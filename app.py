@@ -53,7 +53,7 @@ import threading
 from datetime import datetime
 
 
-# Perfila ICC path check (silencioso en logs)
+ 
 
 
 app = Flask(__name__)
@@ -1852,6 +1852,44 @@ def get_pedidos():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/pedidos/<pedido_id>', methods=['GET'])
+def get_pedido(pedido_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+
+        pedido = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        pedido = fix_id(pedido)
+        # intentar anexar trabajo asociado si existe
+        trabajos_col = get_empresa_collection('trabajos', empresa_id)
+        try:
+            trabajo_doc = None
+            t_id = pedido.get('trabajo_id')
+            if t_id and isinstance(t_id, str) and len(t_id) == 24:
+                try:
+                    trabajo_doc = trabajos_col.find_one({'_id': ObjectId(t_id), 'empresa_id': empresa_id})
+                except Exception:
+                    trabajo_doc = None
+            if trabajo_doc:
+                pedido['trabajo'] = fix_id(trabajo_doc)
+        except Exception:
+            pass
+
+        return jsonify(fix_id(pedido)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/presupuestos/<int:trabajo_id>', methods=['GET'])
 def get_presupuesto(trabajo_id):
     try:
@@ -2094,6 +2132,14 @@ def crear_pedido():
             'fecha_pedido': fecha_pedido,
             'datos_presupuesto': datos_presupuesto
         }
+        # Establecer estado por defecto ('Diseño') usando las etiquetas configuradas
+        try:
+            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            default_label = available.get('diseno') or 'Diseño'
+        except Exception:
+            default_label = 'Diseño'
+        doc['estado'] = default_label
+        doc['fecha_finalizacion'] = None
         result = col.insert_one(doc)
         return jsonify({'success': True, 'pedido_id': str(result.inserted_id)}), 201
     except Exception as e:
