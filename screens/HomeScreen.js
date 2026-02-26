@@ -4,14 +4,14 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F6F7',
+    backgroundColor: '#E9EEF5',
     padding: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 32,
     alignItems: 'center',
     shadowColor: '#000',
@@ -20,6 +20,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     minWidth: 280,
     maxWidth: 380,
+    borderWidth: 1.5,
+    borderColor: '#D0D5DD',
   },
   title: {
     fontSize: 26,
@@ -29,7 +31,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   btn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#344054',
     paddingHorizontal: 38,
     paddingVertical: 15,
     borderRadius: 16,
@@ -50,7 +52,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Bienvenido a MiAppFlexo</Text>
+        <Text style={styles.title}>Bienvenido a PrintForge Pro</Text>
 
         <TouchableOpacity
           style={styles.btn}

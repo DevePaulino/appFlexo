@@ -173,6 +173,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#344054',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  editBtnText: { color: '#FFF', fontWeight: '800' },
+  dangerBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FF6B6B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   estadoPill: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
@@ -194,8 +216,9 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
+export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit }) {
   const [pedido, setPedido] = useState(null);
+  const [activeRole, setActiveRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [chargingAction, setChargingAction] = useState(null);
@@ -203,8 +226,28 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
   useEffect(() => {
     if (visible && pedidoId) {
       cargarPedido();
+      cargarRolActivo();
     }
   }, [visible, pedidoId]);
+
+  const normalizarRolActivo = (value) =>
+    String(value || '')
+      .normalize('NFD')
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+  const cargarRolActivo = async () => {
+    try {
+      const resp = await fetch('http://localhost:8080/api/settings/active-role');
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) return setActiveRole('');
+      setActiveRole(normalizarRolActivo(data.active_role || ''));
+    } catch {
+      setActiveRole('');
+    }
+  };
 
   const cargarPedido = async () => {
     setLoading(true);
@@ -331,9 +374,86 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Detalle del Pedido</Text>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              {(activeRole === 'administrador' || activeRole === 'admin' || activeRole === 'root') && (
+                <>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={async () => {
+                      if (!pedido) return;
+                      try {
+                        console.log('PedidoDetalleModal: editar pulsado, pedido (partial):', pedido);
+                      } catch (e) {}
+
+                      // Try to fetch the full pedido from backend to ensure modal gets complete data
+                      let fullPedido = pedido;
+                      const pid = pedido && (pedido.id || pedido.pedido_id || pedido._id) ? (pedido.id || pedido.pedido_id || pedido._id) : null;
+                      if (pid) {
+                        try {
+                          const resp = await fetch(`http://localhost:8080/api/pedidos/${pid}`);
+                          if (resp.ok) fullPedido = await resp.json();
+                          console.log('PedidoDetalleModal: pedido completo obtenido para edición:', fullPedido);
+                        } catch (e) {
+                          console.warn('PedidoDetalleModal: no se pudo obtener pedido completo', e);
+                        }
+                      }
+
+                      try {
+                        console.log('PedidoDetalleModal: onEdit typeof ->', typeof onEdit);
+                      } catch (e) {}
+                      if (typeof onEdit === 'function') {
+                        try { console.log('PedidoDetalleModal: invocando onEdit ahora'); } catch(e) {}
+                        onEdit(fullPedido);
+                        if (typeof onClose === 'function') onClose();
+                        return;
+                      }
+                      Alert.alert('Editar', 'Funcionalidad de edición no configurada.');
+                    }}
+                  >
+                    <Text style={styles.editBtnText}>Editar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.dangerBtn}
+                    onPress={async () => {
+                      console.log('PedidoDetalleModal: borrar (header) pulsado', pedido?.id);
+                      if (!pedido?.id) return;
+                      const confirmDelete = (typeof window !== 'undefined' && window.confirm)
+                        ? window.confirm('¿Seguro que deseas eliminar este pedido?')
+                        : await new Promise((resolve) => {
+                            Alert.alert('Eliminar pedido', '¿Seguro que deseas eliminar este pedido?', [
+                              { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+                              { text: 'Eliminar', style: 'destructive', onPress: () => resolve(true) },
+                            ]);
+                          });
+
+                      if (!confirmDelete) return;
+
+                      try {
+                        console.log('PedidoDetalleModal: enviando DELETE a backend', `http://localhost:8080/api/pedidos/${pedido.id}`);
+                        const res = await fetch(`http://localhost:8080/api/pedidos/${pedido.id}`, { method: 'DELETE' });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          Alert.alert('Error', data.error || 'No se pudo eliminar el pedido');
+                          return;
+                        }
+                        Alert.alert('Pedido eliminado', 'El pedido ha sido eliminado con éxito');
+                        if (typeof onDeleted === 'function') {
+                          onDeleted();
+                        }
+                      } catch (err) {
+                        Alert.alert('Error', 'Error de conexión: ' + err.message);
+                      }
+                    }}
+                  >
+                    <Text style={[styles.closeBtnText, { color: '#FFF' }]}>Eliminar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                <Text style={styles.closeBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {loading ? (
@@ -381,6 +501,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
                 </View>
 
                 <View style={styles.rightCol}>
+                  {pedido.datos_presupuesto && Object.keys(pedido.datos_presupuesto || {}).length > 0 && (
                   <View style={styles.sectionCard}>
                     <Text style={styles.sectionTitle}>Datos del Presupuesto</Text>
                     {renderRow(
@@ -436,6 +557,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
                       <Text style={styles.fullWidthValue}>{pedido.datos_presupuesto?.observaciones || '-'}</Text>
                     </View>
                   </View>
+                  )}
                 </View>
               </View>
 
@@ -447,6 +569,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId }) {
                   {renderToolCard('Repetidora')}
                   {renderToolCard('Troquel')}
                 </View>
+                {/* Botones de editar/eliminar en la parte inferior eliminados para evitar duplicados; se usa el header. */}
               </View>
             </ScrollView>
           ) : null}

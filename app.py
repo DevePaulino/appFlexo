@@ -2121,8 +2121,23 @@ def crear_pedido():
         referencia = data.get('referencia')
         fecha_pedido = data.get('fecha_pedido')
         datos_presupuesto = data.get('datos_presupuesto')
-        if not trabajo_id or not numero_pedido:
-            return jsonify({'error': 'Faltan datos obligatorios'}), 400
+        if not trabajo_id:
+            return jsonify({'error': 'Faltan datos obligatorios: trabajo_id'}), 400
+
+        # Si no se proporciona `numero_pedido`, generamos un correlativo atómico
+        if not numero_pedido:
+            try:
+                counters_col = mongo.db['counters']
+                seq_doc = counters_col.find_one_and_update(
+                    {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                    {'$inc': {'seq': 1}},
+                    upsert=True,
+                    return_document=pymongo.ReturnDocument.AFTER
+                )
+                numero_pedido = str(seq_doc.get('seq', 0))
+            except Exception:
+                # Fallback simple: timestamp-based if counter fails
+                numero_pedido = f"PED-{int(time.time())}"
         col = get_empresa_collection('pedidos', empresa_id)
         doc = {
             'empresa_id': empresa_id,
@@ -2212,6 +2227,31 @@ def update_pedido(pedido_id):
 
         pedido = col.find_one({'_id': oid, 'empresa_id': empresa_id})
         return jsonify(fix_id(pedido)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>', methods=['DELETE'])
+def delete_pedido(pedido_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        user_role = str(request_user.get('rol') or '').strip().lower()
+        if user_role not in ('administrador', 'root', 'admin'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+
+        result = col.delete_one({'_id': oid, 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+        return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2582,6 +2622,39 @@ def save_trabajos_orden():
         # TODO: Lógica MongoDB para finalizar actualización de orden
         
         return jsonify({'success': True, 'message': 'Orden guardado'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/trabajos', methods=['POST'])
+def create_trabajo():
+    """Crea un trabajo mínimo y devuelve su id."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        cliente = data.get('cliente') or ''
+        referencia = data.get('referencia') or ''
+        fecha_entrega = data.get('fecha_entrega') or None
+
+        if not nombre:
+            nombre = referencia or f'Trabajo {int(time.time())}'
+
+        col = get_empresa_collection('trabajos', empresa_id)
+        nuevo = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'cliente': cliente,
+            'referencia': referencia,
+            'fecha_entrega': fecha_entrega,
+            'estado': 'Pendiente',
+            'created_at': datetime.utcnow().isoformat()
+        }
+        res = col.insert_one(nuevo)
+        return jsonify({'success': True, 'trabajo_id': str(res.inserted_id)}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

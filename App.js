@@ -1,21 +1,720 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PedidosProvider } from './PedidosContext';
 
-import HomeScreen from './screens/HomeScreen';
+import TrabajoScreen from './screens/TrabajoScreen';
+import MachinasScreen from './screens/MachinasScreen';
+import PresupuestoScreen from './screens/PresupuestoScreen';
+import ClientesScreen from './screens/ClientesScreen';
+import TroquelessScreen from './screens/TroquelessScreen';
+import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
+import AuthHomeScreen from './screens/AuthHomeScreen';
+
+const API_BASE = 'http://localhost:8080';
+const API_SESSION_TIMEOUT_URL = `${API_BASE}/api/settings/session-timeout`;
+const AUTH_EXCLUDED_PATHS = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/mfa/verify',
+  '/api/auth/refresh',
+  '/api/auth/logout',
+  '/api/billing/config',
+];
 
 const Stack = createNativeStackNavigator();
+const Tab = createMaterialTopTabNavigator();
+const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting'];
+const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
+
+const SETTINGS_SUBMENU = [
+  { key: 'settings-usuarios-roles', label: 'Usuarios', target: { type: 'setting-section', section: 'usuarios-roles' } },
+  { key: 'settings-creditos', label: 'Créditos', target: { type: 'setting-section', section: 'creditos' } },
+  { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'setting-section', section: 'funcionalidades' } },
+  { key: 'settings-impresion', label: 'Impresión', target: { type: 'setting-section', section: 'impresion' } },
+  { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'tab', route: 'Máquinas' } },
+  { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'tab', route: 'Troqueles' } },
+];
+
+const linking = {
+  prefixes: [],
+  config: {
+    screens: {
+      Home: {
+        screens: {
+          Pedidos: 'pedidos',
+          Presupuesto: 'presupuestos',
+          Producción: 'produccion',
+          Clientes: 'clientes',
+          Máquinas: 'maquinas',
+          Troqueles: 'troqueles',
+          Setting: 'setting',
+        },
+      },
+      'Nueva Cotización': 'nueva-cotizacion',
+      SettingsUsuariosRoles: 'setting/usuarios-roles',
+      SettingsFuncionalidades: 'setting/funcionalidades',
+      SettingsImpresion: 'setting/impresion',
+    },
+  },
+};
+
+function normalizeTabName(tabName) {
+  if (!tabName) return 'Pedidos';
+  if (tabName === 'Settings' || tabName === 'Setting') return 'Pedidos';
+  return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
+}
+
+function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout }) {
+  const [submenuOpen, setSubmenuOpen] = React.useState(false);
+  const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
+  const settingTabRef = React.useRef(null);
+  const activeRoute = state.routes[state.index];
+  const activeRouteName = activeRoute?.name;
+  const activeSettingSection = activeRouteName === 'Setting'
+    ? String(activeRoute?.params?.section || 'usuarios-roles')
+    : null;
+
+  const handleTabPress = (route, isFocused) => {
+    const isSetting = route.name === 'Setting';
+    if (isSetting) {
+      if (submenuOpen) {
+        setSubmenuOpen(false);
+        return;
+      }
+      settingTabRef.current?.measureInWindow?.((x, y, width, height) => {
+        setSubmenuPosition({ top: y + height, left: x });
+        setSubmenuOpen(true);
+      });
+      return;
+    }
+
+    setSubmenuOpen(false);
+    if (!isFocused) {
+      navigation.navigate(route.name);
+    }
+    onTabChange(route.name);
+  };
+
+  const goToSubmenuTarget = (target) => {
+    setSubmenuOpen(false);
+    if (target?.type === 'setting-section') {
+      navigation.navigate('Setting', { section: target.section });
+      onTabChange('Setting');
+      return;
+    }
+
+    if (target?.type === 'tab' && target.route) {
+      navigation.navigate(target.route);
+      onTabChange(target.route);
+    }
+  };
+
+  const isSubmenuTargetActive = (target) => {
+    if (target?.type === 'tab' && target.route) {
+      return activeRouteName === target.route;
+    }
+    if (target?.type === 'setting-section' && target.section) {
+      return activeRouteName === 'Setting' && activeSettingSection === target.section;
+    }
+    return false;
+  };
+
+  const confirmLogout = () => {
+    if (!onLogout) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      const accepted = window.confirm('¿Quieres cerrar la sesión actual?');
+      if (accepted) {
+        onLogout();
+      }
+      return;
+    }
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Quieres cerrar la sesión actual?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: () => onLogout() },
+      ]
+    );
+  };
+
+  return (
+    <View>
+      <View style={styles.tabsBar}>
+        <View style={styles.tabsList}>
+          {state.routes
+            .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
+            .map((route) => {
+          const options = descriptors[route.key]?.options || {};
+          const label = options.tabBarLabel || options.title || route.name;
+          const isFocused = activeRouteName === route.name;
+          const isSetting = route.name === 'Setting';
+          const settingContext = activeRouteName === 'Setting' || activeRouteName === 'Máquinas' || activeRouteName === 'Troqueles';
+          const isActive = isFocused || (isSetting && (submenuOpen || settingContext));
+
+          return (
+            <Pressable
+              key={route.key}
+              ref={isSetting ? settingTabRef : undefined}
+              onPress={() => handleTabPress(route, isFocused)}
+              style={styles.tabBtn}
+            >
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
+              {isActive && route.name !== 'Setting' && <View style={styles.tabIndicator} />}
+            </Pressable>
+          );
+          })}
+        </View>
+        {!!onLogout && (
+          <Pressable onPress={confirmLogout} style={styles.topLogoutBtn}>
+            <Text style={styles.topLogoutBtnText}>Cerrar sesión</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {submenuOpen && (
+        <Modal transparent visible={submenuOpen} animationType="none" onRequestClose={() => setSubmenuOpen(false)}>
+          <View style={StyleSheet.absoluteFill}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSubmenuOpen(false)} />
+            <View
+              style={[
+                styles.settingsSubmenuWrap,
+                {
+                  top: submenuPosition.top,
+                  left: submenuPosition.left,
+                },
+              ]}
+            >
+              {SETTINGS_SUBMENU.map((item) => (
+                <Pressable
+                  key={item.key}
+                  onPress={() => goToSubmenuTarget(item.target)}
+                  style={[styles.settingsSubmenuItem, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemActive]}
+                >
+                  <Text style={[styles.settingsSubmenuItemText, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemTextActive]}>{item.label}</Text>
+                  {isSubmenuTargetActive(item.target) && <View style={styles.settingsSubmenuIndicator} />}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} />}
+      screenOptions={{
+        tabBarStyle: { display: 'none' },
+        animationEnabled: false,
+        swipeEnabled: false,
+      }}
+      initialRouteName={initialRouteName}
+    >
+      <Tab.Screen
+        name="Pedidos"
+        component={TrabajoScreen}
+        options={{
+          tabBarLabel: 'Pedidos',
+        }}
+      />
+      <Tab.Screen
+        name="Presupuesto"
+        component={PresupuestoScreen}
+        options={{
+          tabBarLabel: 'Presupuestos',
+        }}
+      />
+      <Tab.Screen
+        name="Producción"
+        component={ProduccionScreen}
+        options={{
+          tabBarLabel: 'Producción',
+        }}
+      />
+      <Tab.Screen
+        name="Clientes"
+        component={ClientesScreen}
+        options={{
+          tabBarLabel: 'Clientes',
+        }}
+      />
+      <Tab.Screen
+        name="Máquinas"
+        component={MachinasScreen}
+        options={{
+          tabBarLabel: 'Máquinas',
+        }}
+      />
+      <Tab.Screen
+        name="Troqueles"
+        component={TroquelessScreen}
+        options={{
+          tabBarLabel: 'Troqueles',
+        }}
+      />
+      <Tab.Screen
+        name="Setting"
+        initialParams={{ section: 'usuarios-roles' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+        options={{
+          tabBarLabel: 'Setting',
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    position: 'relative',
+    zIndex: 5,
+    paddingRight: 8,
+  },
+  tabsList: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    minHeight: 44,
+  },
+  tabLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#A8A8AA',
+  },
+  tabLabelActive: {
+    color: '#4B5563',
+  },
+  tabIndicator: {
+    marginTop: 6,
+    height: 2,
+    width: 42,
+    borderRadius: 2,
+    backgroundColor: '#4B5563',
+  },
+  topLogoutBtn: {
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 6,
+  },
+  topLogoutBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  settingsSubmenuWrap: {
+    position: 'absolute',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
+    borderTopWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 4,
+    minWidth: 210,
+    maxWidth: 260,
+    zIndex: 50,
+    elevation: 8,
+  },
+  settingsSubmenuItem: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderRadius: 0,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsSubmenuItemActive: {
+    backgroundColor: 'transparent',
+  },
+  settingsSubmenuItemText: {
+    color: '#A8A8AA',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  settingsSubmenuItemTextActive: {
+    color: '#4B5563',
+  },
+  settingsSubmenuIndicator: {
+    marginTop: 6,
+    height: 2,
+    width: 42,
+    borderRadius: 2,
+    backgroundColor: '#4B5563',
+  },
+});
 
 export default function App() {
+  const [initialTab, setInitialTab] = React.useState('Pedidos');
+  const [loading, setLoading] = React.useState(true);
+  // BYPASS AUTH PARA DESARROLLO
+  const [authUser, setAuthUser] = React.useState({ id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 });
+  const [authSession, setAuthSession] = React.useState({ access_token: 'dev', refresh_token: 'dev', usuario: { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 } });
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = React.useState(30);
+  const lastActivityRef = React.useRef(Date.now());
+  const autoLogoutTriggeredRef = React.useRef(false);
+
+  const markActivity = React.useCallback(() => {
+    lastActivityRef.current = Date.now();
+    autoLogoutTriggeredRef.current = false;
+  }, []);
+
+  React.useEffect(() => {
+    global.__MIAPP_ACCESS_TOKEN = authSession?.access_token || null;
+  }, [authSession]);
+
+  React.useEffect(() => {
+    global.__MIAPP_MARK_ACTIVITY = markActivity;
+  }, [markActivity]);
+
+  React.useEffect(() => {
+    if (authUser) {
+      markActivity();
+    }
+  }, [authUser, markActivity]);
+
+  React.useEffect(() => {
+    if (global.__MIAPP_FETCH_PATCHED) return;
+
+    const normalizeHeaders = (headers) => {
+      if (!headers) return {};
+      if (headers instanceof Headers) {
+        const obj = {};
+        headers.forEach((value, key) => {
+          obj[key] = value;
+        });
+        return obj;
+      }
+      if (Array.isArray(headers)) {
+        return Object.fromEntries(headers);
+      }
+      return { ...headers };
+    };
+
+    const originalFetch = global.fetch.bind(global);
+    global.fetch = async (input, init = {}) => {
+      const requestUrl = typeof input === 'string' ? input : (input?.url || '');
+      const isApiRequest = requestUrl.startsWith(`${API_BASE}/api/`);
+      const isAuthExcluded = AUTH_EXCLUDED_PATHS.some((path) => requestUrl.includes(path));
+
+      if (isApiRequest && typeof global.__MIAPP_MARK_ACTIVITY === 'function') {
+        global.__MIAPP_MARK_ACTIVITY();
+      }
+
+      if (!isApiRequest || isAuthExcluded) {
+        return originalFetch(input, init);
+      }
+
+      const accessToken = global.__MIAPP_ACCESS_TOKEN;
+      const nextHeaders = normalizeHeaders(init?.headers);
+      if (accessToken && !nextHeaders.Authorization && !nextHeaders.authorization) {
+        nextHeaders.Authorization = `Bearer ${accessToken}`;
+      }
+
+      let response = await originalFetch(input, { ...init, headers: nextHeaders });
+      if (response.status !== 401) {
+        return response;
+      }
+
+      try {
+        if (!global.__MIAPP_REFRESH_PROMISE) {
+          global.__MIAPP_REFRESH_PROMISE = (async () => {
+            const rawSession = await AsyncStorage.getItem('authSession');
+            const session = rawSession ? JSON.parse(rawSession) : null;
+            const refreshToken = String(session?.refresh_token || '').trim();
+            if (!refreshToken) {
+              return null;
+            }
+
+            const refreshResponse = await originalFetch(`${API_BASE}/api/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+            const refreshData = await refreshResponse.json().catch(() => ({}));
+
+            if (!refreshResponse.ok) {
+              await AsyncStorage.removeItem('authSession');
+              await AsyncStorage.removeItem('authUser');
+              global.__MIAPP_ACCESS_TOKEN = null;
+              setAuthSession(null);
+              setAuthUser(null);
+              return null;
+            }
+
+            const nextSession = {
+              usuario: refreshData.usuario,
+              access_token: refreshData.access_token,
+              refresh_token: refreshData.refresh_token,
+              access_expires_at: refreshData.access_expires_at,
+            };
+
+            await AsyncStorage.setItem('authSession', JSON.stringify(nextSession));
+            await AsyncStorage.setItem('authUser', JSON.stringify(refreshData.usuario || null));
+
+            global.__MIAPP_ACCESS_TOKEN = nextSession.access_token || null;
+            setAuthSession(nextSession);
+            setAuthUser(refreshData.usuario || null);
+            return nextSession;
+          })();
+        }
+
+        const refreshedSession = await global.__MIAPP_REFRESH_PROMISE;
+        if (!refreshedSession?.access_token) {
+          return response;
+        }
+
+        const retryHeaders = normalizeHeaders(init?.headers);
+        retryHeaders.Authorization = `Bearer ${refreshedSession.access_token}`;
+        delete retryHeaders.authorization;
+
+        response = await originalFetch(input, { ...init, headers: retryHeaders });
+        return response;
+      } finally {
+        global.__MIAPP_REFRESH_PROMISE = null;
+      }
+    };
+
+    global.__MIAPP_FETCH_PATCHED = true;
+  }, []);
+
+  React.useEffect(() => {
+    const loadBootState = async () => {
+      try {
+        const [lastTab, rawAuthUser, rawAuthSession] = await Promise.all([
+          AsyncStorage.getItem('lastTab'),
+          AsyncStorage.getItem('authUser'),
+          AsyncStorage.getItem('authSession'),
+        ]);
+        const normalized = normalizeTabName(lastTab);
+        setInitialTab(normalized);
+
+        let nextUser = rawAuthUser ? JSON.parse(rawAuthUser) : null;
+        let nextSession = rawAuthSession ? JSON.parse(rawAuthSession) : null;
+
+        if (nextSession?.refresh_token) {
+          const accessExpiresAt = Number(nextSession.access_expires_at || 0);
+          const now = Math.floor(Date.now() / 1000);
+          const accessStillValid = accessExpiresAt > now + 30;
+
+          if (!accessStillValid) {
+            try {
+              const response = await fetch('http://localhost:8080/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: nextSession.refresh_token }),
+              });
+              const data = await response.json().catch(() => ({}));
+              if (response.ok) {
+                nextSession = {
+                  usuario: data.usuario,
+                  access_token: data.access_token,
+                  refresh_token: data.refresh_token,
+                  access_expires_at: data.access_expires_at,
+                };
+                nextUser = data.usuario;
+                await AsyncStorage.setItem('authSession', JSON.stringify(nextSession));
+                await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
+              } else {
+                nextSession = null;
+                nextUser = null;
+                await AsyncStorage.removeItem('authSession');
+                await AsyncStorage.removeItem('authUser');
+              }
+            } catch {
+              nextSession = null;
+              nextUser = null;
+              await AsyncStorage.removeItem('authSession');
+              await AsyncStorage.removeItem('authUser');
+            }
+          }
+        }
+
+        setAuthSession(nextSession || null);
+        setAuthUser(nextUser || null);
+      } catch (error) {
+        console.error('Error loading boot state:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadBootState();
+  }, []);
+
+  const handleTabChange = async (tabName) => {
+    markActivity();
+    try {
+      await AsyncStorage.setItem('lastTab', normalizeTabName(tabName));
+    } catch (error) {
+      console.error('Error saving tab:', error);
+    }
+  };
+
+  const handleAuthSuccess = async (session) => {
+    const usuario = session?.usuario || null;
+    setAuthUser(usuario);
+    setAuthSession(session || null);
+    markActivity();
+    try {
+      if (usuario) {
+        await AsyncStorage.setItem('authUser', JSON.stringify(usuario));
+        await AsyncStorage.setItem('authSession', JSON.stringify(session));
+      } else {
+        await AsyncStorage.removeItem('authUser');
+        await AsyncStorage.removeItem('authSession');
+      }
+    } catch (error) {
+      console.error('Error saving auth user:', error);
+    }
+  };
+
+  const handleLogout = React.useCallback(async (options = {}) => {
+    const timeoutExpired = !!options.timeoutExpired;
+    try {
+      if (authSession?.refresh_token || authSession?.access_token) {
+        await fetch('http://localhost:8080/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            refresh_token: authSession?.refresh_token,
+            access_token: authSession?.access_token,
+          }),
+        });
+      }
+    } catch {
+    }
+
+    setAuthUser(null);
+    setAuthSession(null);
+    autoLogoutTriggeredRef.current = false;
+    try {
+      await AsyncStorage.removeItem('authUser');
+      await AsyncStorage.removeItem('authSession');
+    } catch (error) {
+      console.error('Error clearing auth user:', error);
+    }
+    if (timeoutExpired) {
+      Alert.alert('Sesión cerrada', 'Tu sesión se cerró por inactividad.');
+    }
+  }, [authSession]);
+
+  React.useEffect(() => {
+    if (!authUser) return;
+    let cancelled = false;
+
+    const loadSessionTimeout = async () => {
+      try {
+        const response = await fetch(API_SESSION_TIMEOUT_URL);
+        const data = await response.json().catch(() => ({}));
+        if (!cancelled && response.ok) {
+          const next = Number(data.session_timeout_minutes);
+          if (Number.isFinite(next) && next > 0) {
+            setSessionTimeoutMinutes(next);
+          }
+        }
+      } catch {
+      }
+    };
+
+    loadSessionTimeout();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
+
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        markActivity();
+      }
+    });
+    return () => subscription.remove();
+  }, [markActivity]);
+
+  React.useEffect(() => {
+    if (!authUser) return undefined;
+
+    const timeoutMs = Math.max(1, Number(sessionTimeoutMinutes || 30)) * 60 * 1000;
+    const intervalId = setInterval(() => {
+      if (autoLogoutTriggeredRef.current) return;
+      const inactiveMs = Date.now() - lastActivityRef.current;
+      if (inactiveMs >= timeoutMs) {
+        autoLogoutTriggeredRef.current = true;
+        handleLogout({ timeoutExpired: true });
+      }
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [authUser, sessionTimeoutMinutes, handleLogout]);
+
+  if (loading) {
+    return null; // o un loading screen
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Inicio">
-        <Stack.Screen name="Inicio" component={HomeScreen} />
-        <Stack.Screen name="Nueva Cotización" component={NewQuoteScreen} />
-        <Stack.Screen name="Configuraciones" component={ConfigScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <PedidosProvider>
+      <NavigationContainer linking={linking}>
+        <Stack.Navigator
+          screenOptions={{
+            animation: 'none',
+          }}
+        >
+          {/* BYPASS AUTH PARA DESARROLLO */}
+          <Stack.Screen
+            name="Home"
+            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} />}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Nueva Cotización"
+            component={NewQuoteScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="SettingsUsuariosRoles"
+            initialParams={{ section: 'usuarios-roles' }}
+            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
+            options={{ title: 'Usuarios', headerShown: true }}
+          />
+          <Stack.Screen
+            name="SettingsFuncionalidades"
+            initialParams={{ section: 'funcionalidades' }}
+            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
+            options={{ title: 'Funcionalidades web', headerShown: true }}
+          />
+          <Stack.Screen
+            name="SettingsImpresion"
+            initialParams={{ section: 'impresion' }}
+            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
+            options={{ title: 'Impresión', headerShown: true }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PedidosProvider>
   );
 }

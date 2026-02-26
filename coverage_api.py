@@ -8,7 +8,8 @@ import subprocess
 
 app = Flask(__name__)
 CORS(app)
-FOGRA_PATH = '/Users/osanchez/Vista-printingConditions/MiAppFlexo/Perfiles/ISOcoated_v2_eci.icc'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FOGRA_PATH = os.path.join(BASE_DIR, 'Perfiles', 'ISOcoated_v2_eci.icc')
 
 print("¿El perfil ICC FOGRA39 ete?", os.path.exists(FOGRA_PATH))
 

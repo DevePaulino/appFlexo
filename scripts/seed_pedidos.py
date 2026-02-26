@@ -33,6 +33,7 @@ for i in range(1, 11):
 
     pedido = {
         '_id': ObjectId(),
+        'empresa_id': 1,
         'numero_pedido': f'PF-{1000 + i}',
         'cliente_id': str(cliente_oid),
         'cliente': {

@@ -36,35 +36,34 @@ function borderColorState(value, isRequired, isNumeric = false, submitted = fals
 }
 
 const styles = {
-    container: { padding: 20, backgroundColor: '#F6F6F7', flex: 1 },
-    section: { marginBottom: 18, marginTop: 10, backgroundColor: '#FFF', borderRadius: 18, padding: 18, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 7 },
-    sectionTitle: { fontSize: 20, fontWeight: '900', color: '#232323', marginBottom: 12, letterSpacing: 0.8 },
+    container: { padding: 20, backgroundColor: '#E9EEF5', flex: 1 },
+    section: { marginBottom: 10, marginTop: 4, backgroundColor: '#FFF', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: '#D0D5DD' },
+    sectionTitle: { fontSize: 16, fontWeight: '900', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 10 },
-    label: { fontSize: 16, color: '#444', fontWeight: '700', marginBottom: 6 },
-    row: { flexDirection: 'row', gap: 16, marginBottom: 12, alignItems: 'flex-start' },
+    label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
+    row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
     col: { flex: 1 },
     input: (value, isRequired, isNumeric = false, submitted = false) => ({
-        fontSize: 16,
-        borderWidth: 0,
-        borderBottomWidth: 2,
+        fontSize: 14,
+        borderWidth: 1,
         borderColor: borderColorState(value, isRequired, isNumeric, submitted),
         backgroundColor: '#FBFBFD',
         paddingVertical: 10,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        marginBottom: 8,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        marginBottom: 10,
         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
         color: '#232323'
     }),
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
-        backgroundColor: '#A8A8AA', paddingHorizontal: 38, paddingVertical: 16,
-        borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 2,
+        backgroundColor: '#A8A8AA', paddingHorizontal: 20, paddingVertical: 10,
+        borderRadius: 12,
         alignItems: 'center', marginBottom: 8, minWidth: 160
     },
     bigBtnText: {
-        color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.2
+        color: '#FFF', fontWeight: '700', fontSize: 13
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 14, paddingVertical: 12,
@@ -85,10 +84,10 @@ const styles = {
         borderColor: color, backgroundColor: '#FBFBFD', marginRight: 8, marginBottom: 8, minWidth: 60, alignItems: 'center'
     }),
     coverageTxt: { color: '#232323', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
-    submitContainer: { alignItems: 'center', marginTop: 40, marginBottom: 24 },
+    submitContainer: { alignItems: 'center', marginTop: 24, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: '#A8A8AA', paddingHorizontal: 38, paddingVertical: 16,
-        borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 2,
+        backgroundColor: '#344054', paddingHorizontal: 20, paddingVertical: 10,
+        borderRadius: 14,
         alignItems: 'center'
     },
     submitText: { color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.2 },
@@ -198,6 +197,17 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
     const getNowDateStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    };
+    const formatDateDisplay = (value) => {
+        const [y, m, d] = String(value || '').split('-');
+        if (!y || !m || !d) return value || '';
+        return `${d}-${m}-${y}`;
+    };
+    const formatDateFromObj = (dateObj) => {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     };
     const [cliente, setCliente] = useState('');
     const [fecha, setFecha] = useState(getNowDateStr());
@@ -356,34 +366,45 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                             <View style={styles.col}>
                                 <Text style={styles.label}>Fecha</Text>
                                 {Platform.OS === 'web' ? (
-                                    <input
-                                        type="date"
-                                        value={fecha}
-                                        onChange={e => setFecha(e.target.value)}
-                                        style={{
-                                            fontSize: 16,
-                                            fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-                                            color: '#232323',
-                                            borderWidth: 0,
-                                            borderBottom: `2px solid ${borderColorState(fecha, true, false, submitted)}`,
-                                            background: '#FBFBFD',
-                                            borderRadius: 6,
-                                            minHeight: 39,
-                                            outline: 'none',
-                                            padding: '10px 8px',
-                                            marginBottom: 8,
-                                            fontWeight: 400,
-                                            letterSpacing: 0,
-                                            appearance: 'none',
-                                        }}
-                                    />
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <TextInput
+                                            value={formatDateDisplay(fecha)}
+                                            style={[styles.input(fecha, true, false, submitted), { flex: 1, marginBottom: 0 }]}
+                                            editable={false}
+                                        />
+                                        <View
+                                            style={{
+                                                width: 38,
+                                                height: 38,
+                                                borderRadius: 8,
+                                                borderWidth: 1,
+                                                borderColor: '#CCC',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                backgroundColor: '#FBFBFD',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 16 }}>📅</Text>
+                                            <input
+                                                type="date"
+                                                value={fecha}
+                                                onChange={e => setFecha(e.target.value)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    opacity: 0,
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        </View>
+                                    </View>
                                 ) : (
                                     <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.8}>
                                         <TextInput
-                                            value={fecha}
-                                            style={styles.input(fecha, true, false, submitted)}
+                                            value={formatDateDisplay(fecha)}
+                                            style={[styles.input(fecha, true, false, submitted), { pointerEvents: 'none' }]}
                                             editable={false}
-                                            pointerEvents="none"
                                         />
                                         {showDatePicker && (
                                             <DateTimePicker
@@ -393,7 +414,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                                                 locale="es-ES"
                                                 onChange={(event, selectedDate) => {
                                                     if (Platform.OS === 'android') setShowDatePicker(false);
-                                                    if (selectedDate) setFecha(selectedDate.toISOString().slice(0, 10));
+                                                    if (selectedDate) setFecha(formatDateFromObj(selectedDate));
                                                 }}
                                             />
                                         )}
@@ -649,7 +670,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
 
             {/* SUBMIT */}
             <View style={styles.submitContainer}>
-                <TouchableOpacity style={styles.bigBtn} onPress={handleSubmit}>
+                <TouchableOpacity style={[styles.bigBtn, styles.submitBtn]} onPress={handleSubmit}>
                     <Text style={styles.bigBtnText}>Siguiente: ver cálculo</Text>
                 </TouchableOpacity>
             </View>

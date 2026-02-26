@@ -572,6 +572,7 @@ export default function TrabajoScreen() {
   const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingInitialValues, setEditingInitialValues] = useState(null);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [modalDetalleVisible, setModalDetalleVisible] = useState(false);
   const [maquinas, setMaquinas] = useState([]);
@@ -732,7 +733,7 @@ export default function TrabajoScreen() {
 
   // Función para cargar pedidos
   const cargarPedidos = () => {
-    fetch('http://localhost:8080/api/pedidos')
+    fetch('http://localhost:8080/api/pedidos', { cache: 'no-store' })
       .then((res) => res.json())
           .then((data) => {
         if (data && data.pedidos) {
@@ -814,6 +815,8 @@ export default function TrabajoScreen() {
 
   const totalPaginasPedidos = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
   const pedidosPaginados = filtrados.slice((paginaPedidos - 1) * ITEMS_PER_PAGE, paginaPedidos * ITEMS_PER_PAGE);
+
+  
 
   useEffect(() => {
     if (paginaPedidos > totalPaginasPedidos) {
@@ -1169,14 +1172,49 @@ export default function TrabajoScreen() {
 
       <NuevoPedidoModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleNuevoPedido}
+        visible={modalVisible}
+        onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
+        onSave={(p) => { setModalVisible(false); setEditingInitialValues(null); handleNuevoPedido(p); }}
+        initialValues={editingInitialValues}
       />
       
       <PedidoDetalleModal
         visible={modalDetalleVisible}
-        onClose={() => setModalDetalleVisible(false)}
+        onClose={() => { setModalDetalleVisible(false); }}
         pedidoId={pedidoSeleccionado}
+        onDeleted={() => { setModalDetalleVisible(false); cargarPedidos(); }}
+        onEdit={async (pedido) => {
+          setModalDetalleVisible(false);
+          try {
+            console.log('TrabajoScreen.onEdit invoked with:', pedido);
+            // If the passed object looks like a reduced entry, fetch full pedido
+            let fullPedido = pedido;
+            const needsFetch = !pedido || !pedido.datos_presupuesto || (!pedido.id && !pedido.pedido_id);
+            if (needsFetch) {
+              const pid = pedido && (pedido.pedido_id || pedido.id || pedido._id) ? (pedido.pedido_id || pedido.id || pedido._id) : pedidoSeleccionado;
+              if (pid) {
+                const resp = await fetch(`http://localhost:8080/api/pedidos/${pid}`);
+                if (resp.ok) {
+                  fullPedido = await resp.json();
+                }
+              }
+            }
+            // normalize ids and datos_presupuesto
+            if (fullPedido) {
+              fullPedido.id = fullPedido.id || fullPedido.pedido_id || fullPedido._id || fullPedido.id;
+              fullPedido.pedido_id = fullPedido.pedido_id || fullPedido.id || fullPedido._id;
+              fullPedido.datos_presupuesto = fullPedido.datos_presupuesto || {};
+            }
+            console.log('TrabajoScreen.onEdit fullPedido:', fullPedido);
+            setEditingInitialValues(fullPedido || null);
+            console.log('TrabajoScreen: abriendo NuevoPedidoModal con initialValues (id):', fullPedido && (fullPedido.id || fullPedido.pedido_id || fullPedido._id));
+            setModalVisible(true);
+          } catch (err) {
+            console.error('Error cargando pedido para editar', err);
+            setEditingInitialValues(pedido || null);
+            setModalVisible(true);
+          }
+        }}
       />
 
       <Modal
