@@ -98,7 +98,11 @@ const styles = {
     submitBtn: {
         backgroundColor: '#344054', paddingHorizontal: 22, paddingVertical: 10,
         borderRadius: 14,
-        alignItems: 'center'
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
     },
     submitText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
@@ -628,7 +632,7 @@ export default function NuevoPresupuestoModal({
         const acabadoValido = Array.isArray(acabado) ? acabado.length > 0 : !!acabado;
 
         const missing = [];
-        if (!clienteSeleccionadoId) missing.push('Cliente');
+        // Allow non-saved clients: require cliente name but don't force clienteSeleccionadoId
         if (!cliente) missing.push('Nombre cliente');
         if (!referencia) missing.push('Referencia');
         if (!formatoAncho) missing.push('Formato ancho');
@@ -645,7 +649,7 @@ export default function NuevoPresupuestoModal({
             return;
         }
 
-        if (clienteSeleccionadoId && cliente && referencia && formatoAncho && formatoLargo && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
+        if (cliente && referencia && formatoAncho && formatoLargo && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
             const presupuesto = {
                 id: Date.now(),
                 numero: `PRE-${Math.floor(Math.random() * 10000)}`,
@@ -701,6 +705,11 @@ export default function NuevoPresupuestoModal({
     };
 
     const handleClose = () => {
+        resetFormFields();
+        onClose();
+    };
+
+    const resetFormFields = () => {
         setCliente('');
         setRazonSocial('');
         setCif('');
@@ -730,12 +739,19 @@ export default function NuevoPresupuestoModal({
         setClienteSeleccionadoId(null);
         setClientePickerVisible(false);
         setBusquedaCliente('');
-        onClose();
+        setPedidoId(null);
     };
+
+    // When opening modal for a new pedido (no initialValues), ensure the form is reset
+    useEffect(() => {
+        if (visible && !initialValues) {
+            resetFormFields();
+        }
+    }, [visible, initialValues]);
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-            <View style={{ flex: 1, backgroundColor: '#F1F3F5' }}>
+            <View style={{ flex: 1, backgroundColor: '#E9EEF5' }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>
@@ -759,13 +775,7 @@ export default function NuevoPresupuestoModal({
                                             <Text style={styles.clientePickerBtnText}>Seleccionar cliente guardado</Text>
                                         </TouchableOpacity>
                                         <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>
-                                        <TextInput
-                                            value={cliente}
-                                            onChangeText={() => {}}
-                                            placeholder="Selecciona cliente guardado"
-                                            style={styles.input(cliente, true, false, submitted)}
-                                            editable={false}
-                                        />
+                                        {/* eliminado campo placeholder innecesario para aprovechar espacio */}
                                     </View>
                                     <View style={styles.col}>
                                         <Text style={styles.label}>{fechaLabel}</Text>
@@ -895,13 +905,28 @@ export default function NuevoPresupuestoModal({
                                     )}
                                     <View style={styles.col}>
                                         <Text style={styles.label}>Comercial</Text>
-                                        <BotonSelector
-                                            opciones={comerciales}
-                                            valorSeleccionado={vendedor}
-                                            onSelect={setVendedor}
-                                            required={true}
-                                            submitted={submitted}
-                                        />
+                                        {Platform.OS === 'web' ? (
+                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#FBFBFD', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
+                                                <select
+                                                    value={vendedor}
+                                                    onChange={(e) => setVendedor(e.target.value)}
+                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '10px 12px', fontSize: '14px', color: '#232323', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: 'pointer' }}
+                                                >
+                                                    <option value="">Seleccionar comercial</option>
+                                                    {usuariosComerciales.map((u) => (
+                                                        <option key={u.id || u.usuario_id || u.nombre} value={u.nombre}>{u.nombre}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <BotonSelector
+                                                opciones={comerciales}
+                                                valorSeleccionado={vendedor}
+                                                onSelect={setVendedor}
+                                                required={true}
+                                                submitted={submitted}
+                                            />
+                                        )}
                                     </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>

@@ -696,13 +696,14 @@ export default function TrabajoScreen() {
 
   const handleCambiarEstado = async (trabajoObj, nuevoEstado) => {
     try {
-      const trabajoId = trabajoObj && (trabajoObj.id || trabajoObj.trabajo_id || trabajoObj.pedido_id || trabajoObj.pedido_id);
+      const trabajoId = trabajoObj && (trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id || trabajoObj.trabajo_id);
 
       const looksLikeObjectId = (s) => typeof s === 'string' && /^[0-9a-fA-F]{24}$/.test(s);
 
       let res;
-      if (trabajoObj && trabajoObj.pedido_id) {
-        res = await fetch(`http://localhost:8080/api/pedidos/${trabajoObj.pedido_id}`, {
+      if (trabajoObj && (trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id)) {
+        const pid = trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id;
+        res = await fetch(`http://localhost:8080/api/pedidos/${pid}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ estado: nuevoEstado })
@@ -737,18 +738,8 @@ export default function TrabajoScreen() {
       .then((res) => res.json())
           .then((data) => {
         if (data && data.pedidos) {
-          const pedidosMapeados = data.pedidos.map((pedido) => ({
-            id: pedido.trabajo_id,
-            pedido_id: pedido.id,
-            numero_pedido: pedido.numero_pedido,
-            nombre: pedido.nombre,
-            cliente: (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '')),
-            referencia: pedido.referencia_trabajo || pedido.referencia || '-',
-            estado: pedido.estado,
-            en_produccion: !!pedido.en_produccion,
-            numero_tintas: extraerNumeroTintas(pedido),
-          }));
-          setTrabajos(pedidosMapeados);
+          // Mantener los objetos de pedido completos para que la UI trabaje únicamente con `pedido`
+          setTrabajos(Array.isArray(data.pedidos) ? data.pedidos : []);
         } else {
           setTrabajos([]);
         }
@@ -836,8 +827,13 @@ export default function TrabajoScreen() {
   };
 
   const handleAbrirDetalle = (trabajo) => {
-    if (trabajo.pedido_id) {
-      setPedidoSeleccionado(trabajo.pedido_id);
+    const pid = trabajo && (trabajo.pedido_id || trabajo.id || trabajo._id || trabajo.trabajo_id);
+    if (pid) {
+      setPedidoSeleccionado(pid);
+      setModalDetalleVisible(true);
+    } else {
+      // fallback: try to open detail without id (component will attempt fetch)
+      setPedidoSeleccionado(null);
       setModalDetalleVisible(true);
     }
   };
@@ -1058,7 +1054,7 @@ export default function TrabajoScreen() {
                   <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colCliente]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{trabajo.cliente}</Text>
+                  <Text style={styles.cellText} numberOfLines={1}>{typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colReferencia]}>
                   <Text style={styles.cellText} numberOfLines={1}>{trabajo.referencia}</Text>

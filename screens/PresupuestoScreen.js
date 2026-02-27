@@ -894,7 +894,7 @@ export default function PresupuestoScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.tableCell, styles.colCliente]}>
-                <Text style={styles.cellText} numberOfLines={1}>{presupuesto.cliente}</Text>
+                <Text style={styles.cellText} numberOfLines={1}>{typeof presupuesto.cliente === 'string' ? presupuesto.cliente : (presupuesto.cliente && (presupuesto.cliente.nombre || '-'))}</Text>
               </View>
               <View style={[styles.tableCell, styles.colReferencia]}>
                 <Text style={styles.cellText} numberOfLines={1}>{presupuesto.referencia || presupuesto.nombre || '-'}</Text>

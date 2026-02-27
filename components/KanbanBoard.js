@@ -11,7 +11,7 @@ export default function KanbanBoard({ maquinas, trabajosPorMaquina, onDropTrabaj
             {(trabajosPorMaquina[maquina.id] || []).map((trabajo, idx) => (
               <View key={trabajo.id} style={styles.kanbanCard}>
                 <Text style={styles.kanbanCardTitle}>{trabajo.nombre}</Text>
-                <Text style={styles.kanbanCardCliente}>{trabajo.cliente}</Text>
+                <Text style={styles.kanbanCardCliente}>{typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}</Text>
                 {/* Aquí irá el drag handle y lógica de drop */}
               </View>
             ))}
