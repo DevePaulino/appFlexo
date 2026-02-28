@@ -989,6 +989,12 @@ export default function PresupuestoScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleNuevoPresupuesto}
+        modalTitle="Nuevo Presupuesto"
+        submitLabel="Guardar Presupuesto"
+        fechaLabel="Fecha de creación"
+        showFechaEntrega={true}
+        fechaEntregaLabel="Fecha de entrega"
+        showMaquinaField={false}
       />
     </View>
   );
