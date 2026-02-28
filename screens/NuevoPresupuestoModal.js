@@ -6,12 +6,7 @@ const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
     { label: 'M', color: '#EC008C', isCMYK: true },
     { label: 'Y', color: '#FFF200', isCMYK: true },
-    { label: 'K', color: '#232323', isCMYK: true },
-    { label: 'P1', color: '#ddd', isCMYK: false },
-    { label: 'P2', color: '#ddd', isCMYK: false },
-    { label: 'P3', color: '#ddd', isCMYK: false },
-    { label: 'P4', color: '#ddd', isCMYK: false },
-    { label: 'P5', color: '#ddd', isCMYK: false }
+    { label: 'K', color: '#232323', isCMYK: true }
 ];
 const troquelEstado = ['Nuevo', 'Usado'];
 const troquelForma = ['Rectangular', 'Circular', 'Irregular'];
@@ -291,7 +286,19 @@ const BotonSelector = ({
     </View>
 );
 
-const TintasSelector = ({ selectedTintas, setSelectedTintas, opcionesTintas = [] }) => (
+const TintasSelector = ({
+    selectedTintas,
+    setSelectedTintas,
+    opcionesTintas = [],
+    pantones = [],
+    onRemovePantone,
+    onStartAdd,
+    addingPantone,
+    addingValue,
+    onChangeAdding,
+    onConfirmAdding,
+    addingMatchHex
+}) => (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
         {opcionesTintas.map((tinta) => {
             const active = selectedTintas.includes(tinta.label);
@@ -309,6 +316,68 @@ const TintasSelector = ({ selectedTintas, setSelectedTintas, opcionesTintas = []
                 </TouchableOpacity>
             );
         })}
+
+        {/* render pantone chips inline after CMYK */}
+        {pantones.map((p, idx) => {
+            const active = selectedTintas.includes(p.label);
+            const tintaObj = { label: p.label, color: p.hex, isCMYK: false };
+            return (
+                <View key={`${p.label}-${idx}`} style={{ marginRight: 8, marginBottom: 8 }}>
+                    <TouchableOpacity
+                        style={[styles.tintaBtn(active, tintaObj), { backgroundColor: p.hex || (active ? '#E8E8EC' : '#FBFBFD') }]}
+                        onPress={() => {
+                            setSelectedTintas(prev =>
+                                active ? prev.filter(l => l !== p.label) : [...prev, p.label]
+                            );
+                        }}
+                    >
+                        <Text style={[styles.tintaTxt, { color: '#fff' }]}>{p.label}</Text>
+                        <TouchableOpacity
+                            onPress={() => typeof onRemovePantone === 'function' && onRemovePantone(idx)}
+                            style={{ position: 'absolute', right: -6, top: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 12 }}>×</Text>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </View>
+            );
+        })}
+
+        {addingPantone ? (
+            <TextInput
+                value={addingValue}
+                onChangeText={onChangeAdding}
+                placeholder="Nº Pantone"
+                autoFocus
+                onSubmitEditing={(e) => {
+                    const txt = (e.nativeEvent && e.nativeEvent.text) || addingValue;
+                    if (typeof onConfirmAdding === 'function') onConfirmAdding(txt);
+                }}
+                onBlur={() => {
+                    if (typeof onConfirmAdding === 'function') onConfirmAdding(addingValue);
+                }}
+                style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 22,
+                    minWidth: 80,
+                    textAlign: 'center',
+                    marginRight: 8,
+                    marginBottom: 8,
+                    backgroundColor: addingMatchHex || '#EFEFEF',
+                    color: addingMatchHex ? '#FFF' : '#6C6C70',
+                }}
+            />
+        ) : (
+            <TouchableOpacity
+                style={{ paddingHorizontal: 14, paddingVertical: 12, borderRadius: 22, backgroundColor: '#EFEFEF', borderWidth: 1, borderColor: '#DDD', marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center' }}
+                onPress={() => {
+                    if (typeof onStartAdd === 'function') onStartAdd();
+                }}
+            >
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#6C6C70' }}>+</Text>
+            </TouchableOpacity>
+        )}
     </View>
 );
 
@@ -479,6 +548,79 @@ export default function NuevoPresupuestoModal({
     const maquinaSeleccionadaObj = (maquinasActivas || []).find((item) => item.nombre === maquina);
     const maquinaIncompatible = !!maquinaSeleccionadaObj && !puedeSeleccionarMaquina(maquinaSeleccionadaObj);
     const tintasOpciones = [...TINTAS_BASE_CMYK];
+    // cargamos mapa de pantones generado por el script
+    let PANTONE_MAP = {};
+    try {
+        PANTONE_MAP = require('../data/pantone_map.json');
+    } catch (e) {
+        PANTONE_MAP = {};
+    }
+    // three positional Pantone slots that replace the old P1/P2/P3 buttons
+    const [pantones, setPantones] = useState([]); // dynamic list of added pantones
+    const [pantoneModalVisible, setPantoneModalVisible] = useState(false);
+    const [pantoneInput, setPantoneInput] = useState('');
+    const [addingPantone, setAddingPantone] = useState(false);
+
+    const srgbToHex = (srgb) => {
+        if (!srgb || srgb.length < 3) return '#EAEAEA';
+        return '#' + srgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+    };
+
+    const findPantoneInMap = (text) => {
+        if (!text) return null;
+        const t = String(text).trim();
+        const tries = [];
+        // common variants
+        if (/^\d+$/.test(t)) tries.push(`PANTONE ${t} C`);
+        tries.push(t.toUpperCase());
+        if (!t.toUpperCase().startsWith('PANTONE')) tries.push(`PANTONE ${t.toUpperCase()} C`);
+        for (const k of tries) {
+            if (PANTONE_MAP[k]) return { key: k, data: PANTONE_MAP[k] };
+        }
+        return null;
+    };
+
+    const addPantone = (text) => {
+        const existing = findPantoneInMap(text);
+        let label = text;
+        let hex = '#EAEAEA';
+        let found = false;
+        if (existing) {
+            found = true;
+            label = `P. ${existing.key.replace(/PANTONE\s*/i, '').replace(/\s*C$/i, '').trim()} C`;
+            hex = srgbToHex(existing.data.srgb);
+        }
+        const item = { key: label, label, hex, found };
+        setPantones(prev => {
+            const next = [...prev, item];
+            return next;
+        });
+        // insert into selectedTintas after any CMYK entries, preserving other non-CMYK ordering
+        setSelectedTintas(prev => {
+            const prevCopy = Array.isArray(prev) ? [...prev] : [];
+            // remove any existing occurrence of this label
+            const filtered = prevCopy.filter(l => l !== item.label);
+            // collect CMYK in order
+            const cmykOrder = ['C', 'M', 'Y', 'K'];
+            const cmyk = cmykOrder.filter(k => filtered.includes(k));
+            const others = filtered.filter(l => !cmykOrder.includes(l));
+            return [...cmyk, ...others, item.label];
+        });
+    };
+
+    // removed addPantoneAt: pantones are appended correlatively after CMYK
+
+    const removePantoneAt = (idx) => {
+        setPantones(prev => {
+            const copy = [...prev];
+            const removed = copy.splice(idx, 1)[0];
+            // remove from selectedTintas
+            if (removed) {
+                setSelectedTintas(sprev => (Array.isArray(sprev) ? sprev.filter(s => s !== removed.label) : []));
+            }
+            return copy;
+        });
+    };
     const parseTintasEspecialesTexto = (value) => {
         return (value || '')
             .split(',')
@@ -1159,8 +1301,22 @@ export default function NuevoPresupuestoModal({
                                     selectedTintas={selectedTintas}
                                     setSelectedTintas={setSelectedTintas}
                                     opcionesTintas={tintasOpciones}
+                                    pantones={pantones}
+                                    onRemovePantone={removePantoneAt}
+                                    onStartAdd={() => { setAddingPantone(true); setPantoneInput(''); }}
+                                    addingPantone={addingPantone}
+                                    addingValue={pantoneInput}
+                                    onChangeAdding={setPantoneInput}
+                                    onConfirmAdding={(txt) => {
+                                        const val = (txt || '').trim();
+                                        if (val) addPantone(val);
+                                        setAddingPantone(false);
+                                        setPantoneInput('');
+                                    }}
+                                    addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
                                 />
                                 <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {selectedTintas.length}</Text>
+                                
                             </View>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Tinta especial</Text>
@@ -1262,6 +1418,46 @@ export default function NuevoPresupuestoModal({
                                     }}
                                 >
                                     <Text style={styles.bigBtnText}>Cerrar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    visible={pantoneModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setPantoneModalVisible(false)}
+                >
+                    <View style={styles.pickerModalOverlay}>
+                        <View style={styles.pickerModalCard}>
+                            <Text style={styles.pickerModalTitle}>Añadir Pantone</Text>
+                            <TextInput
+                                value={pantoneInput}
+                                onChangeText={setPantoneInput}
+                                placeholder="Ej: 485 o PANTONE 485 C"
+                                style={styles.input(pantoneInput, false, false, false)}
+                            />
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
+                                <TouchableOpacity style={styles.bigBtn} onPress={() => setPantoneModalVisible(false)}>
+                                    <Text style={styles.bigBtnText}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.bigBtn, { marginLeft: 8 }]}
+                                    onPress={() => {
+                                        if (pantoneInput && pantoneInput.trim()) {
+                                            const txt = pantoneInput.trim();
+                                            if (pantoneTargetIndex !== null && pantoneTargetIndex !== undefined) {
+                                                addPantoneAt(pantoneTargetIndex, txt);
+                                            } else {
+                                                addPantone(txt);
+                                            }
+                                        }
+                                        setPantoneTargetIndex(null);
+                                        setPantoneModalVisible(false);
+                                    }}
+                                >
+                                    <Text style={styles.bigBtnText}>Añadir</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
