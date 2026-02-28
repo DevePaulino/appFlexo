@@ -1035,7 +1035,12 @@ export default function TrabajoScreen() {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
             const esFinalizado = estadoTrabajoActual === 'finalizado';
             const envioBloqueado = !puedeEnviarAProduccion(trabajo);
-            const textoBoton = esFinalizado ? 'Finalizado' : (estaEnColaVisual(trabajo) ? 'En cola' : 'Producc.');
+            let textoBoton;
+            if (estadoTrabajoActual === 'parado' || estadoTrabajoActual === 'cancelado') {
+              textoBoton = estadoTrabajoActual; // mostrar el nombre del estado tal cual (parado/cancelado)
+            } else {
+              textoBoton = esFinalizado ? 'Finalizado' : (estaEnColaVisual(trabajo) ? 'En cola' : 'Producc.');
+            }
 
             return (
               <View key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`} style={[styles.tableRow, (idx + (paginaPedidos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
