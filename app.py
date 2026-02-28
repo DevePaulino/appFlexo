@@ -1688,7 +1688,7 @@ def api_session_timeout():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/presupuestos', methods=['GET'])
+@app.route('/api/settings/opcion', methods=['GET', 'POST'])
 def crear_config_opcion():
     try:
         categoria = request.args.get('categoria', '').strip().lower()
@@ -1947,8 +1947,34 @@ def get_presupuestos():
             return auth_error
         empresa_id = int(request_user.get('empresa_id') or 0)
 
-        # Lógica MongoDB pendiente si es necesario
-        return jsonify({'presupuestos': []}), 200
+        col = get_empresa_collection('presupuestos', empresa_id)
+        presupuestos = list(col.find({'empresa_id': empresa_id}))
+
+        # Adjuntar trabajo relacionado si existe
+        trabajos_col = get_empresa_collection('trabajos', empresa_id)
+        trabajos_map = {}
+        for t in trabajos_col.find({'empresa_id': empresa_id}):
+            tt = fix_id(t)
+            trabajos_map[str(tt.get('id'))] = tt
+
+        presupuestos_out = []
+        for p in presupuestos:
+            p = fix_id(p)
+            try:
+                trabajo = trabajos_map.get(str(p.get('trabajo_id')))
+                if trabajo:
+                    p['trabajo'] = trabajo
+            except Exception:
+                pass
+            # intentar parsear datos_json si es string
+            try:
+                if p.get('datos_json') and isinstance(p.get('datos_json'), str):
+                    p['datos_json'] = json.loads(p['datos_json'])
+            except Exception:
+                pass
+            presupuestos_out.append(p)
+
+        return jsonify({'presupuestos': presupuestos_out}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
