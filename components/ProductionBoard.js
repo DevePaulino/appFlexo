@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import TrabajoRow from './TrabajoRow';
 
-export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '' }) {
+export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
   const [maquinaActual, setMaquinaActual] = useState(0);
   const [trabajos, setTrabajos] = useState([]);
   const [draggingId, setDraggingId] = useState(null);
@@ -52,16 +53,28 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       return (a.posicion || 0) - (b.posicion || 0);
     });
 
-    // Deduplicate by trabajo id (normalize to string). Keep first occurrence.
-    const seen = new Set();
-    const unique = [];
+    // Deduplicate by trabajo id (normalize to string).
+    // If a trabajo appears in multiple machines prefer the one for the
+    // currently active / filtered machine so UI doesn't keep showing the
+    // item under the origin after a move.
+    const idToEntries = {};
     for (const t of ordenados) {
       const idKey = String(t.id || t.trabajo_id || '');
       if (!idKey) continue;
-      if (seen.has(idKey)) continue;
-      seen.add(idKey);
-      unique.push(t);
+      idToEntries[idKey] = idToEntries[idKey] || [];
+      idToEntries[idKey].push(t);
     }
+    const preferredMachineId = (maquinasFiltradasIds.length === 1)
+      ? maquinasFiltradasIds[0]
+      : (maquinas[maquinaActual] && String(maquinas[maquinaActual].id));
+
+    const unique = Object.keys(idToEntries).map((idKey) => {
+      const entries = idToEntries[idKey];
+      if (entries.length === 1) return entries[0];
+      // prefer entry whose _maquina_id matches the preferredMachineId
+      const pref = entries.find(e => String(e._maquina_id) === String(preferredMachineId));
+      return pref || entries[0];
+    });
     setTrabajos(unique);
     setPaginaActual(0);
   }, [maquinaActual, maquinas, trabajosPorMaquina, maquinaActivaIds]);
@@ -242,6 +255,9 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         }
         
         // Recargar datos
+        // Remove the moved trabajo locally so it doesn't remain visible under the
+        // origin machine while the server-side state and other clients sync.
+        setTrabajos((prev) => prev.filter(t => String(t.id || t.trabajo_id || '') !== String(trabajoId)));
         if (onRefresh) {
           await onRefresh();
         }
@@ -332,6 +348,42 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     };
   };
 
+    // Virtualization helpers (FlatList)
+    const ITEM_HEIGHT = 56;
+
+    const handleEndReached = useCallback(() => {
+      const currentMachineId = (maquinasFiltradasIds.length === 1)
+        ? maquinasFiltradasIds[0]
+        : String(maquinas[maquinaActual]?.id || '');
+      if (typeof onRequestPage === 'function') {
+        onRequestPage(currentMachineId).catch(e => console.error('onRequestPage err', e));
+      }
+    }, [maquinasFiltradasIds, maquinas, maquinaActual, onRequestPage]);
+
+    const renderRow = useCallback(({ item, index }) => {
+      return (
+        <TrabajoRow
+          trabajo={item}
+          index={index}
+          maquinas={maquinas}
+          maquinaActual={maquinaActual}
+          canReorder={canReorder}
+          draggingId={draggingId}
+          targetIndex={targetIndex}
+          cambiandoMaquina={cambiandoMaquina}
+          handleMouseDown={handleMouseDown}
+          handleCambiarMaquina={handleCambiarMaquina}
+          getStatusColor={getStatusColor}
+          getStatusLabel={getStatusLabel}
+          getEntregaSemaforo={getEntregaSemaforo}
+          formatearFecha={formatearFecha}
+          rowRefsRef={rowRefsRef}
+          styles={styles}
+          ITEM_HEIGHT={ITEM_HEIGHT}
+        />
+      );
+    }, [maquinas, maquinaActual, canReorder, draggingId, targetIndex, cambiandoMaquina]);
+
   if (!maquinas || maquinas.length === 0) {
     return <Text>No hay máquinas</Text>;
   }
@@ -366,6 +418,9 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.headerText}>#</Text>
           </View>
+          <View style={[styles.tableCell, styles.colId]}>
+            <Text style={styles.headerText}>ID</Text>
+          </View>
           <View style={[styles.tableCell, styles.colNombre]}>
             <Text style={styles.headerText}>Pedido</Text>
           </View>
@@ -389,145 +444,59 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           </View>
         </View>
 
-        {/* Contenedor de filas sin scroll */}
-        <View style={styles.rowsContainer}>
-          {trabajosFiltrados && trabajosFiltrados.length > 0 ? (
-            (() => {
-              const startIdx = paginaActual * TRABAJOS_POR_PAGINA;
-              const endIdx = startIdx + TRABAJOS_POR_PAGINA;
-              const trabajosPagina = trabajosFiltrados.slice(startIdx, endIdx);
-              const totalPaginas = Math.ceil(trabajosFiltrados.length / TRABAJOS_POR_PAGINA);
-
-              return (
-                <>
-                  {trabajosPagina.map((trabajo, idxPagina) => {
-                    const [statusStyle, statusTextStyle] = getStatusColor(trabajo.estado);
-                    const entregaSemaforo = getEntregaSemaforo(trabajo.fecha_entrega);
-                    const isDragging = draggingId === trabajo.id;
-                    const showDropIndicator = canReorder && targetIndex === (startIdx + idxPagina) && !isDragging;
-                    const idxGlobal = startIdx + idxPagina;
-                    const maquinaFilaId = trabajo._maquina_id ?? maquinas[maquinaActual]?.id;
-
-                    return (
-                      <View key={trabajo.id}>
-                        {showDropIndicator && <View style={styles.dropIndicator} />}
-                        <View
-                          ref={(el) => {
-                            if (el) {
-                              rowRefsRef.current[trabajo.id] = el;
-                            }
-                          }}
-                          style={[
-                            styles.tableRow,
-                            idxGlobal % 2 === 1 && styles.rowAlternate,
-                            canReorder && isDragging && styles.draggedRow,
-                            !canReorder && { cursor: 'default' },
-                          ]}
-                          onMouseDown={canReorder ? (e) => handleMouseDown(e, trabajo.id, idxGlobal) : undefined}
-                        >
-                          <View style={[styles.tableCell, styles.colPos]}>
-                            <Text style={styles.dragHandle}>{canReorder ? '≡' : '-'}</Text>
-                          </View>
-                          <View style={[styles.tableCell, styles.colNombre]}>
-                            <Text style={styles.cellText} numberOfLines={1}>
-                              {trabajo.nombre}
-                            </Text>
-                          </View>
-                          <View style={[styles.tableCell, styles.colCliente]}>
-                            <Text style={styles.cellText} numberOfLines={1}>
-                              {typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}
-                            </Text>
-                          </View>
-                          <View style={[styles.tableCell, styles.colEstado]}>
-                            <View style={[styles.statusBadge, statusStyle]}>
-                              <Text style={[styles.statusText, statusTextStyle]} numberOfLines={1}>
-                                {getStatusLabel(trabajo.estado)}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={[styles.tableCell, styles.colFechaPedido]}>
-                            <Text style={styles.cellText} numberOfLines={1}>
-                              {formatearFecha(trabajo.fecha_pedido)}
-                            </Text>
-                          </View>
-                          <View style={[styles.tableCell, styles.colFechaEntrega]}>
-                            <Text style={styles.cellText} numberOfLines={1}>
-                              {formatearFecha(trabajo.fecha_entrega)}
-                            </Text>
-                          </View>
-                          <View style={[styles.tableCell, styles.colDias]}>
-                            <View style={entregaSemaforo.container}>
-                              <Text style={entregaSemaforo.text} numberOfLines={1}>
-                                {entregaSemaforo.label}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={[styles.tableCell, styles.colMaquina]}>
-                            <select
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                border: '1px solid #CCC',
-                                backgroundColor: '#FFF',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                              }}
-                              value={maquinaFilaId}
-                              onChange={(e) => {
-                                const nuevaMaquina = e.target.value;
-                                if (String(nuevaMaquina) !== String(maquinaFilaId)) {
-                                  handleCambiarMaquina(trabajo.id, nuevaMaquina);
-                                }
-                              }}
-                              disabled={cambiandoMaquina === trabajo.id}
-                              onClick={(e) => e.stopPropagation()}
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
-                              {maquinas.map((maq) => (
-                                <option key={maq.id} value={maq.id}>
-                                  {maq.nombre}
-                                </option>
-                              ))}
-                            </select>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-
-                  {/* Controles de paginación */}
-                  <View style={styles.paginationContainer}>
-                    <TouchableOpacity
-                      style={[styles.paginationButton, paginaActual === 0 && styles.paginationButtonDisabled]}
-                      onPress={() => setPaginaActual(Math.max(0, paginaActual - 1))}
-                      disabled={paginaActual === 0}
-                    >
-                      <Text style={styles.paginationButtonText}>← Anterior</Text>
-                    </TouchableOpacity>
-                    
-                    <Text style={styles.paginationInfo}>
-                      Página {paginaActual + 1} de {totalPaginas} ({trabajosFiltrados.length} trabajos)
-                    </Text>
-                    
-                    <TouchableOpacity
-                      style={[styles.paginationButton, paginaActual >= totalPaginas - 1 && styles.paginationButtonDisabled]}
-                      onPress={() => setPaginaActual(Math.min(totalPaginas - 1, paginaActual + 1))}
-                      disabled={paginaActual >= totalPaginas - 1}
-                    >
-                      <Text style={styles.paginationButtonText}>Siguiente →</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              );
-            })()
-          ) : (
+        {/* Contenedor de filas virtualizado (FlatList) */}
+        <FlatList
+          data={trabajosFiltrados}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderRow}
+          getItemLayout={(data, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+          onEndReachedThreshold={0.5}
+          onEndReached={handleEndReached}
+          initialNumToRender={20}
+          windowSize={21}
+          style={styles.rowsContainer}
+          ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {filtro ? 'No hay resultados para la búsqueda con este filtro' : 'No hay trabajos para el filtro seleccionado'}
-              </Text>
+              <Text style={styles.emptyText}>{filtro ? 'No hay resultados para la búsqueda con este filtro' : 'No hay trabajos para el filtro seleccionado'}</Text>
             </View>
           )}
-        </View>
+          ListFooterComponent={() => {
+            const totalCountForScroll = (searchText && searchText.trim() !== '' && trabajosTotals && trabajosTotals.search_total)
+              ? trabajosTotals.search_total
+              : (trabajosTotals && trabajosTotals[(maquinasFiltradasIds.length === 1) ? maquinasFiltradasIds[0] : String(maquinas[maquinaActual]?.id || '')]) || trabajosFiltrados.length;
+            const totalPaginas = Math.ceil(totalCountForScroll / TRABAJOS_POR_PAGINA) || 1;
+            return (
+              <View style={styles.paginationContainer}>
+                <TouchableOpacity
+                  style={[styles.paginationButton, paginaActual === 0 && styles.paginationButtonDisabled]}
+                  onPress={() => setPaginaActual(Math.max(0, paginaActual - 1))}
+                  disabled={paginaActual === 0}
+                >
+                  <Text style={styles.paginationButtonText}>← Anterior</Text>
+                </TouchableOpacity>
+                <Text style={styles.paginationInfo}>Página {paginaActual + 1} de {totalPaginas} ({totalCountForScroll} trabajos)</Text>
+                <TouchableOpacity
+                  style={[styles.paginationButton, paginaActual >= totalPaginas - 1 && styles.paginationButtonDisabled]}
+                  onPress={async () => {
+                    if (paginaActual >= totalPaginas - 1) return;
+                    if (typeof onRequestPage === 'function') {
+                      const currentMachineId = (maquinasFiltradasIds.length === 1)
+                        ? maquinasFiltradasIds[0]
+                        : String(maquinas[maquinaActual]?.id || '');
+                      const ok = await onRequestPage(currentMachineId);
+                      if (ok) setPaginaActual(Math.min(totalPaginas - 1, paginaActual + 1));
+                    } else {
+                      setPaginaActual(Math.min(totalPaginas - 1, paginaActual + 1));
+                    }
+                  }}
+                  disabled={paginaActual >= totalPaginas - 1}
+                >
+                  <Text style={styles.paginationButtonText}>Siguiente →</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+        />
       </View>
     </View>
   );
@@ -589,6 +558,9 @@ const styles = StyleSheet.create({
   },
   colPos: {
     width: '8%',
+  },
+  colId: {
+    flex: 0.12,
   },
   colNombre: {
     flex: 0.22,

@@ -471,6 +471,8 @@ export default function ProduccionScreen() {
   const navigation = useNavigation();
   const [maquinas, setMaquinas] = useState([]);
   const [trabajosPorMaquina, setTrabajosPorMaquina] = useState({});
+  const [trabajosPages, setTrabajosPages] = useState({});
+  const [trabajosTotals, setTrabajosTotals] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
@@ -543,11 +545,13 @@ export default function ProduccionScreen() {
 
       // Cargar trabajos para cada máquina (colas de producción: excluir parado, cancelado y finalizado)
       const trabajosObj = {};
+      const totalsObj = {};
       for (const maq of maquinasData.maquinas || []) {
         const maquinaNombreEncoded = encodeURIComponent(maq.nombre);
-        const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}`);
+        // Request first page for each machine to avoid loading huge lists at once
+        const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}&page=1&page_size=100`);
         const trabajosData = await trabajosRes.json();
-        
+
         // Filtrar trabajos: excluir parado, cancelado y finalizado
         const trabajosMaqFiltrados = (trabajosData.trabajos || []).filter(trabajo => {
           if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado') {
@@ -555,10 +559,19 @@ export default function ProduccionScreen() {
           }
           return true;
         });
-        
+
         trabajosObj[maq.id] = trabajosMaqFiltrados;
+        // marca que ya cargamos la página 1 para esta máquina
+        setTrabajosPages((p) => ({ ...p, [String(maq.id)]: 1 }));
+        // Registrar total devuelto por la API (si está disponible) para paginación
+        if (trabajosData && typeof trabajosData.total !== 'undefined') {
+          totalsObj[maq.id] = trabajosData.total;
+        } else {
+          totalsObj[maq.id] = trabajosMaqFiltrados.length;
+        }
       }
       setTrabajosPorMaquina(trabajosObj);
+      setTrabajosTotals(totalsObj);
     } catch (e) {
       console.error('Error cargando datos:', e);
       setError(e.message);
@@ -568,9 +581,123 @@ export default function ProduccionScreen() {
     }
   };
 
+  // Fetch a specific page for a machine and append unique items
+  const fetchPageForMachine = async (maquinaId, page) => {
+    try {
+      // if page not provided, use next page after last loaded
+      const last = trabajosPages[String(maquinaId)] || 1;
+      const targetPage = page || (last + 1);
+      const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maquinaId}&page=${targetPage}&page_size=100`);
+      if (!trabajosRes.ok) return false;
+      const trabajosData = await trabajosRes.json();
+      const paginaTrabajos = (trabajosData.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+
+      setTrabajosPorMaquina((prev) => {
+        const existente = Array.isArray(prev[maquinaId]) ? prev[maquinaId].slice() : [];
+        const ids = new Set(existente.map(t => String(t.id || t.trabajo_id || '')));
+        let added = 0;
+        for (const t of paginaTrabajos) {
+          const key = String(t.id || t.trabajo_id || '');
+          if (!ids.has(key)) {
+            existente.push(t);
+            ids.add(key);
+            added++;
+          }
+        }
+        const nuevo = { ...prev, [maquinaId]: existente };
+        // actualizar la página cargada
+        setTrabajosPages((p) => ({ ...p, [String(maquinaId)]: targetPage }));
+        return nuevo;
+      });
+
+      if (trabajosData && typeof trabajosData.total !== 'undefined') {
+        setTrabajosTotals((prev) => ({ ...prev, [maquinaId]: trabajosData.total }));
+      }
+      return true;
+    } catch (e) {
+      console.error('Error fetchPageForMachine', e);
+      return false;
+    }
+  };
+
+  // Fetch a page for global search (no maquina param) and either replace (page=1) or append (page>1)
+  const fetchSearchPage = async (page = 1) => {
+    if (!busquedaProduccion || busquedaProduccion.trim() === '') return false;
+    try {
+      const q = encodeURIComponent(busquedaProduccion.trim());
+      const res = await fetch(`http://localhost:8080/api/produccion?search=${q}&page=${page}&page_size=100`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      const paginaTrabajos = (data.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+
+      // Group by maquina and either replace (page=1) or append
+      const agrupado = {};
+      for (const t of paginaTrabajos) {
+        const maqId = String(t.maquina_id || t._maquina_id || t.maquina || 'sin_maquina');
+        agrupado[maqId] = agrupado[maqId] || [];
+        agrupado[maqId].push(t);
+      }
+
+      setTrabajosPorMaquina((prev) => {
+        const nuevo = { ...prev };
+        for (const [mid, lista] of Object.entries(agrupado)) {
+          if (page === 1) {
+            nuevo[mid] = lista;
+          } else {
+            const existente = Array.isArray(nuevo[mid]) ? nuevo[mid].slice() : [];
+            const ids = new Set(existente.map(t => String(t.id || t.trabajo_id || '')));
+            for (const t of lista) {
+              const key = String(t.id || t.trabajo_id || '');
+              if (!ids.has(key)) {
+                existente.push(t);
+                ids.add(key);
+              }
+            }
+            nuevo[mid] = existente;
+          }
+        }
+        return nuevo;
+      });
+
+      // update totals if provided
+      if (data && typeof data.total !== 'undefined') {
+        // when searching globally, store total under special key 'search' so ProductionBoard can still read it per-machine if desired
+        setTrabajosTotals((prev) => ({ ...prev, search_total: data.total }));
+        // record last loaded search page
+        setTrabajosPages((p) => ({ ...p, search: page }));
+      }
+      return true;
+    } catch (e) {
+      console.error('Error fetchSearchPage', e);
+      return false;
+    }
+  };
+
+  // handler passed to ProductionBoard to request a page load
+  const handleRequestPage = async (maquinaId, page) => {
+    if (busquedaProduccion && busquedaProduccion.trim() !== '') {
+      return await fetchSearchPage(page);
+    }
+    return await fetchPageForMachine(maquinaId, page);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // When the search term changes, perform server-side search across all records (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      (async () => {
+        if (busquedaProduccion && busquedaProduccion.trim() !== '') {
+          await fetchSearchPage(1);
+        } else {
+          await fetchData({ silent: true });
+        }
+      })();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [busquedaProduccion]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -737,10 +864,12 @@ export default function ProduccionScreen() {
         <ProductionBoard 
           maquinas={maquinas} 
           trabajosPorMaquina={trabajosPorMaquina}
+          trabajosTotals={trabajosTotals}
           searchText={busquedaProduccion}
           initialMaquinaId={maquinaInicial}
           maquinaActivaIds={maquinasFiltroIds}
           onRefresh={() => fetchData({ silent: true })}
+          onRequestPage={handleRequestPage}
         />
       </ScrollView>
     </View>

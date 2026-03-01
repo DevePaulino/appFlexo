@@ -18,6 +18,7 @@ import numpy as np
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 import pymongo
+from pymongo import UpdateMany, InsertOne
 import json
 import time
 import hashlib
@@ -830,6 +831,20 @@ def get_maquinas():
             'estado': estado
         }
         col.insert_one(doc)
+        # Invalidate production cache for this company (if redis configured)
+        try:
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                try:
+                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
+                        rc.delete(key)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         return jsonify({'success': True}), 200
     except Exception as e:
         print('REORDER ERROR:\n', _traceback.format_exc())
@@ -2748,41 +2763,106 @@ def api_get_produccion():
         maquina_param = request.args.get('maquina')
         if not maquina_param:
             return jsonify({'error': 'maquina parameter requerido'}), 400
-
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
 
+        # Pagination params (page 1-based)
+        try:
+            page = max(1, int(request.args.get('page', 1)))
+        except Exception:
+            page = 1
+        try:
+            page_size = int(request.args.get('page_size', 100))
+        except Exception:
+            page_size = 100
+        page_size = max(1, min(page_size, 500))
+
         # Accept both numeric maquina_id and string/ObjectId-like ids
         rows = []
+        maquina_match = None
+        skip = (page - 1) * page_size
+        # Optional Redis caching: try to return cached response for this query
+        cache_key = f"produccion:{empresa_id}:{maquina_param}:{page}:{page_size}"
+        rc = None
         try:
-            maquina_int = int(maquina_param)
-            rows = list(orden_col.find({'maquina_id': maquina_int, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                cached = rc.get(cache_key)
+                if cached:
+                    try:
+                        return app.response_class(cached, mimetype='application/json'), 200
+                    except Exception:
+                        pass
         except Exception:
-            # try string match
-            rows = list(orden_col.find({'maquina_id': str(maquina_param), 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
+            rc = None
+        try:
+            maquina_match = int(maquina_param)
+            cursor = orden_col.find({'maquina_id': maquina_match, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)])
+            total = cursor.count()
+            rows = list(cursor.skip(skip).limit(page_size))
+        except Exception:
+            maquina_match = str(maquina_param)
+            cursor = orden_col.find({'maquina_id': maquina_match, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)])
+            try:
+                total = cursor.count()
+            except Exception:
+                total = orden_col.count_documents({'maquina_id': maquina_match, 'empresa_id': empresa_id})
+            rows = list(cursor.skip(skip).limit(page_size))
 
-        # Deduplicate rows by the final displayed id (pedido._id if exists, otherwise trabajo_id)
+        # To avoid N queries, collect all trabajo_ids and fetch pedidos in one query
+        trabajo_ids = []
+        object_ids = []
+        for row in rows:
+            t = row.get('trabajo_id')
+            if t is None:
+                continue
+            s = str(t)
+            trabajo_ids.append(s)
+            # also collect ObjectId variants when possible
+            try:
+                if isinstance(t, str) and len(t) == 24:
+                    object_ids.append(ObjectId(t))
+            except Exception:
+                pass
+
+        # Build pedidos query: match by trabajo_id or by _id (when possible)
+        pedidos_map = {}
+        if trabajo_ids or object_ids:
+            or_clauses = []
+            if trabajo_ids:
+                or_clauses.append({'trabajo_id': {'$in': trabajo_ids}})
+            if object_ids:
+                or_clauses.append({'_id': {'$in': object_ids}})
+            query = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
+            for p in pedidos_col.find(query):
+                # map by both _id and trabajo_id for quick lookup
+                if '_id' in p:
+                    pedidos_map[str(p['_id'])] = p
+                if 'trabajo_id' in p and p['trabajo_id'] is not None:
+                    pedidos_map[str(p['trabajo_id'])] = p
+
+        # Now build the final list, deduping by canonical id
         seen = set()
         trabajos = []
         for row in rows:
             trabajo_id = row.get('trabajo_id')
             posicion = row.get('posicion')
+            canonical_id = None
 
-            # Try to resolve a matching pedido by multiple strategies
+            # Try to find matching pedido in the pre-fetched map
             pedido = None
             if trabajo_id is not None:
-                # first, try to find by trabajo_id field on pedidos
-                pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+                pedido = pedidos_map.get(str(trabajo_id))
                 if not pedido:
-                    # if trabajo_id looks like an ObjectId hex, try matching by _id too
+                    # also try matching by ObjectId form
                     try:
                         if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
-                            pedido = pedidos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+                            pedido = pedidos_map.get(str(ObjectId(trabajo_id)))
                     except Exception:
                         pedido = None
 
-            # Determine the canonical id to dedupe on (what will be shown as `id`)
-            canonical_id = None
             if pedido and '_id' in pedido:
                 canonical_id = str(pedido.get('_id'))
             else:
@@ -2799,7 +2879,21 @@ def api_get_produccion():
             else:
                 trabajos.append({'id': canonical_id, 'nombre': 'Pendiente', 'posicion': posicion})
 
-        return jsonify({'trabajos': trabajos}), 200
+        # include pagination metadata when requested
+        resp = {'trabajos': trabajos}
+        try:
+            resp['page'] = page
+            resp['page_size'] = page_size
+            resp['total'] = int(total)
+        except Exception:
+            pass
+        # Cache the response briefly so small bursts of requests reuse it (if redis configured)
+        try:
+            if rc:
+                rc.set(cache_key, json.dumps(resp), ex=3)
+        except Exception:
+            pass
+        return jsonify(resp), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2950,17 +3044,45 @@ def reordenar_trabajos():
 
         # Build a mapping from canonical_id -> list of trabajo_orden _id documents for this maquina
         current_rows = list(orden_col.find({'maquina_id': maquina_id, 'empresa_id': empresa_id}))
+        # collect trabajo_ids from current_rows and fetch pedidos in one query
+        trabajo_ids = []
+        object_ids = []
+        for r in current_rows:
+            t = r.get('trabajo_id')
+            if t is None:
+                continue
+            trabajo_ids.append(str(t))
+            try:
+                if isinstance(t, str) and len(t) == 24:
+                    object_ids.append(ObjectId(t))
+            except Exception:
+                pass
+
+        pedidos_map = {}
+        if trabajo_ids or object_ids:
+            or_clauses = []
+            if trabajo_ids:
+                or_clauses.append({'trabajo_id': {'$in': trabajo_ids}})
+            if object_ids:
+                or_clauses.append({'_id': {'$in': object_ids}})
+            query = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
+            for p in pedidos_col.find(query):
+                if '_id' in p:
+                    pedidos_map[str(p['_id'])] = p
+                if 'trabajo_id' in p and p['trabajo_id'] is not None:
+                    pedidos_map[str(p['trabajo_id'])] = p
+
         canonical_map = {}  # canonical_id -> [doc_ids]
         for r in current_rows:
             t_id = r.get('trabajo_id')
             canonical = None
             pedido = None
             if t_id is not None:
-                pedido = pedidos_col.find_one({'trabajo_id': t_id, 'empresa_id': empresa_id})
+                pedido = pedidos_map.get(str(t_id))
                 if not pedido:
                     try:
                         if isinstance(t_id, str) and len(t_id) == 24:
-                            pedido = pedidos_col.find_one({'_id': ObjectId(t_id), 'empresa_id': empresa_id})
+                            pedido = pedidos_map.get(str(ObjectId(t_id)))
                     except Exception:
                         pedido = None
 
@@ -2973,26 +3095,35 @@ def reordenar_trabajos():
                 continue
             canonical_map.setdefault(canonical, []).append(r['_id'])
 
-        # Apply updates: set all trabajo_orden rows that map to the canonical id to the nueva_posicion
+        # Prepare bulk operations to update positions efficiently
+        ops = []
         for item in trabajos:
             trabajo_id = str(item.get('trabajo_id'))
             nueva_posicion = int(item.get('nueva_posicion') or 0)
-
-            updated_any = False
             doc_ids = canonical_map.get(trabajo_id) or []
-            for did in doc_ids:
-                res = orden_col.update_one({'_id': did, 'empresa_id': empresa_id}, {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}})
-                if res.matched_count:
-                    updated_any = True
+            if doc_ids:
+                ops.append(UpdateMany({'_id': {'$in': doc_ids}, 'empresa_id': empresa_id}, {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}}))
+            else:
+                # insert new row if nothing existed for this canonical id
+                ops.append(InsertOne({'empresa_id': empresa_id, 'trabajo_id': trabajo_id, 'maquina_id': maquina_id, 'posicion': nueva_posicion}))
 
-            # If no existing rows matched this canonical id, insert a new one
-            if not updated_any:
-                orden_col.insert_one({
-                    'empresa_id': empresa_id,
-                    'trabajo_id': trabajo_id,
-                    'maquina_id': maquina_id,
-                    'posicion': nueva_posicion
-                })
+        if ops:
+            orden_col.bulk_write(ops, ordered=False)
+
+        # Invalidate production cache for this company (if redis configured)
+        try:
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                try:
+                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
+                        rc.delete(key)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
