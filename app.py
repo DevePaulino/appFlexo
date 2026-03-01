@@ -2797,19 +2797,17 @@ def api_get_produccion():
                         pass
         except Exception:
             rc = None
+        # Normalize maquina id and query using explicit query dict to avoid
+        # consuming the cursor when counting results (use count_documents).
         try:
             maquina_match = int(maquina_param)
-            cursor = orden_col.find({'maquina_id': maquina_match, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)])
-            total = cursor.count()
-            rows = list(cursor.skip(skip).limit(page_size))
         except Exception:
             maquina_match = str(maquina_param)
-            cursor = orden_col.find({'maquina_id': maquina_match, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)])
-            try:
-                total = cursor.count()
-            except Exception:
-                total = orden_col.count_documents({'maquina_id': maquina_match, 'empresa_id': empresa_id})
-            rows = list(cursor.skip(skip).limit(page_size))
+
+        query = {'maquina_id': maquina_match, 'empresa_id': empresa_id}
+        cursor = orden_col.find(query).sort([('posicion', 1), ('_id', 1)])
+        total = orden_col.count_documents(query)
+        rows = list(cursor.skip(skip).limit(page_size))
 
         # To avoid N queries, collect all trabajo_ids and fetch pedidos in one query
         trabajo_ids = []

@@ -1,0 +1,74 @@
+[
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efcf"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Dise\u00f1o",
+    "orden": 1,
+    "fecha_creacion": "2026-03-02T00:03:10.501570"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd0"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Pendiente de Aprobaci\u00f3n",
+    "orden": 2,
+    "fecha_creacion": "2026-03-02T00:03:10.519169"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd1"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Pendiente de Clich\u00e9",
+    "orden": 3,
+    "fecha_creacion": "2026-03-02T00:03:10.519918"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd2"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Pendiente de Impresi\u00f3n",
+    "orden": 4,
+    "fecha_creacion": "2026-03-02T00:03:10.520389"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd3"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Pendiente Post-Impresi\u00f3n",
+    "orden": 5,
+    "fecha_creacion": "2026-03-02T00:03:10.520937"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd4"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Finalizado",
+    "orden": 6,
+    "fecha_creacion": "2026-03-02T00:03:10.521549"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd5"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Parado",
+    "orden": 7,
+    "fecha_creacion": "2026-03-02T00:03:10.522055"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c5ae6a944a3b2d60efd6"
+    },
+    "categoria": "estados_pedido",
+    "valor": "Cancelado",
+    "orden": 8,
+    "fecha_creacion": "2026-03-02T00:03:10.522417"
+  }
+]

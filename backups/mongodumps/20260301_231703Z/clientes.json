@@ -1,0 +1,72 @@
+[
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5a"
+    },
+    "nombre": "Alberto Garc\u00eda",
+    "email": "alberto.0@example.com",
+    "telefono": "+34600000000",
+    "direccion": "Calle Demo 10",
+    "ciudad": "Madrid",
+    "codigo_postal": "28010",
+    "pais": "ES",
+    "empresa_id": 1,
+    "fecha_creacion": "2026-03-01T23:02:51.053913"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5b"
+    },
+    "nombre": "Beatriz Mart\u00ednez",
+    "email": "beatriz.1@example.com",
+    "telefono": "+34600000001",
+    "direccion": "Calle Demo 11",
+    "ciudad": "Madrid",
+    "codigo_postal": "28011",
+    "pais": "ES",
+    "empresa_id": 1,
+    "fecha_creacion": "2026-03-01T23:02:51.062466"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5c"
+    },
+    "nombre": "Carlos L\u00f3pez",
+    "email": "carlos.2@example.com",
+    "telefono": "+34600000002",
+    "direccion": "Calle Demo 12",
+    "ciudad": "Madrid",
+    "codigo_postal": "28012",
+    "pais": "ES",
+    "empresa_id": 1,
+    "fecha_creacion": "2026-03-01T23:02:51.063036"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5d"
+    },
+    "nombre": "Daniela Santos",
+    "email": "daniela.3@example.com",
+    "telefono": "+34600000003",
+    "direccion": "Calle Demo 13",
+    "ciudad": "Madrid",
+    "codigo_postal": "28013",
+    "pais": "ES",
+    "empresa_id": 1,
+    "fecha_creacion": "2026-03-01T23:02:51.063442"
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5e"
+    },
+    "nombre": "Esteban P\u00e9rez",
+    "email": "esteban.4@example.com",
+    "telefono": "+34600000004",
+    "direccion": "Calle Demo 14",
+    "ciudad": "Madrid",
+    "codigo_postal": "28014",
+    "pais": "ES",
+    "empresa_id": 1,
+    "fecha_creacion": "2026-03-01T23:02:51.063817"
+  }
+]
