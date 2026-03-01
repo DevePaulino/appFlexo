@@ -832,6 +832,7 @@ def get_maquinas():
         col.insert_one(doc)
         return jsonify({'success': True}), 200
     except Exception as e:
+        print('REORDER ERROR:\n', _traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/maquinas/<int:maquina_id>', methods=['PUT'])
@@ -880,7 +881,9 @@ def update_maquina(maquina_id):
             return jsonify({'error': 'Máquina no encontrada'}), 404
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        print('REORDER EXCEPTION:\n', tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 
 @app.route('/api/maquinas/<int:maquina_id>', methods=['DELETE'])
@@ -892,6 +895,9 @@ def delete_maquina(maquina_id):
         empresa_id = int(request_user.get('empresa_id') or 0)
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
         total = col.count_documents({'empresa_id': empresa_id})
         maquina = col.find_one({'id': maquina_id, 'empresa_id': empresa_id})
         if total == 1 and maquina and maquina.get('nombre') == PROTECTED_MAQUINA_NOMBRE:
@@ -2753,28 +2759,43 @@ def api_get_produccion():
             # try string match
             rows = list(orden_col.find({'maquina_id': str(maquina_param), 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
 
-        # Deduplicate rows by `trabajo_id` (keep first occurrence ordered by posicion)
+        # Deduplicate rows by the final displayed id (pedido._id if exists, otherwise trabajo_id)
         seen = set()
         trabajos = []
         for row in rows:
             trabajo_id = row.get('trabajo_id')
             posicion = row.get('posicion')
-            key_id = str(trabajo_id) if trabajo_id is not None else None
-            if key_id in seen:
-                continue
-            seen.add(key_id)
 
+            # Try to resolve a matching pedido by multiple strategies
             pedido = None
             if trabajo_id is not None:
+                # first, try to find by trabajo_id field on pedidos
                 pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+                if not pedido:
+                    # if trabajo_id looks like an ObjectId hex, try matching by _id too
+                    try:
+                        if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                            pedido = pedidos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+                    except Exception:
+                        pedido = None
+
+            # Determine the canonical id to dedupe on (what will be shown as `id`)
+            canonical_id = None
+            if pedido and '_id' in pedido:
+                canonical_id = str(pedido.get('_id'))
+            else:
+                canonical_id = str(trabajo_id) if trabajo_id is not None else None
+
+            if canonical_id in seen:
+                continue
+            seen.add(canonical_id)
+
             if pedido:
                 p = fix_id(pedido)
                 p['posicion'] = posicion
                 trabajos.append(p)
             else:
-                # fallback: include minimal row so frontend can still render placeholders
-                # Use `id` key so frontend can use a consistent `trabajo.id` value
-                trabajos.append({'id': trabajo_id, 'nombre': 'Pendiente', 'posicion': posicion})
+                trabajos.append({'id': canonical_id, 'nombre': 'Pendiente', 'posicion': posicion})
 
         return jsonify({'trabajos': trabajos}), 200
     except Exception as e:
@@ -2867,18 +2888,59 @@ def reordenar_trabajos():
 
         # Normalizar `maquina_id`: aceptar tanto enteros como cadenas (ObjectId-like)
         try:
+            print('REORDER: start')
             maquina_id = int(maquina_id)
         except Exception:
             maquina_id = str(maquina_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        print('REORDER: orden_col and pedidos_col prepared')
+
+        # Build a mapping from canonical_id -> list of trabajo_orden _id documents for this maquina
+        current_rows = list(orden_col.find({'maquina_id': maquina_id, 'empresa_id': empresa_id}))
+        canonical_map = {}  # canonical_id -> [doc_ids]
+        for r in current_rows:
+            t_id = r.get('trabajo_id')
+            canonical = None
+            pedido = None
+            if t_id is not None:
+                pedido = pedidos_col.find_one({'trabajo_id': t_id, 'empresa_id': empresa_id})
+                if not pedido:
+                    try:
+                        if isinstance(t_id, str) and len(t_id) == 24:
+                            pedido = pedidos_col.find_one({'_id': ObjectId(t_id), 'empresa_id': empresa_id})
+                    except Exception:
+                        pedido = None
+
+            if pedido and '_id' in pedido:
+                canonical = str(pedido.get('_id'))
+            else:
+                canonical = str(t_id) if t_id is not None else None
+
+            if canonical is None:
+                continue
+            canonical_map.setdefault(canonical, []).append(r['_id'])
+
+        # Apply updates: set all trabajo_orden rows that map to the canonical id to the nueva_posicion
         for item in trabajos:
-            trabajo_id = item['trabajo_id']
-            nueva_posicion = int(item['nueva_posicion'])
-            orden_col.update_one(
-                {'trabajo_id': trabajo_id, 'empresa_id': empresa_id},
-                {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}},
-                upsert=True
-            )
+            trabajo_id = str(item.get('trabajo_id'))
+            nueva_posicion = int(item.get('nueva_posicion') or 0)
+
+            updated_any = False
+            doc_ids = canonical_map.get(trabajo_id) or []
+            for did in doc_ids:
+                res = orden_col.update_one({'_id': did, 'empresa_id': empresa_id}, {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}})
+                if res.matched_count:
+                    updated_any = True
+
+            # If no existing rows matched this canonical id, insert a new one
+            if not updated_any:
+                orden_col.insert_one({
+                    'empresa_id': empresa_id,
+                    'trabajo_id': trabajo_id,
+                    'maquina_id': maquina_id,
+                    'posicion': nueva_posicion
+                })
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

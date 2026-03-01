@@ -476,11 +476,12 @@ export default function ProduccionScreen() {
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
   const [maquinasFiltroIds, setMaquinasFiltroIds] = useState([]);
   const maquinaInicial = route?.params?.maquinaId || null;
+  const LOCALSTORAGE_KEY = 'pfp_maquinasFiltro';
 
   const getCargaPorMaquina = () => {
     const cargas = maquinas.map((maq) => {
       const cantidad = (trabajosPorMaquina[maq.id] || []).length;
-      return { id: maq.id, nombre: maq.nombre, cantidad };
+      return { id: String(maq.id), nombre: maq.nombre, cantidad };
     });
     return { cargas };
   };
@@ -587,18 +588,46 @@ export default function ProduccionScreen() {
     if (!maquinas || maquinas.length === 0) return;
 
     if (maquinasFiltroIds.length > 0) {
-      const idsValidos = maquinasFiltroIds.filter((id) => maquinas.some((m) => Number(m.id) === Number(id)));
-      const idsNormalizados = idsValidos.length > 1 ? [idsValidos[0]] : idsValidos;
+      const idsValidos = maquinasFiltroIds.filter((id) => maquinas.some((m) => String(m.id) === String(id)));
+      const idsNormalizados = idsValidos.length > 1 ? [String(idsValidos[0])] : idsValidos.map(String);
       if (idsNormalizados.length !== maquinasFiltroIds.length || idsNormalizados[0] !== maquinasFiltroIds[0]) {
         setMaquinasFiltroIds(idsNormalizados);
       }
       return;
     }
 
-    if (maquinaInicial && maquinas.some((m) => Number(m.id) === Number(maquinaInicial))) {
-      setMaquinasFiltroIds([Number(maquinaInicial)]);
+    if (maquinaInicial && maquinas.some((m) => String(m.id) === String(maquinaInicial))) {
+      setMaquinasFiltroIds([String(maquinaInicial)]);
     }
   }, [maquinas, maquinasFiltroIds, maquinaInicial]);
+
+  // Cargar filtro persistente desde localStorage al montar
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMaquinasFiltroIds(parsed.map(String));
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo leer filtro persistente:', e);
+    }
+  }, []);
+
+  // Persistir filtro en localStorage cuando cambie
+  useEffect(() => {
+    try {
+      if (maquinasFiltroIds && maquinasFiltroIds.length > 0) {
+        localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(maquinasFiltroIds.map(String)));
+      } else {
+        localStorage.removeItem(LOCALSTORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn('No se pudo guardar filtro persistente:', e);
+    }
+  }, [maquinasFiltroIds]);
 
   const toggleMaquinaFiltro = (maquinaId) => {
     const maquinaIdStr = String(maquinaId);
@@ -664,7 +693,7 @@ export default function ProduccionScreen() {
                   {cargas.map((carga) => {
                     const heightPct = Math.max(6, (carga.cantidad / maxCarga) * 100);
                     const tone = getMachineTone(carga.id);
-                    const activa = maquinasFiltroIds.includes(Number(carga.id));
+                    const activa = maquinasFiltroIds.includes(String(carga.id));
                     const hayFiltroActivo = maquinasFiltroIds.length > 0;
                     return (
                       <TouchableOpacity
@@ -672,6 +701,7 @@ export default function ProduccionScreen() {
                         style={[
                           styles.verticalBarItem,
                           activa && styles.verticalBarItemActive,
+                          activa ? { borderWidth: 2, borderColor: getMachineTone(carga.id) } : null,
                           hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
                         ]}
                         onPress={() => toggleMaquinaFiltro(carga.id)}
@@ -690,9 +720,9 @@ export default function ProduccionScreen() {
           })()}
           {maquinasFiltroIds.length > 0 && (
             <View style={styles.filterRow}>
-              <Text style={styles.filterText}>
+                <Text style={styles.filterText}>
                 Filtro activo: {maquinas
-                  .filter((m) => maquinasFiltroIds.includes(Number(m.id)))
+                  .filter((m) => maquinasFiltroIds.includes(String(m.id)))
                   .map((m) => m.nombre)
                   .join('')}
               </Text>
