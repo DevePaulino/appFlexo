@@ -910,7 +910,9 @@ def delete_maquina(maquina_id):
         col.delete_one({'id': maquina_id, 'empresa_id': empresa_id})
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        print('MOVER EXCEPTION:\n', tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 # Endpoints para clientes
 @app.route('/api/clientes', methods=['GET'])
@@ -2819,7 +2821,51 @@ def mover_trabajo_maquina():
         
         # Eliminar de la máquina anterior (si existe)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
-        orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+
+        # Build list of possible trabajo_id variants stored in trabajo_orden
+        posible_ids = set()
+        if trabajo_id is not None:
+            posible_ids.add(trabajo_id)
+            # if looks like ObjectId hex, include ObjectId form
+            try:
+                if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                    posible_ids.add(ObjectId(trabajo_id))
+            except Exception:
+                pass
+
+        # Check pedidos referring to this trabajo_id (by trabajo_id or by _id)
+        try:
+            pedido_candidate = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+            if pedido_candidate and '_id' in pedido_candidate:
+                posible_ids.add(str(pedido_candidate['_id']))
+                try:
+                    posible_ids.add(pedido_candidate['_id'])
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        try:
+            if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                pedido_by_id = pedidos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+                if pedido_by_id and '_id' in pedido_by_id:
+                    posible_ids.add(str(pedido_by_id['_id']))
+                    try:
+                        posible_ids.add(pedido_by_id['_id'])
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Perform delete matching any of the possible id representations
+        if posible_ids:
+            or_clauses = []
+            for pid in posible_ids:
+                or_clauses.append({'trabajo_id': pid})
+            orden_col.delete_many({'empresa_id': empresa_id, '$or': or_clauses})
+        else:
+            orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
 
         # Normalizar `maquina_destino`: aceptar tanto enteros como cadenas (ObjectId-like)
         try:
