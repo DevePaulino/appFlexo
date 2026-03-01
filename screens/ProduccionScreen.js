@@ -601,12 +601,8 @@ export default function ProduccionScreen() {
   }, [maquinas, maquinasFiltroIds, maquinaInicial]);
 
   const toggleMaquinaFiltro = (maquinaId) => {
-    const maquinaIdNum = Number(maquinaId);
-    setMaquinasFiltroIds((prev) =>
-      prev.includes(maquinaIdNum)
-        ? []
-        : [maquinaIdNum]
-    );
+    const maquinaIdStr = String(maquinaId);
+    setMaquinasFiltroIds((prev) => (prev.includes(maquinaIdStr) ? [] : [maquinaIdStr]));
   };
 
   if (loading) {

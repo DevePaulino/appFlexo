@@ -13,9 +13,10 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   const dragStartRef = useRef({ startY: 0, trabajoId: null, currentIndex: null });
   const rowRefsRef = useRef({});
   const targetIndexRef = useRef(null);
+  // Treat machine ids as strings to remain consistent with backend
   const maquinasFiltradasIds = (maquinaActivaIds || [])
-    .map((id) => Number(id))
-    .filter((id) => maquinas.some((m) => Number(m.id) === id));
+    .map((id) => String(id))
+    .filter((id) => maquinas.some((m) => String(m.id) === id));
   const canReorder = maquinasFiltradasIds.length === 1;
 
   // Actualizar trabajos según filtro de máquinas activo
@@ -23,14 +24,14 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     if (!maquinas || maquinas.length === 0) return;
 
     if (maquinasFiltradasIds.length === 1) {
-      const indice = maquinas.findIndex((m) => Number(m.id) === Number(maquinasFiltradasIds[0]));
+      const indice = maquinas.findIndex((m) => String(m.id) === String(maquinasFiltradasIds[0]));
       if (indice !== -1 && indice !== maquinaActual) {
         setMaquinaActual(indice);
       }
     }
 
     const maquinasFuente = maquinasFiltradasIds.length > 0
-      ? maquinas.filter((m) => maquinasFiltradasIds.includes(Number(m.id)))
+      ? maquinas.filter((m) => maquinasFiltradasIds.includes(String(m.id)))
       : maquinas;
 
     const combinado = maquinasFuente.flatMap((maq) =>
@@ -51,7 +52,17 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       return (a.posicion || 0) - (b.posicion || 0);
     });
 
-    setTrabajos(ordenados);
+    // Deduplicate by trabajo id (normalize to string). Keep first occurrence.
+    const seen = new Set();
+    const unique = [];
+    for (const t of ordenados) {
+      const idKey = String(t.id || t.trabajo_id || '');
+      if (!idKey) continue;
+      if (seen.has(idKey)) continue;
+      seen.add(idKey);
+      unique.push(t);
+    }
+    setTrabajos(unique);
     setPaginaActual(0);
   }, [maquinaActual, maquinas, trabajosPorMaquina, maquinaActivaIds]);
 
@@ -59,7 +70,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     if (!maquinas || maquinas.length === 0) return;
     const objetivo = (maquinaActivaIds && maquinaActivaIds.length > 0) ? maquinaActivaIds[0] : initialMaquinaId;
     if (!objetivo) return;
-    const indice = maquinas.findIndex((m) => Number(m.id) === Number(objetivo));
+    const indice = maquinas.findIndex((m) => String(m.id) === String(objetivo));
     if (indice !== -1 && indice !== maquinaActual) {
       setMaquinaActual(indice);
     }
@@ -127,7 +138,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           setTrabajos(newTrabajos);
 
           // GUARDAR EN SERVIDOR
-          const maqActual = maquinas.find((m) => Number(m.id) === Number(maquinasFiltradasIds[0])) || maquinas[maquinaActual];
+          const maqActual = maquinas.find((m) => String(m.id) === String(maquinasFiltradasIds[0])) || maquinas[maquinaActual];
           try {
             const trabajosParaGuardar = newTrabajos.map(t => ({
               trabajo_id: t.id,
@@ -223,7 +234,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       
       if (res.ok) {
         // Encontrar el índice de la máquina destino
-        const indiceMaquinaDestino = maquinas.findIndex(m => Number(m.id) === Number(nuevaMaquinaId));
+        const indiceMaquinaDestino = maquinas.findIndex(m => String(m.id) === String(nuevaMaquinaId));
 
         // Cambiar inmediatamente a la pestaña de destino para mantener el contexto
         if (indiceMaquinaDestino !== -1) {

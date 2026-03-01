@@ -2752,10 +2752,18 @@ def api_get_produccion():
         except Exception:
             # try string match
             rows = list(orden_col.find({'maquina_id': str(maquina_param), 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
+
+        # Deduplicate rows by `trabajo_id` (keep first occurrence ordered by posicion)
+        seen = set()
         trabajos = []
         for row in rows:
             trabajo_id = row.get('trabajo_id')
             posicion = row.get('posicion')
+            key_id = str(trabajo_id) if trabajo_id is not None else None
+            if key_id in seen:
+                continue
+            seen.add(key_id)
+
             pedido = None
             if trabajo_id is not None:
                 pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
@@ -2765,7 +2773,8 @@ def api_get_produccion():
                 trabajos.append(p)
             else:
                 # fallback: include minimal row so frontend can still render placeholders
-                trabajos.append({'trabajo_id': trabajo_id, 'posicion': posicion})
+                # Use `id` key so frontend can use a consistent `trabajo.id` value
+                trabajos.append({'id': trabajo_id, 'nombre': 'Pendiente', 'posicion': posicion})
 
         return jsonify({'trabajos': trabajos}), 200
     except Exception as e:
@@ -2852,11 +2861,15 @@ def reordenar_trabajos():
         data = request.get_json()
         trabajos = data.get('trabajos', [])  # Lista de {trabajo_id, nueva_posicion}
         maquina_id = data.get('maquina_id')
-        
+
         if not trabajos or maquina_id is None:
             return jsonify({'error': 'Faltan datos'}), 400
 
-        maquina_id = int(maquina_id)
+        # Normalizar `maquina_id`: aceptar tanto enteros como cadenas (ObjectId-like)
+        try:
+            maquina_id = int(maquina_id)
+        except Exception:
+            maquina_id = str(maquina_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         for item in trabajos:
             trabajo_id = item['trabajo_id']
