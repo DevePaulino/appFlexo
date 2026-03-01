@@ -865,11 +865,19 @@ export default function TrabajoScreen() {
   const handleEnviarAProduccion = async (maquinaId, maquinaNombre) => {
     if (!trabajoParaProduccion) return;
     try {
+      // Determinar el id real del trabajo: preferir el trabajo anidado en el pedido
+      const trabajoIdToSend = (
+        (trabajoParaProduccion && trabajoParaProduccion.trabajo && (trabajoParaProduccion.trabajo.id || trabajoParaProduccion.trabajo._id || trabajoParaProduccion.trabajo.trabajo_id))
+        || trabajoParaProduccion.trabajo_id
+        || trabajoParaProduccion.id
+        || trabajoParaProduccion._id
+      );
+
       const res = await fetch('http://localhost:8080/api/produccion/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          trabajo_id: trabajoParaProduccion.id,
+          trabajo_id: trabajoIdToSend,
           maquina_id: maquinaId,
         }),
       });

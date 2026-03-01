@@ -231,6 +231,7 @@ const BotonSelector = ({
     small,
     required,
     submitted,
+    disabled = false,
 }) => (
     <View style={styles.selectorRow}>
         {opciones.map((opcion) => {
@@ -262,6 +263,7 @@ const BotonSelector = ({
                         alignItems: 'center'
                     }}
                     onPress={() => {
+                        if (disabled) return;
                         if (!multiple) {
                             onSelect(opcion);
                             return;
@@ -298,6 +300,7 @@ const TintasSelector = ({
     onChangeAdding,
     onConfirmAdding,
     addingMatchHex
+    , disabled = false
 }) => (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
         {opcionesTintas.map((tinta) => {
@@ -307,6 +310,7 @@ const TintasSelector = ({
                     key={tinta.label}
                     style={styles.tintaBtn(active, tinta)}
                     onPress={() => {
+                        if (disabled) return;
                         setSelectedTintas(prev =>
                             active ? prev.filter(l => l !== tinta.label) : [...prev, tinta.label]
                         );
@@ -326,18 +330,21 @@ const TintasSelector = ({
                     <TouchableOpacity
                         style={[styles.tintaBtn(active, tintaObj), { backgroundColor: p.hex || (active ? '#E8E8EC' : '#FBFBFD') }]}
                         onPress={() => {
+                            if (disabled) return;
                             setSelectedTintas(prev =>
                                 active ? prev.filter(l => l !== p.label) : [...prev, p.label]
                             );
                         }}
                     >
                         <Text style={[styles.tintaTxt, { color: '#fff' }]}>{p.label}</Text>
-                        <TouchableOpacity
-                            onPress={() => typeof onRemovePantone === 'function' && onRemovePantone(idx)}
-                            style={{ position: 'absolute', right: -6, top: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <Text style={{ color: '#fff', fontSize: 12 }}>×</Text>
-                        </TouchableOpacity>
+                        {!disabled && (
+                            <TouchableOpacity
+                                onPress={() => typeof onRemovePantone === 'function' && onRemovePantone(idx)}
+                                style={{ position: 'absolute', right: -6, top: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Text style={{ color: '#fff', fontSize: 12 }}>×</Text>
+                            </TouchableOpacity>
+                        )}
                     </TouchableOpacity>
                 </View>
             );
@@ -372,6 +379,7 @@ const TintasSelector = ({
             <TouchableOpacity
                 style={{ paddingHorizontal: 14, paddingVertical: 12, borderRadius: 22, backgroundColor: '#EFEFEF', borderWidth: 1, borderColor: '#DDD', marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center' }}
                 onPress={() => {
+                    if (disabled) return;
                     if (typeof onStartAdd === 'function') onStartAdd();
                 }}
             >
@@ -421,7 +429,9 @@ export default function NuevoPresupuestoModal({
     showMaquinaField = false,
     maquinaLabel = 'Máquina',
     initialValues = null,
+    readOnly = false,
 }) {
+    const isReadOnly = !!readOnly;
     const getNowDateStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -711,6 +721,7 @@ export default function NuevoPresupuestoModal({
     });
 
     const seleccionarClienteGuardado = (item) => {
+        if (isReadOnly) return;
         setClienteSeleccionadoId(item?.id || null);
         setCliente(item?.nombre || '');
         setRazonSocial(item?.razon_social || '');
@@ -724,6 +735,7 @@ export default function NuevoPresupuestoModal({
 
     const pickImageEtiqueta = Platform.OS === 'web'
         ? (e) => {
+            if (isReadOnly) return;
             if (e.target.files && e.target.files[0]) {
                 setEtiquetaUri(URL.createObjectURL(e.target.files[0]));
                 setImagenCobertura(e.target.files[0]);
@@ -731,6 +743,7 @@ export default function NuevoPresupuestoModal({
             }
         }
         : async () => {
+            if (isReadOnly) return;
             const { launchImageLibraryAsync } = await import('expo-image-picker');
             let result = await launchImageLibraryAsync({ mediaTypes: 'Images', quality: 1 });
             if (!result.canceled) {
@@ -741,6 +754,7 @@ export default function NuevoPresupuestoModal({
         };
 
     const handleCalcularCobertura = async () => {
+        if (isReadOnly) return;
         setCoberturaError('');
         if (!imagenCobertura) {
             setCoberturaError("Necesario subir un archivo de la etiqueta");
@@ -792,6 +806,7 @@ export default function NuevoPresupuestoModal({
         }
 
         if (cliente && referencia && formatoAncho && formatoLargo && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
+            // Clone arrays/objects to avoid passing references to component state
             const presupuesto = {
                 id: Date.now(),
                 numero: `PRE-${Math.floor(Math.random() * 10000)}`,
@@ -808,11 +823,12 @@ export default function NuevoPresupuestoModal({
                 formatoLargo,
                 maquina,
                 material,
-                acabado,
+                acabado: Array.isArray(acabado) ? [...acabado] : acabado,
                 tirada,
-                selectedTintas,
-                detalleTintaEspecial,
-                coberturaResult,
+                selectedTintas: Array.isArray(selectedTintas) ? [...selectedTintas] : (selectedTintas || []),
+                detalleTintaEspecial: Array.isArray(detalleTintaEspecial) ? [...detalleTintaEspecial] : (detalleTintaEspecial || []),
+                coberturaResult: coberturaResult ? JSON.parse(JSON.stringify(coberturaResult)) : null,
+                pantones: Array.isArray(pantones) ? pantones.map(p => ({ ...p })) : [],
                 troquelEstadoSel,
                 troquelFormaSel,
                 troquelCoste,
@@ -912,7 +928,7 @@ export default function NuevoPresupuestoModal({
                                         <Text style={styles.label}>Cliente</Text>
                                         <TouchableOpacity
                                             style={styles.clientePickerBtn}
-                                            onPress={() => setClientePickerVisible(true)}
+                                            onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
                                         >
                                             <Text style={styles.clientePickerBtnText}>Seleccionar cliente guardado</Text>
                                         </TouchableOpacity>
@@ -1051,8 +1067,9 @@ export default function NuevoPresupuestoModal({
                                             <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#FBFBFD', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
                                                 <select
                                                     value={vendedor}
-                                                    onChange={(e) => setVendedor(e.target.value)}
-                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '10px 12px', fontSize: '14px', color: '#232323', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: 'pointer' }}
+                                                    onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
+                                                    disabled={isReadOnly}
+                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '10px 12px', fontSize: '14px', color: '#232323', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
                                                 >
                                                     <option value="">Seleccionar comercial</option>
                                                     {usuariosComerciales.map((u) => (
@@ -1067,6 +1084,7 @@ export default function NuevoPresupuestoModal({
                                                 onSelect={setVendedor}
                                                 required={true}
                                                 submitted={submitted}
+                                                disabled={isReadOnly}
                                             />
                                         )}
                                     </View>
@@ -1076,9 +1094,10 @@ export default function NuevoPresupuestoModal({
                                         <Text style={styles.label}>Referencia / Descripción</Text>
                                         <TextInput
                                             value={referencia}
-                                            onChangeText={setReferencia}
+                                            onChangeText={(t) => { if (isReadOnly) return; setReferencia(t); }}
                                             placeholder="Trabajo/referencia"
                                             style={styles.input(referencia, true, false, submitted)}
+                                            editable={!isReadOnly}
                                         />
                                     </View>
                                 </View>
@@ -1156,20 +1175,22 @@ export default function NuevoPresupuestoModal({
                                 <Text style={styles.label}>Formato ancho (mm)</Text>
                                 <TextInput
                                     value={formatoAncho}
-                                    onChangeText={setFormatoAncho}
+                                        onChangeText={(t) => { if (isReadOnly) return; setFormatoAncho(t); }}
                                     keyboardType="numeric"
                                     placeholder="Ej: 100"
-                                    style={styles.input(formatoAncho, true, true, submitted)}
+                                            style={styles.input(formatoAncho, true, true, submitted)}
+                                            editable={!isReadOnly}
                                 />
                             </View>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Formato largo (mm)</Text>
                                 <TextInput
                                     value={formatoLargo}
-                                    onChangeText={setFormatoLargo}
+                                        onChangeText={(t) => { if (isReadOnly) return; setFormatoLargo(t); }}
                                     keyboardType="numeric"
                                     placeholder="Ej: 200"
-                                    style={styles.input(formatoLargo, true, true, submitted)}
+                                            style={styles.input(formatoLargo, true, true, submitted)}
+                                            editable={!isReadOnly}
                                 />
                             </View>
                             {showMaquinaField && (
@@ -1262,6 +1283,7 @@ export default function NuevoPresupuestoModal({
                                     onSelect={setMaterial}
                                     required={true}
                                     submitted={submitted}
+                                    disabled={isReadOnly}
                                 />
                             </View>
                             <View style={styles.col}>
@@ -1271,8 +1293,9 @@ export default function NuevoPresupuestoModal({
                                     valorSeleccionado={acabado}
                                     onSelect={setAcabado}
                                     multiple={true}
-                                    required={true}
+                                    required={false}
                                     submitted={submitted}
+                                    disabled={isReadOnly}
                                 />
                             </View>
                         </View>
@@ -1281,10 +1304,11 @@ export default function NuevoPresupuestoModal({
                                 <Text style={styles.label}>Tirada total</Text>
                                 <TextInput
                                     value={tirada}
-                                    onChangeText={setTirada}
+                                    onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
                                     keyboardType="numeric"
                                     placeholder="Cantidad"
                                     style={styles.input(tirada, true, true, submitted)}
+                                    editable={!isReadOnly}
                                 />
                             </View>
                         </View>
@@ -1303,17 +1327,18 @@ export default function NuevoPresupuestoModal({
                                     opcionesTintas={tintasOpciones}
                                     pantones={pantones}
                                     onRemovePantone={removePantoneAt}
-                                    onStartAdd={() => { setAddingPantone(true); setPantoneInput(''); }}
+                                    onStartAdd={() => { if (isReadOnly) return; setAddingPantone(true); setPantoneInput(''); }}
                                     addingPantone={addingPantone}
                                     addingValue={pantoneInput}
-                                    onChangeAdding={setPantoneInput}
+                                    onChangeAdding={(t) => { if (isReadOnly) return; setPantoneInput(t); }}
                                     onConfirmAdding={(txt) => {
                                         const val = (txt || '').trim();
-                                        if (val) addPantone(val);
+                                        if (val && !isReadOnly) addPantone(val);
                                         setAddingPantone(false);
                                         setPantoneInput('');
                                     }}
                                     addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
+                                    disabled={isReadOnly}
                                 />
                                 <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {selectedTintas.length}</Text>
                                 

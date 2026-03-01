@@ -424,7 +424,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
                           </View>
                           <View style={[styles.tableCell, styles.colCliente]}>
                             <Text style={styles.cellText} numberOfLines={1}>
-                              {trabajo.cliente}
+                              {typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}
                             </Text>
                           </View>
                           <View style={[styles.tableCell, styles.colEstado]}>

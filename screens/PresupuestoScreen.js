@@ -433,6 +433,7 @@ export default function PresupuestoScreen() {
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingInitialValues, setEditingInitialValues] = useState(null);
   const [detalleVisible, setDetalleVisible] = useState(false);
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -632,8 +633,12 @@ export default function PresupuestoScreen() {
   };
 
   const handleAbrirDetalle = (presupuesto) => {
+    // Open the presupuesto form for editing. If aprobado, open in read-only mode.
     setPresupuestoSeleccionado(presupuesto);
-    setDetalleVisible(true);
+    setEditingInitialValues && setEditingInitialValues(presupuesto);
+    setModalVisible(true);
+    // ensure detail view is closed
+    setDetalleVisible(false);
   };
 
   const formatearFecha = (valor) => {
@@ -987,10 +992,40 @@ export default function PresupuestoScreen() {
 
       <NuevoPresupuestoModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleNuevoPresupuesto}
-        modalTitle="Nuevo Presupuesto"
-        submitLabel="Guardar Presupuesto"
+        onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
+        onSave={(p) => {
+          // Si estamos editando un presupuesto existente, actualizarlo vía API
+          if (editingInitialValues && (editingInitialValues.id || editingInitialValues._id)) {
+            const presId = editingInitialValues.id || editingInitialValues._id;
+            fetch(`http://localhost:8080/api/presupuestos/${presId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                numero_presupuesto: p.numero || editingInitialValues.numero_presupuesto,
+                referencia: p.referencia || editingInitialValues.referencia,
+                fecha_presupuesto: p.fecha || editingInitialValues.fecha_presupuesto,
+                aprobado: editingInitialValues.aprobado || false,
+                datos_json: p
+              })
+            })
+              .then((res) => res.json())
+              .then(() => {
+                setModalVisible(false);
+                setEditingInitialValues(null);
+                cargarPresupuestos();
+              })
+              .catch((err) => console.error('Error actualizando presupuesto:', err));
+          } else {
+            // Crear nuevo presupuesto
+            setModalVisible(false);
+            setEditingInitialValues(null);
+            handleNuevoPresupuesto(p);
+          }
+        }}
+        initialValues={editingInitialValues}
+        readOnly={!!(editingInitialValues && editingInitialValues.aprobado)}
+        modalTitle={editingInitialValues ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
+        submitLabel={editingInitialValues ? 'Guardar Cambios' : 'Guardar Presupuesto'}
         fechaLabel="Fecha de creación"
         showFechaEntrega={true}
         fechaEntregaLabel="Fecha de entrega"

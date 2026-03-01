@@ -357,7 +357,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                             <View style={styles.col}>
                                 <Text style={styles.label}>Cliente</Text>
                                 <TextInput
-                                    value={cliente}
+                                    value={typeof cliente === 'string' ? cliente : (cliente && cliente.nombre) || ''}
                                     onChangeText={setCliente}
                                     placeholder="Nombre"
                                     style={styles.input(cliente, true, false, submitted)}
@@ -535,7 +535,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                             opciones={acabados}
                             valorSeleccionado={acabado}
                             onSelect={setAcabado}
-                            required={true}
+                            required={false}
                             submitted={submitted}
                         />
                     </View>

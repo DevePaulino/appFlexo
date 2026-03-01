@@ -800,7 +800,9 @@ def get_maquinas():
         maquinas = [fix_id(m) for m in maquinas]
         return jsonify({'maquinas': maquinas}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        print('ERROR in enviar_trabajo_produccion:\n', tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
         sistemas_secado = data.get('sistemas_secado')
         estado = data.get('estado') or 'Activa'
         col = get_empresa_collection('maquinas', empresa_id)
@@ -1913,15 +1915,14 @@ def save_presupuesto():
         if modo_automatico_activo():
             return jsonify({'error': 'Creación manual deshabilitada. Usa integración API REST.'}), 403
 
-        data = request.get_json()
-        # Lógica MongoDB pendiente si es necesario
-        
-        # Lógica de guardado de presupuesto adaptada a MongoDB pendiente de implementar si es necesario
-        return jsonify({'success': True}), 200
+        # Delegar en la implementación concreta de creación para evitar rutas duplicadas
+        # y garantizar que el presupuesto se inserta en la colección.
+        # Nota: la función `crear_presupuesto` está definida más abajo y hará la inserción.
+        return crear_presupuesto()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/presupuestos/aceptar/<int:trabajo_id>', methods=['POST'])
+@app.route('/api/presupuestos/aceptar/<trabajo_id>', methods=['POST'])
 def aceptar_presupuesto(trabajo_id):
     """Acepta un presupuesto y crea un pedido"""
     try:
@@ -1929,12 +1930,99 @@ def aceptar_presupuesto(trabajo_id):
         if auth_error:
             return auth_error
         empresa_id = int(request_user.get('empresa_id') or 0)
+        data = request.get_json() or {}
 
-        # Lógica de aceptación de presupuesto y creación de pedido adaptada a MongoDB pendiente de implementar si es necesario
-        # Lógica MongoDB pendiente si es necesario
-        
-        # Lógica MongoDB pendiente si es necesario
-        return jsonify({'success': True, 'mensaje': 'Presupuesto aceptado y pedido creado'}), 200
+        # Buscar presupuesto por trabajo_id
+        pres_col = get_empresa_collection('presupuestos', empresa_id)
+        pres = pres_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+        if not pres:
+            # Intentar buscar por id del presupuesto (fallback)
+            try:
+                pres = pres_col.find_one({'empresa_id': empresa_id, '_id': ObjectId(trabajo_id)})
+            except Exception:
+                pres = None
+
+        if not pres:
+            return jsonify({'error': 'Presupuesto no encontrado para el trabajo_id indicado'}), 404
+
+        # Crear pedido usando datos enviados o los datos del presupuesto
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            counters_col = mongo.db['counters']
+            seq_doc = counters_col.find_one_and_update(
+                {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
+            )
+            numero_pedido = str(seq_doc.get('seq', 0))
+        except Exception:
+            numero_pedido = f"PED-{int(time.time())}"
+
+        # Reconstruir/parsear los datos del presupuesto existentes
+        existing_dj = {}
+        try:
+            if pres.get('datos_json') and isinstance(pres.get('datos_json'), str):
+                existing_dj = json.loads(pres.get('datos_json'))
+            else:
+                existing_dj = pres.get('datos_json') or pres.get('datos_presupuesto') or {}
+        except Exception:
+            existing_dj = pres.get('datos_presupuesto') or {}
+
+        # Datos enviados en la petición (puede venir como datos_presupuesto/datosPresupuesto)
+        incoming_dj = data.get('datosPresupuesto') or data.get('datos_presupuesto') or {}
+
+        # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        # Merge: start from existing, then top-level data, then incoming_dj
+        merged_dj = dict(existing_dj or {})
+        for k in extra_keys:
+            if k in data and (k not in merged_dj or merged_dj.get(k) is None):
+                merged_dj[k] = data.get(k)
+        if isinstance(incoming_dj, dict):
+            merged_dj.update(incoming_dj)
+        else:
+            # incoming_dj puede ser una lista (p.ej. selectedTintas) enviada por error desde el cliente.
+            # Manejarlo de forma tolerante: si es lista la interpretamos como `selectedTintas`.
+            if isinstance(incoming_dj, list):
+                merged_dj['selectedTintas'] = incoming_dj
+
+        # Persistir merge en el presupuesto para asegurar que selectedTintas quede guardado
+        try:
+            pres_col.update_one({'_id': pres.get('_id')}, {'$set': {'datos_json': merged_dj, 'datos_presupuesto': merged_dj}})
+        except Exception:
+            try:
+                pres_col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres.get('_id')}, {'id': pres.get('id')} ]}, {'$set': {'datos_json': merged_dj, 'datos_presupuesto': merged_dj}})
+            except Exception:
+                pass
+
+        datos_presupuesto = merged_dj or {}
+
+        doc_pedido = {
+            'empresa_id': empresa_id,
+            'trabajo_id': pres.get('trabajo_id'),
+            'numero_pedido': numero_pedido,
+            'referencia': pres.get('referencia') or datos_presupuesto.get('referencia'),
+            'fecha_pedido': datetime.now().isoformat(),
+            'datos_presupuesto': datos_presupuesto
+        }
+        try:
+            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            default_label = available.get('diseno') or 'Diseño'
+        except Exception:
+            default_label = 'Diseño'
+        doc_pedido['estado'] = default_label
+        doc_pedido['fecha_finalizacion'] = None
+        result = pedidos_col.insert_one(doc_pedido)
+        pedido_id = str(result.inserted_id)
+
+        # Actualizar presupuesto: aprobado, pedido_id, fecha_aprobacion
+        try:
+            pres_col.update_one({'_id': pres.get('_id')}, {'$set': {'aprobado': True, 'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'pedido_id': pedido_id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1972,9 +2060,123 @@ def get_presupuestos():
                     p['datos_json'] = json.loads(p['datos_json'])
             except Exception:
                 pass
+            # Elevar claves comunes desde datos_json a nivel top-level para compatibilidad con frontend
+            try:
+                common = ['cliente', 'nombre', 'referencia', 'razon_social', 'razonSocial', 'cif', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'acabado', 'observaciones', 'material', 'detalleTintaEspecial']
+                dj = p.get('datos_json') or {}
+                if isinstance(dj, dict):
+                    for ck in common:
+                        if ck in dj and not p.get(ck):
+                            p[ck] = dj.get(ck)
+                # mantener también `datos_presupuesto` para compatibilidad con UI antiguas
+                if isinstance(dj, dict) and not p.get('datos_presupuesto'):
+                    p['datos_presupuesto'] = dj
+            except Exception:
+                pass
             presupuestos_out.append(p)
 
         return jsonify({'presupuestos': presupuestos_out}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/presupuestos/<presupuesto_id>', methods=['PUT'])
+def update_presupuesto(presupuesto_id):
+    """Actualiza campos de un presupuesto existente por id."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = int(request_user.get('empresa_id') or 0)
+
+        data = request.get_json() or {}
+        col = get_empresa_collection('presupuestos', empresa_id)
+
+        # Construir update
+        update_fields = {}
+        # Campos de primer nivel permitidos
+        for key in ('numero_presupuesto', 'fecha_presupuesto', 'aprobado', 'referencia', 'pedido_id'):
+            if key in data:
+                update_fields[key] = data.get(key)
+
+        # datos_json completo
+        if 'datos_json' in data:
+            update_fields['datos_json'] = data.get('datos_json')
+        # mantener compatibilidad: también actualizar datos_presupuesto si se envía datos_json
+        if 'datos_json' in data:
+            update_fields['datos_presupuesto'] = data.get('datos_json')
+
+        if not update_fields:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+
+        # Intentar convertir a ObjectId, si falla usar como string
+        try:
+            oid = ObjectId(presupuesto_id)
+            res = col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': update_fields})
+        except Exception:
+            # fallback: buscar por campo string 'id' o por trabajo_id
+            res = col.update_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]}, {'$set': update_fields})
+
+        if res.matched_count == 0:
+            return jsonify({'error': 'Presupuesto no encontrado'}), 404
+
+        # Si se marcó como aprobado, crear un pedido asociado si no existe
+        try:
+            if update_fields.get('aprobado'):
+                # obtener el documento actualizado del presupuesto
+                pres_doc = None
+                try:
+                    oid = ObjectId(presupuesto_id)
+                    pres_doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+                except Exception:
+                    pres_doc = col.find_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]})
+
+                if pres_doc and not pres_doc.get('pedido_id'):
+                    # crear pedido vinculado
+                    pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                    # generar numero_pedido (contador) similar a crear_pedido()
+                    try:
+                        counters_col = mongo.db['counters']
+                        seq_doc = counters_col.find_one_and_update(
+                            {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                            {'$inc': {'seq': 1}},
+                            upsert=True,
+                            return_document=pymongo.ReturnDocument.AFTER
+                        )
+                        numero_pedido = str(seq_doc.get('seq', 0))
+                    except Exception:
+                        numero_pedido = f"PED-{int(time.time())}"
+
+                    doc_pedido = {
+                        'empresa_id': empresa_id,
+                        'trabajo_id': pres_doc.get('trabajo_id'),
+                        'numero_pedido': numero_pedido,
+                        'referencia': pres_doc.get('referencia'),
+                        'fecha_pedido': datetime.now().isoformat(),
+                        'datos_presupuesto': pres_doc.get('datos_json')
+                    }
+                    try:
+                        available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                        default_label = available.get('diseno') or 'Diseño'
+                    except Exception:
+                        default_label = 'Diseño'
+                    doc_pedido['estado'] = default_label
+                    doc_pedido['fecha_finalizacion'] = None
+                    result_pedido = pedidos_col.insert_one(doc_pedido)
+                    pedido_id = str(result_pedido.inserted_id)
+
+                    # grabar pedido_id y fecha_aprobacion en el presupuesto
+                    extra = {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}
+                    try:
+                        oid = ObjectId(presupuesto_id)
+                        col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': extra})
+                    except Exception:
+                        col.update_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]}, {'$set': extra})
+        except Exception:
+            # No bloquear la actualización por errores en la creación del pedido
+            pass
+
+        return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1991,7 +2193,12 @@ def crear_presupuesto():
         fecha_presupuesto = data.get('fecha_presupuesto')
         aprobado = data.get('aprobado', False)
         referencia = data.get('referencia')
-        datos_json = data.get('datos_json')
+        datos_json = data.get('datos_json') or {}
+        # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos_json
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        for k in extra_keys:
+            if k in data and (k not in datos_json or datos_json.get(k) is None):
+                datos_json[k] = data.get(k)
         if not trabajo_id or not numero_presupuesto:
             return jsonify({'error': 'Faltan datos obligatorios'}), 400
         col = get_empresa_collection('presupuestos', empresa_id)
@@ -2002,10 +2209,59 @@ def crear_presupuesto():
             'fecha_presupuesto': fecha_presupuesto,
             'aprobado': aprobado,
             'referencia': referencia,
-            'datos_json': datos_json
+            'datos_json': datos_json,
+            # Mantener compatibilidad con nomenclatura previa (frontend espera a veces `datos_presupuesto`)
+            'datos_presupuesto': datos_json
         }
+        # Mantener cliente a nivel superior para compatibilidad con la UI
+        if datos_json.get('cliente') and not doc.get('cliente'):
+            doc['cliente'] = datos_json.get('cliente')
         result = col.insert_one(doc)
-        return jsonify({'success': True, 'presupuesto_id': str(result.inserted_id)}), 201
+        pres_id = str(result.inserted_id)
+
+        # Si viene aprobado desde creación, crear pedido asociado
+        try:
+            if aprobado:
+                pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                try:
+                    counters_col = mongo.db['counters']
+                    seq_doc = counters_col.find_one_and_update(
+                        {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                        {'$inc': {'seq': 1}},
+                        upsert=True,
+                        return_document=pymongo.ReturnDocument.AFTER
+                    )
+                    numero_pedido = str(seq_doc.get('seq', 0))
+                except Exception:
+                    numero_pedido = f"PED-{int(time.time())}"
+
+                doc_pedido = {
+                    'empresa_id': empresa_id,
+                    'trabajo_id': trabajo_id,
+                    'numero_pedido': numero_pedido,
+                    'referencia': referencia,
+                    'fecha_pedido': datetime.now().isoformat(),
+                    'datos_presupuesto': datos_json
+                }
+                try:
+                    available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                    default_label = available.get('diseno') or 'Diseño'
+                except Exception:
+                    default_label = 'Diseño'
+                doc_pedido['estado'] = default_label
+                doc_pedido['fecha_finalizacion'] = None
+                result_pedido = pedidos_col.insert_one(doc_pedido)
+                pedido_id = str(result_pedido.inserted_id)
+                # actualizar presupuesto con pedido_id y fecha_aprobacion
+                try:
+                    oid = ObjectId(pres_id)
+                    col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+                except Exception:
+                    col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres_id}, {'id': pres_id}]}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'presupuesto_id': pres_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2291,6 +2547,14 @@ def enviar_trabajo_produccion():
         empresa_id = int(request_user.get('empresa_id') or 0)
 
         data = request.get_json()
+        # Logging para depuración: mostrar body recibido
+        try:
+            print('POST /api/produccion/enviar body:', data)
+        except Exception:
+            try:
+                print('POST /api/produccion/enviar raw:', request.data)
+            except Exception:
+                pass
         trabajo_id = data.get('trabajo_id')
         maquina_id = data.get('maquina_id')
         
@@ -2299,9 +2563,52 @@ def enviar_trabajo_produccion():
         
         # Verificar que el trabajo exista y su estado permita envío
         trabajos_col = get_empresa_collection('trabajos', empresa_id)
-        trabajo = trabajos_col.find_one({'_id': fix_id(trabajo_id), 'empresa_id': empresa_id})
+        trabajo = None
+        # Intentar varias formas de localizar el trabajo: _id ObjectId, campo numérico `id`, campo string `id`, o `trabajo_id`
+        try:
+            trabajo = trabajos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+        except Exception:
+            trabajo = None
+
         if not trabajo:
-            return jsonify({'error': 'Trabajo no encontrado'}), 404
+            # si viene un número, probar como entero en campo `id`
+            try:
+                trabajo = trabajos_col.find_one({'id': int(trabajo_id), 'empresa_id': empresa_id})
+            except Exception:
+                trabajo = None
+
+        if not trabajo:
+            # finalmente probar por campos string y por `trabajo_id`
+            trabajo = trabajos_col.find_one({
+                'empresa_id': empresa_id,
+                '$or': [
+                    {'id': str(trabajo_id)},
+                    {'trabajo_id': trabajo_id},
+                    {'_id': trabajo_id}
+                ]
+            })
+
+        if not trabajo:
+            # Intentar recuperar información desde `pedidos` si existe un pedido que referencia este trabajo
+            pedidos_col = get_empresa_collection('pedidos', empresa_id)
+            pedido_doc = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+            if pedido_doc:
+                # Crear un trabajo mínimo para poder encolarlo en producción
+                nuevo_trabajo = {
+                    'empresa_id': empresa_id,
+                    'nombre': pedido_doc.get('referencia') or pedido_doc.get('numero_pedido') or f'Trabajo {int(time.time())}',
+                    'cliente': (pedido_doc.get('cliente') or '') if not isinstance(pedido_doc.get('cliente'), dict) else (pedido_doc.get('cliente').get('nombre') or ''),
+                    'referencia': pedido_doc.get('referencia') or '',
+                    'fecha_entrega': pedido_doc.get('fecha_entrega'),
+                    'estado': 'Pendiente',
+                    'created_at': datetime.utcnow().isoformat(),
+                    'id': trabajo_id
+                }
+                res = trabajos_col.insert_one(nuevo_trabajo)
+                nuevo_trabajo['_id'] = res.inserted_id
+                trabajo = nuevo_trabajo
+            else:
+                return jsonify({'error': 'Trabajo no encontrado'}), 404
 
         rules = get_estados_pedido_rules().get('rules', ESTADOS_RULES_DEFAULT)
         bloqueados = set(rules.get('bloqueados_produccion', []))
@@ -2317,15 +2624,35 @@ def enviar_trabajo_produccion():
         # para que pueda entrar y verse en las colas de impresión.
         if estado_actual in set(preimpresion) and len(en_cola_list) > 0:
             destino_estado = en_cola_list[0]
-            trabajos_col.update_one({'_id': fix_id(trabajo_id), 'empresa_id': empresa_id}, {'$set': {'estado': destino_estado, 'fecha_finalizacion': None}})
+            # Construir query de actualización usando el identificador real del documento encontrado
+            update_query = {'empresa_id': empresa_id}
+            if trabajo.get('_id'):
+                update_query['_id'] = trabajo.get('_id')
+            elif trabajo.get('id') is not None:
+                update_query['id'] = trabajo.get('id')
+            else:
+                update_query['trabajo_id'] = trabajo_id
+            trabajos_col.update_one(update_query, {'$set': {'estado': destino_estado, 'fecha_finalizacion': None}})
 
         # Verificar que no esté ya en producción
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
-        if orden_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id}):
+        # Comprobar si ya existe una orden para este trabajo (aceptar _id ObjectId o string)
+        existing_order = None
+        try:
+            existing_order = orden_col.find_one({'trabajo_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+        except Exception:
+            existing_order = None
+        if not existing_order:
+            existing_order = orden_col.find_one({'empresa_id': empresa_id, '$or': [{'trabajo_id': trabajo_id}, {'trabajo_id': str(trabajo_id)}]})
+        if existing_order:
             return jsonify({'error': 'El trabajo ya está en producción'}), 400
 
-        # Obtener la siguiente posición en la máquina
-        max_pos_doc = orden_col.find({'maquina_id': int(maquina_id), 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+        # Obtener la siguiente posición en la máquina (maquina_id puede ser int o string)
+        try:
+            maquina_id_query = int(maquina_id)
+        except Exception:
+            maquina_id_query = str(maquina_id)
+        max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
         max_pos = 0
         for doc in max_pos_doc:
             max_pos = doc.get('posicion', 0)
@@ -2335,13 +2662,39 @@ def enviar_trabajo_produccion():
         orden_col.insert_one({
             'empresa_id': empresa_id,
             'trabajo_id': trabajo_id,
-            'maquina_id': int(maquina_id),
+            'maquina_id': maquina_id_query,
             'posicion': nueva_posicion
         })
 
+        # Actualizar el estado del trabajo para que pase a la cola de impresión
+        try:
+            nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+            update_query = {'empresa_id': empresa_id}
+            if trabajo.get('_id'):
+                update_query['_id'] = trabajo.get('_id')
+            elif trabajo.get('id') is not None:
+                update_query['id'] = trabajo.get('id')
+            else:
+                update_query['trabajo_id'] = trabajo_id
+
+            trabajos_col.update_one(update_query, {'$set': {'estado': nuevo_estado, 'en_produccion': True, 'fecha_finalizacion': None}})
+        except Exception:
+            pass
+
         # Persistir máquina real en el pedido para trazabilidad
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
-        maq = maquinas_col.find_one({'id': int(maquina_id), 'empresa_id': empresa_id})
+        maq = None
+        try:
+            maq = maquinas_col.find_one({'id': int(maquina_id), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        if not maq:
+            try:
+                maq = maquinas_col.find_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+        if not maq:
+            maq = maquinas_col.find_one({'id': str(maquina_id), 'empresa_id': empresa_id})
         maquina_nombre = maq['nombre'] if maq else None
 
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
@@ -2357,6 +2710,19 @@ def enviar_trabajo_produccion():
             datos_pedido['maquina_bd'] = maquina_nombre
             datos_pedido['maquina_id_bd'] = maquina_id
             pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'datos_presupuesto': datos_pedido}})
+            try:
+                nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+                pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'estado': nuevo_estado}})
+            except Exception:
+                pass
+        else:
+            # Si hay pedido pero no se pudo resolver el nombre de la máquina, aun así actualizar su estado
+            if pedido:
+                try:
+                    nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+                    pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'estado': nuevo_estado}})
+                except Exception:
+                    pass
 
         return jsonify({'success': True}), 200
     except Exception as e:
@@ -2442,7 +2808,18 @@ def mover_trabajo_maquina():
 
         # Persistir máquina actualizada en el pedido
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
-        maq = maquinas_col.find_one({'id': int(maquina_destino), 'empresa_id': empresa_id})
+        maq = None
+        try:
+            maq = maquinas_col.find_one({'id': int(maquina_destino), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        if not maq:
+            try:
+                maq = maquinas_col.find_one({'_id': ObjectId(maquina_destino), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+        if not maq:
+            maq = maquinas_col.find_one({'id': str(maquina_destino), 'empresa_id': empresa_id})
         maquina_nombre = maq['nombre'] if maq else None
 
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
