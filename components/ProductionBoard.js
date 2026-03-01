@@ -474,8 +474,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
                               }}
                               value={maquinaFilaId}
                               onChange={(e) => {
-                                const nuevaMaquina = parseInt(e.target.value);
-                                if (nuevaMaquina !== maquinaFilaId) {
+                                const nuevaMaquina = e.target.value;
+                                if (String(nuevaMaquina) !== String(maquinaFilaId)) {
                                   handleCambiarMaquina(trabajo.id, nuevaMaquina);
                                 }
                               }}

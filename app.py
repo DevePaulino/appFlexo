@@ -2821,8 +2821,14 @@ def mover_trabajo_maquina():
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
 
+        # Normalizar `maquina_destino`: aceptar tanto enteros como cadenas (ObjectId-like)
+        try:
+            maquina_destino_norm = int(maquina_destino)
+        except Exception:
+            maquina_destino_norm = str(maquina_destino)
+
         # Obtener la siguiente posición en la máquina destino
-        max_pos_doc = orden_col.find({'maquina_id': int(maquina_destino), 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+        max_pos_doc = orden_col.find({'maquina_id': maquina_destino_norm, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
         max_pos = 0
         for doc in max_pos_doc:
             max_pos = doc.get('posicion', 0)
@@ -2832,7 +2838,7 @@ def mover_trabajo_maquina():
         orden_col.insert_one({
             'empresa_id': empresa_id,
             'trabajo_id': trabajo_id,
-            'maquina_id': int(maquina_destino),
+            'maquina_id': maquina_destino_norm,
             'posicion': nueva_posicion
         })
 
@@ -2840,7 +2846,7 @@ def mover_trabajo_maquina():
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
         maq = None
         try:
-            maq = maquinas_col.find_one({'id': int(maquina_destino), 'empresa_id': empresa_id})
+            maq = maquinas_col.find_one({'id': maquina_destino_norm, 'empresa_id': empresa_id})
         except Exception:
             pass
         if not maq:
