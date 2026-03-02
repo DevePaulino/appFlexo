@@ -1810,7 +1810,7 @@ export default function ConfigScreen({ route, currentUser }) {
         </View>
 
         {renderCategoria('roles', 'Roles')}
-        <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>Los roles base Operario, Administrador y Root están protegidos.</Text>
+        <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>Los roles base Administrador y Root están protegidos.</Text>
 
         <View style={styles.section}>
           <View style={styles.rulesHeaderRow}>

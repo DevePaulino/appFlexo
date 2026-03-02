@@ -77,6 +77,59 @@ def _handle_uncaught_exception(e):
 app.config["MONGO_URI"] = "mongodb://localhost:27017/printforgepro"
 mongo = PyMongo(app)
 
+
+def ensure_default_users():
+    """Ensure there is always at least one `root` and one `administrador` user.
+    Uses environment variables if present to seed emails/passwords; otherwise generates random passwords.
+    Prints created credentials to stdout so they appear in `backend.log`.
+    """
+    try:
+        col = get_empresa_collection('usuarios', None)
+        root_exists = col.find_one({'rol': 'root'}) is not None
+        admin_exists = col.find_one({'rol': 'administrador'}) is not None
+
+        created = []
+        if not root_exists:
+            root_email = os.environ.get('DEFAULT_ROOT_EMAIL', 'root@localhost')
+            root_pwd = os.environ.get('DEFAULT_ROOT_PASSWORD') or secrets.token_hex(8)
+            doc = {
+                'nombre': 'Root',
+                'email': root_email,
+                'rol': 'root',
+                'password_hash': hash_password(root_pwd),
+                'empresa_id': 0,
+                'empresa_nombre': 'System',
+                'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
+            }
+            col.insert_one(doc)
+            created.append({'rol': 'root', 'email': root_email, 'password': root_pwd})
+
+        if not admin_exists:
+            admin_email = os.environ.get('DEFAULT_ADMIN_EMAIL', 'admin@example.com')
+            admin_pwd = os.environ.get('DEFAULT_ADMIN_PASSWORD') or secrets.token_hex(8)
+            doc = {
+                'nombre': 'Administrador',
+                'email': admin_email,
+                'rol': 'administrador',
+                'password_hash': hash_password(admin_pwd),
+                'empresa_id': int(os.environ.get('DEFAULT_ADMIN_EMPRESA_ID') or 1),
+                'empresa_nombre': os.environ.get('DEFAULT_ADMIN_EMPRESA_NOMBRE') or 'Empresa 1',
+                'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
+            }
+            col.insert_one(doc)
+            created.append({'rol': 'administrador', 'email': admin_email, 'password': admin_pwd})
+
+        if created:
+            print('DEFAULT_USERS_CREATED:', json.dumps(created))
+        else:
+            print('DEFAULT_USERS_PRESENT')
+    except Exception as e:
+        print('ERROR ensuring default users:', str(e))
+
+
+# Ensure minimum users exist at startup
+ensure_default_users()
+
 # Helper para obtener la colección de una empresa
 def get_empresa_collection(nombre, empresa_id):
     # Mapear nombres legacy a la colección canónica `pedidos` cuando corresponde
@@ -103,6 +156,9 @@ ROLE_LABELS = {
     'administrador': 'Administrador',
     'comercial': 'Comercial',
     'root': 'Root',
+    'diseno': 'Diseño',
+    'impresion': 'Impresión',
+    'post-impresion': 'Post-Impresión',
 }
 PROTECTED_ROLE_ORDER = ['operario', 'administrador', 'root']
 PROTECTED_ROLE_KEYS = {'operario', 'administrador', 'root'}
@@ -137,7 +193,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     },
     'administrador': {
         'manage_app_settings': True,
-        'manage_roles_permissions': False,
+        'manage_roles_permissions': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
@@ -151,6 +207,43 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_maquinas': True,
         'edit_pedidos': True,
         'edit_presupuestos': True,
+        'edit_produccion': True,
+    },
+    # Department roles
+    'comercial': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'edit_clientes': True,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+    },
+    'diseno': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'edit_clientes': False,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+    },
+    'impresion': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'edit_clientes': False,
+        'edit_maquinas': True,
+        'edit_pedidos': False,
+        'edit_presupuestos': False,
+        'edit_produccion': True,
+    },
+    'post-impresion': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'edit_clientes': False,
+        'edit_maquinas': False,
+        'edit_pedidos': False,
+        'edit_presupuestos': False,
         'edit_produccion': True,
     },
 }
@@ -538,7 +631,7 @@ def init_db():
     # Initialize simple configuration entries if missing
     col_opciones = get_empresa_collection('config_opciones', 0)
     defaults_catalogo = {
-        'roles': ['Operario', 'Administrador', 'Root', 'Comercial'],
+        'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
         'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
         'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
         'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
@@ -1107,6 +1200,11 @@ def api_usuarios():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+
+        # Sólo usuarios con rol 'administrador' o 'root' pueden crear otros usuarios
+        requester_role = str(request_user.get('rol') or '').strip().lower()
+        if requester_role not in ('administrador', 'root'):
+            return jsonify({'error': 'Permiso denegado: se requiere rol administrador'}), 403
         data = request.get_json() or {}
         nombre = str(data.get('nombre') or '').strip()
         email = str(data.get('email') or '').strip().lower()
