@@ -25,6 +25,8 @@ import time
 import hashlib
 import secrets
 import re
+import base64
+import hmac
 from urllib import request as urllib_request, parse as urllib_parse, error as urllib_error
 from collections import defaultdict
 from email.message import EmailMessage
@@ -76,6 +78,50 @@ def _handle_uncaught_exception(e):
 # Configuración MongoDB (puedes cambiar la URI a tu MongoDB Atlas si quieres)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/printforgepro"
 mongo = PyMongo(app)
+
+# Simple JWT helpers (lightweight, enabled via ENABLE_JWT=1)
+JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-jwt-secret')
+JWT_TTL_SECONDS = int(os.environ.get('JWT_TTL_SECONDS', '3600') or 3600)
+ENABLE_JWT = str(os.environ.get('ENABLE_JWT', '0')).strip().lower() in {'1', 'true', 'yes'}
+
+def _b64url_encode(data_bytes):
+    return base64.urlsafe_b64encode(data_bytes).rstrip(b"=").decode('ascii')
+
+def _b64url_decode(s):
+    s = s.encode('ascii')
+    padding = b'=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + padding)
+
+def create_jwt(payload, ttl_seconds=None):
+    ttl = int(ttl_seconds or JWT_TTL_SECONDS)
+    now = int(time.time())
+    payload = dict(payload)
+    payload.setdefault('iat', now)
+    payload.setdefault('exp', now + ttl)
+    header = {'alg': 'HS256', 'typ': 'JWT'}
+    header_b = _b64url_encode(json.dumps(header, separators=(',', ':')).encode('utf-8'))
+    payload_b = _b64url_encode(json.dumps(payload, separators=(',', ':')).encode('utf-8'))
+    signing_input = f"{header_b}.{payload_b}".encode('utf-8')
+    sig = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+    sig_b = _b64url_encode(sig)
+    return f"{header_b}.{payload_b}.{sig_b}"
+
+def verify_jwt(token):
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        signing_input = (parts[0] + '.' + parts[1]).encode('utf-8')
+        sig = _b64url_decode(parts[2])
+        expected = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+        if not hmac.compare_digest(expected, sig):
+            return None
+        payload = json.loads(_b64url_decode(parts[1]).decode('utf-8'))
+        if 'exp' in payload and int(time.time()) > int(payload.get('exp', 0)):
+            return None
+        return payload
+    except Exception:
+        return None
 
 
 def ensure_default_users():
@@ -141,6 +187,26 @@ def get_empresa_collection(nombre, empresa_id):
         name = 'pedido_orden'
     return mongo.db[name]
 
+
+def log_audit(action, request_user=None, details=None):
+    try:
+        col = get_empresa_collection('audit_logs', 0)
+        doc = {
+            'action': str(action or ''),
+            'user': {
+                'id': str(request_user.get('id')) if request_user and request_user.get('id') else None,
+                'email': request_user.get('email') if request_user else None,
+                'rol': request_user.get('rol') if request_user else None,
+            },
+            'details': details or {},
+            'ip': request.remote_addr if request else None,
+            'ts': datetime.now().isoformat(),
+        }
+        col.insert_one(doc)
+    except Exception:
+        # No permitir que fallos de logging interrumpan la operación principal
+        pass
+
 # Helper para convertir ObjectId a string en respuestas JSON
 def fix_id(doc):
     if not doc:
@@ -160,8 +226,8 @@ ROLE_LABELS = {
     'impresion': 'Impresión',
     'post-impresion': 'Post-Impresión',
 }
-PROTECTED_ROLE_ORDER = ['operario', 'administrador', 'root']
-PROTECTED_ROLE_KEYS = {'operario', 'administrador', 'root'}
+PROTECTED_ROLE_ORDER = ['administrador', 'root']
+PROTECTED_ROLE_KEYS = {'administrador', 'root'}
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'diseno',
     'pendiente-de-aprobacion',
@@ -503,8 +569,39 @@ def get_bearer_token_from_request():
 
 
 def get_request_user():
-    # BYPASS AUTH PARA DESARROLLO (siempre usuario root)
-    user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
+    # If JWT auth not enabled, keep dev bypass for now
+    if not ENABLE_JWT:
+        user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
+        g._request_user = user
+        return user
+
+    token = get_bearer_token_from_request()
+    if not token:
+        return None
+    payload = verify_jwt(token)
+    if not payload:
+        return None
+
+    # Try to resolve user by id or email from token payload
+    col = get_empresa_collection('usuarios', None)
+    uid = payload.get('usuario_id') or payload.get('id') or payload.get('email') or payload.get('usuario')
+    user_doc = None
+    if not uid:
+        return None
+    try:
+        if isinstance(uid, str) and '@' in uid:
+            user_doc = col.find_one({'email': uid})
+        else:
+            try:
+                user_doc = col.find_one({'_id': ObjectId(uid)})
+            except Exception:
+                user_doc = col.find_one({'_id': uid})
+    except Exception:
+        return None
+
+    if not user_doc:
+        return None
+    user = fix_id(user_doc)
     g._request_user = user
     return user
 
@@ -1003,6 +1100,17 @@ def get_clientes():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/auth/token-info', methods=['GET'])
+def auth_token_info():
+    token = get_bearer_token_from_request()
+    if not token:
+        return jsonify({'error': 'No token provided'}), 401
+    payload = verify_jwt(token)
+    if not payload:
+        return jsonify({'error': 'Token inválido o expirado'}), 401
+    return jsonify({'payload': payload}), 200
+
+
 @app.route('/api/clientes', methods=['POST'])
 def create_cliente():
     try:
@@ -1160,11 +1268,15 @@ def register_public_user():
         usuario_id = str(result.inserted_id)
         # Simular empresa_id como el id del usuario creado
         empresa_id = usuario_id
+        # Issue token if JWT enabled
+        token = create_jwt({'usuario_id': usuario_id, 'email': email}) if ENABLE_JWT else None
+
         return jsonify({
             'success': True,
             'id': usuario_id,
             'creditos': FREE_SIGNUP_CREDITS,
             'billing_model': billing_model,
+            'token': token,
             'usuario': {
                 'id': usuario_id,
                 'nombre': nombre,
@@ -1235,6 +1347,11 @@ def api_usuarios():
         usuario = col.find_one({'_id': result.inserted_id})
         out = fix_id(usuario)
         out['_temp_password'] = temp_pwd
+        # Audit log
+        try:
+            log_audit('create_user', request_user, {'created_user_id': out.get('id'), 'created_user_email': out.get('email')})
+        except Exception:
+            pass
         return jsonify(out), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1257,6 +1374,72 @@ def verify_public_user_mfa():
         now = int(time.time())
         # TODO: Implementar verificación MFA con MongoDB
         return jsonify({'error': 'No implementado: migrar verificación MFA a MongoDB'}), 501
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/service-account', methods=['POST'])
+def create_service_account():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        requester_role = str(request_user.get('rol') or '').strip().lower()
+        if requester_role not in ('administrador', 'root'):
+            return jsonify({'error': 'Permiso denegado: se requiere rol administrador'}), 403
+
+        data = request.get_json() or {}
+        name = str(data.get('name') or data.get('nombre') or '').strip() or 'service-account'
+        roles = data.get('roles') if isinstance(data.get('roles'), list) else []
+
+        client_id = secrets.token_hex(12)
+        secret = secrets.token_urlsafe(24)
+        secret_hash = hash_password(secret)
+
+        col = get_empresa_collection('service_accounts', 0)
+        doc = {
+            'client_id': client_id,
+            'secret_hash': secret_hash,
+            'name': name,
+            'roles': roles,
+            'created_by': {'id': request_user.get('id'), 'email': request_user.get('email')},
+            'created_at': datetime.now().isoformat(),
+        }
+        col.insert_one(doc)
+        try:
+            log_audit('create_service_account', request_user, {'client_id': client_id, 'name': name, 'roles': roles})
+        except Exception:
+            pass
+        return jsonify({'client_id': client_id, 'secret': secret}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/service-account/token', methods=['POST'])
+def service_account_token():
+    try:
+        data = request.get_json() or {}
+        client_id = str(data.get('client_id') or '').strip()
+        secret = str(data.get('secret') or '').strip()
+        if not client_id or not secret:
+            return jsonify({'error': 'client_id y secret requeridos'}), 400
+
+        col = get_empresa_collection('service_accounts', 0)
+        acct = col.find_one({'client_id': client_id})
+        if not acct:
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+        secret_hash = acct.get('secret_hash')
+        if not verify_password(secret, secret_hash):
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+
+        payload = {'type': 'service_account', 'client_id': client_id, 'roles': acct.get('roles', [])}
+        token = create_jwt(payload)
+        try:
+            log_audit('issue_service_account_token', None, {'client_id': client_id})
+        except Exception:
+            pass
+        return jsonify({'token': token}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1349,6 +1532,10 @@ def actualizar_usuario(usuario_id):
         if result.matched_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
         usuario = col.find_one({'_id': oid})
+        try:
+            log_audit('update_user', request_user, {'updated_user_id': str(usuario.get('_id')), 'updated_fields': list(update_doc.keys())})
+        except Exception:
+            pass
         return jsonify(fix_id(usuario)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1550,6 +1737,10 @@ def eliminar_usuario(usuario_id):
         result = col.delete_one({'_id': oid})
         if result.deleted_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
+        try:
+            log_audit('delete_user', request_user, {'deleted_user_id': str(usuario_id)})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1642,6 +1833,10 @@ def api_estados_pedido_rules():
         col = get_empresa_collection('config_general', empresa_id)
         # Guardar como JSON string
         col.update_one({'clave': 'estados_pedido_rules'}, {'$set': {'valor': json.dumps(rules), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        try:
+            log_audit('update_estados_pedido_rules', request_user, {'rules_keys': list(rules.keys())})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1680,48 +1875,9 @@ def api_roles_permissions():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/active-role', methods=['GET', 'PUT'])
-def api_active_role():
-    try:
-        if request.method == 'GET':
-            col_opciones = get_empresa_collection('config_opciones', 0)
-            rows = list(col_opciones.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
-            roles = []
-            for r in rows:
-                label = (r.get('valor') or '').strip()
-                key = slugify_estado(label)
-                if not label or not key:
-                    continue
-                roles.append({'key': key, 'label': label})
-
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'active_role'})
-            active = (doc.get('valor') if doc and doc.get('valor') else 'root')
-            # ensure active is a key (slug)
-            active_key = slugify_estado(str(active)) or 'root'
-            active_label = next((r['label'] for r in roles if r['key'] == active_key), active_key)
-            return jsonify({'active_role': active_key, 'active_role_label': active_label, 'roles': roles}), 200
-
-        # PUT - update active role
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
-        data = request.get_json() or {}
-        next_role = str(data.get('active_role') or '').strip()
-        if not next_role:
-            return jsonify({'error': 'active_role requerido'}), 400
-
-        col_opciones = get_empresa_collection('config_opciones', 0)
-        rows = list(col_opciones.find({'categoria': 'roles'}))
-        valid_keys = {slugify_estado((r.get('valor') or '').strip()): (r.get('valor') or '').strip() for r in rows}
-        if next_role not in valid_keys:
-            return jsonify({'error': 'Rol no válido'}), 400
-
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'active_role'}, {'$set': {'valor': next_role, 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
-        return jsonify({'success': True, 'active_role': next_role, 'active_role_label': valid_keys.get(next_role)}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# NOTE: `active-role` API removed. Any logic that relied on the
+# `active_role` configuration should instead rely on explicit user roles
+# (e.g. 'root' or 'administrador').
 
 
 @app.route('/api/settings/modo-creacion', methods=['GET', 'PUT'])
@@ -1744,6 +1900,10 @@ def api_modo_creacion():
             return jsonify({'error': 'modo_creacion no válido (manual|automatico)'}), 400
         col_general = get_empresa_collection('config_general', 0)
         col_general.update_one({'clave': 'modo_creacion'}, {'$set': {'valor': modo, 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        try:
+            log_audit('update_modo_creacion', request_user, {'modo': modo})
+        except Exception:
+            pass
         return jsonify({'success': True, 'modo_creacion': modo}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1771,6 +1931,10 @@ def api_session_timeout():
             return jsonify({'error': f'session_timeout_minutes fuera de rango ({SESSION_TIMEOUT_MINUTES_MIN}-{SESSION_TIMEOUT_MINUTES_MAX})'}), 400
         col_general = get_empresa_collection('config_general', 0)
         col_general.update_one({'clave': 'session_timeout_minutes'}, {'$set': {'valor': str(minutes), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        try:
+            log_audit('update_session_timeout', request_user, {'minutes': minutes})
+        except Exception:
+            pass
         return jsonify({'success': True, 'session_timeout_minutes': minutes}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1790,6 +1954,10 @@ def crear_config_opcion():
             'fecha_creacion': datetime.now().isoformat()
         }
         result = col.insert_one(doc)
+        try:
+            log_audit('create_setting_item', request_user if 'request_user' in locals() else None, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})
+        except Exception:
+            pass
         return jsonify({'success': True, 'id': str(result.inserted_id)}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1826,12 +1994,15 @@ def reorder_settings_catalogo_items():
                     id_by_role_key[role_key] = role_id
             expected_prefix = [id_by_role_key[key] for key in PROTECTED_ROLE_ORDER if key in id_by_role_key]
             if ordered_ids[:len(expected_prefix)] != expected_prefix:
-                return jsonify({'error': 'Los roles base deben permanecer fijos al inicio en orden Operario, Administrador, Root'}), 409
+                return jsonify({'error': 'Los roles base deben permanecer fijos al inicio en orden Administrador, Root'}), 409
 
         # Actualizar orden
         for idx, item_id in enumerate(ordered_ids, start=1):
             col.update_one({'_id': ObjectId(item_id), 'categoria': categoria}, {'$set': {'orden': idx}})
-
+        try:
+            log_audit('reorder_settings', request_user if 'request_user' in locals() else None, {'categoria': categoria, 'ordered_ids': ordered_ids})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1883,6 +2054,10 @@ def update_settings_catalogo_item(item_id):
         # Actualizar valor
         col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor}})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
+        try:
+            log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor})
+        except Exception:
+            pass
         return jsonify({'success': True, 'id': item_id, 'valor': nuevo_valor, 'changed': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1908,6 +2083,10 @@ def delete_settings_catalogo_item(item_id):
         result = col.delete_one({'_id': ObjectId(item_id)})
         if result.deleted_count == 0:
             return jsonify({'error': 'Ítem no encontrado'}), 404
+        try:
+            log_audit('delete_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'valor': valor})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2574,11 +2753,10 @@ def update_pedido(pedido_id):
 
             # Allow root users to override final-state lock
             request_role = str(request_user.get('rol') or '').strip().lower()
-            # Allow override for root users or if active_role is root
-            col_general = get_empresa_collection('config_general', 0)
-            ar_doc = col_general.find_one({'clave': 'active_role'})
-            active_role_cfg = (ar_doc.get('valor') if ar_doc and ar_doc.get('valor') else 'root')
-            if estado_actual in estados_finales and estado_actual != nuevo_estado and request_role != 'root' and slugify_estado(active_role_cfg) != 'root':
+            # Allow override only for root users (removed dependency on configurable
+            # "active_role"). If the current state is final and the requester is
+            # not 'root', disallow the change.
+            if estado_actual in estados_finales and estado_actual != nuevo_estado and request_role != 'root':
                 return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
 
             # Guardar el estado en formato de label (mantener consistencia con datos existentes)

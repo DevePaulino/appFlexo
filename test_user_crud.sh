@@ -32,12 +32,12 @@ EDIT_CODE=$(curl -sS -o /tmp/edit_user.json -w "%{http_code}" "$BASE/api/usuario
   -X PUT \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
-  -d "{\"nombre\":\"Companero Editado ${TS}\",\"email\":\"${TEAM_EMAIL}\",\"rol\":\"operario\",\"billing_model\":\"suscripcion\",\"payment_method\":\"tarjeta\"}")
+  -d "{\"nombre\":\"Companero Editado ${TS}\",\"email\":\"${TEAM_EMAIL}\",\"rol\":\"administrador\",\"billing_model\":\"suscripcion\",\"payment_method\":\"tarjeta\"}")
 run_json_check /tmp/edit_user.json
 
 LIST2_CODE=$(curl -sS -o /tmp/list2.json -w "%{http_code}" "$BASE/api/usuarios" -H "Authorization: Bearer ${TOKEN}")
 run_json_check /tmp/list2.json
-EDIT_OK=$(node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('/tmp/list2.json','utf8')); const id=Number(process.argv[1]); const u=(d.usuarios||[]).find(x=>x.id===id); process.stdout.write(u && String(u.nombre||'').includes('Editado') && String(u.rol||'').toLowerCase()==='operario' ? 'yes':'no')" "$USER_ID")
+EDIT_OK=$(node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('/tmp/list2.json','utf8')); const id=Number(process.argv[1]); const u=(d.usuarios||[]).find(x=>x.id===id); process.stdout.write(u && String(u.nombre||'').includes('Editado') && String(u.rol||'').toLowerCase()==='administrador' ? 'yes':'no')" "$USER_ID")
 
 DEL_CODE=$(curl -sS -o /tmp/delete_user.json -w "%{http_code}" "$BASE/api/usuarios/${USER_ID}" \
   -X DELETE \

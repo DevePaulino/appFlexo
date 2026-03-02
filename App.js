@@ -14,7 +14,6 @@ import TroquelessScreen from './screens/TroquelessScreen';
 import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
-import ActiveRoleSwitcher from './components/ActiveRoleSwitcher';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 
 const API_BASE = 'http://localhost:8080';
@@ -679,7 +678,7 @@ export default function App() {
 
   return (
     <PedidosProvider>
-      <ActiveRoleSwitcher />
+      {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
       <NavigationContainer linking={linking}>
         <Stack.Navigator
           screenOptions={{

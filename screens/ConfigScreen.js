@@ -8,7 +8,6 @@ const API_MODO_URL = 'http://localhost:8080/api/settings/modo-creacion';
 const API_SESSION_TIMEOUT_URL = 'http://localhost:8080/api/settings/session-timeout';
 const API_ESTADOS_RULES_URL = 'http://localhost:8080/api/settings/estados-pedido-rules';
 const API_SETTINGS_REORDER_URL = 'http://localhost:8080/api/settings/reorder';
-const API_ACTIVE_ROLE_URL = 'http://localhost:8080/api/settings/active-role';
 const API_ROLE_PERMISSIONS_URL = 'http://localhost:8080/api/settings/roles-permissions';
 const API_USERS_URL = 'http://localhost:8080/api/usuarios';
 const API_BILLING_CONFIG_URL = 'http://localhost:8080/api/billing/config';
@@ -678,8 +677,6 @@ export default function ConfigScreen({ route, currentUser }) {
   const [guardandoRules, setGuardandoRules] = useState(false);
   const [pedidoRulesExpanded, setPedidoRulesExpanded] = useState(false);
   const [roleRulesExpanded, setRoleRulesExpanded] = useState(false);
-  const [activeRole, setActiveRole] = useState('root');
-  const [availableRoles, setAvailableRoles] = useState([]);
   const [rolePermissions, setRolePermissions] = useState({});
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
@@ -826,18 +823,6 @@ export default function ConfigScreen({ route, currentUser }) {
     setApiExamplesExpanded((prev) => !prev);
   };
 
-  const cargarRolActivo = async () => {
-    try {
-      const response = await fetch(API_ACTIVE_ROLE_URL);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        setActiveRole((data.active_role || 'root').toLowerCase());
-        setAvailableRoles(Array.isArray(data.roles) ? data.roles : []);
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudo cargar el rol activo: ${e.message}`);
-    }
-  };
 
   const cargarPermisosRoles = async () => {
     try {
@@ -894,7 +879,6 @@ export default function ConfigScreen({ route, currentUser }) {
     cargarSettings();
     cargarModoCreacion();
     cargarEstadoRules();
-    cargarRolActivo();
     cargarPermisosRoles();
     cargarUsuarios();
     cargarSessionTimeout();
@@ -994,13 +978,29 @@ export default function ConfigScreen({ route, currentUser }) {
     }
     return null;
   })();
-  const puedeAdministrarUsuarios = (() => {
-    if (currentUserPermissionValue !== null) return currentUserPermissionValue;
-    if (rolePermissionValue !== null) return rolePermissionValue;
-    return ['root', 'administrador', 'admin'].includes(currentUserRole);
-  })();
-  const esRootActivo = String(activeRole || '').toLowerCase() === 'root';
+  // Determinamos en cliente si el usuario actual puede administrar usuarios.
+  // El backend sigue validando la operación final; esto solo habilita/inhabilita la UI.
+  const puedeAdministrarUsuarios = Boolean(
+    currentUserRole === 'root'
+    || currentUserRole === 'administrador'
+    || currentUserRole === 'admin'
+    || currentUserPermissionValue === true
+    || rolePermissionValue === true
+  );
   const puedeEditarSessionTimeout = ['root', 'administrador', 'admin'].includes(currentUserRole);
+
+  // Build availableRoles from settings but hide internal roles and the 'root' key from UI lists
+  const availableRoles = (settings.roles || [])
+    .filter((item) => !item?.internal)
+    .map((item) => {
+      const raw = String(item?.valor || item?.key || item?.label || '').trim();
+      const key = slugifyEstado(raw);
+      return {
+        key,
+        label: String(item?.label || item?.valor || item?.key || raw).trim(),
+      };
+    })
+    .filter((r) => r.key && r.key !== 'root');
 
   const rolesDisponibles = (() => {
     const fromActiveRoles = (availableRoles || [])
@@ -1040,12 +1040,14 @@ export default function ConfigScreen({ route, currentUser }) {
     setSubmittedUsuario(false);
   };
 
-  const mostrarPermisoUsuariosDenegado = () => {
-    Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar usuarios');
-  };
+  // La comprobación/alerta de permiso de usuarios se ha eliminado (backend sigue validando).
 
   const mostrarPermisoRecargasDenegado = () => {
     Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar recargas');
+  };
+
+  const mostrarPermisoUsuariosDenegado = () => {
+    Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar usuarios.');
   };
 
   const abrirModalNuevoUsuario = () => {
@@ -1328,7 +1330,6 @@ export default function ConfigScreen({ route, currentUser }) {
       setInputs((prev) => ({ ...prev, [categoria]: '' }));
       await cargarSettings();
       if (categoria === 'roles') {
-        await cargarRolActivo();
         await cargarPermisosRoles();
       }
     } catch (e) {
@@ -1347,7 +1348,6 @@ export default function ConfigScreen({ route, currentUser }) {
       }
       await cargarSettings();
       if (esRol) {
-        await cargarRolActivo();
         await cargarPermisosRoles();
       }
     } catch (e) {
@@ -1383,7 +1383,6 @@ export default function ConfigScreen({ route, currentUser }) {
 
       await cargarSettings();
       if (categoria === 'roles') {
-        await cargarRolActivo();
         await cargarPermisosRoles();
       }
       if (categoria === 'estados_pedido') {
@@ -1448,6 +1447,7 @@ export default function ConfigScreen({ route, currentUser }) {
       setGuardandoRole(false);
     }
   };
+
 
   const toggleRolePermission = (roleKey, permissionKey) => {
     setRolePermissions((prev) => {
@@ -1558,7 +1558,10 @@ export default function ConfigScreen({ route, currentUser }) {
   };
 
   const renderCategoria = (categoryKey, categoryTitle, sectionStyle = null) => {
-    const items = settings[categoryKey] || [];
+    const itemsRaw = settings[categoryKey] || [];
+    const items = categoryKey === 'roles'
+      ? itemsRaw.filter((item) => !item?.internal && slugifyEstado(String(item?.valor || '')) !== 'root')
+      : itemsRaw;
     const rolesProtegidos = new Set(['administrador', 'root']);
     const estadosProtegidos = new Set([
       'diseno',
@@ -1658,33 +1661,9 @@ export default function ConfigScreen({ route, currentUser }) {
       <View style={styles.blockContainer}>
         {showBlockTitles && <Text style={styles.groupTitle}>Usuarios</Text>}
 
-        {esRootActivo && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Rol activo</Text>
-            <>
-                <View style={styles.chipList}>
-                  {(availableRoles || []).map((role) => {
-                    const key = String(role?.key || '').toLowerCase();
-                    const active = key === activeRole;
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        style={[styles.selectChip, active && styles.selectChipActive]}
-                        disabled={guardandoRole}
-                        onPress={() => actualizarRolActivo(key)}
-                      >
-                        <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{role?.label || key}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <Text style={[styles.muted, { marginTop: 8 }]}>El rol activo aplica las capacidades de edición en toda la app.</Text>
-              </>
-          </View>
-        )}
+        {/* Active-role UI removed: app no longer depends on configurable active_role */}
 
         <View style={styles.section}>
-          {!puedeAdministrarUsuarios && <Text style={styles.muted}>Tu rol no tiene permiso para gestionar usuarios.</Text>}
 
               <TextInput
                 style={styles.usersSearchInput}

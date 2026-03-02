@@ -60,7 +60,7 @@ echo "USER_ID=$USER_ID"
 
 LIST1_CODE=$(do_curl GET "$TMPD/list1.json" "$TMPD/list1.headers" "$BASE/api/usuarios" -H "Authorization: Bearer ${TOKEN}")
 
-EDIT_CODE=$(do_curl PUT "$TMPD/edit_user.json" "$TMPD/edit_user.headers" "$BASE/api/usuarios/${USER_ID}" -H 'Content-Type: application/json' -H "Authorization: Bearer ${TOKEN}" -d "{\"nombre\":\"Companero Editado ${TS}\",\"email\":\"${TEAM_EMAIL}\",\"rol\":\"operario\",\"billing_model\":\"suscripcion\",\"payment_method\":\"tarjeta\"}")
+EDIT_CODE=$(do_curl PUT "$TMPD/edit_user.json" "$TMPD/edit_user.headers" "$BASE/api/usuarios/${USER_ID}" -H 'Content-Type: application/json' -H "Authorization: Bearer ${TOKEN}" -d "{\"nombre\":\"Companero Editado ${TS}\",\"email\":\"${TEAM_EMAIL}\",\"rol\":\"administrador\",\"billing_model\":\"suscripcion\",\"payment_method\":\"tarjeta\"}")
 
 LIST2_CODE=$(do_curl GET "$TMPD/list2.json" "$TMPD/list2.headers" "$BASE/api/usuarios" -H "Authorization: Bearer ${TOKEN}")
 
