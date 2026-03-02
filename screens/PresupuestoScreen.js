@@ -613,19 +613,38 @@ export default function PresupuestoScreen() {
       ...presupuesto // Incluir todos los datos adicionales
     };
     
-    fetch(`http://localhost:8080/api/presupuestos/aceptar/${presupuesto.trabajo_id}`, {
+    const targetId = presupuesto.trabajo_id || presupuesto.id || presupuesto._id;
+    if (!targetId) {
+      console.error('No se encuentra trabajo_id en presupuesto:', presupuesto);
+      alert('No es posible aceptar este presupuesto: falta identificador de trabajo.');
+      return;
+    }
+
+    fetch(`http://localhost:8080/api/presupuestos/aceptar/${targetId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datosPresupuesto)
     })
       .then((res) => res.json())
-      .then(() => {
+      .then((data) => {
         // Actualizar presupuesto localmente
         const updated = presupuestos.map((p) =>
-          p.id === presupuesto.id ? { ...p, aprobado: true } : p
+          p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data && data.pedido ? data.pedido.fecha_pedido : p.fecha_aprobacion } : p
         );
         setPresupuestos(updated);
-        // Notificar al contexto que hay un nuevo pedido
+
+        // Si el servidor devolvió el pedido, navega a Pedidos pasando el pedido
+        if (data && data.pedido) {
+          try {
+            notificarNuevoPedido();
+            navigation.navigate('Pedidos', { newPedido: data.pedido });
+            return;
+          } catch (e) {
+            console.warn('Navigation error al enviar newPedido:', e);
+          }
+        }
+
+        // Fallback: notificar y navegar para que la pantalla recargue
         notificarNuevoPedido();
         navigation.navigate('Pedidos');
       })

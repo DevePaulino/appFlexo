@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
 import { PedidosContext } from '../PedidosContext';
@@ -592,6 +592,23 @@ export default function TrabajoScreen() {
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
   const { actualizacionPedidos } = React.useContext(PedidosContext);
+  const route = useRoute();
+
+  // Insertar pedido nuevo si viene en params (por ejemplo desde PresupuestoScreen)
+  useEffect(() => {
+    try {
+      const newPedido = route && route.params && route.params.newPedido;
+      if (newPedido) {
+        setTrabajos((prev) => {
+          const exists = prev && prev.some((t) => String(t._id || t.id || t.numero_pedido) === String(newPedido._id || newPedido.id || newPedido.numero_pedido));
+          if (exists) return prev;
+          return [newPedido, ...(prev || [])];
+        });
+      }
+    } catch (e) {
+      // no bloquear la UI por errores de params
+    }
+  }, [route && route.params && route.params.newPedido]);
 
   const normalizarEstadoValue = (estadoRaw) => {
     const raw = String(estadoRaw || '').trim().toLowerCase();

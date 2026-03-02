@@ -147,6 +147,27 @@ ROLE_PERMISSIONS_DEFAULT = {
     },
 }
 
+# Defaults for pedido states and rules used when DB has no config
+ESTADOS_PEDIDO_DEFAULT = [
+    {'value': 'diseno', 'label': 'Diseño'},
+    {'value': 'pendiente-de-aprobacion', 'label': 'Pendiente de Aprobación'},
+    {'value': 'pendiente-de-cliche', 'label': 'Pendiente de Cliché'},
+    {'value': 'pendiente-de-impresion', 'label': 'Pendiente de Impresión'},
+    {'value': 'pendiente-post-impresion', 'label': 'Pendiente Post-Impresión'},
+    {'value': 'finalizado', 'label': 'Finalizado'},
+    {'value': 'parado', 'label': 'Parado'},
+    {'value': 'cancelado', 'label': 'Cancelado'},
+]
+
+ESTADOS_RULES_DEFAULT = {
+    'bloqueados_produccion': ['cancelado', 'parado', 'finalizado'],
+    'en_cola_produccion': ['pendiente-de-impresion', 'pendiente-post-impresion'],
+    'preimpresion': ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'],
+    'estados_finalizados': ['finalizado'],
+    'ocultar_timeline': ['parado', 'cancelado'],
+    'ocultar_grafica': ['parado', 'cancelado', 'finalizado'],
+}
+
 FREE_SIGNUP_CREDITS = 50
 CREDIT_COSTS = {
     'report': 7,
@@ -525,62 +546,58 @@ def init_db():
     for categoria, valores in defaults_catalogo.items():
         if col_opciones.count_documents({'categoria': categoria}) == 0:
             for idx, valor in enumerate(valores, start=1):
-                col_opciones.insert_one({
-                    'categoria': categoria,
-                    'valor': valor,
-                    'orden': idx,
-                    'fecha_creacion': datetime.now().isoformat()
-                })
-    # Normalizar orden para todas las categorías
-    categorias_existentes = col_opciones.distinct('categoria')
-    for categoria in categorias_existentes:
-        docs = list(col_opciones.find({'categoria': categoria}).sort([('orden', 1), ('_id', 1)]))
-        for idx, doc in enumerate(docs, start=1):
-            col_opciones.update_one({'_id': doc['_id']}, {'$set': {'orden': idx}})
-    # Configuración general por defecto
-    if not col_general.find_one({'clave': 'modo_creacion'}):
-        col_general.insert_one({'clave': 'modo_creacion', 'valor': 'manual', 'fecha_actualizacion': datetime.now().isoformat()})
-    if not col_general.find_one({'clave': 'active_role'}):
-        col_general.insert_one({'clave': 'active_role', 'valor': 'root', 'fecha_actualizacion': datetime.now().isoformat()})
-    if not col_general.find_one({'clave': 'role_permissions'}):
-        col_general.insert_one({'clave': 'role_permissions', 'valor': json.dumps(ROLE_PERMISSIONS_DEFAULT), 'fecha_actualizacion': datetime.now().isoformat()})
-    # Código SQL y referencias a c, conn, seed_meta, seed_creditos eliminados por migración a MongoDB
+                result = col.insert_one(doc)
+                pres_id = str(result.inserted_id)
 
+                # Si viene aprobado desde creación, crear pedido asociado
+                try:
+                    if aprobado:
+                        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                        try:
+                            counters_col = mongo.db['counters']
+                            seq_doc = counters_col.find_one_and_update(
+                                {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                                {'$inc': {'seq': 1}},
+                                upsert=True,
+                                return_document=pymongo.ReturnDocument.AFTER
+                            )
+                            numero_pedido = str(seq_doc.get('seq', 0))
+                        except Exception:
+                            numero_pedido = f"PED-{int(time.time())}"
 
-def get_modo_creacion():
-    """Obtiene el modo de creación actual: manual | automatico"""
-    col = get_empresa_collection('config_general', 0)
-    doc = col.find_one({'clave': 'modo_creacion'})
-    valor = (doc.get('valor') if doc and doc.get('valor') else 'manual').strip().lower()
-    if valor not in ['manual', 'automatico']:
-        return 'manual'
-    return valor
+                        doc_pedido = {
+                            'empresa_id': empresa_id,
+                            'trabajo_id': trabajo_id,
+                            'numero_pedido': numero_pedido,
+                            'referencia': referencia,
+                            'fecha_pedido': datetime.now().isoformat(),
+                            'datos_presupuesto': datos_json
+                        }
+                        try:
+                            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                            default_label = available.get('diseno') or 'Diseño'
+                        except Exception:
+                            default_label = 'Diseño'
+                        doc_pedido['estado'] = default_label
+                        doc_pedido['fecha_finalizacion'] = None
+                        result_pedido = pedidos_col.insert_one(doc_pedido)
+                        pedido_id = str(result_pedido.inserted_id)
+                        doc_pedido['_id'] = pedido_id
 
+                        # guardar pedido_id en presupuesto
+                        try:
+                            col.update_one({'_id': ObjectId(pres_id)}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+                        except Exception:
+                            try:
+                                col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres_id}, {'id': pres_id}]}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+                            except Exception:
+                                pass
+                        # return created pedido immediately
+                        return jsonify({'success': True, 'presupuesto_id': pres_id, 'pedido': doc_pedido}), 200
+                except Exception:
+                    pass
 
-def modo_automatico_activo():
-    return get_modo_creacion() == 'automatico'
-
-
-ESTADOS_PEDIDO_DEFAULT = [
-    {'value': 'diseno', 'label': 'Diseño'},
-    {'value': 'pendiente-de-aprobacion', 'label': 'Pendiente de Aprobación'},
-    {'value': 'pendiente-de-cliche', 'label': 'Pendiente de Cliché'},
-    {'value': 'pendiente-de-impresion', 'label': 'Pendiente de Impresión'},
-    {'value': 'pendiente-post-impresion', 'label': 'Pendiente Post-Impresión'},
-    {'value': 'finalizado', 'label': 'Finalizado'},
-    {'value': 'parado', 'label': 'Parado'},
-    {'value': 'cancelado', 'label': 'Cancelado'},
-]
-
-
-ESTADOS_RULES_DEFAULT = {
-    'bloqueados_produccion': ['cancelado', 'parado', 'finalizado'],
-    'en_cola_produccion': ['pendiente-de-impresion', 'pendiente-post-impresion'],
-    'preimpresion': ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'],
-    'estados_finalizados': ['finalizado'],
-    'ocultar_timeline': ['parado', 'cancelado'],
-    'ocultar_grafica': ['parado', 'cancelado', 'finalizado'],
-}
+                return jsonify({'success': True, 'presupuesto_id': pres_id}), 200
 
 
 def slugify_estado(texto):
@@ -2038,6 +2055,8 @@ def aceptar_presupuesto(trabajo_id):
         doc_pedido['fecha_finalizacion'] = None
         result = pedidos_col.insert_one(doc_pedido)
         pedido_id = str(result.inserted_id)
+        # attach inserted id to returned doc for client convenience
+        doc_pedido['_id'] = pedido_id
 
         # Actualizar presupuesto: aprobado, pedido_id, fecha_aprobacion
         try:
@@ -2045,7 +2064,7 @@ def aceptar_presupuesto(trabajo_id):
         except Exception:
             pass
 
-        return jsonify({'success': True, 'pedido_id': pedido_id}), 200
+        return jsonify({'success': True, 'pedido': doc_pedido}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2187,6 +2206,8 @@ def update_presupuesto(presupuesto_id):
                     doc_pedido['fecha_finalizacion'] = None
                     result_pedido = pedidos_col.insert_one(doc_pedido)
                     pedido_id = str(result_pedido.inserted_id)
+                    # attach inserted id to returned doc for client convenience
+                    doc_pedido['_id'] = pedido_id
 
                     # grabar pedido_id y fecha_aprobacion en el presupuesto
                     extra = {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}
@@ -2195,6 +2216,8 @@ def update_presupuesto(presupuesto_id):
                         col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': extra})
                     except Exception:
                         col.update_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]}, {'$set': extra})
+                    # return the created pedido to caller (non-blocking)
+                    return jsonify({'success': True, 'pedido': doc_pedido}), 200
         except Exception:
             # No bloquear la actualización por errores en la creación del pedido
             pass
