@@ -1475,7 +1475,7 @@ def logout_public_user_session():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/usuarios/<int:usuario_id>', methods=['PUT'])
+@app.route('/api/usuarios/<usuario_id>', methods=['PUT'])
 def actualizar_usuario(usuario_id):
     try:
         request_user, auth_error = require_request_user()
@@ -1720,7 +1720,7 @@ def consumir_creditos_billing():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/usuarios/<int:usuario_id>', methods=['DELETE'])
+@app.route('/api/usuarios/<usuario_id>', methods=['DELETE'])
 def eliminar_usuario(usuario_id):
     try:
         request_user, auth_error = require_request_user()
