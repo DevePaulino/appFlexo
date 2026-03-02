@@ -28,6 +28,7 @@ from urllib import request as urllib_request, parse as urllib_parse, error as ur
 from collections import defaultdict
 from email.message import EmailMessage
 from flask import Flask, request, jsonify, g
+from flask import make_response
 from werkzeug.exceptions import HTTPException
 from flask_cors import CORS
 from PIL import Image, ImageCms
@@ -77,8 +78,14 @@ mongo = PyMongo(app)
 
 # Helper para obtener la colección de una empresa
 def get_empresa_collection(nombre, empresa_id):
-    # Todas las colecciones llevan el nombre base, pero filtramos por empresa_id
-    return mongo.db[nombre]
+    # Mapear nombres legacy a la colección canónica `pedidos` cuando corresponde
+    # Esto permite unificar el término 'trabajo' -> 'pedido' sin cambiar todas las rutas a la vez.
+    name = str(nombre or '')
+    if name in ('trabajos', 'trabajo'):
+        name = 'pedidos'
+    if name in ('trabajo_orden', 'trabajo-orden', 'trabajos_orden'):
+        name = 'pedido_orden'
+    return mongo.db[name]
 
 # Helper para convertir ObjectId a string en respuestas JSON
 def fix_id(doc):
@@ -3339,6 +3346,78 @@ def create_trabajo():
         return jsonify({'success': True, 'trabajo_id': str(res.inserted_id)}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# --- Compatibility aliases: prefer 'pedidos' terminology but keep 'trabajos' handlers ---
+def _mark_deprecated_and_forward(result):
+    # Normalize result into a Flask response and add a deprecation header
+    resp = make_response(result)
+    try:
+        resp.headers['X-Deprecated-Route'] = 'Use /api/pedidos/* endpoints instead'
+    except Exception:
+        pass
+    return resp
+
+
+@app.route('/api/pedidos/<pedido_id>/estado', methods=['PUT', 'POST'])
+def cambiar_estado_pedido(pedido_id):
+    return _mark_deprecated_and_forward(cambiar_estado_trabajo(pedido_id))
+
+
+@app.route('/api/pedidos/orden', methods=['GET'])
+def get_pedidos_orden():
+    return _mark_deprecated_and_forward(get_trabajos_orden())
+
+
+@app.route('/api/pedidos/orden', methods=['POST'])
+def save_pedidos_orden():
+    return _mark_deprecated_and_forward(save_trabajos_orden())
+
+
+@app.route('/api/pedidos/orden/reset', methods=['POST'])
+def reset_pedidos_orden():
+    return _mark_deprecated_and_forward(reset_trabajos_orden())
+
+
+# Additional non-destructive aliases to help transition from 'trabajo' -> 'pedido'
+@app.route('/api/pedidos-produccion', methods=['GET'])
+def get_pedidos_produccion():
+    res = get_trabajos_produccion()
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/pedidos/produccion/enviar', methods=['POST'])
+def enviar_pedido_produccion():
+    res = enviar_trabajo_produccion()
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/presupuestos/<int:pedido_id>', methods=['GET'])
+def get_presupuesto_por_pedido(pedido_id):
+    res = get_presupuesto(pedido_id)
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/presupuestos/aceptar/<pedido_id>', methods=['POST'])
+def aceptar_presupuesto_por_pedido(pedido_id):
+    res = aceptar_presupuesto(pedido_id)
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/pedidos/trabajo', methods=['POST'])
+def create_pedido_trabajo_alias():
+    """Alias temporal: crea un 'trabajo' mínimo vía la ruta de pedidos.
+    Mantiene compatibilidad con scripts que usan /api/trabajos"""
+    return _mark_deprecated_and_forward(create_trabajo())
+
 
 @app.route('/api/trabajos/orden/reset', methods=['POST'])
 def reset_trabajos_orden():
