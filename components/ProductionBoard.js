@@ -36,7 +36,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       : maquinas;
 
     const combinado = maquinasFuente.flatMap((maq) =>
-      (trabajosPorMaquina[maq.id] || []).map((trab) => ({
+      ((trabajosPorMaquina[String(maq.id)] || trabajosPorMaquina[maq.id]) || []).map((trab) => ({
         ...trab,
         _maquina_id: maq.id,
         _maquina_nombre: maq.nombre,
@@ -59,7 +59,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     // item under the origin after a move.
     const idToEntries = {};
     for (const t of ordenados) {
-      const idKey = String(t.id || t.trabajo_id || '');
+      const idKey = String(t.trabajo_id || t.id || '');
       if (!idKey) continue;
       idToEntries[idKey] = idToEntries[idKey] || [];
       idToEntries[idKey].push(t);
@@ -108,13 +108,14 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     const handleGlobalMouseMove = (e) => {
       if (draggingId === null) return;
 
-      const draggedIndex = trabajos.findIndex((t) => t.id === draggingId);
+      const draggedIndex = trabajos.findIndex((t) => String(t.trabajo_id || t.id || '') === String(draggingId));
       let closestIndex = draggedIndex;
       let closestDistance = Infinity;
 
       // Recalcular posiciones en tiempo real
       trabajos.forEach((trabajo, idx) => {
-        const rowEl = rowRefsRef.current[trabajo.id];
+        const key = String(trabajo.trabajo_id || trabajo.id || '');
+        const rowEl = rowRefsRef.current[key];
         if (rowEl) {
           const rect = rowEl.getBoundingClientRect();
           const rowCenterY = rect.top + rect.height / 2;
@@ -133,7 +134,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
 
     const handleGlobalMouseUp = async () => {
       if (draggingId !== null && canReorder) {
-        const draggedIndex = trabajos.findIndex((t) => t.id === draggingId);
+        const draggedIndex = trabajos.findIndex((t) => String(t.trabajo_id || t.id || '') === String(draggingId));
         const finalTargetIndex = targetIndexRef.current !== null ? targetIndexRef.current : draggedIndex;
         
         if (draggedIndex !== -1 && draggedIndex !== finalTargetIndex) {
@@ -154,7 +155,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           const maqActual = maquinas.find((m) => String(m.id) === String(maquinasFiltradasIds[0])) || maquinas[maquinaActual];
           try {
             const trabajosParaGuardar = newTrabajos.map(t => ({
-              trabajo_id: t.id,
+              trabajo_id: t.id || t.trabajo_id,
               nueva_posicion: t.posicion
             }));
             
@@ -249,17 +250,42 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         // Encontrar el índice de la máquina destino
         const indiceMaquinaDestino = maquinas.findIndex(m => String(m.id) === String(nuevaMaquinaId));
 
+        // Solicitar explícitamente la página 1 de la máquina destino para asegurar que
+        // la lista del padre (`trabajosPorMaquina`) reciba el nuevo trabajo.
+        try {
+          if (onRequestPage) {
+            await onRequestPage(nuevaMaquinaId, 1);
+          }
+        } catch (e) {
+          // no fatal
+          console.warn('onRequestPage error', e);
+        }
+
         // Cambiar inmediatamente a la pestaña de destino para mantener el contexto
         if (indiceMaquinaDestino !== -1) {
           setMaquinaActual(indiceMaquinaDestino);
         }
-        
+
         // Recargar datos
         // Remove the moved trabajo locally so it doesn't remain visible under the
         // origin machine while the server-side state and other clients sync.
         setTrabajos((prev) => prev.filter(t => String(t.id || t.trabajo_id || '') !== String(trabajoId)));
         if (onRefresh) {
           await onRefresh();
+        }
+        // Re-intentar fetch de la página destino por si hubo condición de carrera
+        try {
+          if (onRequestPage) {
+            setTimeout(() => {
+              try {
+                onRequestPage(nuevaMaquinaId, 1).catch(e => console.warn('onRequestPage retry error', e));
+              } catch (e) {
+                console.warn('onRequestPage retry call error', e);
+              }
+            }, 500);
+          }
+        } catch (e) {
+          // ignore
         }
       } else {
         console.error('Error cambiando máquina:', res.statusText);

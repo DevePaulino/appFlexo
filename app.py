@@ -17,6 +17,7 @@ import smtplib
 import numpy as np
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
+from pymongo import ReturnDocument
 import pymongo
 from pymongo import UpdateMany, InsertOne
 import json
@@ -526,85 +527,39 @@ def enforce_rate_limit_auth():
 
 # Inicializar base de datos
 def init_db():
-    # En desarrollo, usar empresa_id=1 por defecto
+    # Use empresa_id=1 by default for local development
     empresa_id = 1
-    # MongoDB: No es necesario crear tablas ni índices, solo asegurar la máquina de ejemplo
-    ensure_maquina_ejemplo_presente(empresa_id)
+    # Ensure example machine exists
+    try:
+        ensure_maquina_ejemplo_presente(empresa_id)
+    except Exception:
+        pass
 
-    # Inicialización MongoDB catálogo/configuración por defecto
+    # Initialize simple configuration entries if missing
     col_opciones = get_empresa_collection('config_opciones', 0)
-    col_general = get_empresa_collection('config_general', 0)
     defaults_catalogo = {
         'roles': ['Operario', 'Administrador', 'Root', 'Comercial'],
         'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
         'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
         'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
         'estados_pedido': [
-            'Diseño',
-            'Pendiente de Aprobación',
-            'Pendiente de Cliché',
-            'Pendiente de Impresión',
-            'Pendiente Post-Impresión',
-            'Finalizado',
-            'Parado',
-            'Cancelado'
+            'diseno',
+            'pendiente-de-aprobacion',
+            'pendiente-de-cliche',
+            'pendiente-de-impresion',
+            'pendiente-post-impresion',
+            'finalizado',
+            'parado',
+            'cancelado'
         ]
     }
-    for categoria, valores in defaults_catalogo.items():
-        if col_opciones.count_documents({'categoria': categoria}) == 0:
+    try:
+        for categoria, valores in defaults_catalogo.items():
             for idx, valor in enumerate(valores, start=1):
-                result = col.insert_one(doc)
-                pres_id = str(result.inserted_id)
-
-                # Si viene aprobado desde creación, crear pedido asociado
-                try:
-                    if aprobado:
-                        pedidos_col = get_empresa_collection('pedidos', empresa_id)
-                        try:
-                            counters_col = mongo.db['counters']
-                            seq_doc = counters_col.find_one_and_update(
-                                {'key': 'pedido_seq', 'empresa_id': empresa_id},
-                                {'$inc': {'seq': 1}},
-                                upsert=True,
-                                return_document=pymongo.ReturnDocument.AFTER
-                            )
-                            numero_pedido = str(seq_doc.get('seq', 0))
-                        except Exception:
-                            numero_pedido = f"PED-{int(time.time())}"
-
-                        doc_pedido = {
-                            'empresa_id': empresa_id,
-                            'trabajo_id': trabajo_id,
-                            'numero_pedido': numero_pedido,
-                            'referencia': referencia,
-                            'fecha_pedido': datetime.now().isoformat(),
-                            'datos_presupuesto': datos_json
-                        }
-                        try:
-                            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
-                            default_label = available.get('diseno') or 'Diseño'
-                        except Exception:
-                            default_label = 'Diseño'
-                        doc_pedido['estado'] = default_label
-                        doc_pedido['fecha_finalizacion'] = None
-                        result_pedido = pedidos_col.insert_one(doc_pedido)
-                        pedido_id = str(result_pedido.inserted_id)
-                        doc_pedido['_id'] = pedido_id
-
-                        # guardar pedido_id en presupuesto
-                        try:
-                            col.update_one({'_id': ObjectId(pres_id)}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
-                        except Exception:
-                            try:
-                                col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres_id}, {'id': pres_id}]}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
-                            except Exception:
-                                pass
-                        # return created pedido immediately
-                        return jsonify({'success': True, 'presupuesto_id': pres_id, 'pedido': doc_pedido}), 200
-                except Exception:
-                    pass
-
-                return jsonify({'success': True, 'presupuesto_id': pres_id}), 200
+                if col_opciones.count_documents({'categoria': categoria, 'value': valor}) == 0:
+                    col_opciones.insert_one({'categoria': categoria, 'value': valor, 'order': idx})
+    except Exception:
+        pass
 
 
 def slugify_estado(texto):
@@ -855,20 +810,6 @@ def get_maquinas():
             'estado': estado
         }
         col.insert_one(doc)
-        # Invalidate production cache for this company (if redis configured)
-        try:
-            import redis as _redis
-            redis_url = os.environ.get('REDIS_URL', '').strip()
-            if redis_url:
-                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
-                try:
-                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
-                        rc.delete(key)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
         return jsonify({'success': True}), 200
     except Exception as e:
         print('REORDER ERROR:\n', _traceback.format_exc())
@@ -2705,19 +2646,47 @@ def enviar_trabajo_produccion():
             maquina_id_query = int(maquina_id)
         except Exception:
             maquina_id_query = str(maquina_id)
-        max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
-        max_pos = 0
-        for doc in max_pos_doc:
-            max_pos = doc.get('posicion', 0)
-        nueva_posicion = (max_pos or 0) + 1
 
-        # Insertar en trabajo_orden
-        orden_col.insert_one({
-            'empresa_id': empresa_id,
-            'trabajo_id': trabajo_id,
-            'maquina_id': maquina_id_query,
-            'posicion': nueva_posicion
-        })
+        # Intentar usar contador atómico por empresa+máquina para asignar posiciones
+        try:
+            counters_col = mongo.db['counters']
+            counter_key = f"pos_{empresa_id}_{maquina_id_query}"
+            seq_doc = counters_col.find_one_and_update(
+                {'key': counter_key, 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+            nueva_posicion = int(seq_doc.get('seq', 1))
+        except Exception:
+            # Fallback: calcular max+1 si el contador no está disponible
+            max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+            max_pos = 0
+            for doc in max_pos_doc:
+                max_pos = doc.get('posicion', 0)
+            nueva_posicion = (max_pos or 0) + 1
+
+        # Insertar en trabajo_orden usando upsert para evitar duplicados por trabajo_id
+        try:
+            orden_col.find_one_and_update(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$setOnInsert': {
+                    'empresa_id': empresa_id,
+                    'trabajo_id': trabajo_id,
+                    'maquina_id': maquina_id_query,
+                    'posicion': nueva_posicion
+                }},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+        except Exception:
+            # Fallback a inserción simple si upsert falla por algún motivo
+            orden_col.insert_one({
+                'empresa_id': empresa_id,
+                'trabajo_id': trabajo_id,
+                'maquina_id': maquina_id_query,
+                'posicion': nueva_posicion
+            })
 
         # Actualizar el estado del trabajo para que pase a la cola de impresión
         try:
@@ -2836,26 +2805,26 @@ def api_get_produccion():
 
         query = {'maquina_id': maquina_match, 'empresa_id': empresa_id}
         cursor = orden_col.find(query).sort([('posicion', 1), ('_id', 1)])
-        total = orden_col.count_documents(query)
-        rows = list(cursor.skip(skip).limit(page_size))
 
-        # To avoid N queries, collect all trabajo_ids and fetch pedidos in one query
+        # Fetch ALL rows for this machine (queue sizes are typically small) and
+        # dedupe globally by canonical pedido id before applying pagination.
+        all_rows = list(cursor)
+
+        # Collect trabajo ids from all rows so we can fetch pedidos once
         trabajo_ids = []
         object_ids = []
-        for row in rows:
+        for row in all_rows:
             t = row.get('trabajo_id')
             if t is None:
                 continue
             s = str(t)
             trabajo_ids.append(s)
-            # also collect ObjectId variants when possible
             try:
                 if isinstance(t, str) and len(t) == 24:
                     object_ids.append(ObjectId(t))
             except Exception:
                 pass
 
-        # Build pedidos query: match by trabajo_id or by _id (when possible)
         pedidos_map = {}
         if trabajo_ids or object_ids:
             or_clauses = []
@@ -2863,28 +2832,23 @@ def api_get_produccion():
                 or_clauses.append({'trabajo_id': {'$in': trabajo_ids}})
             if object_ids:
                 or_clauses.append({'_id': {'$in': object_ids}})
-            query = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
-            for p in pedidos_col.find(query):
-                # map by both _id and trabajo_id for quick lookup
+            pquery = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
+            for p in pedidos_col.find(pquery):
                 if '_id' in p:
                     pedidos_map[str(p['_id'])] = p
                 if 'trabajo_id' in p and p['trabajo_id'] is not None:
                     pedidos_map[str(p['trabajo_id'])] = p
 
-        # Now build the final list, deduping by canonical id
-        seen = set()
-        trabajos = []
-        for row in rows:
+        # Build a map canonical_id -> best row (choose smallest posicion)
+        unique_rows = {}
+        for row in all_rows:
             trabajo_id = row.get('trabajo_id')
             posicion = row.get('posicion')
-            canonical_id = None
 
-            # Try to find matching pedido in the pre-fetched map
             pedido = None
             if trabajo_id is not None:
                 pedido = pedidos_map.get(str(trabajo_id))
                 if not pedido:
-                    # also try matching by ObjectId form
                     try:
                         if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
                             pedido = pedidos_map.get(str(ObjectId(trabajo_id)))
@@ -2896,10 +2860,21 @@ def api_get_produccion():
             else:
                 canonical_id = str(trabajo_id) if trabajo_id is not None else None
 
-            if canonical_id in seen:
-                continue
-            seen.add(canonical_id)
+            # Keep the row with the lowest posicion for this canonical id
+            prev = unique_rows.get(canonical_id)
+            if not prev or (posicion is not None and (prev.get('posicion') is None or posicion < prev.get('posicion'))):
+                unique_rows[canonical_id] = {'row': row, 'pedido': pedido}
 
+        # Now produce a sorted list of unique entries and apply pagination
+        sorted_items = sorted(unique_rows.items(), key=lambda kv: (kv[1]['row'].get('posicion') or 0, str(kv[0] or '')))
+        total = len(sorted_items)
+        paged = sorted_items[skip:skip+page_size]
+
+        trabajos = []
+        for canonical_id, info in paged:
+            row = info['row']
+            pedido = info.get('pedido')
+            posicion = row.get('posicion')
             if pedido:
                 p = fix_id(pedido)
                 p['posicion'] = posicion
@@ -2995,20 +2970,47 @@ def mover_trabajo_maquina():
         except Exception:
             maquina_destino_norm = str(maquina_destino)
 
-        # Obtener la siguiente posición en la máquina destino
-        max_pos_doc = orden_col.find({'maquina_id': maquina_destino_norm, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
-        max_pos = 0
-        for doc in max_pos_doc:
-            max_pos = doc.get('posicion', 0)
-        nueva_posicion = (max_pos or 0) + 1
+        # Obtener la siguiente posición en la máquina destino (usar contador atómico si es posible)
+        try:
+            counters_col = mongo.db['counters']
+            counter_key = f"pos_{empresa_id}_{maquina_destino_norm}"
+            seq_doc = counters_col.find_one_and_update(
+                {'key': counter_key, 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+            nueva_posicion = int(seq_doc.get('seq', 1))
+        except Exception:
+            max_pos_doc = orden_col.find({'maquina_id': maquina_destino_norm, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+            max_pos = 0
+            for doc in max_pos_doc:
+                max_pos = doc.get('posicion', 0)
+            nueva_posicion = (max_pos or 0) + 1
 
-        # Insertar en la nueva máquina al final
-        orden_col.insert_one({
-            'empresa_id': empresa_id,
-            'trabajo_id': trabajo_id,
-            'maquina_id': maquina_destino_norm,
-            'posicion': nueva_posicion
-        })
+        # Insertar/actualizar en la nueva máquina usando upsert para evitar duplicados
+        try:
+            orden_col.find_one_and_update(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$set': {
+                    'maquina_id': maquina_destino_norm,
+                    'posicion': nueva_posicion
+                },
+                 '$setOnInsert': {
+                     'empresa_id': empresa_id,
+                     'trabajo_id': trabajo_id
+                 }
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+        except Exception:
+            orden_col.insert_one({
+                'empresa_id': empresa_id,
+                'trabajo_id': trabajo_id,
+                'maquina_id': maquina_destino_norm,
+                'posicion': nueva_posicion
+            })
 
         # Persistir máquina actualizada en el pedido
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
@@ -3039,6 +3041,59 @@ def mover_trabajo_maquina():
             datos_pedido['maquina_bd'] = maquina_nombre
             datos_pedido['maquina_id_bd'] = maquina_destino
             pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'datos_presupuesto': datos_pedido}})
+
+        # Log the move request for debugging
+        try:
+            app.logger.info(f"MOVER_REQUEST empresa={empresa_id} trabajo_id={trabajo_id} maquina_destino={maquina_destino} maquina_destino_norm={maquina_destino_norm}")
+        except Exception:
+            pass
+
+        # Invalidate production cache for this company (if redis configured).
+        # Remove keys that may use numeric or string forms of the machine id.
+        try:
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                deleted = []
+                try:
+                    # generic company-wide pattern (keep for safety)
+                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
+                        try:
+                            rc.delete(key)
+                            deleted.append(key)
+                        except Exception:
+                            pass
+                    # more targeted: machine numeric form
+                    try:
+                        mnum = str(maquina_destino_norm)
+                        for key in rc.scan_iter(f"produccion:{empresa_id}:{mnum}:*"):
+                            try:
+                                rc.delete(key)
+                                deleted.append(key)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    # targeted: original machine param as provided (string form)
+                    try:
+                        mraw = str(maquina_destino)
+                        for key in rc.scan_iter(f"produccion:{empresa_id}:{mraw}:*"):
+                            try:
+                                rc.delete(key)
+                                deleted.append(key)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                try:
+                    app.logger.info(f"MOVER_CACHE_INVALIDATED deleted_count={len(deleted)} sample_deleted={deleted[:6]}")
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
         return jsonify({'success': True}), 200
     except Exception as e:
@@ -3186,6 +3241,54 @@ def cambiar_estado_trabajo(trabajo_id):
             orden_col = get_empresa_collection('trabajo_orden', empresa_id)
             orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
         return jsonify({'success': True, 'estado': nuevo_estado, 'fecha_finalizacion': fecha_finalizacion}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/produccion/rebuild_counters', methods=['POST'])
+def rebuild_production_counters():
+    """Reconstruye/normaliza los contadores atómicos (`counters`) a partir de `trabajo_orden`.
+    Opcional: JSON body puede incluir `maquina_id` para restringir a una máquina.
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        data = request.get_json(silent=True) or {}
+        maquina_filter = data.get('maquina_id', None)
+
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        counters_col = mongo.db['counters']
+
+        # Construir filtro para distinct
+        base_query = {'empresa_id': empresa_id}
+        if maquina_filter is not None:
+            try:
+                maquina_norm = int(maquina_filter)
+            except Exception:
+                maquina_norm = str(maquina_filter)
+            base_query['maquina_id'] = maquina_norm
+
+        maquinas = orden_col.distinct('maquina_id', filter=base_query)
+        updated = []
+        for m in maquinas:
+            # Calcular max posicion para esta maquina
+            q = {'empresa_id': empresa_id, 'maquina_id': m}
+            max_pos = 0
+            doc = orden_col.find(q).sort('posicion', -1).limit(1)
+            for r in doc:
+                max_pos = int(r.get('posicion') or 0)
+            next_seq = (max_pos or 0) + 1
+            counter_key = f"pos_{empresa_id}_{m}"
+            counters_col.update_one(
+                {'key': counter_key, 'empresa_id': empresa_id},
+                {'$set': {'seq': next_seq, 'updated_at': datetime.utcnow().isoformat()}},
+                upsert=True
+            )
+            updated.append({'maquina_id': m, 'set_seq': next_seq})
+
+        return jsonify({'success': True, 'updated': updated}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

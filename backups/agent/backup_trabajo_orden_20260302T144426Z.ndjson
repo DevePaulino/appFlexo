@@ -1,0 +1,8 @@
+{"id": "69a4cc42b6d5cdfcdcd8f472", "empresa_id": 1, "trabajo_id": "69a4cc42b6d5cdfcdcd8f46d", "maquina_id": 1, "posicion": 2}
+{"id": "69a4cc42b6d5cdfcdcd8f473", "empresa_id": 1, "trabajo_id": "69a4cc42b6d5cdfcdcd8f46e", "maquina_id": 2, "posicion": 2}
+{"id": "69a4cc42b6d5cdfcdcd8f474", "empresa_id": 1, "trabajo_id": "69a4cc42b6d5cdfcdcd8f46f", "maquina_id": 2, "posicion": 3}
+{"id": "69a4ccacf8711f17a9250b67", "empresa_id": 1, "trabajo_id": "69a4cc42b6d5cdfcdcd8f46b", "maquina_id": 1, "posicion": 3}
+{"id": "69a4ce54911a225a9ed1d002", "empresa_id": 1, "trabajo_id": "69a4cc42b6d5cdfcdcd8f46c", "maquina_id": 2, "posicion": 4}
+{"id": "69a4ce54911a225a9ed1d003", "empresa_id": 1, "trabajo_id": "None", "maquina_id": 2, "posicion": 0}
+{"id": "69a55f82a37371fbf11b10e3", "empresa_id": 1, "trabajo_id": "69a5559ea37371fbf11b10e2", "maquina_id": "69a54893cdfaea3fd4a437b6", "posicion": 1}
+{"id": "69a56e51a37371fbf11b10e6", "empresa_id": 1, "trabajo_id": "69a569dba37371fbf11b10e5", "maquina_id": "69a54893cdfaea3fd4a437b6", "posicion": 2}

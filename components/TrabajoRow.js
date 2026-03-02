@@ -30,11 +30,13 @@ function TrabajoRow(props) {
   const showDropIndicator = canReorder && targetIndex === idxGlobal && !isDragging;
   const maquinaFilaId = trabajo._maquina_id ?? maquinas[maquinaActual]?.id;
 
+  const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
+  const displayId = trabajo.trabajo_id || trabajo.id;
   return (
-    <View key={String(trabajo.id)}>
+    <View key={canonicalId}>
       {showDropIndicator && <View style={styles.dropIndicator} />}
       <View
-        ref={(el) => { if (el) rowRefsRef.current[trabajo.id] = el; }}
+        ref={(el) => { if (el) rowRefsRef.current[canonicalId] = el; }}
         style={[
           styles.tableRow,
           idxGlobal % 2 === 1 && styles.rowAlternate,
@@ -42,13 +44,17 @@ function TrabajoRow(props) {
           !canReorder && { cursor: 'default' },
           { height: ITEM_HEIGHT }
         ]}
-        onMouseDown={canReorder ? (e) => handleMouseDown(e, trabajo.id, idxGlobal) : undefined}
       >
         <View style={[styles.tableCell, styles.colPos]}>
-          <Text style={styles.dragHandle}>{canReorder ? '≡' : '-'}</Text>
+          <Text
+            style={styles.dragHandle}
+            onMouseDown={canReorder ? (e) => handleMouseDown(e, canonicalId, idxGlobal) : undefined}
+          >
+            {canReorder ? '≡' : '-'}
+          </Text>
         </View>
         <View style={[styles.tableCell, styles.colId]}>
-          <Text style={styles.cellText} numberOfLines={1}>{trabajo.id}</Text>
+          <Text style={styles.cellText} numberOfLines={1}>{displayId}</Text>
         </View>
         <View style={[styles.tableCell, styles.colNombre]}>
           <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
@@ -73,8 +79,8 @@ function TrabajoRow(props) {
         <View style={[styles.tableCell, styles.colMaquina]}>
           <Picker
             selectedValue={maquinaFilaId}
-            onValueChange={(nuevaMaquina) => { if (String(nuevaMaquina) !== String(maquinaFilaId)) handleCambiarMaquina(trabajo.id, nuevaMaquina); }}
-            enabled={cambiandoMaquina !== trabajo.id}
+            onValueChange={(nuevaMaquina) => { if (String(nuevaMaquina) !== String(maquinaFilaId)) handleCambiarMaquina(canonicalId, nuevaMaquina); }}
+            enabled={cambiandoMaquina !== canonicalId}
             style={{ height: 36 }}
           >
             {maquinas.map((maq) => (<Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />))}
@@ -87,12 +93,15 @@ function TrabajoRow(props) {
 
 export default React.memo(TrabajoRow, (a, b) => {
   try {
+    const aid = a.trabajo.trabajo_id || a.trabajo.id;
+    const bid = b.trabajo.trabajo_id || b.trabajo.id;
     return (
-      a.trabajo.id === b.trabajo.id &&
+      aid === bid &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.draggingId === b.draggingId &&
       a.targetIndex === b.targetIndex &&
-      a.maquinaActual === b.maquinaActual
+      a.maquinaActual === b.maquinaActual &&
+      a.canReorder === b.canReorder
     );
   } catch (e) {
     return false;

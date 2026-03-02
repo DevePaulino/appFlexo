@@ -1,0 +1,19 @@
+{
+  "timestamp": "20260302T141859Z",
+  "db": "printforgepro",
+  "backup": "backups/agent/trabajo_orden_backup_20260302T141859Z.ndjson",
+  "duplicate_groups_count": 1,
+  "groups_sample": [
+    {
+      "empresa_id": 1,
+      "maquina_id": 2,
+      "trabajo_id": "None",
+      "count": 3,
+      "ids_sample": [
+        "69a4ce54911a225a9ed1d003",
+        "69a4ce54911a225a9ed1d004",
+        "69a4ce54911a225a9ed1d005"
+      ]
+    }
+  ]
+}
