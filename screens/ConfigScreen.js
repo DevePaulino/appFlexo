@@ -1559,7 +1559,7 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const renderCategoria = (categoryKey, categoryTitle, sectionStyle = null) => {
     const items = settings[categoryKey] || [];
-    const rolesProtegidos = new Set(['operario', 'administrador', 'root']);
+    const rolesProtegidos = new Set(['administrador', 'root']);
     const estadosProtegidos = new Set([
       'diseno',
       'pendiente-de-aprobacion',
