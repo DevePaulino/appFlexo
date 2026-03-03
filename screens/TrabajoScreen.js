@@ -1150,13 +1150,14 @@ export default function TrabajoScreen({ currentUser }) {
                       padding: '6px 8px',
                       borderRadius: '4px',
                       border: '1px solid #DDD',
-                      backgroundColor: canChangeStatus() ? '#FFF' : '#F0F0F0',
+                      backgroundColor: '#FFF',
                       fontSize: '11px',
                       fontWeight: '600',
                       cursor: canChangeStatus() ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: canChangeStatus() ? (getStatusColor(trabajo.estado) || '#232323') : '#999',
-                      opacity: canChangeStatus() ? 1 : 0.6,
+                      color: getStatusColor(trabajo.estado) || '#232323',
+                      opacity: canChangeStatus() ? 1 : 0.65,
+                      pointerEvents: canChangeStatus() ? 'auto' : 'none',
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
