@@ -688,6 +688,23 @@ export default function App() {
           }
         }
 
+        // Si el usuario existe, aplicar el rol seleccionado en el desplegable
+        try {
+          const selectedRole = (typeof window !== 'undefined' && window.localStorage)
+            ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+            : null;
+          if (selectedRole && nextUser) {
+            nextUser = { ...(nextUser || {}), rol: selectedRole };
+            try {
+              await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
+            } catch (e) {
+              // ignore AsyncStorage write errors
+            }
+          }
+        } catch (e) {
+          // ignore localStorage errors
+        }
+
         setAuthSession(nextSession || null);
         setAuthUser(nextUser || null);
       } catch (error) {
