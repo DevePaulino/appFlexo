@@ -54,9 +54,10 @@ export default function SettingMenuScreen() {
     },
     {
       title: 'Funcionalidades web',
-      description: 'Modo de creación, estados y reglas de flujo.',
+      description: 'Funciones experimentales y modos de desarrollo.',
       route: 'SettingsFuncionalidades',
     },
+
     {
       title: 'Impresión',
       description: 'Materiales, acabados y tintas especiales.',

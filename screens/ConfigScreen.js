@@ -9,6 +9,8 @@ const API_SESSION_TIMEOUT_URL = 'http://localhost:8080/api/settings/session-time
 const API_ESTADOS_RULES_URL = 'http://localhost:8080/api/settings/estados-pedido-rules';
 const API_SETTINGS_REORDER_URL = 'http://localhost:8080/api/settings/reorder';
 const API_ROLE_PERMISSIONS_URL = 'http://localhost:8080/api/settings/roles-permissions';
+const API_ESTADO_USAGE_URL = 'http://localhost:8080/api/settings/estado-usage';
+const API_ROL_USAGE_URL = 'http://localhost:8080/api/settings/rol-usage';
 const API_USERS_URL = 'http://localhost:8080/api/usuarios';
 const API_OPCION_URL = 'http://localhost:8080/api/settings/opcion';
 const API_BILLING_CONFIG_URL = 'http://localhost:8080/api/billing/config';
@@ -20,6 +22,7 @@ const ROLE_RULES_EXPANDED_KEY = 'config_role_rules_expanded';
 const ROLE_PERMISSION_CONFIG = [
   { key: 'manage_app_settings', title: 'Editar configuración de la app', hint: 'Permite modificar catálogos y reglas globales.' },
   { key: 'manage_roles_permissions', title: 'Editar roles y permisos', hint: 'Permite cambiar el rol activo y la matriz de permisos.' },
+  { key: 'manage_estados_pedido', title: 'Editar estados de pedidos', hint: 'Permite crear, modificar y eliminar estados disponibles.' },
   { key: 'edit_clientes', title: 'Editar clientes', hint: 'Alta, edición y eliminación de clientes.' },
   { key: 'edit_maquinas', title: 'Editar máquinas', hint: 'Alta, edición y eliminación de máquinas.' },
   { key: 'edit_pedidos', title: 'Editar pedidos', hint: 'Creación y cambios de pedidos y trabajos.' },
@@ -672,8 +675,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [nuevoUsuarioEmail, setNuevoUsuarioEmail] = useState('');
   const [nuevoUsuarioRol, setNuevoUsuarioRol] = useState('comercial');
   const [submittedUsuario, setSubmittedUsuario] = useState(false);
-  const [modoCreacion, setModoCreacion] = useState('manual');
-  const [apiExamplesExpanded, setApiExamplesExpanded] = useState(false);
+  
   const [estadoRules, setEstadoRules] = useState(ESTADO_RULE_DEFAULTS);
   const [guardandoRules, setGuardandoRules] = useState(false);
   const [pedidoRulesExpanded, setPedidoRulesExpanded] = useState(false);
@@ -681,11 +683,15 @@ export default function ConfigScreen({ route, currentUser }) {
   const [rolePermissions, setRolePermissions] = useState({});
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
+  const [editing, setEditing] = useState({ category: null, id: null, text: '' });
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState('30');
   const [sessionTimeoutMin, setSessionTimeoutMin] = useState(5);
   const [sessionTimeoutMax, setSessionTimeoutMax] = useState(480);
   const [guardandoSessionTimeout, setGuardandoSessionTimeout] = useState(false);
   const [forceRootEnabled, setForceRootEnabled] = useState(false);
+  const [modoCreacion, setModoCreacion] = useState('manual');
+  const [apiExamplesExpanded, setApiExamplesExpanded] = useState(false);
+  const [guardandoModoCreacion, setGuardandoModoCreacion] = useState(false);
   const [billingConfig, setBillingConfig] = useState({
     checkout_enabled: false,
     payment_methods: [
@@ -702,13 +708,12 @@ export default function ConfigScreen({ route, currentUser }) {
   const section = String(route?.params?.section || 'all');
   const showUsuariosRoles = section === 'all' || section === 'usuarios-roles';
   const showCreditos = section === 'all' || section === 'creditos';
-  const showFuncionalidades = section === 'all' || section === 'funcionalidades';
+  
   const showImpresion = section === 'all' || section === 'impresion';
 
   const titleBySection = {
     'usuarios-roles': 'Usuarios',
     creditos: 'Créditos',
-    funcionalidades: 'Funcionalidades web',
     impresion: 'Impresión',
   };
   const pageTitle = titleBySection[section] || 'Configuración';
@@ -723,6 +728,12 @@ export default function ConfigScreen({ route, currentUser }) {
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  };
+
+  const capitalizeFirst = (s) => {
+    const str = String(s || '');
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
   const estadosPedidoDisponibles = (settings.estados_pedido || [])
@@ -765,131 +776,7 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
-  const cargarModoCreacion = async () => {
-    try {
-      const response = await fetch(API_MODO_URL);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.modo) {
-        setModoCreacion(data.modo);
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudo cargar el modo de creación: ${e.message}`);
-    }
-  };
-
-  useEffect(() => {
-    try {
-      const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-      if (isWeb) {
-        const flag = String(window.localStorage.getItem('PFP_FORCE_ROOT') || '').trim();
-        setForceRootEnabled(flag === '1');
-        return;
-      }
-      AsyncStorage.getItem('PFP_FORCE_ROOT').then((v) => setForceRootEnabled(String(v || '') === '1')).catch(() => {});
-    } catch (e) {
-      // ignore
-    }
-  }, []);
-
-  const toggleForceRoot = async (value) => {
-    try {
-      setForceRootEnabled(!!value);
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        if (value) {
-          window.localStorage.setItem('PFP_FORCE_ROOT', '1');
-        } else {
-          window.localStorage.removeItem('PFP_FORCE_ROOT');
-        }
-        // reload to let App.js pick up the change
-        // eslint-disable-next-line no-restricted-globals
-        window.location.reload();
-        return;
-      }
-
-      await AsyncStorage.setItem('PFP_FORCE_ROOT', value ? '1' : '0');
-      Alert.alert('Cambio guardado', 'Reinicia la app para aplicar el cambio.');
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  const cargarEstadoRules = async () => {
-    try {
-      const response = await fetch(API_ESTADOS_RULES_URL);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.rules) {
-        setEstadoRules((prev) => ({ ...prev, ...data.rules }));
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudieron cargar reglas de estados: ${e.message}`);
-    }
-  };
-
-  const cargarPedidoRulesExpanded = async () => {
-    try {
-      const [pedidoValue, roleValue] = await Promise.all([
-        AsyncStorage.getItem(PEDIDO_RULES_EXPANDED_KEY),
-        AsyncStorage.getItem(ROLE_RULES_EXPANDED_KEY),
-      ]);
-      if (pedidoValue === '1') setPedidoRulesExpanded(true);
-      if (pedidoValue === '0') setPedidoRulesExpanded(false);
-      if (roleValue === '1') setRoleRulesExpanded(true);
-      if (roleValue === '0') setRoleRulesExpanded(false);
-    } catch (e) {
-    }
-  };
-
-  const togglePedidoRulesExpanded = async () => {
-    const next = !pedidoRulesExpanded;
-    setPedidoRulesExpanded(next);
-    try {
-      await AsyncStorage.setItem(PEDIDO_RULES_EXPANDED_KEY, next ? '1' : '0');
-    } catch (e) {
-    }
-  };
-
-  const toggleRoleRulesExpanded = async () => {
-    const next = !roleRulesExpanded;
-    setRoleRulesExpanded(next);
-    try {
-      await AsyncStorage.setItem(ROLE_RULES_EXPANDED_KEY, next ? '1' : '0');
-    } catch (e) {
-    }
-  };
-
-  const toggleApiExamplesExpanded = () => {
-    setApiExamplesExpanded((prev) => !prev);
-  };
-
-
-  const cargarPermisosRoles = async () => {
-    try {
-      const response = await fetch(API_ROLE_PERMISSIONS_URL);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.permissions) {
-        setRolePermissions(data.permissions);
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudieron cargar los permisos por rol: ${e.message}`);
-    }
-  };
-
-  const cargarSessionTimeout = async () => {
-    try {
-      const response = await fetch(API_SESSION_TIMEOUT_URL);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        const next = Number(data.session_timeout_minutes);
-        const nextMin = Number(data.min);
-        const nextMax = Number(data.max);
-        if (Number.isFinite(next)) setSessionTimeoutMinutes(String(next));
-        if (Number.isFinite(nextMin)) setSessionTimeoutMin(nextMin);
-        if (Number.isFinite(nextMax)) setSessionTimeoutMax(nextMax);
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudo cargar el tiempo de cierre de sesión: ${e.message}`);
-    }
-  };
+  
 
   const cargarBillingConfig = async () => {
     try {
@@ -913,13 +800,117 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
+  const cargarModoCreacion = () => {
+    try {
+      fetch(API_MODO_URL)
+        .then((r) => r.json().catch(() => ({})))
+        .then((data) => {
+          if (data && data.modo) {
+            setModoCreacion(String(data.modo || 'manual'));
+          }
+        })
+        .catch(() => setModoCreacion('manual'));
+    } catch (e) {
+      setModoCreacion('manual');
+    }
+  };
+
+  const actualizarModoCreacion = async (modo) => {
+    try {
+      setGuardandoModoCreacion(true);
+      await fetch(API_MODO_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo }),
+      });
+      setModoCreacion(modo);
+    } catch (e) {
+      Alert.alert('Error', `No se pudo actualizar el modo: ${e.message}`);
+    } finally {
+      setGuardandoModoCreacion(false);
+    }
+  };
+
+  const cargarEstadoRules = () => {
+    try {
+      fetch(API_ESTADOS_RULES_URL)
+        .then((r) => r.json().catch(() => ({})))
+        .then((data) => {
+          if (data && data.rules) {
+            setEstadoRules((prev) => ({ ...prev, ...data.rules }));
+          } else if (!data) {
+            setEstadoRules(ESTADO_RULE_DEFAULTS);
+          }
+        })
+        .catch(() => {
+          setEstadoRules(ESTADO_RULE_DEFAULTS);
+        });
+    } catch (e) {
+      setEstadoRules(ESTADO_RULE_DEFAULTS);
+    }
+  };
+
+  const cargarPermisosRoles = async () => {
+    try {
+      const response = await fetch(API_ROLE_PERMISSIONS_URL);
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data && data.permissions) {
+        setRolePermissions(data.permissions || {});
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const cargarSessionTimeout = () => {
+    try {
+      fetch(API_SESSION_TIMEOUT_URL)
+        .then((r) => r.json().catch(() => ({})))
+        .then((data) => {
+          if (data && typeof data.session_timeout_minutes !== 'undefined') {
+            setSessionTimeoutMinutes(String(data.session_timeout_minutes || '30'));
+          }
+          if (data && typeof data.session_timeout_min !== 'undefined') {
+            setSessionTimeoutMin(Number(data.session_timeout_min || 5));
+          }
+          if (data && typeof data.session_timeout_max !== 'undefined') {
+            setSessionTimeoutMax(Number(data.session_timeout_max || 480));
+          }
+        })
+        .catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const cargarPedidoRulesExpanded = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PEDIDO_RULES_EXPANDED_KEY);
+      if (raw != null) {
+        setPedidoRulesExpanded(raw === '1' || raw === 'true');
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const toggleRoleRulesExpanded = async () => {
+    try {
+      const next = !roleRulesExpanded;
+      setRoleRulesExpanded(next);
+      await AsyncStorage.setItem(ROLE_RULES_EXPANDED_KEY, next ? '1' : '0');
+    } catch (e) {
+      setRoleRulesExpanded((v) => !v);
+    }
+  };
+
   const recargarConfiguracion = () => {
     cargarSettings();
-    cargarModoCreacion();
     cargarEstadoRules();
     cargarPermisosRoles();
     cargarUsuarios();
     cargarSessionTimeout();
+    cargarModoCreacion();
     cargarBillingConfig();
   };
 
@@ -1389,26 +1380,7 @@ export default function ConfigScreen({ route, currentUser }) {
     });
   }, [settings.estados_pedido]);
 
-  const actualizarModoCreacion = async (modo) => {
-    try {
-      const response = await fetch(API_MODO_URL, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modo }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo actualizar el modo');
-        return;
-      }
-      setModoCreacion(modo);
-      if (modo === 'automatico') {
-        setApiExamplesExpanded(false);
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudo actualizar el modo: ${e.message}`);
-    }
-  };
+  
 
   const agregarValor = async (categoria) => {
     const valor = (inputs[categoria] || '').trim();
@@ -1437,12 +1409,72 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const eliminarValor = async (id) => {
     const esRol = (settings.roles || []).some((item) => item.id === id);
-    // Prevent deleting internal or protected roles (only 'administrador' protected)
+    const esEstado = (settings.estados_pedido || []).some((item) => item.id === id);
+    
+    // Validar rol protegido
     const rolItem = (settings.roles || []).find((item) => item.id === id);
     if (rolItem && (rolItem.internal === true || slugifyEstado(String(rolItem?.valor || '')) === 'administrador')) {
-      Alert.alert('Acción no permitida', 'No se puede eliminar este rol.');
+      Alert.alert('Acción no permitida', 'No se puede eliminar este rol protegido del sistema.');
       return;
     }
+
+    // Validar si el rol está siendo usado por algún usuario
+    if (esRol) {
+      try {
+        const response = await fetch(`${API_ROL_USAGE_URL}?rol_id=${encodeURIComponent(id)}`);
+        const data = await response.json().catch(() => ({ in_use: false, count: 0 }));
+        
+        if (data.in_use) {
+          Alert.alert(
+            'No se puede eliminar',
+            `Este rol está siendo utilizado por ${data.count} usuario(s). Cambia los usuarios a otro rol antes de eliminar este.`
+          );
+          return;
+        }
+      } catch (e) {
+        // Si hay error verificando, permitir continuar con la eliminación
+        console.log('Error validating rol usage:', e.message);
+      }
+    }
+
+    // Validar estado protegido o en uso
+    if (esEstado) {
+      const estadoItem = (settings.estados_pedido || []).find((item) => item.id === id);
+      const estadoKey = slugifyEstado(String(estadoItem?.valor || ''));
+      const estadosProtegidos = new Set([
+        'diseno',
+        'pendiente-de-aprobacion',
+        'pendiente-de-cliche',
+        'pendiente-de-impresion',
+        'pendiente-post-impresion',
+        'finalizado',
+        'parado',
+        'cancelado',
+      ]);
+      
+      if (estadosProtegidos.has(estadoKey)) {
+        Alert.alert('Acción no permitida', 'No se puede eliminar este estado (protegido del sistema).');
+        return;
+      }
+
+      // Validar si el estado está siendo usado en algún pedido
+      try {
+        const response = await fetch(`${API_ESTADO_USAGE_URL}?estado_id=${encodeURIComponent(id)}`);
+        const data = await response.json().catch(() => ({ in_use: false, count: 0 }));
+        
+        if (data.in_use) {
+          Alert.alert(
+            'No se puede eliminar',
+            `Este estado está siendo utilizado en ${data.count} pedido(s). Elimina o cambia los pedidos antes de borrar el estado.`
+          );
+          return;
+        }
+      } catch (e) {
+        // Si hay error verificando, permitir continuar con la eliminación
+        console.log('Error validating estado usage:', e.message);
+      }
+    }
+
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       const data = await response.json().catch(() => ({}));
@@ -1454,52 +1486,56 @@ export default function ConfigScreen({ route, currentUser }) {
       if (esRol) {
         await cargarPermisosRoles();
       }
+      if (esEstado) {
+        await cargarEstadoRules();
+      }
     } catch (e) {
       Alert.alert('Error', `No se pudo eliminar: ${e.message}`);
     }
   };
 
   const editarValor = async (item, categoria) => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof window.prompt !== 'function') {
-      Alert.alert('No disponible', 'La edición rápida está disponible en la versión web.');
-      return;
-    }
-
     // Prevent editing internal or protected roles (only 'administrador' protected)
     if (categoria === 'roles' && (item?.internal === true || slugifyEstado(String(item?.valor || '')) === 'administrador')) {
       Alert.alert('Acción no permitida', 'No se puede editar este rol.');
       return;
     }
 
-    const actual = String(item?.valor || '').trim();
-    const nuevoValor = window.prompt('Nuevo nombre:', actual);
-    if (nuevoValor === null) return;
+    // Activate inline editing state (works on web and native)
+    setEditing({ category: categoria, id: item.id, text: String(item?.valor || '') });
+  };
 
-    const nuevo = String(nuevoValor || '').trim();
-    if (!nuevo || nuevo.toLowerCase() === actual.toLowerCase()) return;
-
+  const saveEditedValor = async () => {
+    const { category, id, text } = editing;
+    if (!category || !id) {
+      setEditing({ category: null, id: null, text: '' });
+      return;
+    }
+    const nuevo = String(text || '').trim();
+    const lista = settings[category] || [];
+    const original = (lista.find((it) => it.id === id) || {}).valor || '';
+    if (!nuevo || nuevo.toLowerCase() === String(original || '').toLowerCase()) {
+      setEditing({ category: null, id: null, text: '' });
+      return;
+    }
     try {
-      const response = await fetch(`${API_URL}/${item.id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ valor: nuevo }),
       });
       const data = await response.json().catch(() => ({}));
-
       if (!response.ok) {
         Alert.alert('Error', data.error || 'No se pudo editar el valor');
         return;
       }
-
       await cargarSettings();
-      if (categoria === 'roles') {
-        await cargarPermisosRoles();
-      }
-      if (categoria === 'estados_pedido') {
-        await cargarEstadoRules();
-      }
+      if (category === 'roles') await cargarPermisosRoles();
+      if (category === 'estados_pedido') await cargarEstadoRules();
     } catch (e) {
       Alert.alert('Error', `No se pudo editar: ${e.message}`);
+    } finally {
+      setEditing({ category: null, id: null, text: '' });
     }
   };
 
@@ -1729,7 +1765,19 @@ export default function ConfigScreen({ route, currentUser }) {
                       </TouchableOpacity>
                     </>
                   )}
-                  <Text style={styles.chipText}>{item.valor}</Text>
+                  {editing.id === item.id && editing.category === categoryKey ? (
+                    <TextInput
+                      style={[styles.input, { minWidth: 120, paddingVertical: 6 }]}
+                      value={editing.text}
+                      onChangeText={(t) => setEditing((prev) => ({ ...prev, text: t }))}
+                      onBlur={() => saveEditedValor()}
+                      onSubmitEditing={() => saveEditedValor()}
+                      autoFocus
+                      returnKeyType="done"
+                    />
+                  ) : (
+                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : item.valor}</Text>
+                  )}
                   <TouchableOpacity
                     style={[styles.chipEdit, (esRolProtegido || esEstadoProtegido) && styles.chipEditDisabled]}
                     disabled={esRolProtegido || esEstadoProtegido}
@@ -1881,7 +1929,7 @@ export default function ConfigScreen({ route, currentUser }) {
                               style={[styles.selectChip, active && styles.selectChipActive]}
                               onPress={() => setNuevoUsuarioRol(role.key)}
                             >
-                              <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{role.label}</Text>
+                              <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{capitalizeFirst(role.label)}</Text>
                             </TouchableOpacity>
                           );
                         })}
@@ -1889,9 +1937,6 @@ export default function ConfigScreen({ route, currentUser }) {
                     </View>
 
                     <View style={styles.usersFormActions}>
-                      <TouchableOpacity style={styles.usersBtn} onPress={cerrarModalUsuario}>
-                        <Text style={styles.usersBtnText}>Cancelar</Text>
-                      </TouchableOpacity>
                       <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={guardarUsuario}>
                         <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{usuarioEditandoId ? 'Guardar cambios' : 'Guardar'}</Text>
                       </TouchableOpacity>
@@ -1900,10 +1945,10 @@ export default function ConfigScreen({ route, currentUser }) {
                 </View>
               </Modal>
 
+        <View>
+          {renderCategoria('roles', 'Roles')}
+          <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>Los roles base Administrador y Root están protegidos.</Text>
         </View>
-
-        {renderCategoria('roles', 'Roles')}
-        <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>Los roles base Administrador y Root están protegidos.</Text>
 
         <View style={styles.section}>
           <View style={styles.rulesHeaderRow}>
@@ -1913,9 +1958,9 @@ export default function ConfigScreen({ route, currentUser }) {
             </TouchableOpacity>
           </View>
           {!roleRulesExpanded ? (
-            <Text style={styles.muted}>Pulsa “Expandir” para ver y editar reglas.</Text>
+            <Text style={styles.muted}>Pulsa "Expandir" para ver y editar reglas.</Text>
           ) : (availableRoles || []).length === 0 ? (
-            <Text style={styles.muted}>Primero añade roles en “Roles”.</Text>
+            <Text style={styles.muted}>Primero añade roles en "Roles".</Text>
           ) : (
             <>
               {ROLE_PERMISSION_CONFIG.map((perm) => {
@@ -1934,7 +1979,7 @@ export default function ConfigScreen({ route, currentUser }) {
                             style={[styles.selectChip, active && styles.selectChipActive]}
                             onPress={() => toggleRolePermission(roleKey, perm.key)}
                           >
-                            <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{role?.label || roleKey}</Text>
+                            <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{capitalizeFirst(role?.label || roleKey)}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -1949,7 +1994,55 @@ export default function ConfigScreen({ route, currentUser }) {
             </>
           )}
         </View>
+
+        </View>
+
       </View>
+      )}
+
+      {section && (section === 'all' || section === 'funcionalidades') && (
+        <View style={styles.blockContainer}>
+          {showBlockTitles && <Text style={styles.groupTitle}>Funcionalidades web</Text>}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Modo de creación</Text>
+            <View style={styles.modeRow}>
+              <View style={styles.modeButtonsWrap}>
+                <TouchableOpacity
+                  style={[styles.modeBtn, modoCreacion === 'manual' && styles.modeBtnActive]}
+                  onPress={() => actualizarModoCreacion('manual')}
+                  disabled={guardandoModoCreacion}
+                >
+                  <Text style={[styles.modeBtnText, modoCreacion === 'manual' && styles.modeBtnTextActive]}>Manual</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeBtn, modoCreacion === 'automatico' && styles.modeBtnActive]}
+                  onPress={() => actualizarModoCreacion('automatico')}
+                  disabled={guardandoModoCreacion}
+                >
+                  <Text style={[styles.modeBtnText, modoCreacion === 'automatico' && styles.modeBtnTextActive]}>Automático</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.rulesToggleBtn} onPress={() => setApiExamplesExpanded((v) => !v)}>
+                <Text style={styles.rulesToggleBtnText}>{apiExamplesExpanded ? 'Ocultar ejemplos API' : 'Ver ejemplos API'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {apiExamplesExpanded && (
+              <>
+                <Text style={styles.codeTitle}>Ejemplo: cambiar modo (curl)</Text>
+                <View style={styles.codeBlock}>
+                  <Text style={styles.codeText}>{`curl -X PUT ${API_MODO_URL} -H 'Content-Type: application/json' -d '{"modo":"automatico"}'`}</Text>
+                </View>
+                <Text style={styles.codeTitle}>Ejemplo: cambiar modo (fetch)</Text>
+                <View style={styles.codeBlock}>
+                  <Text style={styles.codeText}>{`fetch('${API_MODO_URL}', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modo: 'automatico' }) })`}</Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          {renderCategoria('estados_pedido', 'Estados de pedido')}
+        </View>
       )}
 
       {showCreditos && (
@@ -2022,166 +2115,7 @@ export default function ConfigScreen({ route, currentUser }) {
       </View>
       )}
 
-      {showFuncionalidades && (
-      <View style={styles.blockContainer}>
-      {showBlockTitles && <Text style={styles.groupTitle}>Funcionalidades web</Text>}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Modo de creación</Text>
-          <>
-              <View style={styles.modeRow}>
-                <View style={styles.modeButtonsWrap}>
-                  <TouchableOpacity
-                    style={[styles.modeBtn, modoCreacion === 'manual' && styles.modeBtnActive]}
-                    onPress={() => actualizarModoCreacion('manual')}
-                  >
-                    <Text style={[styles.modeBtnText, modoCreacion === 'manual' && styles.modeBtnTextActive]}>
-                      Manual
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modeBtn, modoCreacion === 'automatico' && styles.modeBtnActive]}
-                    onPress={() => actualizarModoCreacion('automatico')}
-                  >
-                    <Text style={[styles.modeBtnText, modoCreacion === 'automatico' && styles.modeBtnTextActive]}>
-                      Automático (API REST)
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {modoCreacion === 'automatico' && (
-                <>
-                  <Text style={[styles.muted, { marginTop: 8 }]}>En Automático se bloquea la creación por botón en Pedidos y Presupuestos.</Text>
-                  <Text style={[styles.muted, { marginTop: 6 }]}>Endpoint: POST /api/integracion/documentos</Text>
-
-                  <View style={[styles.rulesHeaderRow, { marginTop: 10 }]}> 
-                    <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Ejemplos JSON</Text>
-                    <TouchableOpacity style={styles.rulesToggleBtn} onPress={toggleApiExamplesExpanded}>
-                      <Text style={styles.rulesToggleBtnText}>{apiExamplesExpanded ? 'Ocultar' : 'Expandir'}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {!apiExamplesExpanded ? (
-                    <Text style={styles.muted}>Pulsa “Expandir” para ver los ejemplos JSON.</Text>
-                  ) : (
-                    <>
-                      <Text style={styles.codeTitle}>Ejemplo Presupuesto</Text>
-                      <View style={styles.codeBlock}>
-                        <Text style={styles.codeText}>{`{
-  "tipo": "presupuesto",
-  "cliente": "Cliente Demo",
-  "referencia": "REF-EXT-001",
-  "nombre": "Trabajo externo",
-  "fecha_pedido": "2026-02-25",
-  "fecha_entrega": "2026-03-05",
-  "numero_presupuesto": "PRE-EXT-001",
-  "material": "PET"
-}`}</Text>
-                      </View>
-
-                      <Text style={styles.codeTitle}>Ejemplo Pedido</Text>
-                      <View style={styles.codeBlock}>
-                        <Text style={styles.codeText}>{`{
-  "tipo": "pedido",
-  "cliente": "Cliente Demo",
-  "referencia": "REF-EXT-002",
-  "nombre": "Pedido externo",
-  "numero_pedido": "PED-EXT-002",
-  "fecha_pedido": "2026-02-25",
-  "fecha_entrega": "2026-03-06",
-  "maquina": "Nilpeter FA"
-}`}</Text>
-                      </View>
-                    </>
-                  )}
-                </>
-              )}
-            </>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Forzar rol root (dev)</Text>
-          <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}> 
-            <Text style={styles.muted}>Forzar usuario con rol 'root' (solo desarrollo)</Text>
-            <Switch value={forceRootEnabled} onValueChange={toggleForceRoot} />
-          </View>
-          <Text style={[styles.muted, { marginTop: 6 }]}>Activa para obtener permisos root en la app web. Usar solo en entorno local.</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cierre automático de sesión</Text>
-          <Text style={[styles.muted, { marginBottom: 8 }]}>Cierra sesión tras inactividad. Rango permitido: {sessionTimeoutMin} - {sessionTimeoutMax} minutos.</Text>
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.submenuAddInput, !puedeEditarSessionTimeout && { opacity: 0.6 }]}
-              value={sessionTimeoutMinutes}
-              onChangeText={(text) => setSessionTimeoutMinutes(String(text || '').replace(/[^0-9]/g, ''))}
-              editable={puedeEditarSessionTimeout}
-              keyboardType="number-pad"
-              placeholder="Minutos"
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity
-              style={[styles.addBtn, (!puedeEditarSessionTimeout || guardandoSessionTimeout) && { opacity: 0.5 }]}
-              onPress={guardarSessionTimeout}
-              disabled={!puedeEditarSessionTimeout || guardandoSessionTimeout}
-            >
-              <Text style={styles.addBtnText}>{guardandoSessionTimeout ? 'Guardando...' : 'Guardar'}</Text>
-            </TouchableOpacity>
-          </View>
-          {!puedeEditarSessionTimeout && <Text style={styles.muted}>Solo administrador y root pueden editar este valor.</Text>}
-        </View>
-
-        {renderCategoria('estados_pedido', 'Estados de pedido', styles.pedidoStatesCard)}
-
-        <View style={[styles.section, styles.pedidoRulesCard]}>
-          <View style={styles.rulesHeaderRow}>
-            <Text style={[styles.pedidoRulesHeader, { marginBottom: 0 }]}>Reglas de estados de pedido</Text>
-            <TouchableOpacity style={styles.rulesToggleBtn} onPress={togglePedidoRulesExpanded}>
-              <Text style={styles.rulesToggleBtnText}>{pedidoRulesExpanded ? 'Ocultar' : 'Expandir'}</Text>
-            </TouchableOpacity>
-          </View>
-          {estadosPedidoDisponibles.length === 0 ? (
-              <Text style={styles.muted}>Primero añade estados en “Estados de pedido”.</Text>
-            ) : (
-              pedidoRulesExpanded ? (
-                <>
-                  {ESTADO_RULE_CONFIG.map((rule) => {
-                    const selected = estadoRules[rule.key] || [];
-                    return (
-                      <View key={rule.key} style={styles.pedidoRuleGroup}>
-                        <Text style={styles.pedidoRuleTitle}>{rule.title}</Text>
-                        <Text style={styles.pedidoRuleHint}>{rule.hint}</Text>
-                        <View style={styles.chipList}>
-                          {estadosPedidoDisponibles.map((estado) => {
-                            const active = selected.includes(estado.value);
-                            return (
-                              <TouchableOpacity
-                                key={`${rule.key}-${estado.value}`}
-                                style={[styles.pedidoRuleChip, active && styles.pedidoRuleChipActive]}
-                                onPress={() => toggleEstadoRule(rule.key, estado.value)}
-                              >
-                                <Text style={[styles.pedidoRuleChipText, active && styles.pedidoRuleChipTextActive]}>{estado.label}</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    );
-                  })}
-
-                  <TouchableOpacity style={styles.saveRulesBtnPedido} onPress={guardarEstadoRules} disabled={guardandoRules}>
-                    <Text style={styles.saveRulesBtnText}>{guardandoRules ? 'Guardando...' : 'Guardar reglas'}</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <Text style={styles.muted}>Pulsa “Expandir” para ver y editar reglas.</Text>
-              )
-            )}
-        </View>
-      </View>
-      )}
+      
 
       {showImpresion && (
       <View style={styles.blockContainer}>

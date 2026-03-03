@@ -173,8 +173,7 @@ def ensure_default_users():
         print('ERROR ensuring default users:', str(e))
 
 
-# Ensure minimum users exist at startup
-ensure_default_users()
+
 
 # Helper para obtener la colección de una empresa
 def get_empresa_collection(nombre, empresa_id):
@@ -238,6 +237,12 @@ PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'parado',
     'cancelado',
 }
+
+# Ensure minimum users exist at startup (call after helpers are defined)
+try:
+    ensure_default_users()
+except Exception:
+    pass
 PERMISSION_KEYS = [
     'manage_app_settings',
     'manage_roles_permissions',
@@ -251,6 +256,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': False,
@@ -260,6 +266,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'administrador': {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
+        'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
@@ -269,6 +276,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'root': {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
+        'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
@@ -279,6 +287,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'comercial': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': True,
         'edit_maquinas': False,
         'edit_pedidos': True,
@@ -288,6 +297,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'diseno': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': True,
@@ -297,6 +307,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'impresion': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': True,
         'edit_pedidos': False,
@@ -306,6 +317,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'post-impresion': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': False,
@@ -571,6 +583,21 @@ def get_bearer_token_from_request():
 def get_request_user():
     # If JWT auth not enabled, keep dev bypass for now
     if not ENABLE_JWT:
+        # Allow tests to simulate users via header
+        header = request.headers.get('X-Test-User')
+        if header:
+            try:
+                data = json.loads(header)
+                user = {
+                    'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
+                    'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
+                    'rol': data.get('rol') or data.get('role') or 'operario',
+                    'empresa_id': int(data.get('empresa_id') or data.get('empresa') or 1)
+                }
+                g._request_user = user
+                return user
+            except Exception:
+                pass
         user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
         g._request_user = user
         return user
@@ -607,10 +634,86 @@ def get_request_user():
 
 
 def can_role_permission(role_key, permission_key):
-    # role = normalize_role(role_key)  # Legacy, no usado con MongoDB
-    # permissions = get_role_permissions()
-    # return bool(permissions.get(role, {}).get(permission_key, False))
-    return False
+    try:
+        if not role_key or not permission_key:
+            return False
+        # root siempre tiene todos los permisos
+        if str(role_key).strip() == 'root':
+            return True
+
+        permissions = get_role_permissions()
+        # Normalizar clave de rol
+        role = str(role_key).strip()
+        role_perms = permissions.get(role)
+        if isinstance(role_perms, dict):
+            return bool(role_perms.get(permission_key, False))
+        return False
+    except Exception:
+        return False
+
+
+def get_role_permissions(empresa_id=0):
+    """Leer la matriz de permisos desde `config_general` (empresa 0 = global).
+    Devuelve un dict { role_key: {permission_key: bool, ...}, ... }. Si no existe,
+    devuelve `ROLE_PERMISSIONS_DEFAULT`.
+    """
+    try:
+        empresa_id = int(empresa_id or 0)
+    except Exception:
+        empresa_id = 0
+    col_general = get_empresa_collection('config_general', empresa_id)
+    doc = col_general.find_one({'clave': 'role_permissions'})
+    parsed = None
+    if doc and doc.get('valor'):
+        try:
+            parsed = json.loads(doc.get('valor'))
+        except Exception:
+            parsed = None
+    if not isinstance(parsed, dict):
+        # Retornar una copia para evitar mutaciones accidentales
+        return dict(ROLE_PERMISSIONS_DEFAULT)
+    return parsed
+
+
+def get_required_permission_for_request(path, method_upper):
+    """Resolver (si aplica) la permission key requerida para una ruta y método.
+    Devuelve None si no hay permiso asociado (ruta pública o lectura).
+    """
+    if not path:
+        return None
+    mutating = {'POST', 'PUT', 'PATCH', 'DELETE'}
+    p = str(path or '').lower()
+
+    # Gestión específica de permisos para roles/ajustes
+    if p.startswith('/api/settings/roles-permissions'):
+        # Sólo para cambios efectivos
+        return 'manage_roles_permissions' if method_upper in mutating else None
+
+    # Cambios en la configuración general requieren manage_app_settings
+    if p.startswith('/api/settings') and method_upper in mutating:
+        return 'manage_app_settings'
+
+    # Clientes
+    if p.startswith('/api/clientes') and method_upper in mutating:
+        return 'edit_clientes'
+
+    # Máquinas
+    if p.startswith('/api/maquinas') and method_upper in mutating:
+        return 'edit_maquinas'
+
+    # Pedidos / trabajos
+    if (p.startswith('/api/pedidos') or p.startswith('/api/trabajos') or p.startswith('/api/trabajo')) and method_upper in mutating:
+        return 'edit_pedidos'
+
+    # Presupuestos
+    if p.startswith('/api/presupuestos') and method_upper in mutating:
+        return 'edit_presupuestos'
+
+    # Producción
+    if p.startswith('/api/produccion') and method_upper in mutating:
+        return 'edit_produccion'
+
+    return None
 
 
 def get_session_timeout_minutes():
@@ -632,8 +735,31 @@ def can_edit_session_timeout(user):
 
 
 def require_request_user():
-    # BYPASS AUTH PARA DESARROLLO (siempre usuario root)
-    return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}, None
+    # Allow a test header `X-Test-User` in development to simulate users.
+    # If JWT is disabled, prefer the header; otherwise fall back to dev root.
+    if not ENABLE_JWT:
+        header = request.headers.get('X-Test-User')
+        if header:
+            try:
+                data = json.loads(header)
+                user = {
+                    'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
+                    'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
+                    'rol': data.get('rol') or data.get('role') or 'operario',
+                    'empresa_id': int(data.get('empresa_id') or data.get('empresa') or 1)
+                }
+                g._request_user = user
+                return user, None
+            except Exception:
+                pass
+        # default dev bypass
+        return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}, None
+
+    # When JWT enabled, resolve via token
+    user = get_request_user()
+    if not user:
+        return None, (jsonify({'error': 'Autenticación requerida'}), 401)
+    return user, None
 
 
 @app.after_request
@@ -660,14 +786,17 @@ def enforce_role_permissions():
             if incoming_key == INTEGRATION_API_KEY:
                 return None
 
-    # permission = get_required_permission_for_request(path, method_upper)
-    permission = None
-    if not permission:
-        return None
+    # Determinar permiso requerido para esta ruta/método
+    permission = get_required_permission_for_request(path, method_upper)
 
+    # Rutas públicas no requieren autenticación/permiso
     for public_prefix in AUTH_PUBLIC_PATHS:
         if path.startswith(public_prefix):
             return None
+
+    # Si no hay permiso requerido para esta ruta, permitirla
+    if not permission:
+        return None
 
     request_user = get_request_user()
     if not request_user:
@@ -676,7 +805,11 @@ def enforce_role_permissions():
             'required_permission': permission,
         }), 401
 
-    if can_role_permission(request_user.get('rol'), permission):
+    try:
+        allowed = can_role_permission(request_user.get('rol'), permission)
+    except Exception:
+        allowed = False
+    if allowed:
         return None
 
     return jsonify({
@@ -778,6 +911,16 @@ def slugify_estado(texto):
                 prev_dash = True
     result = ''.join(out).strip('-')
     return result
+
+
+def capitalize_first(texto):
+    try:
+        s = str(texto or '').strip()
+        if not s:
+            return s
+        return s[0].upper() + s[1:]
+    except Exception:
+        return texto
 
 
 def normalize_text_list(value):
@@ -1268,6 +1411,24 @@ def register_public_user():
         usuario_id = str(result.inserted_id)
         # Simular empresa_id como el id del usuario creado
         empresa_id = usuario_id
+        # Initialize default roles/options for the new company (do not include global/internal 'root')
+        try:
+            col_opciones_empresa = get_empresa_collection('config_opciones', empresa_id)
+            default_roles = ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión']
+            for idx, role_val in enumerate(default_roles, start=1):
+                # avoid inserting duplicates (case-insensitive)
+                existing = col_opciones_empresa.find_one({'categoria': 'roles', 'valor': {'$regex': f'^{re.escape(role_val)}$', '$options': 'i'}})
+                if not existing:
+                    col_opciones_empresa.insert_one({
+                        'categoria': 'roles',
+                        'valor': role_val,
+                        'orden': idx,
+                        'fecha_creacion': datetime.now().isoformat(),
+                        'empresa_id': empresa_id,
+                    })
+        except Exception:
+            # Do not fail registration if roles init fails
+            pass
         # Issue token if JWT enabled
         token = create_jwt({'usuario_id': usuario_id, 'email': email}) if ENABLE_JWT else None
 
@@ -1842,35 +2003,57 @@ def api_estados_pedido_rules():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/roles-permissions', methods=['GET'])
+@app.route('/api/settings/roles-permissions', methods=['GET', 'PUT'])
 def api_roles_permissions():
-    """Devuelve la matriz de permisos por rol y la lista de permisos disponibles."""
+    """Devuelve o guarda la matriz de permisos por rol y la lista de permisos disponibles.
+    GET -> devuelve current permissions
+    PUT -> guarda el objeto JSON `permissions` en `config_general` bajo la clave `role_permissions`.
+    """
     try:
+        # GET: devolver
+        if request.method == 'GET':
+            request_user, auth_error = require_request_user()
+            if auth_error:
+                return auth_error
+            col_general = get_empresa_collection('config_general', 0)
+            doc = col_general.find_one({'clave': 'role_permissions'})
+            parsed = None
+            if doc and doc.get('valor'):
+                try:
+                    parsed = json.loads(doc.get('valor'))
+                except Exception:
+                    parsed = None
+            if not isinstance(parsed, dict):
+                parsed = ROLE_PERMISSIONS_DEFAULT
+
+            # Also return the list of known permissions and available roles
+            col_roles = get_empresa_collection('config_opciones', 0)
+            rows = list(col_roles.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
+            roles = []
+            for r in rows:
+                label = (r.get('valor') or '').strip()
+                key = slugify_estado(label)
+                if label and key:
+                    roles.append({'key': key, 'label': label})
+
+            return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
+
+        # PUT: guardar
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+        data = request.get_json() or {}
+        permissions = data.get('permissions') or data.get('roles_permissions') or data.get('rolesPermissions')
+        if not isinstance(permissions, dict):
+            return jsonify({'error': 'permissions debe ser un objeto JSON'}), 400
+
         col_general = get_empresa_collection('config_general', 0)
-        doc = col_general.find_one({'clave': 'role_permissions'})
-        parsed = None
-        if doc and doc.get('valor'):
-            try:
-                parsed = json.loads(doc.get('valor'))
-            except Exception:
-                parsed = None
-        if not isinstance(parsed, dict):
-            parsed = ROLE_PERMISSIONS_DEFAULT
-
-        # Also return the list of known permissions and available roles
-        col_roles = get_empresa_collection('config_opciones', 0)
-        rows = list(col_roles.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
-        roles = []
-        for r in rows:
-            label = (r.get('valor') or '').strip()
-            key = slugify_estado(label)
-            if label and key:
-                roles.append({'key': key, 'label': label})
-
-        return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
+        col_general.update_one({'clave': 'role_permissions'}, {'$set': {'valor': json.dumps(permissions), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        try:
+            log_audit('update_role_permissions', request_user, {'roles': list(permissions.keys())})
+        except Exception:
+            pass
+        return jsonify({'success': True, 'permissions': permissions}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1945,6 +2128,9 @@ def crear_config_opcion():
     try:
         categoria = request.args.get('categoria', '').strip().lower()
         valor = request.args.get('valor', '').strip()
+        # Normalize role labels: capitalize first letter
+        if categoria == 'roles' and valor:
+            valor = capitalize_first(valor)
         col = get_empresa_collection('config_opciones', 0)
         siguiente_orden = (col.find({'categoria': categoria}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria}) else 0) + 1
         doc = {
@@ -2008,14 +2194,104 @@ def reorder_settings_catalogo_items():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/<int:item_id>', methods=['PUT'])
+@app.route('/api/settings/estado-usage', methods=['GET'])
+def check_estado_usage():
+    """Valida si un estado está siendo usado en algún pedido/trabajo"""
+    try:
+        estado_id = request.args.get('estado_id', '').strip()
+        if not estado_id:
+            return jsonify({'error': 'estado_id requerido'}), 400
+        
+        try:
+            estado_id_obj = ObjectId(estado_id)
+        except Exception:
+            return jsonify({'error': 'estado_id inválido'}), 400
+        
+        # Obtener el estado de config para saber su valor
+        col_config = get_empresa_collection('config_opciones', 0)
+        estado_config = col_config.find_one({'_id': estado_id_obj, 'categoria': 'estados_pedido'})
+        
+        if not estado_config:
+            return jsonify({'error': 'Estado no encontrado'}), 404
+        
+        estado_valor_original = estado_config.get('valor', '')
+        # Normalizar el valor para comparación
+        estado_valor_slugified = slugify_estado(estado_valor_original)
+        
+        # Contar cuántos trabajos tienen este estado
+        col_trabajos = get_empresa_collection('trabajos', 0)
+        count = col_trabajos.count_documents({'estado': estado_valor_slugified})
+        
+        in_use = count > 0
+        
+        return jsonify({
+            'estado_id': estado_id,
+            'estado_valor': estado_valor_original,
+            'in_use': in_use,
+            'count': count
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/rol-usage', methods=['GET'])
+def check_rol_usage():
+    """Valida si un rol está siendo usado por algún usuario"""
+    try:
+        rol_id = request.args.get('rol_id', '').strip()
+        if not rol_id:
+            return jsonify({'error': 'rol_id requerido'}), 400
+        
+        try:
+            rol_id_obj = ObjectId(rol_id)
+        except Exception:
+            return jsonify({'error': 'rol_id inválido'}), 400
+        
+        # Obtener el rol de config para saber su valor
+        col_config = get_empresa_collection('config_opciones', 0)
+        rol_config = col_config.find_one({'_id': rol_id_obj, 'categoria': 'roles'})
+        
+        if not rol_config:
+            return jsonify({'error': 'Rol no encontrado'}), 404
+        
+        rol_valor_original = rol_config.get('valor', '')
+        # Normalizar el valor para comparación
+        rol_valor_slugified = slugify_estado(rol_valor_original)
+        
+        # Contar cuántos usuarios tienen este rol
+        col_usuarios = get_empresa_collection('usuarios', 0)
+        count = col_usuarios.count_documents({'rol': rol_valor_slugified})
+        
+        in_use = count > 0
+        
+        return jsonify({
+            'rol_id': rol_id,
+            'rol_valor': rol_valor_original,
+            'in_use': in_use,
+            'count': count
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/<item_id>', methods=['PUT'])
 def update_settings_catalogo_item(item_id):
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
         data = request.get_json() or {}
         nuevo_valor = (data.get('valor') or '').strip()
+        # Normalize role labels on update as well
+        if nuevo_valor and 'roles' in (data.get('categoria') or ''):
+            # when caller supplies categoria, honor it; otherwise we'll detect below from doc
+            nuevo_valor = capitalize_first(nuevo_valor)
         if not nuevo_valor:
             return jsonify({'error': 'Valor requerido'}), 400
-        col = get_empresa_collection('config_opciones', 0)
+
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        col = get_empresa_collection('config_opciones', empresa_id)
         # Buscar el documento por _id
         from bson import ObjectId
         try:
@@ -2028,6 +2304,9 @@ def update_settings_catalogo_item(item_id):
         valor_actual = (doc.get('valor') or '').strip()
         if categoria not in ALLOWED_SETTINGS_CATEGORIES:
             return jsonify({'error': 'Categoría no válida'}), 400
+        # If this is roles category, ensure normalized label
+        if categoria == 'roles' and nuevo_valor:
+            nuevo_valor = capitalize_first(nuevo_valor)
         if valor_actual.strip().lower() == nuevo_valor.strip().lower():
             return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': False}), 200
         slug_actual = slugify_estado(valor_actual)
@@ -2055,7 +2334,7 @@ def update_settings_catalogo_item(item_id):
         col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor}})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
         try:
-            log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor})
+            log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor, 'empresa_id': empresa_id})
         except Exception:
             pass
         return jsonify({'success': True, 'id': item_id, 'valor': nuevo_valor, 'changed': True}), 200
@@ -2063,11 +2342,24 @@ def update_settings_catalogo_item(item_id):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/<int:item_id>', methods=['DELETE'])
+@app.route('/api/settings/<item_id>', methods=['OPTIONS'])
+def settings_item_options(item_id):
+    # Explicitly handle CORS preflight for item-specific settings routes
+    resp = make_response('')
+    resp.status_code = 200
+    return resp
+
+
+@app.route('/api/settings/<item_id>', methods=['DELETE'])
 def delete_settings_catalogo_item(item_id):
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
         from bson import ObjectId
-        col = get_empresa_collection('config_opciones', 0)
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        col = get_empresa_collection('config_opciones', empresa_id)
         try:
             doc = col.find_one({'_id': ObjectId(item_id)})
         except Exception:
@@ -2084,7 +2376,7 @@ def delete_settings_catalogo_item(item_id):
         if result.deleted_count == 0:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         try:
-            log_audit('delete_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'valor': valor})
+            log_audit('delete_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'valor': valor, 'empresa_id': empresa_id})
         except Exception:
             pass
         return jsonify({'success': True}), 200

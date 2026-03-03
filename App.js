@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { PedidosProvider } from './PedidosContext';
 
 import TrabajoScreen from './screens/TrabajoScreen';
@@ -59,6 +60,7 @@ const linking = {
       'Nueva Cotización': 'nueva-cotizacion',
       SettingsUsuariosRoles: 'setting/usuarios-roles',
       SettingsFuncionalidades: 'setting/funcionalidades',
+      
       SettingsImpresion: 'setting/impresion',
     },
   },
@@ -70,7 +72,7 @@ function normalizeTabName(tabName) {
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
-function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser }) {
+function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onRoleChange }) {
   const [submenuOpen, setSubmenuOpen] = React.useState(false);
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
@@ -79,6 +81,28 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const activeSettingSection = activeRouteName === 'Setting'
     ? String(activeRoute?.params?.section || 'usuarios-roles')
     : null;
+  const [rolesList, setRolesList] = React.useState([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/api/settings?categoria=roles`);
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && !cancelled) {
+          const items = data.items || [];
+          const list = (items || []).map((it) => {
+            const valor = String(it?.valor || it?.label || it?.key || '').trim();
+            return { key: String(valor).toLowerCase(), label: valor };
+          }).filter((r) => r.key);
+          setRolesList(list);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleTabPress = (route, isFocused) => {
     const isSetting = route.name === 'Setting';
@@ -148,7 +172,54 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
     <View>
       <View style={styles.tabsBar}>
         <View style={styles.userInfoContainer}>
-          <Text style={styles.userInfoText}>{(currentUser?.nombre || 'Invitado')} · {(String(currentUser?.rol || '') || '-')}</Text>
+          {Platform.OS === 'web' ? (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <select
+                value={String(currentUser?.rol || '').toLowerCase()}
+                onChange={(e) => {
+                  try {
+                    const next = String(e.target.value || '').trim();
+                    if (typeof onRoleChange === 'function') onRoleChange(next);
+                    if (typeof window !== 'undefined' && window.localStorage) {
+                      window.localStorage.setItem('PFP_SELECTED_ROLE', next);
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                }}
+                style={{ fontSize: 12, fontWeight: 700, padding: '6px 8px', borderRadius: 6, border: '1px solid #E0E0E0', background: '#FFF' }}
+              >
+                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
+                  <option key={r.key} value={r.key}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <View style={{ width: 180 }}>
+              <Picker
+                selectedValue={String(currentUser?.rol || '').toLowerCase()}
+                onValueChange={async (next) => {
+                  try {
+                    const nextVal = String(next || '').trim();
+                    if (typeof onRoleChange === 'function') onRoleChange(nextVal);
+                    try {
+                      await AsyncStorage.setItem('PFP_SELECTED_ROLE', nextVal);
+                    } catch (e) {
+                      // ignore storage errors
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                }}
+                mode="dropdown"
+                style={{ height: 36 }}
+              >
+                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
+                  <Picker.Item key={r.key} label={r.label} value={r.key} />
+                ))}
+              </Picker>
+            </View>
+          )}
         </View>
         <View style={styles.tabsList}>
           {state.routes
@@ -212,10 +283,10 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   );
 }
 
-function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
+function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRoleChange }) {
   return (
     <Tab.Navigator
-      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} />}
+      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onRoleChange={onRoleChange} />}
       screenOptions={{
         tabBarStyle: { display: 'none' },
         animationEnabled: false,
@@ -631,6 +702,22 @@ export default function App() {
     }
   };
 
+  const handleRoleChange = async (nextRole) => {
+    try {
+      if (!nextRole) return;
+      if (!authUser) return;
+      const nextUser = { ...(authUser || {}), rol: nextRole };
+      setAuthUser(nextUser);
+      try {
+        await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
+      } catch (e) {
+        // ignore
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   const handleLogout = React.useCallback(async (options = {}) => {
     const timeoutExpired = !!options.timeoutExpired;
     try {
@@ -726,7 +813,7 @@ export default function App() {
           {/* BYPASS AUTH PARA DESARROLLO */}
           <Stack.Screen
             name="Home"
-            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} />}
+            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} onRoleChange={handleRoleChange} />}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -746,6 +833,7 @@ export default function App() {
             children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
             options={{ title: 'Funcionalidades web', headerShown: true }}
           />
+          
           <Stack.Screen
             name="SettingsImpresion"
             initialParams={{ section: 'impresion' }}

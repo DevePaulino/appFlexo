@@ -1,0 +1,41 @@
+[
+  {
+    "categoria": "roles",
+    "valor": "administrador",
+    "value": "Administrador",
+    "label": "Administrador",
+    "order": 1,
+    "id": "69a5fdd0d28a042ea731a958"
+  },
+  {
+    "categoria": "roles",
+    "valor": "diseno",
+    "value": "Diseño",
+    "label": "Diseño",
+    "order": 3,
+    "id": "69a5fdd0d28a042ea731a95c"
+  },
+  {
+    "categoria": "roles",
+    "valor": "impresion",
+    "value": "Impresión",
+    "label": "Impresión",
+    "order": 4,
+    "id": "69a5fdd0d28a042ea731a95e"
+  },
+  {
+    "categoria": "roles",
+    "valor": "post-impresion",
+    "value": "Post-Impresión",
+    "label": "Post-Impresión",
+    "order": 5,
+    "id": "69a5fdd0d28a042ea731a960"
+  },
+  {
+    "categoria": "roles",
+    "valor": "fd",
+    "orden": 1,
+    "fecha_creacion": "2026-03-03T16:26:54.981968",
+    "id": "69a6fdbe5004ae0e356f2574"
+  }
+]
