@@ -546,9 +546,9 @@ export default function NuevoPresupuestoModal({
         fechaEntregaObj.getTime() < fechaCreacionObj.getTime();
 
     const comerciales = (usuariosComerciales || []).map((item) => item.nombre);
-    const materiales = (catalogos.materiales || []).map((item) => item.valor);
-    const acabados = (catalogos.acabados || []).map((item) => item.valor);
-    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor);
+    const materiales = (catalogos.materiales || []).map((item) => item.valor).filter(Boolean);
+    const acabados = (catalogos.acabados || []).map((item) => item.valor).filter(Boolean);
+    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor).filter(Boolean);
     const numeroTintasSeleccionadas = selectedTintas.length;
     const puedeSeleccionarMaquina = (itemMaquina) => {
         if (!showMaquinaField) return true;
