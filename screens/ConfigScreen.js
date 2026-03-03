@@ -1239,6 +1239,23 @@ export default function ConfigScreen({ route, currentUser }) {
       mostrarPermisoUsuariosDenegado();
       return;
     }
+
+    try {
+      const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+      // On web, react-native Alert may not trigger the onPress handlers; use window.confirm instead.
+      if (isWeb && typeof window.confirm === 'function') {
+        // eslint-disable-next-line no-console
+        console.log('confirmarEliminarUsuario (web)', usuario.id, usuario.nombre);
+        const accepted = window.confirm(`¿Seguro que quieres eliminar a ${usuario?.nombre || 'este usuario'}?`);
+        if (accepted) {
+          eliminarUsuario(usuario.id);
+        }
+        return;
+      }
+    } catch (e) {
+      // ignore and fallback to Alert
+    }
+
     Alert.alert(
       'Confirmar eliminación',
       `¿Seguro que quieres eliminar a ${usuario?.nombre || 'este usuario'}?`,
