@@ -3127,6 +3127,11 @@ def enviar_trabajo_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+        
+        # Validar que el usuario tenga permiso para cambiar estados
+        if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+            return jsonify({'error': 'No autorizado para cambiar estados'}), 403
+        
         empresa_id = int(request_user.get('empresa_id') or 0)
 
         data = request.get_json()
@@ -3808,8 +3813,14 @@ def cambiar_estado_trabajo(trabajo_id):
         if auth_error:
             return auth_error
         
+        # DEBUG: log the actual role being used
+        actual_role = request_user.get('rol')
+        x_role_header = request.headers.get('X-Role', 'NOT_SET')
+        print(f"DEBUG: cambiar_estado_trabajo - user_role={actual_role}, X-Role_header={x_role_header}", flush=True)
+        
         # Validar que el usuario tenga permiso para cambiar estados
-        if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+        if not can_role_permission(actual_role, 'manage_estados_pedido'):
+            print(f"DEBUG: Permission denied for role={actual_role}, manage_estados_pedido check failed", flush=True)
             return jsonify({'error': 'No autorizado para cambiar estados'}), 403
         
         empresa_id = int(request_user.get('empresa_id') or 0)
