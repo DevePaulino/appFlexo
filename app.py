@@ -1275,6 +1275,19 @@ def auth_token_info():
     return jsonify({'payload': payload}), 200
 
 
+@app.route('/api/auth/check-permission/<permission_key>', methods=['GET'])
+def check_permission(permission_key):
+    """Verifica si el usuario actual tiene un permiso específico"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        has_permission = can_role_permission(request_user.get('rol'), permission_key)
+        return jsonify({'permission': permission_key, 'allowed': has_permission}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/clientes', methods=['POST'])
 def create_cliente():
     try:
@@ -3048,6 +3061,9 @@ def update_pedido(pedido_id):
 
         # Validación y normalización del estado según reglas configuradas
         if 'estado' in data:
+            # Validar que el usuario tenga permiso para cambiar estados
+            if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+                return jsonify({'error': 'No autorizado para cambiar estados'}), 403
             raw_estado = str(data.get('estado') or '').strip()
             if not raw_estado:
                 return jsonify({'error': 'estado vacío'}), 400

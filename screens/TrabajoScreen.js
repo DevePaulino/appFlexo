@@ -590,6 +590,7 @@ export default function TrabajoScreen({ currentUser }) {
   });
   const [modoCreacion, setModoCreacion] = useState('manual');
   const [hoverNuevo, setHoverNuevo] = useState(false);
+  const [canChangeEstado, setCanChangeEstado] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
   const { actualizacionPedidos } = React.useContext(PedidosContext);
   const route = useRoute();
@@ -779,12 +780,23 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setTrabajos([]));
   };
 
+  // Verificar si el usuario puede cambiar estados
+  const checkCanChangeEstado = () => {
+    fetch('http://localhost:8080/api/auth/check-permission/manage_estados_pedido')
+      .then((res) => res.json())
+      .then((data) => {
+        setCanChangeEstado(data && data.allowed === true);
+      })
+      .catch(() => setCanChangeEstado(false));
+  };
+
   // Cargar pedidos al montar el componente
   useEffect(() => {
     cargarPedidos();
     cargarModoCreacion();
     cargarEstadosDisponibles();
     cargarEstadoRules();
+    checkCanChangeEstado();
     fetch('http://localhost:8080/api/maquinas')
       .then((res) => res.json())
       .then((data) => setMaquinas(data.maquinas || []))
@@ -1131,16 +1143,19 @@ export default function TrabajoScreen({ currentUser }) {
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
                   <select
+                    disabled={!canChangeEstado}
                     style={{
                       padding: '6px 8px',
                       borderRadius: '4px',
                       border: '1px solid #DDD',
-                      backgroundColor: '#FFF',
+                      backgroundColor: canChangeEstado ? '#FFF' : '#F0F0F0',
                       fontSize: '11px',
                       fontWeight: '600',
-                      cursor: 'pointer',
+                      cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
                       color: getStatusColor(trabajo.estado) || '#232323',
+                      opacity: canChangeEstado ? 1 : 0.65,
+                      pointerEvents: canChangeEstado ? 'auto' : 'none',
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
