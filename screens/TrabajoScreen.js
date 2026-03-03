@@ -821,6 +821,19 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setMaquinas([]));
   }, []);
 
+  // Revalidar permisos al cambiar el rol activo sin refrescar la página
+  useEffect(() => {
+    const handler = () => checkCanChangeEstado();
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('pfp-role-changed', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('pfp-role-changed', handler);
+      }
+    };
+  }, []);
+
   useFocusEffect(
     React.useCallback(() => {
       cargarModoCreacion();
