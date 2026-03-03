@@ -3807,6 +3807,11 @@ def cambiar_estado_trabajo(trabajo_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+        
+        # Validar que el usuario tenga permiso para cambiar estados
+        if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+            return jsonify({'error': 'No autorizado para cambiar estados'}), 403
+        
         empresa_id = int(request_user.get('empresa_id') or 0)
         data = request.get_json()
         nuevo_estado = data.get('estado')
