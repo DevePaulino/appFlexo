@@ -473,7 +473,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         {/* Contenedor de filas virtualizado (FlatList) */}
         <FlatList
           data={trabajosFiltrados}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item) => String(item.trabajo_id || item.id || item._id || '')}
           renderItem={renderRow}
           getItemLayout={(data, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
           onEndReachedThreshold={0.5}
