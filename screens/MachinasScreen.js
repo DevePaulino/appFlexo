@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function MachinasScreen() {
+export default function MachinasScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const emptyForm = {
@@ -529,14 +529,17 @@ export default function MachinasScreen() {
     };
   }, []);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={styles.btnPlusWrap}>
             <Pressable
-              style={styles.btnPlus}
-              onPress={abrirNuevaMaquina}
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && abrirNuevaMaquina()}
+              disabled={!puedeCrear}
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
@@ -544,7 +547,7 @@ export default function MachinasScreen() {
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>Nueva máquina</Text>
+                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nueva máquina'}</Text>
               </View>
             )}
           </View>

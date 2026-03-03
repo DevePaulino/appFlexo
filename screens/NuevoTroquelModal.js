@@ -141,6 +141,7 @@ export default function NuevoTroquelModal({
   existingNumeros = [],
   initialTroquel = null,
   modoEdicion = false,
+  currentUser = null,
 }) {
   const [refTroquel, setRefTroquel] = useState('');
   const [tipoTroquel, setTipoTroquel] = useState('regular');
@@ -178,6 +179,8 @@ export default function NuevoTroquelModal({
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   const handleClose = () => {
     setRefTroquel('');
     setTipoTroquel('regular');
@@ -191,6 +194,10 @@ export default function NuevoTroquelModal({
   };
 
   const handleSave = () => {
+    if (!puedeCrear) {
+      alert('Permiso denegado: no puedes crear/editar troqueles con este rol');
+      return;
+    }
     const referenciaNormalizada = String(refTroquel || '').trim();
 
     if (!referenciaNormalizada) {
@@ -338,13 +345,18 @@ export default function NuevoTroquelModal({
         </ScrollView>
 
         <View style={styles.submitContainer}>
-          <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleSave}>
+          <TouchableOpacity style={[styles.btn, styles.btnPrimary, !puedeCrear && { opacity: 0.45 }]} onPress={() => puedeCrear && handleSave()} disabled={!puedeCrear}>
             <Text style={styles.btnText}>{modoEdicion ? 'Guardar cambios' : 'Guardar'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={handleClose}>
             <Text style={styles.btnText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
+        {!puedeCrear && (
+          <View style={{ paddingHorizontal: 16, marginTop: 6 }}>
+            <Text style={{ color: '#777', fontSize: 12 }}>Tu rol no permite crear/editar troqueles.</Text>
+          </View>
+        )}
       </View>
     </Modal>
   );

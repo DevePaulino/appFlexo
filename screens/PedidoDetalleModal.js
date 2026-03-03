@@ -264,11 +264,14 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
   const cargarRolActivo = async () => {
     try {
-      const resp = await fetch('http://localhost:8080/api/settings/active-role');
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) return setActiveRole('');
-      setActiveRole(normalizarRolActivo(data.active_role || ''));
-    } catch {
+      const respAll = await fetch('http://localhost:8080/api/settings');
+      if (!respAll.ok) {
+        setActiveRole('');
+        return;
+      }
+      const all = await respAll.json().catch(() => ({}));
+      setActiveRole(normalizarRolActivo((all.settings && (all.settings.active_role || all.settings.activeRole || all.settings.active)) || ''));
+    } catch (err) {
       setActiveRole('');
     }
   };

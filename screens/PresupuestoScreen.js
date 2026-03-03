@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function PresupuestoScreen() {
+export default function PresupuestoScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
@@ -790,6 +790,8 @@ export default function PresupuestoScreen() {
     };
   }, []);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   const presupuestosBaseGrafica = presupuestos.filter((p) => coincideBusquedaPresupuesto(p));
   const totalPresupuestos = presupuestosBaseGrafica.length;
   const aprobadosCount = presupuestosBaseGrafica.filter((p) => !!p.aprobado).length;
@@ -804,8 +806,9 @@ export default function PresupuestoScreen() {
           {modoCreacion !== 'automatico' && (
             <View style={styles.btnPlusWrap}>
               <Pressable
-                style={styles.btnPlus}
-                onPress={() => setModalVisible(true)}
+                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+                onPress={() => puedeCrear && setModalVisible(true)}
+                disabled={!puedeCrear}
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
@@ -813,7 +816,7 @@ export default function PresupuestoScreen() {
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>Nuevo presupuesto</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo presupuesto'}</Text>
                 </View>
               )}
             </View>
@@ -1049,6 +1052,7 @@ export default function PresupuestoScreen() {
         showFechaEntrega={true}
         fechaEntregaLabel="Fecha de entrega"
         showMaquinaField={false}
+        currentUser={currentUser}
       />
     </View>
   );

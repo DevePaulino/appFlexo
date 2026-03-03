@@ -430,7 +430,9 @@ export default function NuevoPresupuestoModal({
     maquinaLabel = 'Máquina',
     initialValues = null,
     readOnly = false,
+    currentUser = null,
 }) {
+    const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
     const isReadOnly = !!readOnly;
     const getNowDateStr = () => {
         const d = new Date();
@@ -773,6 +775,10 @@ export default function NuevoPresupuestoModal({
     }, [imagenCobertura, selectedTintas]);
 
     const handleSubmit = () => {
+        if (!puedeCrear) {
+            Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear presupuestos.');
+            return;
+        }
         setSubmitted(true);
         if (emailVacio || emailInvalido || cifInvalido) {
             Alert.alert('Error', 'Email vacío o inválido, o CIF inválido. Revisa los campos.');
@@ -1368,13 +1374,22 @@ export default function NuevoPresupuestoModal({
 
                     {/* SUBMIT */}
                     <View style={styles.submitContainer}>
-                        <TouchableOpacity style={[styles.bigBtn, styles.submitBtn]} onPress={handleSubmit}>
+                        <TouchableOpacity
+                            style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
+                            onPress={() => puedeCrear && handleSubmit()}
+                            disabled={!puedeCrear}
+                        >
                             <Text style={styles.bigBtnText}>{submitLabel}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
                             <Text style={styles.bigBtnText}>Cancelar</Text>
                         </TouchableOpacity>
                     </View>
+                    {!puedeCrear && (
+                        <View style={{ paddingHorizontal: 16, marginTop: 6 }}>
+                            <Text style={{ color: '#777', fontSize: 12 }}>Tu rol no permite crear presupuestos.</Text>
+                        </View>
+                    )}
                 </ScrollView>
 
                 {showDatePicker && Platform.OS !== 'web' && (

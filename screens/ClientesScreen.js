@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function ClientesScreen() {
+export default function ClientesScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const [clientes, setClientes] = useState([]);
   const [filtrados, setFiltrados] = useState(clientes);
@@ -515,14 +515,17 @@ export default function ClientesScreen() {
     };
   }, []);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={styles.btnPlusWrap}>
             <Pressable
-              style={styles.btnPlus}
-              onPress={() => setModalVisible(true)}
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && setModalVisible(true)}
+              disabled={!puedeCrear}
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
@@ -530,7 +533,7 @@ export default function ClientesScreen() {
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>Nuevo cliente</Text>
+                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo cliente'}</Text>
               </View>
             )}
           </View>

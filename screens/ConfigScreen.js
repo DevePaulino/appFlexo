@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -684,6 +684,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [sessionTimeoutMin, setSessionTimeoutMin] = useState(5);
   const [sessionTimeoutMax, setSessionTimeoutMax] = useState(480);
   const [guardandoSessionTimeout, setGuardandoSessionTimeout] = useState(false);
+  const [forceRootEnabled, setForceRootEnabled] = useState(false);
   const [billingConfig, setBillingConfig] = useState({
     checkout_enabled: false,
     payment_methods: [
@@ -772,6 +773,42 @@ export default function ConfigScreen({ route, currentUser }) {
       }
     } catch (e) {
       Alert.alert('Error', `No se pudo cargar el modo de creación: ${e.message}`);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+      if (isWeb) {
+        const flag = String(window.localStorage.getItem('PFP_FORCE_ROOT') || '').trim();
+        setForceRootEnabled(flag === '1');
+        return;
+      }
+      AsyncStorage.getItem('PFP_FORCE_ROOT').then((v) => setForceRootEnabled(String(v || '') === '1')).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const toggleForceRoot = async (value) => {
+    try {
+      setForceRootEnabled(!!value);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        if (value) {
+          window.localStorage.setItem('PFP_FORCE_ROOT', '1');
+        } else {
+          window.localStorage.removeItem('PFP_FORCE_ROOT');
+        }
+        // reload to let App.js pick up the change
+        // eslint-disable-next-line no-restricted-globals
+        window.location.reload();
+        return;
+      }
+
+      await AsyncStorage.setItem('PFP_FORCE_ROOT', value ? '1' : '0');
+      Alert.alert('Cambio guardado', 'Reinicia la app para aplicar el cambio.');
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -1043,11 +1080,20 @@ export default function ConfigScreen({ route, currentUser }) {
   // La comprobación/alerta de permiso de usuarios se ha eliminado (backend sigue validando).
 
   const mostrarPermisoRecargasDenegado = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert('Permiso denegado: Tu rol no tiene permiso para gestionar recargas');
+      return;
+    }
     Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar recargas');
   };
 
   const mostrarPermisoUsuariosDenegado = () => {
-    Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar usuarios.');
+    const roleInfo = `rol=${currentUserRole} manage_app_settings=${String(currentUserPermissionValue)} rolePerm=${String(rolePermissionValue)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(`Permiso denegado: Tu rol no tiene permiso para gestionar usuarios. (${roleInfo})`);
+      return;
+    }
+    Alert.alert('Permiso denegado', `Tu rol no tiene permiso para gestionar usuarios. (${roleInfo})`);
   };
 
   const abrirModalNuevoUsuario = () => {
@@ -1061,6 +1107,7 @@ export default function ConfigScreen({ route, currentUser }) {
   };
 
   const guardarUsuario = async () => {
+    console.log('guardarUsuario invoked', { nuevoUsuarioNombre, nuevoUsuarioEmail, nuevoUsuarioRol, puedeAdministrarUsuarios });
     if (!puedeAdministrarUsuarios) {
       mostrarPermisoUsuariosDenegado();
       return;
@@ -1096,15 +1143,25 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
 
+      // Debug: show status and response body to help diagnose web client issues
+      console.log('guardarUsuario response', response.status, data);
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo guardar el usuario');
+        Alert.alert('Error', `(${response.status}) ${data.error || 'No se pudo guardar el usuario'}`);
         return;
+      }
+
+      // On success, show created/updated id and any temp password returned
+      const id = data.id || data._id || (data.usuario && data.usuario.id) || null;
+      const temp = data._temp_password || (data.usuario && data.usuario._temp_password) || null;
+      if (id) {
+        Alert.alert('Usuario creado', `ID: ${id}${temp ? `\nContraseña temporal: ${temp}` : ''}`);
       }
 
       limpiarFormularioUsuario();
       setModalUsuarioVisible(false);
       await cargarUsuarios();
     } catch (e) {
+      console.error('guardarUsuario exception', e);
       Alert.alert('Error', `No se pudo guardar el usuario: ${e.message}`);
     }
   };
@@ -1339,6 +1396,12 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const eliminarValor = async (id) => {
     const esRol = (settings.roles || []).some((item) => item.id === id);
+    // Prevent deleting internal/root roles from the UI
+    const rolItem = (settings.roles || []).find((item) => item.id === id);
+    if (rolItem && (rolItem.internal === true || slugifyEstado(String(rolItem?.valor || '')) === 'root')) {
+      Alert.alert('Acción no permitida', 'No se puede eliminar este rol.');
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       const data = await response.json().catch(() => ({}));
@@ -1358,6 +1421,12 @@ export default function ConfigScreen({ route, currentUser }) {
   const editarValor = async (item, categoria) => {
     if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof window.prompt !== 'function') {
       Alert.alert('No disponible', 'La edición rápida está disponible en la versión web.');
+      return;
+    }
+
+    // Prevent editing internal/root roles from the UI
+    if (categoria === 'roles' && (item?.internal === true || slugifyEstado(String(item?.valor || '')) === 'root')) {
+      Alert.alert('Acción no permitida', 'No se puede editar este rol.');
       return;
     }
 
@@ -1648,7 +1717,7 @@ export default function ConfigScreen({ route, currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           {showTopUsersPlus && (
-            <TouchableOpacity style={styles.usersBtnPlus} onPress={abrirModalNuevoUsuario}>
+            <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
               <Text style={styles.usersBtnPlusText}>+</Text>
             </TouchableOpacity>
           )}
@@ -1984,6 +2053,15 @@ export default function ConfigScreen({ route, currentUser }) {
                 </>
               )}
             </>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Forzar rol root (dev)</Text>
+          <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}> 
+            <Text style={styles.muted}>Forzar usuario con rol 'root' (solo desarrollo)</Text>
+            <Switch value={forceRootEnabled} onValueChange={toggleForceRoot} />
+          </View>
+          <Text style={[styles.muted, { marginTop: 6 }]}>Activa para obtener permisos root en la app web. Usar solo en entorno local.</Text>
         </View>
 
         <View style={styles.section}>

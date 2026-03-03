@@ -2,9 +2,14 @@ import React from 'react';
 import { Alert } from 'react-native';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 
-export default function NuevoPedidoModal({ visible, onClose, onSave, initialValues }) {
+export default function NuevoPedidoModal({ visible, onClose, onSave, initialValues, currentUser }) {
   try { console.log('NuevoPedidoModal render -> visible:', visible, 'initialValues id:', initialValues && (initialValues.id || initialValues.pedido_id || initialValues._id)); } catch(e) {}
   const handleCrearPedidoDesdeFormulario = async (formulario) => {
+    const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+    if (!puedeCrear) {
+      Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear pedidos.');
+      return;
+    }
     const nombreTrabajo = formulario.nombre || formulario.referencia || `Trabajo ${formulario.numero}`;
 
     try {
@@ -139,6 +144,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       fechaEntregaLabel="Fecha de entrega"
       showMaquinaField={true}
       maquinaLabel="Máquina"
+      currentUser={currentUser}
     />
   );
 }

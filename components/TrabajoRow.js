@@ -31,7 +31,7 @@ function TrabajoRow(props) {
   const maquinaFilaId = trabajo._maquina_id ?? maquinas[maquinaActual]?.id;
 
   const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
-  const displayId = trabajo.trabajo_id || trabajo.id;
+  const displayId = canonicalId; // mostrar la id canónica completa en la UI
   return (
     <View key={canonicalId}>
       {showDropIndicator && <View style={styles.dropIndicator} />}
@@ -54,7 +54,7 @@ function TrabajoRow(props) {
           </Text>
         </View>
         <View style={[styles.tableCell, styles.colId]}>
-          <Text style={styles.cellText} numberOfLines={1}>{displayId}</Text>
+          <Text style={styles.cellText}>{displayId}</Text>
         </View>
         <View style={[styles.tableCell, styles.colNombre]}>
           <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>

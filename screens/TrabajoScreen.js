@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function TrabajoScreen() {
+export default function TrabajoScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const ESTADO_FINALIZADO_COLOR = '#1F9D55';
 
@@ -929,6 +929,8 @@ export default function TrabajoScreen() {
     };
   }, []);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -936,8 +938,9 @@ export default function TrabajoScreen() {
           {modoCreacion !== 'automatico' && (
             <View style={styles.btnPlusWrap}>
               <Pressable
-                style={styles.btnPlus}
-                onPress={() => setModalVisible(true)}
+                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+                onPress={() => puedeCrear && setModalVisible(true)}
+                disabled={!puedeCrear}
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
@@ -945,7 +948,7 @@ export default function TrabajoScreen() {
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>Nuevo pedido</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo pedido'}</Text>
                 </View>
               )}
             </View>
@@ -1202,6 +1205,7 @@ export default function TrabajoScreen() {
         onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
         onSave={(p) => { setModalVisible(false); setEditingInitialValues(null); handleNuevoPedido(p); }}
         initialValues={editingInitialValues}
+        currentUser={currentUser}
       />
       
       <PedidoDetalleModal

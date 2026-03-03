@@ -70,7 +70,7 @@ function normalizeTabName(tabName) {
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
-function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout }) {
+function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser }) {
   const [submenuOpen, setSubmenuOpen] = React.useState(false);
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
@@ -147,6 +147,9 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   return (
     <View>
       <View style={styles.tabsBar}>
+        <View style={styles.userInfoContainer}>
+          <Text style={styles.userInfoText}>{(currentUser?.nombre || 'Invitado')} · {(String(currentUser?.rol || '') || '-')}</Text>
+        </View>
         <View style={styles.tabsList}>
           {state.routes
             .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
@@ -212,7 +215,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
 function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
   return (
     <Tab.Navigator
-      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} />}
+      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} />}
       screenOptions={{
         tabBarStyle: { display: 'none' },
         animationEnabled: false,
@@ -222,45 +225,33 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
     >
       <Tab.Screen
         name="Pedidos"
-        component={TrabajoScreen}
-        options={{
-          tabBarLabel: 'Pedidos',
-        }}
+        options={{ tabBarLabel: 'Pedidos' }}
+        children={(props) => <TrabajoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Presupuesto"
-        component={PresupuestoScreen}
-        options={{
-          tabBarLabel: 'Presupuestos',
-        }}
+        options={{ tabBarLabel: 'Presupuestos' }}
+        children={(props) => <PresupuestoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Producción"
-        component={ProduccionScreen}
-        options={{
-          tabBarLabel: 'Producción',
-        }}
+        options={{ tabBarLabel: 'Producción' }}
+        children={(props) => <ProduccionScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Clientes"
-        component={ClientesScreen}
-        options={{
-          tabBarLabel: 'Clientes',
-        }}
+        options={{ tabBarLabel: 'Clientes' }}
+        children={(props) => <ClientesScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Máquinas"
-        component={MachinasScreen}
-        options={{
-          tabBarLabel: 'Máquinas',
-        }}
+        options={{ tabBarLabel: 'Máquinas' }}
+        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Troqueles"
-        component={TroquelessScreen}
-        options={{
-          tabBarLabel: 'Troqueles',
-        }}
+        options={{ tabBarLabel: 'Troqueles' }}
+        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Setting"
@@ -325,6 +316,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4B5563',
   },
+  userInfoContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  userInfoText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '700',
+  },
   settingsSubmenuWrap: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
@@ -382,6 +383,43 @@ export default function App() {
   const markActivity = React.useCallback(() => {
     lastActivityRef.current = Date.now();
     autoLogoutTriggeredRef.current = false;
+  }, []);
+
+  // DEV TEMP: Forzar usuario `root` controlado por `localStorage.PFP_FORCE_ROOT`.
+  // - Para activar en el navegador: `localStorage.setItem('PFP_FORCE_ROOT','1')` y recarga.
+  // - Para desactivar: `localStorage.setItem('PFP_FORCE_ROOT','0')` y recarga (o eliminar la clave).
+  // Esto evita editar el código para activar/desactivar el forzado y facilita revertirlo.
+  React.useEffect(() => {
+    try {
+      const isWeb = typeof window !== 'undefined' && typeof window.location !== 'undefined';
+      if (!isWeb) return;
+
+      const flag = String(window.localStorage.getItem('PFP_FORCE_ROOT') || '').trim();
+      if (flag !== '1') {
+        // Do nothing unless explicitly enabled
+        // eslint-disable-next-line no-console
+        console.log("DEV: PFP_FORCE_ROOT not set to '1' — skipping force-root");
+        return;
+      }
+
+      const rootUser = { id: 'root', nombre: 'Root', rol: 'root', empresa_id: 1 };
+      const nowSec = Math.floor(Date.now() / 1000);
+      const rootSession = {
+        usuario: rootUser,
+        access_token: 'dev-access',
+        refresh_token: 'dev-refresh',
+        access_expires_at: nowSec + 3600 * 24,
+      };
+
+      setAuthUser(rootUser);
+      setAuthSession(rootSession);
+      AsyncStorage.setItem('authUser', JSON.stringify(rootUser)).catch(() => {});
+      AsyncStorage.setItem('authSession', JSON.stringify(rootSession)).catch(() => {});
+      // eslint-disable-next-line no-console
+      console.log('DEV: authUser/authSession forzados a root (controlado por PFP_FORCE_ROOT)');
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   React.useEffect(() => {

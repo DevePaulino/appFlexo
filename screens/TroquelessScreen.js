@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function TroquelessScreen() {
+export default function TroquelessScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const [troqueles, setTroqueles] = useState([
     { id: 1, numero: 'TR-001', estado: 'Disponible', forma: 'Rectangular', tipo: 'regular', anchoMotivo: '100', altoMotivo: '150' },
@@ -567,13 +567,16 @@ export default function TroquelessScreen() {
 
   const cargarRolActivo = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings/active-role');
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) return activeRole;
-      const roleNormalizado = normalizarRolActivo(data.active_role || 'root');
+      const respAll = await fetch('http://localhost:8080/api/settings');
+      if (!respAll.ok) {
+        setActiveRole('root');
+        return 'root';
+      }
+      const all = await respAll.json().catch(() => ({}));
+      const roleNormalizado = normalizarRolActivo((all.settings && (all.settings.active_role || all.settings.activeRole || all.settings.active)) || 'root');
       setActiveRole(roleNormalizado);
       return roleNormalizado;
-    } catch {
+    } catch (e) {
       setActiveRole('root');
       return 'root';
     }
@@ -864,6 +867,8 @@ export default function TroquelessScreen() {
     };
   }, []);
 
+  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -871,8 +876,9 @@ export default function TroquelessScreen() {
           <View style={styles.headerTopLeft}>
             <View style={styles.btnPlusWrap}>
               <Pressable
-                style={styles.btnPlus}
-                onPress={abrirNuevoTroquel}
+                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+                onPress={() => puedeCrear && abrirNuevoTroquel()}
+                disabled={!puedeCrear}
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
@@ -880,7 +886,7 @@ export default function TroquelessScreen() {
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>Nuevo troquel</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo troquel'}</Text>
                 </View>
               )}
             </View>
@@ -1024,6 +1030,7 @@ export default function TroquelessScreen() {
         existingNumeros={modoEdicionTroquel ? numerosExistentesEdicionTroquel : numerosExistentesTroquel}
         initialTroquel={troquelEditando}
         modoEdicion={modoEdicionTroquel}
+        currentUser={currentUser}
       />
 
       <Modal visible={modalDetalleVisible} transparent animationType="fade" onRequestClose={cerrarDetalle}>
