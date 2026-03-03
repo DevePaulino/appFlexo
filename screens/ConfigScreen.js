@@ -854,8 +854,8 @@ export default function ConfigScreen({ route, currentUser }) {
     try {
       const response = await fetch(API_ROLE_PERMISSIONS_URL);
       const data = await response.json().catch(() => ({}));
-      if (response.ok && data && data.permissions) {
-        setRolePermissions(data.permissions || {});
+      if (response.ok && data && data.roles_permissions) {
+        setRolePermissions(data.roles_permissions || {});
       }
     } catch (e) {
       // ignore

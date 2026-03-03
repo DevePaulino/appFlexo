@@ -246,6 +246,7 @@ except Exception:
 PERMISSION_KEYS = [
     'manage_app_settings',
     'manage_roles_permissions',
+    'manage_estados_pedido',
     'edit_clientes',
     'edit_maquinas',
     'edit_pedidos',
