@@ -782,13 +782,30 @@ export default function TrabajoScreen({ currentUser }) {
 
   // Verificar si el rol actual puede cambiar estados
   const checkCanChangeEstado = () => {
-    // Roles que tienen permiso de manage_estados_pedido
-    const rolesAutorizados = ['root', 'administrador', 'admin', 'oficina'];
     const rolActual = typeof window !== 'undefined' && window.localStorage
       ? window.localStorage.getItem('PFP_SELECTED_ROLE')
       : null;
-    const puedeEditar = !rolActual || rolesAutorizados.includes(rolActual);
-    setCanChangeEstado(puedeEditar);
+    
+    // Si no hay rol seleccionado, permitir por defecto
+    if (!rolActual) {
+      setCanChangeEstado(true);
+      return;
+    }
+    
+    // Preguntar al backend si el rol tiene permiso
+    fetch('http://localhost:8080/api/auth/verify-role-permission', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: rolActual,
+        permission: 'manage_estados_pedido'
+      })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setCanChangeEstado(data && data.allowed === true);
+      })
+      .catch(() => setCanChangeEstado(false));
   };
 
   // Cargar pedidos al montar el componente

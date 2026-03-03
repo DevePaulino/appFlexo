@@ -325,6 +325,16 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': False,
         'edit_produccion': True,
     },
+    'oficina': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': True,
+        'edit_clientes': True,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+    },
 }
 
 # Defaults for pedido states and rules used when DB has no config
@@ -1275,15 +1285,19 @@ def auth_token_info():
     return jsonify({'payload': payload}), 200
 
 
-@app.route('/api/auth/check-permission/<permission_key>', methods=['GET'])
-def check_permission(permission_key):
-    """Verifica si el usuario actual tiene un permiso específico"""
+@app.route('/api/auth/verify-role-permission', methods=['POST'])
+def verify_role_permission():
+    """Verifica si un rol específico tiene un permiso sin requerir autenticación"""
     try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
-        has_permission = can_role_permission(request_user.get('rol'), permission_key)
-        return jsonify({'permission': permission_key, 'allowed': has_permission}), 200
+        data = request.get_json() or {}
+        role = str(data.get('role') or '').strip()
+        permission = str(data.get('permission') or '').strip()
+        
+        if not role or not permission:
+            return jsonify({'error': 'role y permission requeridos'}), 400
+        
+        has_permission = can_role_permission(role, permission)
+        return jsonify({'role': role, 'permission': permission, 'allowed': has_permission}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
