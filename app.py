@@ -595,11 +595,23 @@ def get_request_user():
                     'rol': data.get('rol') or data.get('role') or 'operario',
                     'empresa_id': int(data.get('empresa_id') or data.get('empresa') or 1)
                 }
+                # Check for X-Role header override (for role switching without logout)
+                x_role = request.headers.get('X-Role')
+                if x_role:
+                    x_role = str(x_role or '').strip().lower()
+                    if x_role:  # Only override if header has a non-empty value
+                        user['rol'] = x_role
                 g._request_user = user
                 return user
             except Exception:
                 pass
         user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
+        # Check for X-Role header override even in dev mode
+        x_role = request.headers.get('X-Role')
+        if x_role:
+            x_role = str(x_role or '').strip().lower()
+            if x_role:  # Only override if header has a non-empty value
+                user['rol'] = x_role
         g._request_user = user
         return user
 
@@ -630,6 +642,14 @@ def get_request_user():
     if not user_doc:
         return None
     user = fix_id(user_doc)
+    
+    # Check for X-Role header override (for role switching without logout)
+    x_role = request.headers.get('X-Role')
+    if x_role:
+        x_role = str(x_role or '').strip().lower()
+        if x_role:  # Only override if header has a non-empty value
+            user['rol'] = x_role
+    
     g._request_user = user
     return user
 

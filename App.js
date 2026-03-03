@@ -545,6 +545,18 @@ export default function App() {
         nextHeaders.Authorization = `Bearer ${accessToken}`;
       }
 
+      // Usar el rol seleccionado del desplegable si existe
+      try {
+        const selectedRole = typeof window !== 'undefined' && window.localStorage 
+          ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+          : null;
+        if (selectedRole && !nextHeaders['X-Role']) {
+          nextHeaders['X-Role'] = selectedRole;
+        }
+      } catch (e) {
+        // ignore localStorage errors
+      }
+
       let response = await originalFetch(input, { ...init, headers: nextHeaders });
       if (response.status !== 401) {
         return response;
@@ -601,6 +613,18 @@ export default function App() {
         const retryHeaders = normalizeHeaders(init?.headers);
         retryHeaders.Authorization = `Bearer ${refreshedSession.access_token}`;
         delete retryHeaders.authorization;
+
+        // Usar el rol seleccionado del desplegable también en retry
+        try {
+          const selectedRole = typeof window !== 'undefined' && window.localStorage 
+            ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+            : null;
+          if (selectedRole && !retryHeaders['X-Role']) {
+            retryHeaders['X-Role'] = selectedRole;
+          }
+        } catch (e) {
+          // ignore localStorage errors
+        }
 
         response = await originalFetch(input, { ...init, headers: retryHeaders });
         return response;
