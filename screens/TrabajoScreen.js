@@ -711,24 +711,7 @@ export default function TrabajoScreen({ currentUser }) {
     }
   };
 
-  const canChangeStatus = () => {
-    // Check if current user has permission to change estado
-    // Root and admin always have permission
-    const userRole = (currentUser?.rol || '').toLowerCase().trim();
-    if (userRole === 'root' || userRole === 'administrador' || userRole === 'admin') {
-      return true;
-    }
-    // Others don't have manage_estados_pedido permission
-    return false;
-  };
-
   const handleCambiarEstado = async (trabajoObj, nuevoEstado) => {
-    // Early check: prevent if user doesn't have permission
-    if (!canChangeStatus()) {
-      alert('No tienes permiso para cambiar estados');
-      return;
-    }
-
     try {
       const trabajoId = trabajoObj && (trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id || trabajoObj.trabajo_id);
 
@@ -767,6 +750,9 @@ export default function TrabajoScreen({ currentUser }) {
 
       if (res && res.ok) {
         cargarPedidos();
+      } else if (res && res.status === 403) {
+        console.error('Permiso denegado al cambiar estado');
+        alert('No tienes permiso para cambiar estados');
       } else {
         const text = res ? await res.text().catch(()=>null) : null;
         console.error('Error cambiando estado:', res ? res.statusText : 'no response', text);
@@ -1145,7 +1131,6 @@ export default function TrabajoScreen({ currentUser }) {
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
                   <select
-                    disabled={!canChangeStatus()}
                     style={{
                       padding: '6px 8px',
                       borderRadius: '4px',
@@ -1153,11 +1138,9 @@ export default function TrabajoScreen({ currentUser }) {
                       backgroundColor: '#FFF',
                       fontSize: '11px',
                       fontWeight: '600',
-                      cursor: canChangeStatus() ? 'pointer' : 'not-allowed',
+                      cursor: 'pointer',
                       width: '100%',
                       color: getStatusColor(trabajo.estado) || '#232323',
-                      opacity: canChangeStatus() ? 1 : 0.65,
-                      pointerEvents: canChangeStatus() ? 'auto' : 'none',
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
