@@ -1027,7 +1027,7 @@ export default function ConfigScreen({ route, currentUser }) {
   );
   const puedeEditarSessionTimeout = ['root', 'administrador', 'admin'].includes(currentUserRole);
 
-  // Build availableRoles from settings but hide internal roles and the 'root' key from UI lists
+  // Build availableRoles from settings (hide only internal roles in UI lists)
   const availableRoles = (settings.roles || [])
     .filter((item) => !item?.internal)
     .map((item) => {
@@ -1038,7 +1038,7 @@ export default function ConfigScreen({ route, currentUser }) {
         label: String(item?.label || item?.valor || item?.key || raw).trim(),
       };
     })
-    .filter((r) => r.key && r.key !== 'root');
+    .filter((r) => r.key);
 
   const rolesDisponibles = (() => {
     const fromActiveRoles = (availableRoles || [])
@@ -1437,9 +1437,9 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const eliminarValor = async (id) => {
     const esRol = (settings.roles || []).some((item) => item.id === id);
-    // Prevent deleting internal/root roles from the UI
+    // Prevent deleting internal or protected roles (only 'administrador' protected)
     const rolItem = (settings.roles || []).find((item) => item.id === id);
-    if (rolItem && (rolItem.internal === true || slugifyEstado(String(rolItem?.valor || '')) === 'root')) {
+    if (rolItem && (rolItem.internal === true || slugifyEstado(String(rolItem?.valor || '')) === 'administrador')) {
       Alert.alert('Acción no permitida', 'No se puede eliminar este rol.');
       return;
     }
@@ -1465,8 +1465,8 @@ export default function ConfigScreen({ route, currentUser }) {
       return;
     }
 
-    // Prevent editing internal/root roles from the UI
-    if (categoria === 'roles' && (item?.internal === true || slugifyEstado(String(item?.valor || '')) === 'root')) {
+    // Prevent editing internal or protected roles (only 'administrador' protected)
+    if (categoria === 'roles' && (item?.internal === true || slugifyEstado(String(item?.valor || '')) === 'administrador')) {
       Alert.alert('Acción no permitida', 'No se puede editar este rol.');
       return;
     }
@@ -1670,9 +1670,9 @@ export default function ConfigScreen({ route, currentUser }) {
   const renderCategoria = (categoryKey, categoryTitle, sectionStyle = null) => {
     const itemsRaw = settings[categoryKey] || [];
     const items = categoryKey === 'roles'
-      ? itemsRaw.filter((item) => !item?.internal && slugifyEstado(String(item?.valor || '')) !== 'root')
+      ? itemsRaw.filter((item) => !item?.internal)
       : itemsRaw;
-    const rolesProtegidos = new Set(['administrador', 'root']);
+    const rolesProtegidos = new Set(['administrador']);
     const estadosProtegidos = new Set([
       'diseno',
       'pendiente-de-aprobacion',

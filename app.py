@@ -226,8 +226,8 @@ ROLE_LABELS = {
     'impresion': 'Impresión',
     'post-impresion': 'Post-Impresión',
 }
-PROTECTED_ROLE_ORDER = ['administrador', 'root']
-PROTECTED_ROLE_KEYS = {'administrador', 'root'}
+PROTECTED_ROLE_ORDER = ['administrador']
+PROTECTED_ROLE_KEYS = {'administrador'}
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'diseno',
     'pendiente-de-aprobacion',
