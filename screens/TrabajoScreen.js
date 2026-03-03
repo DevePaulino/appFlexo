@@ -711,25 +711,54 @@ export default function TrabajoScreen({ currentUser }) {
     }
   };
 
+  const canChangeStatus = () => {
+    // Check if current user has permission to change estado
+    // Root and admin always have permission
+    const userRole = (currentUser?.rol || '').toLowerCase().trim();
+    if (userRole === 'root' || userRole === 'administrador' || userRole === 'admin') {
+      return true;
+    }
+    // Others don't have manage_estados_pedido permission
+    return false;
+  };
+
   const handleCambiarEstado = async (trabajoObj, nuevoEstado) => {
+    // Early check: prevent if user doesn't have permission
+    if (!canChangeStatus()) {
+      alert('No tienes permiso para cambiar estados');
+      return;
+    }
+
     try {
       const trabajoId = trabajoObj && (trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id || trabajoObj.trabajo_id);
 
       const looksLikeObjectId = (s) => typeof s === 'string' && /^[0-9a-fA-F]{24}$/.test(s);
+
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      // Add X-Role header to ensure backend validates correctly
+      const selectedRole = typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+        : null;
+      if (selectedRole) {
+        headers['X-Role'] = selectedRole;
+      }
 
       let res;
       if (trabajoObj && (trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id)) {
         const pid = trabajoObj.pedido_id || trabajoObj.id || trabajoObj._id;
         res = await fetch(`http://localhost:8080/api/pedidos/${pid}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ estado: nuevoEstado })
         });
       } else if (looksLikeObjectId(trabajoId)) {
         // fallback: update trabajo state
         res = await fetch(`http://localhost:8080/api/trabajos/${trabajoId}/estado`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ estado: nuevoEstado })
         });
       } else {
@@ -1116,16 +1145,18 @@ export default function TrabajoScreen({ currentUser }) {
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
                   <select
+                    disabled={!canChangeStatus()}
                     style={{
                       padding: '6px 8px',
                       borderRadius: '4px',
                       border: '1px solid #DDD',
-                      backgroundColor: '#FFF',
+                      backgroundColor: canChangeStatus() ? '#FFF' : '#F0F0F0',
                       fontSize: '11px',
                       fontWeight: '600',
-                      cursor: 'pointer',
+                      cursor: canChangeStatus() ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: getStatusColor(trabajo.estado) || '#232323',
+                      color: canChangeStatus() ? (getStatusColor(trabajo.estado) || '#232323') : '#999',
+                      opacity: canChangeStatus() ? 1 : 0.6,
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
