@@ -1184,27 +1184,52 @@ export default function ConfigScreen({ route, currentUser }) {
     setModalUsuarioVisible(true);
   };
 
+  const [deletingUserId, setDeletingUserId] = useState(null);
+
   const eliminarUsuario = async (id) => {
     if (!puedeAdministrarUsuarios) {
       mostrarPermisoUsuariosDenegado();
       return;
     }
 
+    if (!id) return;
+    setDeletingUserId(id);
     try {
-      const response = await fetch(`${API_USERS_URL}/${id}`, { method: 'DELETE' });
-      const data = await response.json().catch(() => ({}));
+      const headers = { 'Content-Type': 'application/json' };
+      if (global.__MIAPP_ACCESS_TOKEN) {
+        headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('Eliminar usuario request:', `${API_USERS_URL}/${id}`);
+      const response = await fetch(`${API_USERS_URL}/${id}`, { method: 'DELETE', headers });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (e) {
+        // no JSON body (204) - ignore
+        data = {};
+      }
 
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo eliminar el usuario');
+        // eslint-disable-next-line no-console
+        console.error('Eliminar usuario failed', response.status, data);
+        Alert.alert('Error', data.error || `No se pudo eliminar el usuario (status ${response.status})`);
         return;
       }
 
+      // eslint-disable-next-line no-console
+      console.log('Usuario eliminado:', id);
       if (usuarioEditandoId === id) {
         limpiarFormularioUsuario();
       }
       await cargarUsuarios();
     } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Eliminar usuario exception', e);
       Alert.alert('Error', `No se pudo eliminar el usuario: ${e.message}`);
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -1767,8 +1792,12 @@ export default function ConfigScreen({ route, currentUser }) {
                             >
                               <Text style={styles.usersActionBtnText}>Editar</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.usersActionBtn, styles.usersActionBtnDelete, !puedeAdministrarUsuarios && { opacity: 0.5 }]} onPress={() => confirmarEliminarUsuario(usuario)}>
-                              <Text style={styles.usersActionBtnText}>Eliminar</Text>
+                            <TouchableOpacity
+                              style={[styles.usersActionBtn, styles.usersActionBtnDelete, (!puedeAdministrarUsuarios || deletingUserId === usuario.id) && { opacity: 0.5 }]}
+                              onPress={() => confirmarEliminarUsuario(usuario)}
+                              disabled={!puedeAdministrarUsuarios || deletingUserId === usuario.id}
+                            >
+                              <Text style={styles.usersActionBtnText}>{deletingUserId === usuario.id ? 'Eliminando...' : 'Eliminar'}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
