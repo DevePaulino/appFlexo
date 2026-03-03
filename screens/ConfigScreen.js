@@ -10,6 +10,7 @@ const API_ESTADOS_RULES_URL = 'http://localhost:8080/api/settings/estados-pedido
 const API_SETTINGS_REORDER_URL = 'http://localhost:8080/api/settings/reorder';
 const API_ROLE_PERMISSIONS_URL = 'http://localhost:8080/api/settings/roles-permissions';
 const API_USERS_URL = 'http://localhost:8080/api/usuarios';
+const API_OPCION_URL = 'http://localhost:8080/api/settings/opcion';
 const API_BILLING_CONFIG_URL = 'http://localhost:8080/api/billing/config';
 const API_BILLING_CHECKOUT_SESSION_URL = 'http://localhost:8080/api/billing/checkout-session';
 const API_BILLING_CHECKOUT_CONFIRM_URL = 'http://localhost:8080/api/billing/checkout-confirm';
@@ -1414,11 +1415,9 @@ export default function ConfigScreen({ route, currentUser }) {
     if (!valor) return;
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoria, valor }),
-      });
+      // Backend expects creation via /api/settings/opcion with query params
+      const url = `${API_OPCION_URL}?categoria=${encodeURIComponent(categoria)}&valor=${encodeURIComponent(valor)}`;
+      const response = await fetch(url, { method: 'POST' });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
