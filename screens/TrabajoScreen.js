@@ -590,7 +590,7 @@ export default function TrabajoScreen({ currentUser }) {
   });
   const [modoCreacion, setModoCreacion] = useState('manual');
   const [hoverNuevo, setHoverNuevo] = useState(false);
-  const [canChangeEstado, setCanChangeEstado] = useState(false);
+  const [canChangeEstado, setCanChangeEstado] = useState(true);
   const hoverNuevoTimerRef = useRef(null);
   const { actualizacionPedidos } = React.useContext(PedidosContext);
   const route = useRoute();
@@ -780,14 +780,15 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setTrabajos([]));
   };
 
-  // Verificar si el usuario puede cambiar estados
+  // Verificar si el rol actual puede cambiar estados
   const checkCanChangeEstado = () => {
-    fetch('http://localhost:8080/api/auth/check-permission/manage_estados_pedido')
-      .then((res) => res.json())
-      .then((data) => {
-        setCanChangeEstado(data && data.allowed === true);
-      })
-      .catch(() => setCanChangeEstado(false));
+    // Roles que tienen permiso de manage_estados_pedido
+    const rolesAutorizados = ['root', 'administrador', 'admin', 'oficina'];
+    const rolActual = typeof window !== 'undefined' && window.localStorage
+      ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+      : null;
+    const puedeEditar = !rolActual || rolesAutorizados.includes(rolActual);
+    setCanChangeEstado(puedeEditar);
   };
 
   // Cargar pedidos al montar el componente
@@ -808,6 +809,7 @@ export default function TrabajoScreen({ currentUser }) {
       cargarModoCreacion();
       cargarEstadosDisponibles();
       cargarEstadoRules();
+      checkCanChangeEstado();
     }, [])
   );
 
@@ -1148,7 +1150,7 @@ export default function TrabajoScreen({ currentUser }) {
                       padding: '6px 8px',
                       borderRadius: '4px',
                       border: '1px solid #DDD',
-                      backgroundColor: canChangeEstado ? '#FFF' : '#F0F0F0',
+                      backgroundColor: '#FFF',
                       fontSize: '11px',
                       fontWeight: '600',
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
