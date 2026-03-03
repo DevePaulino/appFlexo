@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePermission } from './usePermission';
 
 const API_URL = 'http://localhost:8080/api/settings';
 const API_MODO_URL = 'http://localhost:8080/api/settings/modo-creacion';
@@ -1016,7 +1017,8 @@ export default function ConfigScreen({ route, currentUser }) {
     || currentUserPermissionValue === true
     || rolePermissionValue === true
   );
-  const puedeEditarSessionTimeout = ['root', 'administrador', 'admin'].includes(currentUserRole);
+  // Usar permiso dinámico desde el backend
+  const puedeEditarSessionTimeout = usePermission('manage_app_settings');
 
   // Build availableRoles from settings (hide only internal roles in UI lists)
   const availableRoles = (settings.roles || [])

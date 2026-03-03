@@ -754,6 +754,20 @@ export default function App() {
       } catch (e) {
         // ignore
       }
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('PFP_SELECTED_ROLE', String(nextRole || '').trim());
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+      try {
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: nextRole }));
+        }
+      } catch (e) {
+        // ignore event errors
+      }
     } catch (e) {
       // ignore
     }

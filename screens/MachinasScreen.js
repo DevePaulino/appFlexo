@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Platform, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
@@ -529,7 +530,7 @@ export default function MachinasScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'impresion'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = usePermission('edit_maquinas');
 
   return (
     <View style={styles.container}>

@@ -394,6 +394,7 @@ AUTH_PUBLIC_PATHS = (
     '/api/auth/mfa/verify',
     '/api/auth/refresh',
     '/api/auth/logout',
+    '/api/auth/verify-role-permission',
     '/api/billing/config'
 )
 AUTH_ATTEMPTS = defaultdict(list)

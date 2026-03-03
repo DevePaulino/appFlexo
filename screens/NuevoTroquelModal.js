@@ -142,6 +142,7 @@ export default function NuevoTroquelModal({
   initialTroquel = null,
   modoEdicion = false,
   currentUser = null,
+  puedeCrear = true,
 }) {
   const [refTroquel, setRefTroquel] = useState('');
   const [tipoTroquel, setTipoTroquel] = useState('regular');
@@ -178,8 +179,6 @@ export default function NuevoTroquelModal({
       }
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
-
-  const puedeCrear = ['root', 'administrador'].includes(String(currentUser?.rol || '').toLowerCase());
 
   const handleClose = () => {
     setRefTroquel('');

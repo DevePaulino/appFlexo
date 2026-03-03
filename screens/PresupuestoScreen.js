@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal,
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 import { PedidosContext } from '../PedidosContext';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
@@ -790,7 +791,7 @@ export default function PresupuestoScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'comercial', 'diseno'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = usePermission('edit_presupuestos');
 
   const presupuestosBaseGrafica = presupuestos.filter((p) => coincideBusquedaPresupuesto(p));
   const totalPresupuestos = presupuestosBaseGrafica.length;
@@ -1053,6 +1054,7 @@ export default function PresupuestoScreen({ currentUser }) {
         fechaEntregaLabel="Fecha de entrega"
         showMaquinaField={false}
         currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
     </View>
   );

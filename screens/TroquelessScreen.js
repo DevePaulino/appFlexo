@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import NuevoTroquelModal from './NuevoTroquelModal';
+import { usePermission } from './usePermission';
 
 function calcularSiguienteNumeroTroquel(lista) {
   let maxNumero = 0;
@@ -867,7 +868,7 @@ export default function TroquelessScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = usePermission('manage_app_settings');
 
   return (
     <View style={styles.container}>
@@ -1031,6 +1032,7 @@ export default function TroquelessScreen({ currentUser }) {
         initialTroquel={troquelEditando}
         modoEdicion={modoEdicionTroquel}
         currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
 
       <Modal visible={modalDetalleVisible} transparent animationType="fade" onRequestClose={cerrarDetalle}>

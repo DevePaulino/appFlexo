@@ -431,8 +431,8 @@ export default function NuevoPresupuestoModal({
     initialValues = null,
     readOnly = false,
     currentUser = null,
+    puedeCrear = true,
 }) {
-    const puedeCrear = ['root', 'administrador', 'comercial', 'diseno'].includes(String(currentUser?.rol || '').toLowerCase());
     const isReadOnly = !!readOnly;
     const getNowDateStr = () => {
         const d = new Date();

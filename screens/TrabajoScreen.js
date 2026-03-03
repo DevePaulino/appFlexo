@@ -4,6 +4,7 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
 import { PedidosContext } from '../PedidosContext';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
@@ -988,9 +989,8 @@ export default function TrabajoScreen({ currentUser }) {
     };
   }, []);
 
-  // Verifica si el rol actual tiene permiso para crear pedidos (edit_pedidos)
-  // Roles con edit_pedidos: root, administrador, comercial, diseno
-  const puedeCrear = ['root', 'administrador', 'comercial', 'diseno'].includes(String(currentUser?.rol || '').toLowerCase());
+  // Verificar permiso dinámicamente desde el backend
+  const puedeCrear = usePermission('edit_pedidos');
 
   return (
     <View style={styles.container}>
@@ -1265,11 +1265,11 @@ export default function TrabajoScreen({ currentUser }) {
 
       <NuevoPedidoModal
         visible={modalVisible}
-        visible={modalVisible}
         onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
         onSave={(p) => { setModalVisible(false); setEditingInitialValues(null); handleNuevoPedido(p); }}
         initialValues={editingInitialValues}
         currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
       
       <PedidoDetalleModal

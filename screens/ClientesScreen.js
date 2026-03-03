@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
@@ -515,7 +516,7 @@ export default function ClientesScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'comercial'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = usePermission('edit_clientes');
 
   return (
     <View style={styles.container}>
