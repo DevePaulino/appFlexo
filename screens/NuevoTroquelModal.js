@@ -179,7 +179,7 @@ export default function NuevoTroquelModal({
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = ['root', 'administrador'].includes(String(currentUser?.rol || '').toLowerCase());
 
   const handleClose = () => {
     setRefTroquel('');

@@ -515,7 +515,7 @@ export default function ClientesScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = ['root', 'administrador', 'comercial'].includes(String(currentUser?.rol || '').toLowerCase());
 
   return (
     <View style={styles.container}>

@@ -867,7 +867,7 @@ export default function TroquelessScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = ['root', 'administrador'].includes(String(currentUser?.rol || '').toLowerCase());
 
   return (
     <View style={styles.container}>

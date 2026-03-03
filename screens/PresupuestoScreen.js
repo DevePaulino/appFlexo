@@ -790,7 +790,7 @@ export default function PresupuestoScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = ['root', 'administrador', 'comercial', 'diseno'].includes(String(currentUser?.rol || '').toLowerCase());
 
   const presupuestosBaseGrafica = presupuestos.filter((p) => coincideBusquedaPresupuesto(p));
   const totalPresupuestos = presupuestosBaseGrafica.length;

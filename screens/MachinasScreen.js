@@ -529,7 +529,7 @@ export default function MachinasScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  const puedeCrear = ['root', 'administrador', 'impresion'].includes(String(currentUser?.rol || '').toLowerCase());
 
   return (
     <View style={styles.container}>

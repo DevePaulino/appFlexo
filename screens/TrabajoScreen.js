@@ -929,7 +929,9 @@ export default function TrabajoScreen({ currentUser }) {
     };
   }, []);
 
-  const puedeCrear = ['root', 'administrador', 'admin'].includes(String(currentUser?.rol || '').toLowerCase());
+  // Verifica si el rol actual tiene permiso para crear pedidos (edit_pedidos)
+  // Roles con edit_pedidos: root, administrador, comercial, diseno
+  const puedeCrear = ['root', 'administrador', 'comercial', 'diseno'].includes(String(currentUser?.rol || '').toLowerCase());
 
   return (
     <View style={styles.container}>
