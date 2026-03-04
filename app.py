@@ -892,28 +892,55 @@ def init_db():
 
     # Initialize simple configuration entries if missing
     col_opciones = get_empresa_collection('config_opciones', 0)
+    
+    # Mapeo de slugs a nombres legibles para estados
+    states_slug_to_label = {
+        'diseno': 'Diseño',
+        'pendiente-de-aprobacion': 'Pendiente de Aprobación',
+        'pendiente-de-cliche': 'Pendiente de Cliché',
+        'pendiente-de-impresion': 'Pendiente de Impresión',
+        'pendiente-post-impresion': 'Pendiente Post-Impresión',
+        'finalizado': 'Finalizado',
+        'parado': 'Parado',
+        'cancelado': 'Cancelado'
+    }
+    
     defaults_catalogo = {
         'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
         'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
         'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
         'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
-        'estados_pedido': [
-            'diseno',
-            'pendiente-de-aprobacion',
-            'pendiente-de-cliche',
-            'pendiente-de-impresion',
-            'pendiente-post-impresion',
-            'finalizado',
-            'parado',
-            'cancelado'
-        ]
+        'estados_pedido': list(states_slug_to_label.keys())
     }
+    
     try:
         for categoria, valores in defaults_catalogo.items():
             for idx, valor in enumerate(valores, start=1):
-                if col_opciones.count_documents({'categoria': categoria, 'value': valor}) == 0:
-                    col_opciones.insert_one({'categoria': categoria, 'value': valor, 'order': idx})
-    except Exception:
+                # Use new schema: 'valor' and 'orden' (no legacy 'value'/'order')
+                # For estados, search by label (human-readable), not slug
+                if categoria == 'estados_pedido':
+                    label = states_slug_to_label.get(valor, valor)
+                    # Check if exists by valor (slug)
+                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor}) == 0:
+                        col_opciones.insert_one({
+                            'categoria': categoria,
+                            'valor': label,  # Store human-readable label
+                            'label': label,
+                            'orden': idx,
+                            'fecha_creacion': datetime.now().isoformat()
+                        })
+                else:
+                    # For other categories, check if value exists (case-insensitive)
+                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor}) == 0:
+                        col_opciones.insert_one({
+                            'categoria': categoria,
+                            'valor': valor,
+                            'label': valor,
+                            'orden': idx,
+                            'fecha_creacion': datetime.now().isoformat()
+                        })
+    except Exception as e:
+        print(f'Error initializing catalogo: {e}')
         pass
 
 
