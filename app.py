@@ -2650,14 +2650,6 @@ def get_presupuesto(trabajo_id):
 @app.route('/api/presupuestos', methods=['POST'])
 def save_presupuesto():
     try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
-
-        if modo_automatico_activo():
-            return jsonify({'error': 'Creación manual deshabilitada. Usa integración API REST.'}), 403
-
         # Delegar en la implementación concreta de creación para evitar rutas duplicadas
         # y garantizar que el presupuesto se inserta en la colección.
         # Nota: la función `crear_presupuesto` está definida más abajo y hará la inserción.
@@ -3023,9 +3015,6 @@ def crear_pedido_manual():
         if auth_error:
             return auth_error
         empresa_id = int(request_user.get('empresa_id') or 0)
-
-        if modo_automatico_activo():
-            return jsonify({'error': 'Creación manual deshabilitada. Usa integración API REST.'}), 403
 
         data = request.get_json()
         nombre = data.get('nombre')
