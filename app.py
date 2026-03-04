@@ -2364,6 +2364,7 @@ def crear_config_opcion():
     try:
         categoria = request.args.get('categoria', '').strip().lower()
         valor = request.args.get('valor', '').strip()
+        color = request.args.get('color', '').strip()  # Color para estados_pedido
         
         # Validar que no se creen opciones vacías
         if not categoria or not valor:
@@ -2386,6 +2387,9 @@ def crear_config_opcion():
             'orden': siguiente_orden,
             'fecha_creacion': datetime.now().isoformat()
         }
+        # Guardar color si es un estado de pedido
+        if categoria == 'estados_pedido' and color:
+            doc['color'] = color
         result = col.insert_one(doc)
         try:
             log_audit('create_setting_item', request_user if 'request_user' in locals() else None, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})

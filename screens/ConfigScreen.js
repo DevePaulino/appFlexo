@@ -1451,8 +1451,17 @@ export default function ConfigScreen({ route, currentUser }) {
     if (!valor) return;
 
     try {
+      // Generar color para estados_pedido
+      let color = '';
+      if (categoria === 'estados_pedido') {
+        color = generateColorFromHash(valor);
+      }
+
       // Backend expects creation via /api/settings/opcion with query params
-      const url = `${API_OPCION_URL}?categoria=${encodeURIComponent(categoria)}&valor=${encodeURIComponent(valor)}`;
+      let url = `${API_OPCION_URL}?categoria=${encodeURIComponent(categoria)}&valor=${encodeURIComponent(valor)}`;
+      if (color) {
+        url += `&color=${encodeURIComponent(color)}`;
+      }
       const response = await fetch(url, { method: 'POST' });
       const data = await response.json().catch(() => ({}));
 
@@ -1927,7 +1936,20 @@ export default function ConfigScreen({ route, currentUser }) {
                       returnKeyType="done"
                     />
                   ) : (
-                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
+                    <>
+                      {esEstadoPedido && (
+                        <View
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: item.color || generateColorFromHash(item.valor),
+                            marginRight: 8,
+                          }}
+                        />
+                      )}
+                      <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
+                    </>
                   )}
                   <TouchableOpacity
                     style={[styles.chipEdit, (esRolProtegido || esEstadoProtegido) && styles.chipEditDisabled]}
@@ -2411,7 +2433,8 @@ export default function ConfigScreen({ route, currentUser }) {
                 .filter((estado) => estado.id !== estadoAMigrar?.id)
                 .map((estado) => {
                   const isSelected = estadoDestinoMigracion?.id === estado.id;
-                  const estadoColor = generateColorFromHash(estado.valor);
+                  // Usar color guardado si existe, si no generar uno
+                  const estadoColor = estado.color || generateColorFromHash(estado.valor);
                   return (
                     <TouchableOpacity
                       key={`migrar-estado-${estado.id}`}

@@ -744,10 +744,18 @@ export default function TrabajoScreen({ currentUser }) {
 
   const getEstadoDotColor = (estado) => {
     const value = normalizarEstadoValue(estado);
+    
     // Si está en el mapa fijo, usar ese color
     if (ESTADO_COLOR_MAP[value]) {
       return ESTADO_COLOR_MAP[value];
     }
+    
+    // Buscar el estado en los disponibles para obtener su color guardado
+    const estadoItem = estadosDisponibles.find(item => item.value === value);
+    if (estadoItem?.color) {
+      return estadoItem.color;
+    }
+    
     // Si no, generar color aleatorio basado en el nombre (pero consistente)
     return generateColorFromHash(value);
   };
