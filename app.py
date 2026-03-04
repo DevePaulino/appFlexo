@@ -3582,6 +3582,12 @@ def migrate_estados():
         if not source_estado_id or not destination_estado_value:
             return jsonify({'error': 'source_estado_id y destination_estado_value son requeridos'}), 400
         
+        # Validar que source_estado_id sea un ObjectId válido
+        try:
+            source_oid = ObjectId(source_estado_id)
+        except Exception:
+            return jsonify({'error': 'ID de estado fuente inválido'}), 400
+        
         # Validar que destination_estado_value sea válido
         available_items = get_estados_pedido_disponibles()
         disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
@@ -3597,7 +3603,7 @@ def migrate_estados():
         settings_col = get_empresa_collection('settings', empresa_id)
         source_estado_doc = settings_col.find_one({
             'collection': 'estados_pedido',
-            '_id': ObjectId(source_estado_id)
+            '_id': source_oid
         })
         
         if not source_estado_doc:
