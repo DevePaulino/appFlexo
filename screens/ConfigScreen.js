@@ -1502,6 +1502,10 @@ export default function ConfigScreen({ route, currentUser }) {
       if (categoria === 'roles') {
         await cargarPermisosRoles();
       }
+      if (categoria === 'estados_pedido') {
+        // Reload page to sync colors across all views
+        window.location.reload();
+      }
     } catch (e) {
       Alert.alert('Error', `No se pudo guardar: ${e.message}`);
     }
@@ -1703,7 +1707,11 @@ export default function ConfigScreen({ route, currentUser }) {
       }
       await cargarSettings();
       if (category === 'roles') await cargarPermisosRoles();
-      if (category === 'estados_pedido') await cargarEstadoRules();
+      if (category === 'estados_pedido') {
+        await cargarEstadoRules();
+        // Reload page to sync colors across all views
+        window.location.reload();
+      }
     } catch (e) {
       Alert.alert('Error', `No se pudo editar: ${e.message}`);
     } finally {
