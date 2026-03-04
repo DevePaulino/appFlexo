@@ -3373,7 +3373,21 @@ def enviar_trabajo_produccion():
         preimpresion = list(rules.get('preimpresion', []))
 
         estado_actual = (trabajo.get('estado') or '').strip().lower()
-        if estado_actual in bloqueados or estado_actual in en_cola:
+        
+        # Obtener la orden existente ANTES de validar estados
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        # Comprobar si ya existe una orden para este trabajo (aceptar _id ObjectId o string)
+        existing_order = None
+        try:
+            existing_order = orden_col.find_one({'trabajo_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+        except Exception:
+            existing_order = None
+        if not existing_order:
+            existing_order = orden_col.find_one({'empresa_id': empresa_id, '$or': [{'trabajo_id': trabajo_id}, {'trabajo_id': str(trabajo_id)}]})
+        
+        # Solo rechazar si está en estados bloqueados O si está en en_cola pero NO existe en orden_col
+        # (si ya existe en orden_col, permitir actualizar máquina o posición)
+        if estado_actual in bloqueados or (estado_actual in en_cola and not existing_order):
             return jsonify({'error': f'No se puede enviar a producción cuando el estado es {estado_actual}'}), 400
 
         # Si llega desde fases previas a impresión, avanzar automáticamente
@@ -3390,49 +3404,44 @@ def enviar_trabajo_produccion():
                 update_query['trabajo_id'] = trabajo_id
             trabajos_col.update_one(update_query, {'$set': {'estado': destino_estado, 'fecha_finalizacion': None}})
 
-        # Verificar que no esté ya en producción
-        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
-        # Comprobar si ya existe una orden para este trabajo (aceptar _id ObjectId o string)
-        existing_order = None
-        try:
-            existing_order = orden_col.find_one({'trabajo_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
-        except Exception:
-            existing_order = None
-        if not existing_order:
-            existing_order = orden_col.find_one({'empresa_id': empresa_id, '$or': [{'trabajo_id': trabajo_id}, {'trabajo_id': str(trabajo_id)}]})
-        if existing_order:
-            return jsonify({'error': 'El trabajo ya está en producción'}), 400
-
+        # Verificar si ya está en producción (para permitir cambiar de máquina)
+        
         # Obtener la siguiente posición en la máquina (maquina_id puede ser int o string)
         try:
             maquina_id_query = int(maquina_id)
         except Exception:
             maquina_id_query = str(maquina_id)
 
-        # Intentar usar contador atómico por empresa+máquina para asignar posiciones
-        try:
-            counters_col = mongo.db['counters']
-            counter_key = f"pos_{empresa_id}_{maquina_id_query}"
-            seq_doc = counters_col.find_one_and_update(
-                {'key': counter_key, 'empresa_id': empresa_id},
-                {'$inc': {'seq': 1}},
-                upsert=True,
-                return_document=ReturnDocument.AFTER
-            )
-            nueva_posicion = int(seq_doc.get('seq', 1))
-        except Exception:
-            # Fallback: calcular max+1 si el contador no está disponible
-            max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
-            max_pos = 0
-            for doc in max_pos_doc:
-                max_pos = doc.get('posicion', 0)
-            nueva_posicion = (max_pos or 0) + 1
+        # Si ya existe en cola pero en otra máquina, permitir cambio de máquina
+        # Si es nuevo, insertar con nueva posición
+        if existing_order and str(existing_order.get('maquina_id')) == str(maquina_id_query):
+            # Mismo trabajo, misma máquina - sin cambios
+            nueva_posicion = existing_order.get('posicion', 1)
+        else:
+            # Nuevo trabajo o cambio de máquina
+            try:
+                counters_col = mongo.db['counters']
+                counter_key = f"pos_{empresa_id}_{maquina_id_query}"
+                seq_doc = counters_col.find_one_and_update(
+                    {'key': counter_key, 'empresa_id': empresa_id},
+                    {'$inc': {'seq': 1}},
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER
+                )
+                nueva_posicion = int(seq_doc.get('seq', 1))
+            except Exception:
+                # Fallback: calcular max+1 si el contador no está disponible
+                max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+                max_pos = 0
+                for doc in max_pos_doc:
+                    max_pos = doc.get('posicion', 0)
+                nueva_posicion = (max_pos or 0) + 1
 
-        # Insertar en trabajo_orden usando upsert para evitar duplicados por trabajo_id
+        # Insertar o actualizar en trabajo_orden
         try:
             orden_col.find_one_and_update(
                 {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
-                {'$setOnInsert': {
+                {'$set': {
                     'empresa_id': empresa_id,
                     'trabajo_id': trabajo_id,
                     'maquina_id': maquina_id_query,
@@ -3442,7 +3451,7 @@ def enviar_trabajo_produccion():
                 return_document=ReturnDocument.AFTER
             )
         except Exception:
-            # Fallback a inserción simple si upsert falla por algún motivo
+            # Fallback a inserción/update simple
             orden_col.insert_one({
                 'empresa_id': empresa_id,
                 'trabajo_id': trabajo_id,
@@ -3464,6 +3473,16 @@ def enviar_trabajo_produccion():
             trabajos_col.update_one(update_query, {'$set': {'estado': nuevo_estado, 'en_produccion': True, 'fecha_finalizacion': None}})
         except Exception:
             pass
+
+        # Actualizar también en pedidos (la colección canónica) si existe
+        try:
+            pedidos_col.update_one(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$set': {'estado': nuevo_estado, 'en_produccion': True, 'fecha_finalizacion': None}}
+            )
+        except Exception:
+            pass
+
 
         # Persistir máquina real en el pedido para trazabilidad
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
