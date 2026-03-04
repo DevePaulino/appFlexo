@@ -882,16 +882,19 @@ def enforce_rate_limit_auth():
 
 # Inicializar base de datos
 def init_db():
-    # Use empresa_id=1 by default for local development
-    empresa_id = 1
-    # Ensure example machine exists
+    """Initialize default configuration entries in database"""
+    from pymongo import MongoClient
+    from os import environ
+    
+    # Connect directly to MongoDB (bypass PyMongo which may not be ready)
+    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforge')
     try:
-        ensure_maquina_ejemplo_presente(empresa_id)
-    except Exception:
-        pass
-
-    # Initialize simple configuration entries if missing
-    col_opciones = get_empresa_collection('config_opciones', 0)
+        client = MongoClient(mongo_uri)
+        db = client['printforge']
+        col_opciones = db['config_opciones']
+    except Exception as e:
+        print(f"Error connecting to MongoDB in init_db(): {e}")
+        return
     
     # Mapeo de slugs a nombres legibles para estados
     states_slug_to_label = {
@@ -949,6 +952,7 @@ def init_db():
         print(f'Error initializing catalogo: {e}')
         traceback.print_exc()
         pass
+
 
 
 def slugify_estado(texto):
