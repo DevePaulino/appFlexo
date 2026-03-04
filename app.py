@@ -2779,6 +2779,180 @@ def aceptar_presupuesto(trabajo_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/pedidos/crear-desde-erp', methods=['POST'])
+def crear_pedido_desde_erp():
+    """
+    Endpoint para que sistemas externos (ERP) creen pedidos automáticamente.
+    
+    Parámetros requeridos (JSON):
+    - trabajo_id: Identificador único del trabajo/pedido en el sistema externo
+    - cliente: Nombre del cliente
+    - referencia: Referencia del pedido
+    - nombre: Nombre del pedido (opcional)
+    - fecha_entrega: Fecha de entrega (opcional)
+    - datos_presupuesto: Objeto JSON con detalles del presupuesto (opcional)
+    - estado: Estado del pedido (opcional, por defecto "Diseño")
+    
+    Headers requeridos:
+    - X-Empresa-Id: ID de la empresa
+    - X-User-Id: ID del usuario (puede ser "erp")
+    - X-Role: Rol del usuario (puede ser "erp" o "sistema")
+    
+    Retorna:
+    - success: true/false
+    - pedido: Objeto del pedido creado con su ID
+    - pedido_id: ID del pedido creado
+    - numero_pedido: Número secuencial del pedido
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        data = request.get_json() or {}
+        
+        # Validar campos requeridos
+        trabajo_id = str(data.get('trabajo_id') or '').strip()
+        cliente = str(data.get('cliente') or '').strip()
+        referencia = str(data.get('referencia') or '').strip()
+        
+        if not trabajo_id:
+            return jsonify({'error': 'trabajo_id es requerido'}), 400
+        if not cliente:
+            return jsonify({'error': 'cliente es requerido'}), 400
+        
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        
+        # Verificar si ya existe un pedido para este trabajo_id
+        existing_pedido = pedidos_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+        if existing_pedido:
+            return jsonify({
+                'success': True,
+                'message': 'Pedido ya existe para este trabajo_id',
+                'pedido': fix_id(existing_pedido),
+                'pedido_id': str(existing_pedido.get('_id'))
+            }), 200
+        
+        # Generar número de pedido
+        try:
+            counters_col = mongo.db['counters']
+            seq_doc = counters_col.find_one_and_update(
+                {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
+            )
+            numero_pedido = str(seq_doc.get('seq', 0))
+        except Exception as e:
+            print(f"Error generando número de pedido: {e}")
+            numero_pedido = f"PED-{int(time.time())}"
+        
+        # Preparar datos del presupuesto
+        datos_presupuesto = data.get('datos_presupuesto') or {}
+        if isinstance(datos_presupuesto, str):
+            try:
+                datos_presupuesto = json.loads(datos_presupuesto)
+            except Exception:
+                datos_presupuesto = {}
+        
+        # Crear documento del pedido
+        doc_pedido = {
+            'empresa_id': empresa_id,
+            'trabajo_id': trabajo_id,
+            'numero_pedido': numero_pedido,
+            'cliente': cliente,
+            'referencia': referencia,
+            'nombre': data.get('nombre') or f'Pedido {numero_pedido}',
+            'fecha_pedido': datetime.now().isoformat(),
+            'fecha_entrega': data.get('fecha_entrega') or None,
+            'datos_presupuesto': datos_presupuesto,
+            'origen': 'erp',  # Marcamos que viene del ERP
+            'created_by': f"{request_user.get('id')} (ERP Integration)"
+        }
+        
+        # Establecer estado del pedido
+        try:
+            available_states = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            requested_estado = (data.get('estado') or 'diseno').lower()
+            estado = available_states.get(requested_estado) or available_states.get('diseno') or 'Diseño'
+        except Exception:
+            estado = data.get('estado') or 'Diseño'
+        
+        doc_pedido['estado'] = estado
+        doc_pedido['fecha_finalizacion'] = None
+        
+        # Insertar pedido
+        try:
+            result = pedidos_col.insert_one(doc_pedido)
+            pedido_id = str(result.inserted_id)
+            doc_pedido['_id'] = pedido_id
+            
+            # Registrar auditoría
+            try:
+                log_audit('create_pedido_erp', {
+                    'id': f"{request_user.get('id')} (ERP)",
+                    'empresa_id': empresa_id,
+                    'role': 'erp'
+                }, {
+                    'trabajo_id': trabajo_id,
+                    'pedido_id': pedido_id,
+                    'numero_pedido': numero_pedido,
+                    'cliente': cliente
+                })
+            except Exception as e:
+                print(f"Error registrando auditoría: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Pedido creado exitosamente desde ERP',
+                'pedido': fix_id(doc_pedido),
+                'pedido_id': pedido_id,
+                'numero_pedido': numero_pedido
+            }), 201
+        except Exception as e:
+            print(f"Error insertando pedido: {e}")
+            return jsonify({'error': f'Error creando pedido: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"Error en crear_pedido_desde_erp: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/validar-modo-automatico', methods=['GET'])
+def validar_modo_automatico():
+    """
+    Endpoint para que sistemas externos (ERP) validen si el modo automático está habilitado.
+    
+    Headers requeridos:
+    - X-Empresa-Id: ID de la empresa
+    - X-User-Id: ID del usuario
+    - X-Role: Rol del usuario
+    
+    Retorna:
+    - modo_automatico: true/false
+    - modo: 'automatico' o 'manual'
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        
+        col_general = get_empresa_collection('config_general', 0)
+        doc = col_general.find_one({'clave': 'modo_creacion'})
+        valor = (doc.get('valor') if doc and doc.get('valor') else 'manual')
+        valor = valor if valor in ['manual', 'automatico'] else 'manual'
+        
+        return jsonify({
+            'success': True,
+            'modo': valor,
+            'modo_automatico': (valor == 'automatico'),
+            'mensaje': 'Modo automático habilitado' if valor == 'automatico' else 'Modo manual habilitado'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/presupuestos', methods=['GET'])
 def get_presupuestos():
     """Obtiene todos los presupuestos"""
