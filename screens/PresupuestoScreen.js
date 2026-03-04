@@ -490,6 +490,7 @@ export default function PresupuestoScreen({ currentUser }) {
 
   useFocusEffect(
     React.useCallback(() => {
+      cargarPresupuestos();
       cargarModoCreacion();
     }, [])
   );
