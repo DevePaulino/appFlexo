@@ -2119,45 +2119,49 @@ def get_settings_catalogo():
         categoria = (request.args.get('categoria') or '').strip().lower()
         empresa_id = 0
         col = get_empresa_collection('config_opciones', empresa_id)
-        # Asegura que los estados protegidos estén presentes (solo para 'estados_pedido')
-        def ensure_estados_protegidos_presentes():
+        
+        # Ensure all protected categories have their default values
+        def ensure_protected_categories():
             """
-            Safely ensure protected estado documents exist with correct schema.
+            Safely ensure all protected config categories exist with default values.
             Only inserts documents that are completely missing, never creates duplicates.
             """
-            defaults_estados = [
-                ('diseno', 'Diseño', 1),
-                ('pendiente-de-aprobacion', 'Pendiente de Aprobación', 2),
-                ('pendiente-de-cliche', 'Pendiente de Cliché', 3),
-                ('pendiente-de-impresion', 'Pendiente de Impresión', 4),
-                ('pendiente-post-impresion', 'Pendiente Post-Impresión', 5),
-                ('finalizado', 'Finalizado', 6),
-                ('parado', 'Parado', 7),
-                ('cancelado', 'Cancelado', 8),
-            ]
+            # Define all protected default values matching init_db()
+            defaults_catalogo = {
+                'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
+                'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
+                'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
+                'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
+                'estados_pedido': [
+                    'Diseño', 'Pendiente de Aprobación', 'Pendiente de Cliché',
+                    'Pendiente de Impresión', 'Pendiente Post-Impresión',
+                    'Finalizado', 'Parado', 'Cancelado'
+                ]
+            }
             
-            # Check which ones are completely missing using the valor field
-            for slug, label, orden in defaults_estados:
-                # Search by valor to match actual schema
-                if col.count_documents({
-                    'categoria': 'estados_pedido',
-                    'valor': label
-                }) == 0:
-                    # Only insert if doesn't exist - never create duplicates
-                    col.insert_one({
-                        'categoria': 'estados_pedido',
-                        'valor': label,
-                        'label': label,
-                        'orden': orden,
-                        'fecha_creacion': datetime.now().isoformat()
-                    })
-
+            for cat, valores in defaults_catalogo.items():
+                for idx, valor in enumerate(valores, start=1):
+                    # Check if this value already exists in this category
+                    exists = col.count_documents({
+                        'categoria': cat,
+                        'valor': valor
+                    }) > 0
+                    
+                    if not exists:
+                        # Insert only if doesn't exist
+                        col.insert_one({
+                            'categoria': cat,
+                            'valor': valor,
+                            'label': valor,
+                            'orden': idx,
+                            'fecha_creacion': datetime.now().isoformat()
+                        })
 
         if categoria:
             if categoria not in ALLOWED_SETTINGS_CATEGORIES:
                 return jsonify({'error': 'Categoría no válida'}), 400
-            if categoria == 'estados_pedido':
-                ensure_estados_protegidos_presentes()
+            # Ensure category has default values before querying
+            ensure_protected_categories()
             rows = list(col.find({'categoria': categoria}).sort([('orden', 1), ('_id', 1)]))
             items = [{
                 'id': str(row.get('_id')),
@@ -2167,8 +2171,9 @@ def get_settings_catalogo():
                 'fecha_creacion': row.get('fecha_creacion')
             } for row in rows]
             return jsonify({'categoria': categoria, 'items': items}), 200
+        
         # Si no hay categoría, devolver todas
-        ensure_estados_protegidos_presentes()
+        ensure_protected_categories()
         rows = list(col.find({}).sort([('categoria', 1), ('orden', 1), ('_id', 1)]))
         settings = {key: [] for key in ALLOWED_SETTINGS_CATEGORIES}
         for row in rows:
