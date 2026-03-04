@@ -312,6 +312,20 @@ const styles = StyleSheet.create({
   selectChipTextActive: {
     color: '#027A48',
   },
+  selectChipDisabled: {
+    opacity: 0.5,
+  },
+  selectChipTextDisabled: {
+    color: '#98A2B3',
+  },
+  selectChipProtected: {
+    backgroundColor: '#FFF4E6',
+    borderColor: '#FF9500',
+    borderWidth: 1,
+  },
+  selectChipTextProtected: {
+    color: '#FF9500',
+  },
   saveRulesBtn: {
     marginTop: 10,
     alignSelf: 'flex-start',
@@ -319,6 +333,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  saveRulesBtnDisabled: {
+    opacity: 0.5,
   },
   saveRulesBtnText: {
     color: '#FFF',
@@ -922,7 +939,12 @@ export default function ConfigScreen({ route, currentUser }) {
 
   useFocusEffect(
     React.useCallback(() => {
-      recargarConfiguracion();
+      // Agregar un pequeño delay para evitar sobrescribir cambios recientes
+      const timer = setTimeout(() => {
+        recargarConfiguracion();
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }, [])
   );
 
@@ -1019,6 +1041,25 @@ export default function ConfigScreen({ route, currentUser }) {
   );
   // Usar permiso dinámico desde el backend
   const puedeEditarSessionTimeout = usePermission('manage_app_settings');
+  const puedeEditarRolesPermisosFromHook = usePermission('manage_roles_permissions');
+  
+  // Estado local para reflejar cambios inmediatos cuando el usuario se quita permisos a si mismo
+  const [puedeEditarRolesPermisosLocal, setPuedeEditarRolesPermisosLocal] = useState(puedeEditarRolesPermisosFromHook);
+  
+  useEffect(() => {
+    setPuedeEditarRolesPermisosLocal(puedeEditarRolesPermisosFromHook);
+  }, [puedeEditarRolesPermisosFromHook]);
+  
+  // Actualizar cuando el rol del usuario cambia para reflejar los permisos del nuevo rol
+  useEffect(() => {
+    if (currentUserRole && rolePermissions) {
+      const rolePerms = rolePermissions[currentUserRole] || {};
+      const hasPermission = !!rolePerms.manage_roles_permissions;
+      setPuedeEditarRolesPermisosLocal(hasPermission);
+    }
+  }, [currentUserRole, rolePermissions]);
+  
+  const puedeEditarRolesPermisos = puedeEditarRolesPermisosLocal;
 
   // Build availableRoles from settings (hide only internal roles in UI lists)
   const availableRoles = (settings.roles || [])
@@ -1597,40 +1638,63 @@ export default function ConfigScreen({ route, currentUser }) {
   };
 
 
-  const toggleRolePermission = (roleKey, permissionKey) => {
-    setRolePermissions((prev) => {
-      const currentRolePerms = prev[roleKey] || {};
-      return {
-        ...prev,
-        [roleKey]: {
-          ...currentRolePerms,
-          [permissionKey]: !currentRolePerms[permissionKey],
-        },
-      };
-    });
-  };
-
-  const guardarPermisosRoles = async () => {
-    setGuardandoPermisos(true);
+  const toggleRolePermission = async (roleKey, permissionKey) => {
+    if (!puedeEditarRolesPermisos) {
+      Alert.alert('Permiso denegado', 'Solo administrador y root pueden editar reglas de permisos');
+      return;
+    }
+    
+    // El administrador nunca puede ser desactivado
+    if (roleKey === 'administrador') {
+      Alert.alert('Permiso protegido', 'El rol administrador no puede perder permisos');
+      return;
+    }
+    
+    // Calculamos el nuevo estado
+    const currentRolePerms = rolePermissions[roleKey] || {};
+    const newValue = !currentRolePerms[permissionKey];
+    const newPermissions = {
+      ...rolePermissions,
+      [roleKey]: {
+        ...currentRolePerms,
+        [permissionKey]: newValue,
+      },
+    };
+    
+    // Actualizamos el estado local
+    setRolePermissions(newPermissions);
+    
+    // Guardamos inmediatamente
     try {
+      setGuardandoPermisos(true);
       const response = await fetch(API_ROLE_PERMISSIONS_URL, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: rolePermissions }),
+        body: JSON.stringify({ permissions: newPermissions }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         Alert.alert('Error', data.error || 'No se pudieron guardar los permisos');
+        // Revertir cambio local
+        setRolePermissions(rolePermissions);
         return;
       }
-      setRolePermissions(data.permissions || rolePermissions);
-      Alert.alert('OK', 'Permisos guardados');
+      setRolePermissions(data.permissions || newPermissions);
+      
+      // Si el usuario quitó el permiso 'manage_roles_permissions' a su propio rol, actualizar estado local
+      if (roleKey === currentUserRole && permissionKey === 'manage_roles_permissions' && newValue === false) {
+        setPuedeEditarRolesPermisosLocal(false);
+      }
     } catch (e) {
       Alert.alert('Error', `No se pudieron guardar los permisos: ${e.message}`);
+      // Revertir cambio local
+      setRolePermissions(rolePermissions);
     } finally {
       setGuardandoPermisos(false);
     }
   };
+
+
 
   const guardarSessionTimeout = async () => {
     if (!puedeEditarSessionTimeout) {
@@ -1959,6 +2023,9 @@ export default function ConfigScreen({ route, currentUser }) {
               <Text style={styles.rulesToggleBtnText}>{roleRulesExpanded ? 'Ocultar' : 'Expandir'}</Text>
             </TouchableOpacity>
           </View>
+          {!puedeEditarRolesPermisos && (
+            <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>Permiso denegado: Solo administrador y root pueden editar reglas de permisos.</Text>
+          )}
           {!roleRulesExpanded ? (
             <Text style={styles.muted}>Pulsa "Expandir" para ver y editar reglas.</Text>
           ) : (availableRoles || []).length === 0 ? (
@@ -1975,13 +2042,25 @@ export default function ConfigScreen({ route, currentUser }) {
                         const roleKey = String(role?.key || '').toLowerCase();
                         const rolePerms = rolePermissions[roleKey] || {};
                         const active = !!rolePerms[perm.key];
+                        const isAdministrador = roleKey === 'administrador';
                         return (
                           <TouchableOpacity
                             key={`${perm.key}-${roleKey}`}
-                            style={[styles.selectChip, active && styles.selectChipActive]}
+                            style={[
+                              styles.selectChip, 
+                              active && styles.selectChipActive,
+                              !puedeEditarRolesPermisos && styles.selectChipDisabled,
+                              isAdministrador && styles.selectChipProtected
+                            ]}
                             onPress={() => toggleRolePermission(roleKey, perm.key)}
+                            disabled={!puedeEditarRolesPermisos || isAdministrador}
                           >
-                            <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{capitalizeFirst(role?.label || roleKey)}</Text>
+                            <Text style={[
+                              styles.selectChipText, 
+                              active && styles.selectChipTextActive,
+                              !puedeEditarRolesPermisos && styles.selectChipTextDisabled,
+                              isAdministrador && styles.selectChipTextProtected
+                            ]}>{capitalizeFirst(role?.label || roleKey)}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -1989,10 +2068,6 @@ export default function ConfigScreen({ route, currentUser }) {
                   </View>
                 );
               })}
-
-              <TouchableOpacity style={styles.saveRulesBtn} onPress={guardarPermisosRoles} disabled={guardandoPermisos}>
-                <Text style={styles.saveRulesBtnText}>{guardandoPermisos ? 'Guardando...' : 'Guardar permisos'}</Text>
-              </TouchableOpacity>
             </>
           )}
         </View>

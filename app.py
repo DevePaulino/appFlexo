@@ -1471,6 +1471,7 @@ def register_public_user():
                     col_opciones_empresa.insert_one({
                         'categoria': 'roles',
                         'valor': role_val,
+                        'label': role_val,
                         'orden': idx,
                         'fecha_creacion': datetime.now().isoformat(),
                         'empresa_id': empresa_id,
@@ -1983,6 +1984,7 @@ def get_settings_catalogo():
                 col.insert_one({
                     'categoria': 'estados_pedido',
                     'valor': valor_default,
+                    'label': valor_default,
                     'orden': orden_base + idx,
                     'fecha_creacion': datetime.now().isoformat()
                 })
@@ -2096,6 +2098,20 @@ def api_roles_permissions():
         if not isinstance(permissions, dict):
             return jsonify({'error': 'permissions debe ser un objeto JSON'}), 400
 
+        # Verificar que el usuario tiene permisos para editar
+        can_manage = verify_role_permission(request_user, 'manage_roles_permissions')
+        if not can_manage:
+            return jsonify({'error': 'No tienes permisos para editar las reglas de permisos'}), 403
+
+        # Proteger el rol 'administrador': nunca puede perder permisos
+        for role_key, perms in permissions.items():
+            if role_key == 'administrador':
+                # El rol administrador debe mantener todos sus permisos
+                admin_perms = permissions.get('administrador', {})
+                for perm_key in PERMISSION_KEYS:
+                    if admin_perms.get(perm_key) is False:
+                        return jsonify({'error': 'El rol administrador no puede perder permisos. Imposible desactivar permisos para administrador'}), 400
+
         col_general = get_empresa_collection('config_general', 0)
         col_general.update_one({'clave': 'role_permissions'}, {'$set': {'valor': json.dumps(permissions), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
         try:
@@ -2185,6 +2201,7 @@ def crear_config_opcion():
         doc = {
             'categoria': categoria,
             'valor': valor,
+            'label': valor,  # Include label field for roles and estados_pedido
             'orden': siguiente_orden,
             'fecha_creacion': datetime.now().isoformat()
         }
