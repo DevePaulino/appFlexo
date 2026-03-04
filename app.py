@@ -1145,8 +1145,23 @@ def get_maquinas():
         maquinas = list(col.find({'empresa_id': empresa_id}))
         # Agregar trabajos_en_cola para cada máquina
         for m in maquinas:
-            maquina_id = m.get('id')
-            trabajos_en_cola = orden_col.count_documents({'maquina_id': maquina_id, 'empresa_id': empresa_id})
+            maquina_id_field = m.get('id')
+            maquina_oid = m.get('_id')
+            
+            # Build query to match by either id field or _id
+            query_terms = []
+            if maquina_id_field is not None:
+                query_terms.append({'maquina_id': maquina_id_field, 'empresa_id': empresa_id})
+            if maquina_oid is not None:
+                query_terms.append({'maquina_id': maquina_oid, 'empresa_id': empresa_id})
+                query_terms.append({'maquina_id': str(maquina_oid), 'empresa_id': empresa_id})
+            
+            if query_terms:
+                query = {'$or': query_terms} if len(query_terms) > 1 else query_terms[0]
+            else:
+                query = {'maquina_id': maquina_id_field, 'empresa_id': empresa_id}
+            
+            trabajos_en_cola = orden_col.count_documents(query)
             m['trabajos_en_cola'] = trabajos_en_cola
         maquinas = [fix_id(m) for m in maquinas]
         return jsonify({'maquinas': maquinas}), 200
