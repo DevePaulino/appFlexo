@@ -3490,7 +3490,9 @@ def update_pedido(pedido_id):
             if not raw_estado:
                 return jsonify({'error': 'estado vacío'}), 400
             nuevo_estado = slugify_estado(raw_estado)
-            disponibles = {item['valor'] for item in get_estados_pedido_disponibles()}
+            # Validar contra los slugs de estados disponibles (frontend envía slugificado)
+            available_items = get_estados_pedido_disponibles()
+            disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
             if nuevo_estado not in disponibles:
                 return jsonify({'error': 'Estado no válido'}), 400
 
@@ -3511,8 +3513,7 @@ def update_pedido(pedido_id):
                 return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
 
             # Guardar el estado en formato de label (mantener consistencia con datos existentes)
-            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
-            estado_label = available.get(nuevo_estado) or nuevo_estado
+            estado_label = disponibles.get(nuevo_estado) or nuevo_estado
             update['estado'] = estado_label
 
             # Ajustar fecha_finalizacion automáticamente si aplicable
