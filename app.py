@@ -923,15 +923,14 @@ def init_db():
                 if categoria == 'estados_pedido':
                     # For estados: valor is the slug (key), label is human-readable (value)
                     label = states_slug_to_label.get(valor, valor)
-                    # Check if exists by slug (valor key)
+                    # Check if exists by human-readable label (prevent duplicates)
                     exists = col_opciones.count_documents({
                         'categoria': categoria, 
-                        'tipo_slug': valor  # Use a separate field to track the slug
+                        'valor': label  # Check using the actual value field
                     }) > 0
                     if not exists:
                         col_opciones.insert_one({
                             'categoria': categoria,
-                            'tipo_slug': valor,  # Store slug for idempotency check
                             'valor': label,  # Store human-readable label
                             'label': label,
                             'orden': idx,
