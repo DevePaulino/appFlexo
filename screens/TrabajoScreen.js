@@ -1205,26 +1205,20 @@ export default function TrabajoScreen({ currentUser }) {
                   </View>
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
-                  <View style={[styles.statusBadge, getStatusColor(trabajo.estado)[0]]}>
-                    <Text style={[styles.statusText, getStatusColor(trabajo.estado)[1]]} numberOfLines={1}>
-                      {getStatusLabel(trabajo.estado)}
-                    </Text>
-                  </View>
                   <select
                     disabled={!canChangeEstado}
                     style={{
                       padding: '6px 8px',
                       borderRadius: '4px',
                       border: '1px solid #DDD',
-                      backgroundColor: '#FFF',
+                      backgroundColor: getStatusColor(trabajo.estado)[0].backgroundColor || '#FFF',
                       fontSize: '11px',
                       fontWeight: '600',
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: getEstadoDotColor(trabajo.estado) || '#232323',
+                      color: getStatusColor(trabajo.estado)[1].color || '#232323',
                       opacity: canChangeEstado ? 1 : 0.65,
                       pointerEvents: canChangeEstado ? 'auto' : 'none',
-                      marginTop: '4px',
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
