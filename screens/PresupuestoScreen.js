@@ -571,14 +571,21 @@ export default function PresupuestoScreen({ currentUser }) {
       'X-Role': currentUser?.role || 'administrador'
     };
     
+    console.log('Iniciando guardado de presupuesto...', presupuesto);
+    console.log('Headers:', authHeaders);
+    
     // Primero crear el trabajo
     fetch('http://localhost:8080/api/trabajos', {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify(trabajo)
     })
-      .then((res) => res.json())
+      .then((res) => {
+        console.log('Respuesta de crear trabajo:', res.status, res.statusText);
+        return res.json();
+      })
       .then((data) => {
+        console.log('Datos de trabajo creado:', data);
         if (data.trabajo_id) {
           // Ahora guardar el presupuesto con todos los datos
           const presupuestoCompleto = {
@@ -609,27 +616,41 @@ export default function PresupuestoScreen({ currentUser }) {
             observaciones: presupuesto.observaciones
           };
           
+          console.log('Enviando presupuesto completo:', presupuestoCompleto);
+          
           fetch('http://localhost:8080/api/presupuestos', {
             method: 'POST',
             headers: authHeaders,
             body: JSON.stringify(presupuestoCompleto)
           })
-            .then((res) => res.json())
+            .then((res) => {
+              console.log('Respuesta de guardar presupuesto:', res.status, res.statusText);
+              return res.json();
+            })
             .then((respData) => {
+              console.log('Datos de respuesta:', respData);
               if (respData.error) {
                 console.error('Error guardando presupuesto:', respData.error);
-                alert(`Error al guardar presupuesto: ${respData.error}`);
+                alert(`❌ Error al guardar presupuesto:\n${respData.error}`);
               } else {
+                console.log('✅ Presupuesto guardado exitosamente');
+                alert('✅ ¡Presupuesto guardado exitosamente!');
                 cargarPresupuestos();
               }
             })
-            .catch((err) => console.error('Error guardando presupuesto:', err));
+            .catch((err) => {
+              console.error('Error en fetch de presupuesto:', err);
+              alert(`❌ Error en la solicitud:\n${err.message}`);
+            });
         } else {
           console.error('Error creando trabajo:', data);
-          alert(`Error al crear trabajo: ${data.error || 'desconocido'}`);
+          alert(`❌ Error al crear trabajo:\n${data.error || 'desconocido'}`);
         }
       })
-      .catch((err) => console.error('Error creando trabajo:', err));
+      .catch((err) => {
+        console.error('Error en fetch de trabajo:', err);
+        alert(`❌ Error en la solicitud de trabajo:\n${err.message}`);
+      });
   };
 
   const handleAceptarPresupuesto = (presupuesto) => {
