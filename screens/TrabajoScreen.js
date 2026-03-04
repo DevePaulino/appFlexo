@@ -558,6 +558,18 @@ export default function TrabajoScreen({ currentUser }) {
     '#1976D2', '#F57C00', '#C2185B', '#7B1FA2', '#00796B', '#388E3C', '#D32F2F', '#616161', '#0EA5A4', '#4A90E2'
   ];
 
+  // Mapa fijo de estado → color para consistencia
+  const ESTADO_COLOR_MAP = {
+    'diseno': '#1976D2',
+    'pendiente-de-aprobacion': '#F57C00',
+    'pendiente-de-cliche': '#C2185B',
+    'pendiente-de-impresion': '#7B1FA2',
+    'pendiente-post-impresion': '#00796B',
+    'finalizado': '#1F9D55',
+    'parado': '#D32F2F',
+    'cancelado': '#616161',
+  };
+
   const slugifyEstado = (texto) => {
     return String(texto || '')
       .normalize('NFD')
@@ -694,10 +706,7 @@ export default function TrabajoScreen({ currentUser }) {
 
   const getEstadoDotColor = (estado) => {
     const value = normalizarEstadoValue(estado);
-    if (value === 'finalizado') return ESTADO_FINALIZADO_COLOR;
-    const index = estadosDisponibles.findIndex((item) => item.value === value);
-    if (index < 0) return '#9E9E9E';
-    return ESTADOS_COLORS[index % ESTADOS_COLORS.length];
+    return ESTADO_COLOR_MAP[value] || '#9E9E9E';
   };
 
   const estadosGrafica = estadosDisponibles.filter(
