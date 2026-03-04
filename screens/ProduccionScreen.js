@@ -552,11 +552,26 @@ export default function ProduccionScreen() {
         const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}&page=1&page_size=100`);
         const trabajosData = await trabajosRes.json();
 
-        // Filtrar trabajos: excluir parado, cancelado y finalizado
+        // Filtrar trabajos: excluir trabajos que NO están en producción (diseño, aprobación, etc.)
         const trabajosMaqFiltrados = (trabajosData.trabajos || []).filter(trabajo => {
-          if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado') {
+          // Mostrar solo trabajos con en_produccion: true o estados de producción
+          // Excluir: parado, cancelado, finalizado, y estados de etapas previas (Diseño, Pendiente de Aprobación, etc.)
+          const estadoLower = (trabajo.estado || '').toLowerCase();
+          
+          // Excluir estos estados específicamente
+          if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado' ||
+              trabajo.estado === 'Finalizado' || trabajo.estado === 'Parado' || trabajo.estado === 'Cancelado') {
             return false;
           }
+          
+          // Excluir estados de diseño/aprobación
+          if (estadoLower.includes('diseño') || estadoLower.includes('diseno') || 
+              estadoLower.includes('aprobación') || estadoLower.includes('aprobacion') ||
+              estadoLower.includes('cliché') || estadoLower.includes('cliche')) {
+            return false;
+          }
+          
+          // Incluir todos los demás (pendiente-de-impresion, en-proceso, etc.)
           return true;
         });
 

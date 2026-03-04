@@ -1142,7 +1142,20 @@ def get_maquinas():
         empresa_id = int(request_user.get('empresa_id') or 0)
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        
         maquinas = list(col.find({'empresa_id': empresa_id}))
+        
+        # Estados a excluir de la cuenta de trabajos_en_cola
+        # (solo contar trabajos que están realmente en producción)
+        estados_excluir = {
+            'parado', 'cancelado', 'finalizado',  # lowercase
+            'Parado', 'Cancelado', 'Finalizado',  # uppercase
+            'Diseño', 'diseno', 'diseño',  # design phase
+            'Pendiente de Aprobación', 'pendiente de aprobación',  # approval phase
+            'Pendiente de Cliché', 'pendiente de cliché',  # cliche phase
+        }
+        
         # Agregar trabajos_en_cola para cada máquina
         for m in maquinas:
             maquina_id_field = m.get('id')
@@ -1161,7 +1174,24 @@ def get_maquinas():
             else:
                 query = {'maquina_id': maquina_id_field, 'empresa_id': empresa_id}
             
-            trabajos_en_cola = orden_col.count_documents(query)
+            # Get all trabajo_orden for this machine
+            ordenes = list(orden_col.find(query))
+            
+            # Count only those whose pedido is in a production state
+            trabajos_en_cola = 0
+            for orden in ordenes:
+                trabajo_id = orden.get('trabajo_id')
+                if not trabajo_id:
+                    continue
+                # Get the corresponding pedido
+                pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+                if not pedido:
+                    continue
+                # Check if estado is in production (not in exclusion list)
+                estado = pedido.get('estado')
+                if estado not in estados_excluir:
+                    trabajos_en_cola += 1
+            
             m['trabajos_en_cola'] = trabajos_en_cola
         maquinas = [fix_id(m) for m in maquinas]
         return jsonify({'maquinas': maquinas}), 200
