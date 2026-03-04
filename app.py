@@ -1066,8 +1066,9 @@ def normalize_legacy_json_storage(apply_changes=False):
     return {'apply': bool(apply_changes), 'presupuestos': {}, 'pedidos': {}}
 
 
-def get_estados_pedido_disponibles():
-    col = get_empresa_collection('config_opciones', 0)
+def get_estados_pedido_disponibles(empresa_id=None):
+    empresa_id = int(empresa_id or 0)
+    col = get_empresa_collection('config_opciones', empresa_id)
     rows = list(col.find({'categoria': 'estados_pedido'}).sort([('orden', 1), ('_id', 1)]))
     if not rows:
         return ESTADOS_PEDIDO_DEFAULT
@@ -1123,10 +1124,11 @@ def infer_estados_rules(available_states):
     return inferred
 
 
-def get_estados_pedido_rules():
-    available_states = get_estados_pedido_disponibles()
+def get_estados_pedido_rules(empresa_id=None):
+    available_states = get_estados_pedido_disponibles(empresa_id)
     allowed_values = {item['valor'] for item in available_states}
-    col = get_empresa_collection('config_general', 0)
+    empresa_id = int(empresa_id or 0)
+    col = get_empresa_collection('config_general', empresa_id)
     doc = col.find_one({'clave': 'estados_pedido_rules'})
     stored = {}
     if doc and doc.get('valor'):
@@ -2818,7 +2820,7 @@ def aceptar_presupuesto(trabajo_id):
                 'datos_presupuesto': datos_presupuesto
             }
             try:
-                available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
+                available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
                 default_label = available.get('diseno') or 'Diseño'
             except Exception:
                 default_label = 'Diseño'
@@ -2954,7 +2956,7 @@ def crear_pedido_desde_erp():
         
         # Establecer estado del pedido
         try:
-            available_states = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
+            available_states = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
             requested_estado = (data.get('estado') or 'diseno').lower()
             estado = available_states.get(requested_estado) or available_states.get('diseno') or 'Diseño'
         except Exception:
@@ -3174,7 +3176,7 @@ def update_presupuesto(presupuesto_id):
                         'datos_presupuesto': pres_doc.get('datos_json')
                     }
                     try:
-                        available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
+                        available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
                         default_label = available.get('diseno') or 'Diseño'
                     except Exception:
                         default_label = 'Diseño'
@@ -3266,7 +3268,7 @@ def crear_presupuesto():
                     'datos_presupuesto': datos_json
                 }
                 try:
-                    available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
+                    available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
                     default_label = available.get('diseno') or 'Diseño'
                 except Exception:
                     default_label = 'Diseño'
@@ -3450,7 +3452,7 @@ def crear_pedido():
         }
         # Establecer estado por defecto ('Diseño') usando las etiquetas configuradas
         try:
-            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
+            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
             default_label = available.get('diseno') or 'Diseño'
         except Exception:
             default_label = 'Diseño'
@@ -3491,7 +3493,7 @@ def update_pedido(pedido_id):
                 return jsonify({'error': 'estado vacío'}), 400
             nuevo_estado = slugify_estado(raw_estado)
             # Validar contra los slugs de estados disponibles (frontend envía slugificado)
-            available_items = get_estados_pedido_disponibles()
+            available_items = get_estados_pedido_disponibles(empresa_id)
             disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
             if nuevo_estado not in disponibles:
                 return jsonify({'error': 'Estado no válido'}), 400
@@ -3500,7 +3502,7 @@ def update_pedido(pedido_id):
             pedido_actual = col.find_one({'_id': oid, 'empresa_id': empresa_id})
             if not pedido_actual:
                 return jsonify({'error': 'Pedido no encontrado'}), 404
-            reglas = get_estados_pedido_rules().get('rules', ESTADOS_RULES_DEFAULT)
+            reglas = get_estados_pedido_rules(empresa_id).get('rules', ESTADOS_RULES_DEFAULT)
             estados_finales = set(reglas.get('estados_finalizados', []))
             estado_actual = slugify_estado(str(pedido_actual.get('estado') or ''))
 
@@ -3589,7 +3591,7 @@ def migrate_estados():
             return jsonify({'error': 'ID de estado fuente inválido'}), 400
         
         # Validar que destination_estado_value sea válido
-        available_items = get_estados_pedido_disponibles()
+        available_items = get_estados_pedido_disponibles(empresa_id)
         disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
         dest_slug = slugify_estado(destination_estado_value)
         
