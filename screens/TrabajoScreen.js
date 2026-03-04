@@ -672,6 +672,9 @@ export default function TrabajoScreen({ currentUser }) {
 
   const getStatusColor = (estado) => {
     const value = normalizarEstadoValue(estado);
+    const color = getEstadoDotColor(value);
+    
+    // Para estados conocidos, usar estilos predefinidos
     switch (value) {
       case 'diseno':
         return [styles.statusDiseno, styles.statusDisenoText];
@@ -690,7 +693,13 @@ export default function TrabajoScreen({ currentUser }) {
       case 'cancelado':
         return [styles.statusCancelado, styles.statusCanceladoText];
       default:
-        return [styles.statusDiseno, styles.statusDisenoText];
+        // Para estados nuevos, generar estilos dinámicos
+        const backgroundColor = color + '20'; // 20% opacidad (hex 33)
+        const textColor = color;
+        return [
+          { ...styles.statusBadge, backgroundColor },
+          { ...styles.statusText, color: textColor }
+        ];
     }
   };
 
@@ -704,9 +713,41 @@ export default function TrabajoScreen({ currentUser }) {
     (estado) => !(estadoRules.ocultar_timeline || []).includes(estado.value)
   );
 
+  // Generar color aleatorio pero consistente basado en hash del estado
+  const generateColorFromHash = (text) => {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Colores vibrantes y distinguibles (10 colores)
+    const vibrantes = [
+      '#E91E63', // Rosa
+      '#2196F3', // Azul claro
+      '#00BCD4', // Cyan
+      '#4CAF50', // Verde
+      '#FFC107', // Ámbar
+      '#FF5722', // Naranja profundo
+      '#9C27B0', // Púrpura
+      '#3F51B5', // Índigo
+      '#009688', // Teal
+      '#FF6F00', // Naranja
+    ];
+    
+    const index = Math.abs(hash) % vibrantes.length;
+    return vibrantes[index];
+  };
+
   const getEstadoDotColor = (estado) => {
     const value = normalizarEstadoValue(estado);
-    return ESTADO_COLOR_MAP[value] || '#9E9E9E';
+    // Si está en el mapa fijo, usar ese color
+    if (ESTADO_COLOR_MAP[value]) {
+      return ESTADO_COLOR_MAP[value];
+    }
+    // Si no, generar color aleatorio basado en el nombre (pero consistente)
+    return generateColorFromHash(value);
   };
 
   const estadosGrafica = estadosDisponibles.filter(

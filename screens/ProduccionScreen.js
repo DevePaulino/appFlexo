@@ -494,7 +494,23 @@ export default function ProduccionScreen() {
     return palette[index];
   };
 
+  const generateColorFromHash = (text) => {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const vibrantes = [
+      '#E91E63', '#2196F3', '#00BCD4', '#4CAF50', '#FFC107',
+      '#FF5722', '#9C27B0', '#3F51B5', '#009688', '#FF6F00',
+    ];
+    const index = Math.abs(hash) % vibrantes.length;
+    return vibrantes[index];
+  };
+
   const getStatusColor = (estado) => {
+    const color = generateColorFromHash(estado);
     switch (estado) {
       case 'diseno':
         return [styles.statusDiseno, styles.statusDisenoText];
@@ -513,7 +529,13 @@ export default function ProduccionScreen() {
       case 'cancelado':
         return [styles.statusCancelado, styles.statusCanceladoText];
       default:
-        return [styles.statusDiseno, styles.statusDisenoText];
+        // Para estados nuevos
+        const backgroundColor = color + '20';
+        const textColor = color;
+        return [
+          { ...styles.statusBadge, backgroundColor },
+          { ...styles.statusText, color: textColor }
+        ];
     }
   };
 
