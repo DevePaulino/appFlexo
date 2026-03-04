@@ -752,6 +752,23 @@ export default function ConfigScreen({ route, currentUser }) {
       .replace(/^-+|-+$/g, '');
   };
 
+  const generateColorFromHash = (texto) => {
+    // Normalizar el texto antes de hacer hash para consistencia
+    const normalized = slugifyEstado(texto);
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const vibrantes = [
+      '#E91E63', '#2196F3', '#00BCD4', '#4CAF50', '#FFC107',
+      '#FF5722', '#9C27B0', '#3F51B5', '#009688', '#FF6F00',
+    ];
+    const index = Math.abs(hash) % vibrantes.length;
+    return vibrantes[index];
+  };
+
   const capitalizeFirst = (s) => {
     const str = String(s || '');
     if (!str) return '';
@@ -2394,15 +2411,23 @@ export default function ConfigScreen({ route, currentUser }) {
                 .filter((estado) => estado.id !== estadoAMigrar?.id)
                 .map((estado) => {
                   const isSelected = estadoDestinoMigracion?.id === estado.id;
+                  const estadoColor = generateColorFromHash(estado.valor);
                   return (
                     <TouchableOpacity
                       key={`migrar-estado-${estado.id}`}
-                      style={[styles.selectChip, isSelected && styles.selectChipActive]}
+                      style={[
+                        styles.selectChip,
+                        isSelected && styles.selectChipActive,
+                        { borderLeftWidth: 4, borderLeftColor: estadoColor }
+                      ]}
                       onPress={() => setEstadoDestinoMigracion(estado)}
                     >
-                      <Text style={[styles.selectChipText, isSelected && styles.selectChipTextActive]}>
-                        {estado.valor}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: estadoColor }} />
+                        <Text style={[styles.selectChipText, isSelected && styles.selectChipTextActive]}>
+                          {estado.valor}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
