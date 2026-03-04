@@ -1211,7 +1211,7 @@ def create_maquina():
         print('CREATE MAQUINA ERROR:\n', _traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/maquinas/<int:maquina_id>', methods=['PUT'])
+@app.route('/api/maquinas/<maquina_id>', methods=['PUT'])
 def update_maquina(maquina_id):
     try:
         request_user, auth_error = require_request_user()
@@ -1238,21 +1238,47 @@ def update_maquina(maquina_id):
         estado = data.get('estado') or 'Activa'
 
         col = get_empresa_collection('maquinas', empresa_id)
-        result = col.update_one({'id': maquina_id, 'empresa_id': empresa_id}, {'$set': {
-            'nombre': nombre,
-            'anio_fabricacion': anio_fabricacion,
-            'tipo_maquina': tipo_maquina,
-            'numero_colores': numero_colores,
-            'ancho_max_material_mm': ancho_max_material_mm,
-            'ancho_max_impresion_mm': ancho_max_impresion_mm,
-            'repeticion_min_mm': repeticion_min_mm,
-            'repeticion_max_mm': repeticion_max_mm,
-            'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
-            'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
-            'espesor_planchas_mm': espesor_planchas_mm,
-            'sistemas_secado': sistemas_secado,
-            'estado': estado
-        }})
+        
+        # Try to find and update by _id (ObjectId) first (since GET endpoint returns _id as id)
+        result = None
+        try:
+            if len(maquina_id) == 24:  # Valid ObjectId hex string
+                result = col.update_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id}, {'$set': {
+                    'nombre': nombre,
+                    'anio_fabricacion': anio_fabricacion,
+                    'tipo_maquina': tipo_maquina,
+                    'numero_colores': numero_colores,
+                    'ancho_max_material_mm': ancho_max_material_mm,
+                    'ancho_max_impresion_mm': ancho_max_impresion_mm,
+                    'repeticion_min_mm': repeticion_min_mm,
+                    'repeticion_max_mm': repeticion_max_mm,
+                    'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
+                    'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
+                    'espesor_planchas_mm': espesor_planchas_mm,
+                    'sistemas_secado': sistemas_secado,
+                    'estado': estado
+                }})
+        except Exception:
+            pass
+        
+        # Fall back to updating by 'id' field if no match by _id
+        if not result or result.matched_count == 0:
+            result = col.update_one({'id': maquina_id, 'empresa_id': empresa_id}, {'$set': {
+                'nombre': nombre,
+                'anio_fabricacion': anio_fabricacion,
+                'tipo_maquina': tipo_maquina,
+                'numero_colores': numero_colores,
+                'ancho_max_material_mm': ancho_max_material_mm,
+                'ancho_max_impresion_mm': ancho_max_impresion_mm,
+                'repeticion_min_mm': repeticion_min_mm,
+                'repeticion_max_mm': repeticion_max_mm,
+                'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
+                'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
+                'espesor_planchas_mm': espesor_planchas_mm,
+                'sistemas_secado': sistemas_secado,
+                'estado': estado
+            }})
+        
         if result.matched_count == 0:
             return jsonify({'error': 'Máquina no encontrada'}), 404
         return jsonify({'success': True}), 200
@@ -1262,7 +1288,7 @@ def update_maquina(maquina_id):
         return jsonify({'error': str(e), 'trace': tb}), 500
 
 
-@app.route('/api/maquinas/<int:maquina_id>', methods=['DELETE'])
+@app.route('/api/maquinas/<maquina_id>', methods=['DELETE'])
 def delete_maquina(maquina_id):
     try:
         request_user, auth_error = require_request_user()
@@ -1272,22 +1298,39 @@ def delete_maquina(maquina_id):
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
-        pedidos_col = get_empresa_collection('pedidos', empresa_id)
-        pedidos_col = get_empresa_collection('pedidos', empresa_id)
         total = col.count_documents({'empresa_id': empresa_id})
-        maquina = col.find_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Try to find by _id (ObjectId) first (since GET endpoint returns _id as id)
+        maquina = None
+        try:
+            if len(maquina_id) == 24:  # Valid ObjectId hex string
+                maquina = col.find_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        
+        # Fall back to searching by the 'id' field
+        if not maquina:
+            maquina = col.find_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
         if total == 1 and maquina and maquina.get('nombre') == PROTECTED_MAQUINA_NOMBRE:
             return jsonify({'error': 'No puedes eliminar la máquina de ejemplo si no hay otras creadas'}), 409
         if not maquina:
             return jsonify({'error': 'Máquina no encontrada'}), 404
-        trabajos_en_cola = orden_col.count_documents({'maquina_id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Get the maquina_id from the document (could be the 'id' field or numeric value)
+        actual_maquina_id = maquina.get('id', maquina_id)
+        trabajos_en_cola = orden_col.count_documents({'maquina_id': actual_maquina_id, 'empresa_id': empresa_id})
         if trabajos_en_cola > 0:
             return jsonify({'error': 'No se puede eliminar: la máquina tiene trabajos en cola'}), 400
-        col.delete_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Delete by _id if that's what matched
+        if '_id' in maquina:
+            col.delete_one({'_id': maquina['_id'], 'empresa_id': empresa_id})
+        else:
+            col.delete_one({'id': actual_maquina_id, 'empresa_id': empresa_id})
         return jsonify({'success': True}), 200
     except Exception as e:
         tb = _traceback.format_exc()
-        print('MOVER EXCEPTION:\n', tb)
         return jsonify({'error': str(e), 'trace': tb}), 500
 
 # Endpoints para clientes

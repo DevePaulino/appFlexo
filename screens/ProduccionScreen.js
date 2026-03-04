@@ -569,9 +569,26 @@ export default function ProduccionScreen() {
         } else {
           totalsObj[maq.id] = trabajosMaqFiltrados.length;
         }
+
+        // DEBUG: log per-machine counts to help reconcile frontend vs backend
+        try {
+          console.log(`PROD_DEBUG machine id=${maq.id} name=${maq.nombre} filtered_len=${trabajosMaqFiltrados.length} api_total=${trabajosData && typeof trabajosData.total !== 'undefined' ? trabajosData.total : 'NA'} maquina_trabajos_en_cola=${typeof maq.trabajos_en_cola !== 'undefined' ? maq.trabajos_en_cola : 'NA'}`);
+        } catch (e) {
+          console.log('PROD_DEBUG logging failed', e);
+        }
       }
       setTrabajosPorMaquina(trabajosObj);
       setTrabajosTotals(totalsObj);
+
+      // DEBUG: small summary to help debugging mismatched counts
+      try {
+        const resumen = Object.fromEntries(Object.entries(trabajosObj).map(([k, v]) => [k, v.length]));
+        console.log('PROD_DEBUG summary counts per maquina (filtered lengths):', resumen);
+        console.log('PROD_DEBUG totalsObj (API reported totals):', totalsObj);
+        console.log('PROD_DEBUG maquinas list (id,nombre,trabajos_en_cola):', (maquinasData.maquinas || []).map(m => ({ id: m.id, nombre: m.nombre, trabajos_en_cola: m.trabajos_en_cola })));
+      } catch (e) {
+        console.log('PROD_DEBUG summary logging failed', e);
+      }
     } catch (e) {
       console.error('Error cargando datos:', e);
       setError(e.message);
