@@ -715,9 +715,11 @@ export default function TrabajoScreen({ currentUser }) {
 
   // Generar color aleatorio pero consistente basado en hash del estado
   const generateColorFromHash = (text) => {
+    // Normalizar el texto antes de hacer hash para consistencia
+    const normalized = slugifyEstado(text);
     let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32bit integer
     }

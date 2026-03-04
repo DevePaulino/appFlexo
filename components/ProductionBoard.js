@@ -195,10 +195,22 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     }
   }, [draggingId, trabajos, maquinas, maquinaActual, canReorder, maquinasFiltradasIds]);
 
+  const slugifyEstado = (texto) => {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
   const generateColorFromHash = (text) => {
+    // Normalizar el texto antes de hacer hash para consistencia
+    const normalized = slugifyEstado(text);
     let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash;
     }
