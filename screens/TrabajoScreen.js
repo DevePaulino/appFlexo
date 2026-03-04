@@ -662,7 +662,29 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setModoCreacion('manual'));
   };
 
-  const getStatusColor = (estado) => getEstadoDotColor(estado);
+  const getStatusColor = (estado) => {
+    const value = normalizarEstadoValue(estado);
+    switch (value) {
+      case 'diseno':
+        return [styles.statusDiseno, styles.statusDisenoText];
+      case 'pendiente-de-aprobacion':
+        return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];
+      case 'pendiente-de-cliche':
+        return [styles.statusPendienteCliche, styles.statusPendienteClicheText];
+      case 'pendiente-de-impresion':
+        return [styles.statusPendienteImpresion, styles.statusPendienteImpresionText];
+      case 'pendiente-post-impresion':
+        return [styles.statusPendientePostImpresion, styles.statusPendientePostImpresionText];
+      case 'finalizado':
+        return [styles.statusFinalizado, styles.statusFinalizadoText];
+      case 'parado':
+        return [styles.statusParado, styles.statusParadoText];
+      case 'cancelado':
+        return [styles.statusCancelado, styles.statusCanceladoText];
+      default:
+        return [styles.statusDiseno, styles.statusDisenoText];
+    }
+  };
 
   const getStatusLabel = (estado) => {
     const value = normalizarEstadoValue(estado);
