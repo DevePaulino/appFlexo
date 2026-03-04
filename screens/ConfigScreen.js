@@ -769,6 +769,33 @@ export default function ConfigScreen({ route, currentUser }) {
     return vibrantes[index];
   };
 
+  // Mapa fijo de colores para estados del sistema (consistente con las otras vistas)
+  const ESTADO_COLOR_MAP = {
+    'diseno': '#1976D2',
+    'pendiente-de-aprobacion': '#F57C00',
+    'pendiente-de-cliche': '#C2185B',
+    'pendiente-de-impresion': '#7B1FA2',
+    'pendiente-post-impresion': '#00796B',
+    'finalizado': '#1F9D55',
+    'parado': '#D32F2F',
+    'cancelado': '#9E9E9E',
+  };
+
+  const getEstadoColor = (estadoValor) => {
+    const normalized = slugifyEstado(estadoValor);
+    // Primero intenta usar color fijo del sistema
+    if (ESTADO_COLOR_MAP[normalized]) {
+      return ESTADO_COLOR_MAP[normalized];
+    }
+    // Luego intenta usar color persistido
+    const estadoItem = (settings.estados_pedido || []).find(item => slugifyEstado(item.valor) === normalized);
+    if (estadoItem?.color) {
+      return estadoItem.color;
+    }
+    // Por último, genera un color dinámico
+    return generateColorFromHash(estadoValor);
+  };
+
   const capitalizeFirst = (s) => {
     const str = String(s || '');
     if (!str) return '';
@@ -1943,7 +1970,7 @@ export default function ConfigScreen({ route, currentUser }) {
                             width: 10,
                             height: 10,
                             borderRadius: 5,
-                            backgroundColor: item.color || generateColorFromHash(item.valor),
+                            backgroundColor: getEstadoColor(item.valor),
                             marginRight: 8,
                           }}
                         />
@@ -2433,8 +2460,8 @@ export default function ConfigScreen({ route, currentUser }) {
                 .filter((estado) => estado.id !== estadoAMigrar?.id)
                 .map((estado) => {
                   const isSelected = estadoDestinoMigracion?.id === estado.id;
-                  // Usar color guardado si existe, si no generar uno
-                  const estadoColor = estado.color || generateColorFromHash(estado.valor);
+                  // Usar color guardado si existe, si no usar mapa fijo o generar uno
+                  const estadoColor = getEstadoColor(estado.valor);
                   return (
                     <TouchableOpacity
                       key={`migrar-estado-${estado.id}`}
