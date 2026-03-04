@@ -1591,6 +1591,8 @@ export default function ConfigScreen({ route, currentUser }) {
       }
       if (esEstado) {
         await cargarEstadoRules();
+        // Reload page to update all views with correct colors
+        window.location.reload();
       }
     } catch (e) {
       Alert.alert('Error', `No se pudo eliminar: ${e.message}`);
@@ -1649,7 +1651,13 @@ export default function ConfigScreen({ route, currentUser }) {
 
       Alert.alert(
         'Migración completada',
-        `Se migraron exitosamente ${migratedCount} pedido(s) a "${estadoDestinoMigracion.valor}" y se eliminó el estado.`
+        `Se migraron exitosamente ${migratedCount} pedido(s) a "${estadoDestinoMigracion.valor}" y se eliminó el estado.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => window.location.reload(),
+          }
+        ]
       );
     } catch (e) {
       Alert.alert('Error', `No se pudo completar la migración: ${e.message}`);
