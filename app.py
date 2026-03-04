@@ -917,20 +917,25 @@ def init_db():
         for categoria, valores in defaults_catalogo.items():
             for idx, valor in enumerate(valores, start=1):
                 # Use new schema: 'valor' and 'orden' (no legacy 'value'/'order')
-                # For estados, search by label (human-readable), not slug
                 if categoria == 'estados_pedido':
+                    # For estados: valor is the slug (key), label is human-readable (value)
                     label = states_slug_to_label.get(valor, valor)
-                    # Check if exists by valor (slug)
-                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor}) == 0:
+                    # Check if exists by slug (valor key)
+                    exists = col_opciones.count_documents({
+                        'categoria': categoria, 
+                        'tipo_slug': valor  # Use a separate field to track the slug
+                    }) > 0
+                    if not exists:
                         col_opciones.insert_one({
                             'categoria': categoria,
+                            'tipo_slug': valor,  # Store slug for idempotency check
                             'valor': label,  # Store human-readable label
                             'label': label,
                             'orden': idx,
                             'fecha_creacion': datetime.now().isoformat()
                         })
                 else:
-                    # For other categories, check if value exists (case-insensitive)
+                    # For other categories, check if value exists
                     if col_opciones.count_documents({'categoria': categoria, 'valor': valor}) == 0:
                         col_opciones.insert_one({
                             'categoria': categoria,
@@ -940,7 +945,9 @@ def init_db():
                             'fecha_creacion': datetime.now().isoformat()
                         })
     except Exception as e:
+        import traceback
         print(f'Error initializing catalogo: {e}')
+        traceback.print_exc()
         pass
 
 
@@ -2111,29 +2118,38 @@ def get_settings_catalogo():
         col = get_empresa_collection('config_opciones', empresa_id)
         # Asegura que los estados protegidos estén presentes (solo para 'estados_pedido')
         def ensure_estados_protegidos_presentes():
+            """
+            Safely ensure protected estado documents exist with correct schema.
+            Only inserts documents that are completely missing, never creates duplicates.
+            """
             defaults_estados = [
-                'Diseño',
-                'Pendiente de Aprobación',
-                'Pendiente de Cliché',
-                'Pendiente de Impresión',
-                'Pendiente Post-Impresión',
-                'Finalizado',
-                'Parado',
-                'Cancelado',
+                ('diseno', 'Diseño', 1),
+                ('pendiente-de-aprobacion', 'Pendiente de Aprobación', 2),
+                ('pendiente-de-cliche', 'Pendiente de Cliché', 3),
+                ('pendiente-de-impresion', 'Pendiente de Impresión', 4),
+                ('pendiente-post-impresion', 'Pendiente Post-Impresión', 5),
+                ('finalizado', 'Finalizado', 6),
+                ('parado', 'Parado', 7),
+                ('cancelado', 'Cancelado', 8),
             ]
-            existentes = {slugify_estado(row.get('valor')) for row in col.find({'categoria': 'estados_pedido'}) if row.get('valor')}
-            faltantes = [valor for valor in defaults_estados if slugify_estado(valor) not in existentes]
-            if not faltantes:
-                return
-            orden_base = (col.find({'categoria': 'estados_pedido'}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': 'estados_pedido'}) else 0) + 1
-            for idx, valor_default in enumerate(faltantes, start=0):
-                col.insert_one({
+            
+            # Check which ones are completely missing using the typ_slug field
+            for slug, label, orden in defaults_estados:
+                # Search by tipo_slug for consistency with init_db()
+                if col.count_documents({
                     'categoria': 'estados_pedido',
-                    'valor': valor_default,
-                    'label': valor_default,
-                    'orden': orden_base + idx,
-                    'fecha_creacion': datetime.now().isoformat()
-                })
+                    'tipo_slug': slug
+                }) == 0:
+                    # Only insert if doesn't exist - never create duplicates
+                    col.insert_one({
+                        'categoria': 'estados_pedido',
+                        'tipo_slug': slug,
+                        'valor': label,
+                        'label': label,
+                        'orden': orden,
+                        'fecha_creacion': datetime.now().isoformat()
+                    })
+
 
         if categoria:
             if categoria not in ALLOWED_SETTINGS_CATEGORIES:
