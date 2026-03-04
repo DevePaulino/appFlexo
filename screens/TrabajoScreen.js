@@ -567,7 +567,7 @@ export default function TrabajoScreen({ currentUser }) {
     'pendiente-post-impresion': '#00796B',
     'finalizado': '#1F9D55',
     'parado': '#D32F2F',
-    'cancelado': '#616161',
+    'cancelado': '#9E9E9E',
   };
 
   const slugifyEstado = (texto) => {

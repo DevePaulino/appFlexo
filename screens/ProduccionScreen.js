@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   statusCanceladoText: {
-    color: '#616161',
+    color: '#9E9E9E',
   },
   // Semáforo para retraso
   retrasoContainer: {
