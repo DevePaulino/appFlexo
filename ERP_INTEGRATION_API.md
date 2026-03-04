@@ -347,3 +347,10 @@ Los valores válidos para `estado` son:
 
 5. **Sincronización:** Guarda el `pedido_id` retornado en tu sistema ERP para futuras referencias y actualizaciones.
 
+6. **Extensibilidad:** El campo `datos_presupuesto` es flexible y puede contener cualquier estructura JSON. Así, cuando se añadan nuevos campos a un pedido o presupuesto en futuras versiones, simplemente envía los nuevos datos en este objeto y serán guardados automáticamente sin necesidad de cambios en los endpoints.
+
+7. **Compatibilidad futura:** El sistema está diseñado para be compatible con evoluciones futuras:
+   - Nuevos campos en `datos_presupuesto` se ignoran si no son reconocidos (forward-compatible)
+   - Campos opcionales pueden convertirse en requeridos cuando sea necesario
+   - El versionado se maneja mediante `X-API-Version` si es necesario en el futuro
+

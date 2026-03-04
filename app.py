@@ -2796,8 +2796,8 @@ def crear_pedido_desde_erp():
     
     Headers requeridos:
     - X-Empresa-Id: ID de la empresa
-    - X-User-Id: ID del usuario (puede ser "erp")
-    - X-Role: Rol del usuario (puede ser "erp" o "sistema")
+    - X-User-Id: ID del usuario (puede ser "erp" o token JWT)
+    - X-Role: Rol del usuario (puede ser "erp" o similar para sistemas)
     
     Retorna:
     - success: true/false
@@ -2806,11 +2806,31 @@ def crear_pedido_desde_erp():
     - numero_pedido: Número secuencial del pedido
     """
     try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
+        # Permitir autenticación por headers para sistemas ERP
+        empresa_id = request.headers.get('X-Empresa-Id', '').strip()
+        user_id = request.headers.get('X-User-Id', '').strip()
+        role = request.headers.get('X-Role', '').strip()
         
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        if not empresa_id or not user_id or not role:
+            # Fallback a require_request_user si no vienen los headers
+            request_user, auth_error = require_request_user()
+            if auth_error:
+                return auth_error
+            empresa_id = int(request_user.get('empresa_id') or 0)
+            user_id = request_user.get('id')
+            role = request_user.get('rol')
+        else:
+            try:
+                empresa_id = int(empresa_id)
+            except ValueError:
+                return jsonify({'error': 'X-Empresa-Id debe ser un número entero'}), 400
+        
+        # Crear objeto request_user para logging
+        request_user = {
+            'id': user_id,
+            'empresa_id': empresa_id,
+            'role': role
+        }
         data = request.get_json() or {}
         
         # Validar campos requeridos
@@ -2927,17 +2947,28 @@ def validar_modo_automatico():
     
     Headers requeridos:
     - X-Empresa-Id: ID de la empresa
-    - X-User-Id: ID del usuario
-    - X-Role: Rol del usuario
+    - X-User-Id: ID del usuario (puede ser "erp" o token JWT)
+    - X-Role: Rol del usuario (puede ser "erp" o similar para sistemas)
     
     Retorna:
     - modo_automatico: true/false
     - modo: 'automatico' o 'manual'
     """
     try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
+        # Permitir autenticación por headers para sistemas ERP
+        empresa_id = request.headers.get('X-Empresa-Id', '').strip()
+        
+        if not empresa_id:
+            # Fallback a require_request_user si no viene el header
+            request_user, auth_error = require_request_user()
+            if auth_error:
+                return auth_error
+            empresa_id = int(request_user.get('empresa_id') or 0)
+        else:
+            try:
+                empresa_id = int(empresa_id)
+            except ValueError:
+                return jsonify({'error': 'X-Empresa-Id debe ser un número entero'}), 400
         
         col_general = get_empresa_collection('config_general', 0)
         doc = col_general.find_one({'clave': 'modo_creacion'})

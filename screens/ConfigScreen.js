@@ -2106,13 +2106,75 @@ export default function ConfigScreen({ route, currentUser }) {
 
             {apiExamplesExpanded && (
               <>
-                <Text style={styles.codeTitle}>Ejemplo: cambiar modo (curl)</Text>
+                <Text style={styles.codeTitle}>1. Cambiar modo (curl)</Text>
                 <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`curl -X PUT ${API_MODO_URL} -H 'Content-Type: application/json' -d '{"modo":"automatico"}'`}</Text>
+                  <Text style={styles.codeText}>{`curl -X PUT ${API_MODO_URL} \\
+  -H 'Content-Type: application/json' \\
+  -H 'X-Empresa-Id: 1' \\
+  -H 'X-User-Id: admin' \\
+  -H 'X-Role: administrador' \\
+  -d '{"modo":"automatico"}'`}</Text>
                 </View>
-                <Text style={styles.codeTitle}>Ejemplo: cambiar modo (fetch)</Text>
+
+                <Text style={styles.codeTitle}>2. Crear pedido desde ERP (curl)</Text>
                 <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`fetch('${API_MODO_URL}', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modo: 'automatico' }) })`}</Text>
+                  <Text style={styles.codeText}>{`curl -X POST http://localhost:8080/api/pedidos/crear-desde-erp \\
+  -H 'Content-Type: application/json' \\
+  -H 'X-Empresa-Id: 1' \\
+  -H 'X-User-Id: erp-system' \\
+  -H 'X-Role: erp' \\
+  -d '{
+    "trabajo_id": "ERP-2026-001",
+    "cliente": "Cliente ABC",
+    "referencia": "REF-001",
+    "nombre": "Pedido desde ERP",
+    "fecha_entrega": "2026-03-15",
+    "datos_presupuesto": {
+      "tirada": 1000,
+      "material": "PP",
+      "acabado": ["Mate"]
+    }
+  }'`}</Text>
+                </View>
+
+                <Text style={styles.codeTitle}>3. Verificar si modo automático está activo (curl)</Text>
+                <View style={styles.codeBlock}>
+                  <Text style={styles.codeText}>{`curl -X GET http://localhost:8080/api/pedidos/validar-modo-automatico \\
+  -H 'X-Empresa-Id: 1' \\
+  -H 'X-User-Id: erp-system' \\
+  -H 'X-Role: erp'`}</Text>
+                </View>
+
+                <Text style={styles.codeTitle}>4. Cambiar estado de un pedido (fetch)</Text>
+                <View style={styles.codeBlock}>
+                  <Text style={styles.codeText}>{`const updatePedido = (pedidoId, nuevoEstado) => {
+  fetch(\`http://localhost:8080/api/pedidos/\${pedidoId}\`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': '1',
+      'X-User-Id': 'admin',
+      'X-Role': 'administrador'
+    },
+    body: JSON.stringify({
+      estado: nuevoEstado,
+      // Soporta campos adicionales
+      observaciones: '',
+      datos_presupuesto: {}
+    })
+  }).then(r => r.json())
+   .then(d => console.log(d));
+};`}</Text>
+                </View>
+
+                <Text style={styles.codeTitle}>Notas importantes:</Text>
+                <View style={styles.codeBlock}>
+                  <Text style={styles.codeText}>{`• Los headers X-Empresa-Id, X-User-Id y X-Role son OBLIGATORIOS
+• Para ERP: X-Role puede ser "erp" o similar
+• El modo automático: "automatico" o "manual"
+• Los campos adicionales en pedidos/presupuestos se
+  guardan en "datos_presupuesto" para compatibilidad futura
+• Idempotencia: crear 2 veces mismo trabajo_id retorna el existente`}</Text>
                 </View>
               </>
             )}
