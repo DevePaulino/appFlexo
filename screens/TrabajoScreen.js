@@ -613,13 +613,9 @@ export default function TrabajoScreen({ currentUser }) {
   }, [route && route.params && route.params.newPedido]);
 
   const normalizarEstadoValue = (estadoRaw) => {
-    const raw = String(estadoRaw || '').trim().toLowerCase();
-    if (!raw) return ESTADOS_DEFAULT[0].value;
-    const values = estadosDisponibles.map((item) => item.value);
-    if (values.includes(raw)) return raw;
-    const slug = slugifyEstado(estadoRaw);
-    if (values.includes(slug)) return slug;
-    return raw;
+    const slug = slugifyEstado(estadoRaw || '');
+    if (!slug) return ESTADOS_DEFAULT[0].value;
+    return slug;
   };
 
   const cargarEstadosDisponibles = () => {
@@ -1207,7 +1203,7 @@ export default function TrabajoScreen({ currentUser }) {
                       fontWeight: '600',
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: getStatusColor(trabajo.estado) || '#232323',
+                      color: getEstadoDotColor(trabajo.estado) || '#232323',
                       opacity: canChangeEstado ? 1 : 0.65,
                       pointerEvents: canChangeEstado ? 'auto' : 'none',
                     }}
