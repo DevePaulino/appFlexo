@@ -621,6 +621,8 @@ export default function TrabajoScreen({ currentUser }) {
   const normalizarEstadoValue = (estadoRaw) => {
     const slug = slugifyEstado(estadoRaw || '');
     if (!slug) return ESTADOS_DEFAULT[0].value;
+    // Migración: slug antiguo 'diseno' (de 'Diseño') → nuevo 'en-diseno' (de 'En Diseño')
+    if (slug === 'diseno') return 'en-diseno';
     return slug;
   };
 
