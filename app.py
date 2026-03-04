@@ -2312,9 +2312,19 @@ def crear_config_opcion():
     try:
         categoria = request.args.get('categoria', '').strip().lower()
         valor = request.args.get('valor', '').strip()
+        
+        # Validar que no se creen opciones vacías
+        if not categoria or not valor:
+            return jsonify({'error': 'categoria y valor son requeridos y no pueden estar vacíos'}), 400
+        
         # Normalize role labels: capitalize first letter
         if categoria == 'roles' and valor:
             valor = capitalize_first(valor)
+        
+        # Validar que el valor no sea literalmente 'None' o similar
+        if valor.lower() in ['none', 'null', 'undefined']:
+            return jsonify({'error': f'Valor inválido: "{valor}" está reservado'}), 400
+        
         col = get_empresa_collection('config_opciones', 0)
         siguiente_orden = (col.find({'categoria': categoria}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria}) else 0) + 1
         doc = {
