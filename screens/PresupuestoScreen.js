@@ -455,7 +455,18 @@ export default function PresupuestoScreen({ currentUser }) {
   // Cargar presupuestos desde backend
   const cargarPresupuestos = () => {
     setCargando(true);
-    fetch('http://localhost:8080/api/presupuestos')
+    
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+    
+    fetch('http://localhost:8080/api/presupuestos', {
+      headers: authHeaders
+    })
       .then((res) => res.json())
       .then((data) => {
         console.log('Presupuestos recibidos:', data);
@@ -552,10 +563,18 @@ export default function PresupuestoScreen({ currentUser }) {
       fecha_entrega: presupuesto.fecha || new Date().toISOString().split('T')[0]
     };
     
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+    
     // Primero crear el trabajo
     fetch('http://localhost:8080/api/trabajos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify(trabajo)
     })
       .then((res) => res.json())
@@ -592,11 +611,22 @@ export default function PresupuestoScreen({ currentUser }) {
           
           fetch('http://localhost:8080/api/presupuestos', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(presupuestoCompleto)
           })
-            .then(() => cargarPresupuestos())
+            .then((res) => res.json())
+            .then((respData) => {
+              if (respData.error) {
+                console.error('Error guardando presupuesto:', respData.error);
+                alert(`Error al guardar presupuesto: ${respData.error}`);
+              } else {
+                cargarPresupuestos();
+              }
+            })
             .catch((err) => console.error('Error guardando presupuesto:', err));
+        } else {
+          console.error('Error creando trabajo:', data);
+          alert(`Error al crear trabajo: ${data.error || 'desconocido'}`);
         }
       })
       .catch((err) => console.error('Error creando trabajo:', err));
@@ -621,9 +651,17 @@ export default function PresupuestoScreen({ currentUser }) {
       return;
     }
 
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+
     fetch(`http://localhost:8080/api/presupuestos/aceptar/${targetId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify(datosPresupuesto)
     })
       .then((res) => res.json())
@@ -1017,12 +1055,20 @@ export default function PresupuestoScreen({ currentUser }) {
         visible={modalVisible}
         onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
         onSave={(p) => {
+          // Headers de autenticación
+          const authHeaders = {
+            'Content-Type': 'application/json',
+            'X-Empresa-Id': currentUser?.empresa_id || '1',
+            'X-User-Id': currentUser?.id || 'admin',
+            'X-Role': currentUser?.role || 'administrador'
+          };
+
           // Si estamos editando un presupuesto existente, actualizarlo vía API
           if (editingInitialValues && (editingInitialValues.id || editingInitialValues._id)) {
             const presId = editingInitialValues.id || editingInitialValues._id;
             fetch(`http://localhost:8080/api/presupuestos/${presId}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders,
               body: JSON.stringify({
                 numero_presupuesto: p.numero || editingInitialValues.numero_presupuesto,
                 referencia: p.referencia || editingInitialValues.referencia,
