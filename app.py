@@ -3559,6 +3559,78 @@ def delete_pedido(pedido_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/pedidos/migrate-estado', methods=['POST'])
+def migrate_estados():
+    """Migra todos los pedidos de un estado a otro"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        
+        # Validar permisos
+        user_role = str(request_user.get('rol') or '').strip().lower()
+        if user_role not in ('administrador', 'root', 'admin'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        
+        empresa_id = int(request_user.get('empresa_id') or 0)
+        data = request.get_json() or {}
+        
+        source_estado_id = data.get('source_estado_id')
+        destination_estado_value = data.get('destination_estado_value')
+        
+        if not source_estado_id or not destination_estado_value:
+            return jsonify({'error': 'source_estado_id y destination_estado_value son requeridos'}), 400
+        
+        # Validar que destination_estado_value sea válido
+        available_items = get_estados_pedido_disponibles()
+        disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
+        dest_slug = slugify_estado(destination_estado_value)
+        
+        if dest_slug not in disponibles:
+            return jsonify({'error': 'Estado destino no es válido'}), 400
+        
+        # Obtener el estado destino normalizado
+        estado_destino_label = disponibles.get(dest_slug) or destination_estado_value
+        
+        # Obtener el estado fuente de la base de datos de configuración
+        settings_col = get_empresa_collection('settings', empresa_id)
+        source_estado_doc = settings_col.find_one({
+            'collection': 'estados_pedido',
+            '_id': ObjectId(source_estado_id)
+        })
+        
+        if not source_estado_doc:
+            return jsonify({'error': 'Estado fuente no encontrado'}), 404
+        
+        estado_fuente_label = source_estado_doc.get('valor')
+        
+        # Buscar todos los pedidos con el estado fuente y actualizarlos
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        result = pedidos_col.update_many(
+            {
+                'empresa_id': empresa_id,
+                'estado': estado_fuente_label
+            },
+            {
+                '$set': {
+                    'estado': estado_destino_label,
+                    'fecha_finalizacion': None  # Resetear fecha de finalización
+                }
+            }
+        )
+        
+        migrated_count = result.modified_count
+        
+        return jsonify({
+            'success': True,
+            'migrated_count': migrated_count,
+            'message': f'Se migraron {migrated_count} pedido(s) de "{estado_fuente_label}" a "{estado_destino_label}"'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/produccion/enviar', methods=['POST'])
 def enviar_trabajo_produccion():
     """Envía un trabajo a producción en una máquina"""

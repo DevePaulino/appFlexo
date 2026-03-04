@@ -722,6 +722,10 @@ export default function ConfigScreen({ route, currentUser }) {
   const [recargaCreditos, setRecargaCreditos] = useState('50');
   const [recargaPaymentMethod, setRecargaPaymentMethod] = useState('tarjeta');
   const [procesandoRecarga, setProcesandoRecarga] = useState(false);
+  const [migrarEstadoModal, setMigrarEstadoModal] = useState(false);
+  const [estadoAMigrar, setEstadoAMigrar] = useState(null);
+  const [estadoDestinoMigracion, setEstadoDestinoMigracion] = useState(null);
+  const [migrandoEstados, setMigrandoEstados] = useState(false);
 
   const section = String(route?.params?.section || 'all');
   const showUsuariosRoles = section === 'all' || section === 'usuarios-roles';
@@ -1506,10 +1510,13 @@ export default function ConfigScreen({ route, currentUser }) {
         const data = await response.json().catch(() => ({ in_use: false, count: 0 }));
         
         if (data.in_use) {
-          Alert.alert(
-            'No se puede eliminar',
-            `Este estado está siendo utilizado en ${data.count} pedido(s). Elimina o cambia los pedidos antes de borrar el estado.`
-          );
+          // En lugar de bloquear, mostrar modal para migrar
+          setEstadoAMigrar({
+            id: id,
+            valor: estadoItem.valor,
+            count: data.count
+          });
+          setMigrarEstadoModal(true);
           return;
         }
       } catch (e) {
@@ -1534,6 +1541,67 @@ export default function ConfigScreen({ route, currentUser }) {
       }
     } catch (e) {
       Alert.alert('Error', `No se pudo eliminar: ${e.message}`);
+    }
+  };
+
+  const migrarpedidosYEliminarEstado = async () => {
+    if (!estadoAMigrar || !estadoDestinoMigracion) {
+      Alert.alert('Error', 'Debes seleccionar un estado destino');
+      return;
+    }
+
+    setMigrandoEstados(true);
+
+    try {
+      // Llamar al backend para migrar pedidos
+      const response = await fetch('http://localhost:8080/api/pedidos/migrate-estado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_estado_id: estadoAMigrar.id,
+          destination_estado_value: estadoDestinoMigracion.valor
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        Alert.alert('Error en migración', data.error || 'No se pudo migrar los pedidos');
+        setMigrandoEstados(false);
+        return;
+      }
+
+      const migratedCount = data.migrated_count || 0;
+
+      // Eliminar el estado
+      const deleteResponse = await fetch(`${API_URL}/${estadoAMigrar.id}`, { 
+        method: 'DELETE' 
+      });
+
+      const deleteData = await deleteResponse.json().catch(() => ({}));
+
+      if (!deleteResponse.ok) {
+        Alert.alert('Error', deleteData.error || 'No se pudo eliminar el estado');
+        setMigrandoEstados(false);
+        return;
+      }
+
+      // Éxito - actualizar datos y cerrar modal
+      setMigrarEstadoModal(false);
+      setEstadoAMigrar(null);
+      setEstadoDestinoMigracion(null);
+
+      await cargarSettings();
+      await cargarEstadoRules();
+
+      Alert.alert(
+        'Migración completada',
+        `Se migraron exitosamente ${migratedCount} pedido(s) a "${estadoDestinoMigracion.valor}" y se eliminó el estado.`
+      );
+    } catch (e) {
+      Alert.alert('Error', `No se pudo completar la migración: ${e.message}`);
+    } finally {
+      setMigrandoEstados(false);
     }
   };
 
@@ -2304,6 +2372,58 @@ export default function ConfigScreen({ route, currentUser }) {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={iniciarRecargaCheckout} disabled={procesandoRecarga}>
                 <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{procesandoRecarga ? 'Procesando...' : 'Ir al pago'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={migrarEstadoModal} transparent animationType="fade" onRequestClose={() => setMigrarEstadoModal(false)}>
+        <View style={styles.usersModalBackdrop}>
+          <View style={styles.usersModalCard}>
+            <Text style={styles.usersFormTitle}>Migrar pedidos</Text>
+            {estadoAMigrar && (
+              <Text style={styles.muted}>
+                Se migrarán {estadoAMigrar.count} pedido(s) del estado "{estadoAMigrar.valor}" a otro estado.
+              </Text>
+            )}
+
+            <Text style={styles.usersFieldLabel}>Selecciona el estado destino *</Text>
+            <ScrollView style={styles.estadoSelectContainer} nestedScrollEnabled>
+              {(settings.estados_pedido || [])
+                .filter((estado) => estado.id !== estadoAMigrar?.id)
+                .map((estado) => {
+                  const isSelected = estadoDestinoMigracion?.id === estado.id;
+                  return (
+                    <TouchableOpacity
+                      key={`migrar-estado-${estado.id}`}
+                      style={[styles.selectChip, isSelected && styles.selectChipActive]}
+                      onPress={() => setEstadoDestinoMigracion(estado)}
+                    >
+                      <Text style={[styles.selectChipText, isSelected && styles.selectChipTextActive]}>
+                        {estado.valor}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
+
+            <View style={styles.usersFormActions}>
+              <TouchableOpacity
+                style={styles.usersBtn}
+                onPress={() => setMigrarEstadoModal(false)}
+                disabled={migrandoEstados}
+              >
+                <Text style={styles.usersBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.usersBtn, styles.usersBtnPrimary]}
+                onPress={migrarpedidosYEliminarEstado}
+                disabled={!estadoDestinoMigracion || migrandoEstados}
+              >
+                <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>
+                  {migrandoEstados ? 'Migrando...' : 'Migrar y eliminar'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
