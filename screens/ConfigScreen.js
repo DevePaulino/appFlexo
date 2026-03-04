@@ -1087,27 +1087,34 @@ export default function ConfigScreen({ route, currentUser }) {
     || currentUserPermissionValue === true
     || rolePermissionValue === true
   );
+  // Sincronizar PFP_SELECTED_ROLE con el rol del usuario actual para que usePermission siempre use el rol correcto
+  useEffect(() => {
+    if (currentUserRole && typeof window !== 'undefined' && window.localStorage) {
+      const stored = window.localStorage.getItem('PFP_SELECTED_ROLE');
+      if (stored !== currentUserRole) {
+        window.localStorage.setItem('PFP_SELECTED_ROLE', currentUserRole);
+        if (typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: currentUserRole }));
+        }
+      }
+    }
+  }, [currentUserRole]);
+
   // Usar permiso dinámico desde el backend
   const puedeEditarSessionTimeout = usePermission('manage_app_settings');
   const puedeEditarRolesPermisosFromHook = usePermission('manage_roles_permissions');
-  
+
   // Estado local para reflejar cambios inmediatos cuando el usuario se quita permisos a si mismo
   const [puedeEditarRolesPermisosLocal, setPuedeEditarRolesPermisosLocal] = useState(puedeEditarRolesPermisosFromHook);
-  
+
   useEffect(() => {
     setPuedeEditarRolesPermisosLocal(puedeEditarRolesPermisosFromHook);
   }, [puedeEditarRolesPermisosFromHook]);
-  
-  // Actualizar cuando el rol del usuario cambia para reflejar los permisos del nuevo rol
-  useEffect(() => {
-    if (currentUserRole && rolePermissions) {
-      const rolePerms = rolePermissions[currentUserRole] || {};
-      const hasPermission = !!rolePerms.manage_roles_permissions;
-      setPuedeEditarRolesPermisosLocal(hasPermission);
-    }
-  }, [currentUserRole, rolePermissions]);
-  
-  const puedeEditarRolesPermisos = puedeEditarRolesPermisosLocal;
+
+  // Fallback directo: root y administrador siempre pueden editar (la columna Administrador sigue bloqueada en la UI)
+  const puedeEditarRolesPermisos = puedeEditarRolesPermisosLocal
+    || currentUserRole === 'root'
+    || currentUserRole === 'administrador';
 
   // Build availableRoles from settings (hide only internal roles in UI lists)
   const availableRoles = (settings.roles || [])
@@ -1546,14 +1553,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const estadoItem = (settings.estados_pedido || []).find((item) => item.id === id);
       const estadoKey = slugifyEstado(String(estadoItem?.valor || ''));
       const estadosProtegidos = new Set([
-        'diseno',
-        'pendiente-de-aprobacion',
-        'pendiente-de-cliche',
-        'pendiente-de-impresion',
-        'pendiente-post-impresion',
-        'finalizado',
-        'parado',
-        'cancelado',
+        'en-diseno',
       ]);
       
       if (estadosProtegidos.has(estadoKey)) {
@@ -1586,6 +1586,9 @@ export default function ConfigScreen({ route, currentUser }) {
       const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (response.status === 404) {
+          await cargarSettings();
+        }
         Alert.alert('Error', data.error || 'No se pudo eliminar');
         return;
       }
@@ -1913,14 +1916,7 @@ export default function ConfigScreen({ route, currentUser }) {
       : itemsRaw;
     const rolesProtegidos = new Set(['administrador']);
     const estadosProtegidos = new Set([
-      'diseno',
-      'pendiente-de-aprobacion',
-      'pendiente-de-cliche',
-      'pendiente-de-impresion',
-      'pendiente-post-impresion',
-      'finalizado',
-      'parado',
-      'cancelado',
+      'en-diseno',
     ]);
     return (
       <View key={categoryKey} style={[styles.section, sectionStyle]}>

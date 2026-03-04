@@ -746,8 +746,8 @@ export default function App() {
   const handleRoleChange = async (nextRole) => {
     try {
       if (!nextRole) return;
-      if (!authUser) return;
-      const nextUser = { ...(authUser || {}), rol: nextRole };
+      const baseUser = authUser || { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 };
+      const nextUser = { ...baseUser, rol: nextRole };
       setAuthUser(nextUser);
       try {
         await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));

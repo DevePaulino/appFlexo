@@ -228,14 +228,7 @@ ROLE_LABELS = {
 PROTECTED_ROLE_ORDER = ['administrador']
 PROTECTED_ROLE_KEYS = {'administrador'}
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
-    'diseno',
-    'pendiente-de-aprobacion',
-    'pendiente-de-cliche',
-    'pendiente-de-impresion',
-    'pendiente-post-impresion',
-    'finalizado',
-    'parado',
-    'cancelado',
+    'en-diseno',
 }
 
 # Ensure minimum users exist at startup (call after helpers are defined)
@@ -339,23 +332,16 @@ ROLE_PERMISSIONS_DEFAULT = {
 
 # Defaults for pedido states and rules used when DB has no config
 ESTADOS_PEDIDO_DEFAULT = [
-    {'valor': 'Diseño', 'label': 'Diseño'},
-    {'valor': 'Pendiente de Aprobación', 'label': 'Pendiente de Aprobación'},
-    {'valor': 'Pendiente de Cliché', 'label': 'Pendiente de Cliché'},
-    {'valor': 'Pendiente de Impresión', 'label': 'Pendiente de Impresión'},
-    {'valor': 'Pendiente Post-Impresión', 'label': 'Pendiente Post-Impresión'},
-    {'valor': 'Finalizado', 'label': 'Finalizado'},
-    {'valor': 'Parado', 'label': 'Parado'},
-    {'valor': 'Cancelado', 'label': 'Cancelado'},
+    {'valor': 'En Diseño', 'label': 'En Diseño'},
 ]
 
 ESTADOS_RULES_DEFAULT = {
-    'bloqueados_produccion': ['cancelado', 'parado', 'finalizado'],
-    'en_cola_produccion': ['pendiente-de-impresion', 'pendiente-post-impresion'],
-    'preimpresion': ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'],
-    'estados_finalizados': ['finalizado'],
-    'ocultar_timeline': ['parado', 'cancelado'],
-    'ocultar_grafica': ['parado', 'cancelado', 'finalizado'],
+    'bloqueados_produccion': [],
+    'en_cola_produccion': [],
+    'preimpresion': ['en-diseno'],
+    'estados_finalizados': [],
+    'ocultar_timeline': [],
+    'ocultar_grafica': [],
 }
 
 FREE_SIGNUP_CREDITS = 50
@@ -674,9 +660,14 @@ def can_role_permission(role_key, permission_key):
             return True
 
         permissions = get_role_permissions()
-        # Normalizar clave de rol
         role = str(role_key).strip()
+        # Buscar primero con el nombre original, luego slugificado
         role_perms = permissions.get(role)
+        if role_perms is None:
+            role_perms = permissions.get(slugify_estado(role))
+        # Si no está en la matriz de DB, buscar en los defaults
+        if role_perms is None:
+            role_perms = ROLE_PERMISSIONS_DEFAULT.get(role) or ROLE_PERMISSIONS_DEFAULT.get(slugify_estado(role))
         if isinstance(role_perms, dict):
             return bool(role_perms.get(permission_key, False))
         return False
@@ -2130,14 +2121,12 @@ def get_settings_catalogo():
             """
             # Define all protected default values matching init_db()
             defaults_catalogo = {
-                'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
+                'roles': ['Administrador'],
                 'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
                 'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
                 'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
                 'estados_pedido': [
-                    'Diseño', 'Pendiente de Aprobación', 'Pendiente de Cliché',
-                    'Pendiente de Impresión', 'Pendiente Post-Impresión',
-                    'Finalizado', 'Parado', 'Cancelado'
+                    'En Diseño'
                 ]
             }
             
@@ -2270,7 +2259,7 @@ def api_roles_permissions():
             return jsonify({'error': 'permissions debe ser un objeto JSON'}), 400
 
         # Verificar que el usuario tiene permisos para editar
-        can_manage = verify_role_permission(request_user, 'manage_roles_permissions')
+        can_manage = can_role_permission(request_user.get('rol'), 'manage_roles_permissions')
         if not can_manage:
             return jsonify({'error': 'No tienes permisos para editar las reglas de permisos'}), 403
 
@@ -2503,7 +2492,7 @@ def check_rol_usage():
         rol_config = col_config.find_one({'_id': rol_id_obj, 'categoria': 'roles'})
         
         if not rol_config:
-            return jsonify({'error': 'Rol no encontrado'}), 404
+            return jsonify({'rol_id': rol_id, 'in_use': False, 'count': 0, 'not_found': True}), 200
         
         rol_valor_original = rol_config.get('valor', '')
         # Normalizar el valor para comparación
