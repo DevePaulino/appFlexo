@@ -19,7 +19,7 @@ for old_val, new_val in updates:
     try:
         result = coll.update_many(
             {'categoria': 'roles', 'valor': old_val},
-            {'$set': {'valor': new_val, 'value': new_val, 'label': new_val}}
+            {'$set': {'valor': new_val, 'label': new_val}}
         )
         if result.modified_count > 0:
             print(f"✓ Updated {result.modified_count} role(s): '{old_val}' → '{new_val}'")

@@ -11,7 +11,7 @@ update_doc = {'$set': {
     'categoria': 'roles',
     'valor': 'root',
     'label': 'Root',
-    'order': 0,
+    'orden': 0,
     'activo': True,
     'empresa_id': 0,
     'internal': True

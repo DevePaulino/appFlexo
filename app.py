@@ -339,14 +339,14 @@ ROLE_PERMISSIONS_DEFAULT = {
 
 # Defaults for pedido states and rules used when DB has no config
 ESTADOS_PEDIDO_DEFAULT = [
-    {'value': 'diseno', 'label': 'Diseño'},
-    {'value': 'pendiente-de-aprobacion', 'label': 'Pendiente de Aprobación'},
-    {'value': 'pendiente-de-cliche', 'label': 'Pendiente de Cliché'},
-    {'value': 'pendiente-de-impresion', 'label': 'Pendiente de Impresión'},
-    {'value': 'pendiente-post-impresion', 'label': 'Pendiente Post-Impresión'},
-    {'value': 'finalizado', 'label': 'Finalizado'},
-    {'value': 'parado', 'label': 'Parado'},
-    {'value': 'cancelado', 'label': 'Cancelado'},
+    {'valor': 'Diseño', 'label': 'Diseño'},
+    {'valor': 'Pendiente de Aprobación', 'label': 'Pendiente de Aprobación'},
+    {'valor': 'Pendiente de Cliché', 'label': 'Pendiente de Cliché'},
+    {'valor': 'Pendiente de Impresión', 'label': 'Pendiente de Impresión'},
+    {'valor': 'Pendiente Post-Impresión', 'label': 'Pendiente Post-Impresión'},
+    {'valor': 'Finalizado', 'label': 'Finalizado'},
+    {'valor': 'Parado', 'label': 'Parado'},
+    {'valor': 'Cancelado', 'label': 'Cancelado'},
 ]
 
 ESTADOS_RULES_DEFAULT = {
@@ -1076,17 +1076,17 @@ def get_estados_pedido_disponibles():
     used = set()
     for row in rows:
         label = (row.get('valor') or '').strip()
-        value = slugify_estado(label)
-        if not label or not value or value in used:
+        valor_slug = slugify_estado(label)
+        if not label or not valor_slug or valor_slug in used:
             continue
-        used.add(value)
-        parsed.append({'value': value, 'label': label})
+        used.add(valor_slug)
+        parsed.append({'valor': label, 'label': label})
     return parsed if parsed else ESTADOS_PEDIDO_DEFAULT
 
 
 def infer_estados_rules(available_states):
-    values = {item['value'] for item in available_states}
-    labels = {item['value']: (item.get('label') or '').lower() for item in available_states}
+    values = {item['valor'] for item in available_states}
+    labels = {item['valor']: (item.get('label') or '').lower() for item in available_states}
 
     def find_by_keywords(words):
         matches = []
@@ -1126,7 +1126,7 @@ def infer_estados_rules(available_states):
 
 def get_estados_pedido_rules():
     available_states = get_estados_pedido_disponibles()
-    allowed_values = {item['value'] for item in available_states}
+    allowed_values = {item['valor'] for item in available_states}
     col = get_empresa_collection('config_general', 0)
     doc = col.find_one({'clave': 'estados_pedido_rules'})
     stored = {}
@@ -2815,7 +2815,7 @@ def aceptar_presupuesto(trabajo_id):
                 'datos_presupuesto': datos_presupuesto
             }
             try:
-                available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
                 default_label = available.get('diseno') or 'Diseño'
             except Exception:
                 default_label = 'Diseño'
@@ -2951,7 +2951,7 @@ def crear_pedido_desde_erp():
         
         # Establecer estado del pedido
         try:
-            available_states = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            available_states = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
             requested_estado = (data.get('estado') or 'diseno').lower()
             estado = available_states.get(requested_estado) or available_states.get('diseno') or 'Diseño'
         except Exception:
@@ -3171,7 +3171,7 @@ def update_presupuesto(presupuesto_id):
                         'datos_presupuesto': pres_doc.get('datos_json')
                     }
                     try:
-                        available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                        available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
                         default_label = available.get('diseno') or 'Diseño'
                     except Exception:
                         default_label = 'Diseño'
@@ -3263,7 +3263,7 @@ def crear_presupuesto():
                     'datos_presupuesto': datos_json
                 }
                 try:
-                    available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                    available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
                     default_label = available.get('diseno') or 'Diseño'
                 except Exception:
                     default_label = 'Diseño'
@@ -3447,7 +3447,7 @@ def crear_pedido():
         }
         # Establecer estado por defecto ('Diseño') usando las etiquetas configuradas
         try:
-            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
             default_label = available.get('diseno') or 'Diseño'
         except Exception:
             default_label = 'Diseño'
@@ -3487,7 +3487,7 @@ def update_pedido(pedido_id):
             if not raw_estado:
                 return jsonify({'error': 'estado vacío'}), 400
             nuevo_estado = slugify_estado(raw_estado)
-            disponibles = {item['value'] for item in get_estados_pedido_disponibles()}
+            disponibles = {item['valor'] for item in get_estados_pedido_disponibles()}
             if nuevo_estado not in disponibles:
                 return jsonify({'error': 'Estado no válido'}), 400
 
@@ -3508,7 +3508,7 @@ def update_pedido(pedido_id):
                 return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
 
             # Guardar el estado en formato de label (mantener consistencia con datos existentes)
-            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles()}
             estado_label = available.get(nuevo_estado) or nuevo_estado
             update['estado'] = estado_label
 
