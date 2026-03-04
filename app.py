@@ -4238,7 +4238,10 @@ def create_trabajo():
             'created_at': datetime.utcnow().isoformat()
         }
         res = col.insert_one(nuevo)
-        return jsonify({'success': True, 'trabajo_id': str(res.inserted_id)}), 201
+        trabajo_id = str(res.inserted_id)
+        # Asegurar que el documento tiene un campo trabajo_id que coincida con _id
+        col.update_one({'_id': res.inserted_id}, {'$set': {'trabajo_id': trabajo_id}})
+        return jsonify({'success': True, 'trabajo_id': trabajo_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
