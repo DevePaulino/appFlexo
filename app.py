@@ -1141,13 +1141,44 @@ def get_maquinas():
             return auth_error
         empresa_id = int(request_user.get('empresa_id') or 0)
         col = get_empresa_collection('maquinas', empresa_id)
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         maquinas = list(col.find({'empresa_id': empresa_id}))
+        # Agregar trabajos_en_cola para cada máquina
+        for m in maquinas:
+            maquina_id = m.get('id')
+            trabajos_en_cola = orden_col.count_documents({'maquina_id': maquina_id, 'empresa_id': empresa_id})
+            m['trabajos_en_cola'] = trabajos_en_cola
         maquinas = [fix_id(m) for m in maquinas]
         return jsonify({'maquinas': maquinas}), 200
     except Exception as e:
         tb = _traceback.format_exc()
-        print('ERROR in enviar_trabajo_produccion:\n', tb)
+        print('ERROR in get_maquinas:\n', tb)
         return jsonify({'error': str(e), 'trace': tb}), 500
+
+
+@app.route('/api/maquinas', methods=['POST'])
+def create_maquina():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = int(request_user.get('empresa_id') or 0)
+
+        data = request.get_json()
+        nombre = data.get('nombre')
+        if not nombre:
+            return jsonify({'error': 'Nombre requerido'}), 400
+
+        anio_fabricacion = data.get('anio_fabricacion')
+        tipo_maquina = data.get('tipo_maquina')
+        numero_colores = data.get('numero_colores')
+        ancho_max_material_mm = data.get('ancho_max_material_mm')
+        ancho_max_impresion_mm = data.get('ancho_max_impresion_mm')
+        repeticion_min_mm = data.get('repeticion_min_mm')
+        repeticion_max_mm = data.get('repeticion_max_mm')
+        velocidad_max_maquina_mmin = data.get('velocidad_max_maquina_mmin')
+        velocidad_max_impresion_mmin = data.get('velocidad_max_impresion_mmin')
+        espesor_planchas_mm = data.get('espesor_planchas_mm')
         sistemas_secado = data.get('sistemas_secado')
         estado = data.get('estado') or 'Activa'
         col = get_empresa_collection('maquinas', empresa_id)
@@ -1177,7 +1208,7 @@ def get_maquinas():
         col.insert_one(doc)
         return jsonify({'success': True}), 200
     except Exception as e:
-        print('REORDER ERROR:\n', _traceback.format_exc())
+        print('CREATE MAQUINA ERROR:\n', _traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/maquinas/<int:maquina_id>', methods=['PUT'])

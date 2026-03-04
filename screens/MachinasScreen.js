@@ -190,6 +190,10 @@ const styles = StyleSheet.create({
   deleteBtn: {
     backgroundColor: '#D32F2F',
   },
+  actionBtnDisabled: {
+    backgroundColor: '#A8A8AA',
+    opacity: 0.6,
+  },
   actionBtnText: {
     fontSize: 11,
     fontWeight: '600',
@@ -637,7 +641,11 @@ export default function MachinasScreen({ currentUser }) {
                 <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(maquina)}>
                   <Text style={styles.actionBtnText}>Ver</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleEliminarMaquina(maquina)}>
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.deleteBtn, maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled]} 
+                  disabled={maquina.trabajos_en_cola > 0}
+                  onPress={() => handleEliminarMaquina(maquina)}
+                >
                   <Text style={styles.actionBtnText}>Eliminar</Text>
                 </TouchableOpacity>
               </View>
