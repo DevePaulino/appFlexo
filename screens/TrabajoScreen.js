@@ -799,8 +799,12 @@ export default function TrabajoScreen({ currentUser }) {
       .then((res) => res.json())
           .then((data) => {
         if (data && data.pedidos) {
-          // Mantener los objetos de pedido completos para que la UI trabaje únicamente con `pedido`
-          setTrabajos(Array.isArray(data.pedidos) ? data.pedidos : []);
+          // Normalizar estados a slugificado para consistencia
+          const pedidosNormalizados = (Array.isArray(data.pedidos) ? data.pedidos : []).map(p => ({
+            ...p,
+            estado: slugifyEstado(p.estado || '')
+          }));
+          setTrabajos(pedidosNormalizados);
         } else {
           setTrabajos([]);
         }
