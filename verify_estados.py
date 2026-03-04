@@ -1,27 +1,27 @@
+#!/usr/bin/env python3
 from pymongo import MongoClient
+from os import environ
 
-client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+client = MongoClient(environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforge'))
+db = client['printforge']
+col = db['config_opciones']
 
-print("=== TRABAJOS POR MAQUINA ===\n")
+total = col.count_documents({'categoria': 'estados_pedido'})
+print(f"Total: {total}")
 
-maquinas = list(db['maquinas'].find({'empresa_id': 1}))
-for maq in maquinas:
-    maq_name = maq.get('nombre')
-    maq_oid_str = str(maq.get('_id'))
-    
-    trajs = list(db['pedido_orden'].find({'maquina_id': maq_oid_str, 'empresa_id': 1}))
-    contador = 0
-    print(f"{maq_name}:")
-    for t in trajs:
-        trabajo_id = t.get('trabajo_id')
-        pedido = db['pedidos'].find_one({'trabajo_id': trabajo_id})
-        if pedido:
-            estado = pedido.get('estado', 'N/A')
-            es_prod = estado not in ['Diseño','diseno','Pendiente de Aprobación','Pendiente de Cliché','parado','Cancelado','Finalizado']
-            if es_prod:
-                contador += 1
-            marker = "✓" if es_prod else "✗"
-            print(f"  {marker} {trabajo_id}: {estado}")
-    
-    print(f"  Total: {contador}\n")
+todos = list(col.find({'categoria': 'estados_pedido'}).sort('orden', 1))
+print("\nDocumentos:")
+for doc in todos:
+    print(f"  valor='{doc.get('valor')}' orden={doc.get('orden')} id={str(doc['_id'])[:12]}")
+
+# Check for duplicates
+from collections import defaultdict
+duplicados = defaultdict(list)
+for doc in todos:
+    valor = doc.get('valor')
+    duplicados[valor].append(str(doc['_id']))
+
+print("\n\nAnálisis de duplicados:")
+for valor, ids in sorted(duplicados.items()):
+    status = f"DUPLICADO x{len(ids)}" if len(ids) > 1 else "OK"
+    print(f"  {valor}: {status}")

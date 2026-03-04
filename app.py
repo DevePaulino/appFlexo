@@ -2136,17 +2136,16 @@ def get_settings_catalogo():
                 ('cancelado', 'Cancelado', 8),
             ]
             
-            # Check which ones are completely missing using the typ_slug field
+            # Check which ones are completely missing using the valor field
             for slug, label, orden in defaults_estados:
-                # Search by tipo_slug for consistency with init_db()
+                # Search by valor to match actual schema
                 if col.count_documents({
                     'categoria': 'estados_pedido',
-                    'tipo_slug': slug
+                    'valor': label
                 }) == 0:
                     # Only insert if doesn't exist - never create duplicates
                     col.insert_one({
                         'categoria': 'estados_pedido',
-                        'tipo_slug': slug,
                         'valor': label,
                         'label': label,
                         'orden': orden,
