@@ -2733,25 +2733,41 @@ def aceptar_presupuesto(trabajo_id):
 
         datos_presupuesto = merged_dj or {}
 
-        doc_pedido = {
-            'empresa_id': empresa_id,
-            'trabajo_id': pres.get('trabajo_id'),
-            'numero_pedido': numero_pedido,
-            'referencia': pres.get('referencia') or datos_presupuesto.get('referencia'),
-            'fecha_pedido': datetime.now().isoformat(),
-            'datos_presupuesto': datos_presupuesto
-        }
-        try:
-            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
-            default_label = available.get('diseno') or 'Diseño'
-        except Exception:
-            default_label = 'Diseño'
-        doc_pedido['estado'] = default_label
-        doc_pedido['fecha_finalizacion'] = None
-        result = pedidos_col.insert_one(doc_pedido)
-        pedido_id = str(result.inserted_id)
-        # attach inserted id to returned doc for client convenience
-        doc_pedido['_id'] = pedido_id
+        # Verificar si ya existe un pedido para este trabajo_id
+        existing_pedido = pedidos_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+        
+        if existing_pedido:
+            # El pedido ya existe - actualizar campos vacíos
+            pedido_id = str(existing_pedido.get('_id'))
+            # Solo actualizar si falta numero_pedido
+            if not existing_pedido.get('numero_pedido'):
+                pedidos_col.update_one(
+                    {'_id': existing_pedido.get('_id')},
+                    {'$set': {'numero_pedido': numero_pedido, 'datos_presupuesto': datos_presupuesto}}
+                )
+            doc_pedido = existing_pedido
+            doc_pedido['_id'] = pedido_id
+        else:
+            # Crear nuevo pedido
+            doc_pedido = {
+                'empresa_id': empresa_id,
+                'trabajo_id': pres.get('trabajo_id'),
+                'numero_pedido': numero_pedido,
+                'referencia': pres.get('referencia') or datos_presupuesto.get('referencia'),
+                'fecha_pedido': datetime.now().isoformat(),
+                'datos_presupuesto': datos_presupuesto
+            }
+            try:
+                available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
+                default_label = available.get('diseno') or 'Diseño'
+            except Exception:
+                default_label = 'Diseño'
+            doc_pedido['estado'] = default_label
+            doc_pedido['fecha_finalizacion'] = None
+            result = pedidos_col.insert_one(doc_pedido)
+            pedido_id = str(result.inserted_id)
+            # attach inserted id to returned doc for client convenience
+            doc_pedido['_id'] = pedido_id
 
         # Actualizar presupuesto: aprobado, pedido_id, fecha_aprobacion
         try:
