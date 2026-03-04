@@ -2349,6 +2349,7 @@ def update_settings_catalogo_item(item_id):
 
         data = request.get_json() or {}
         nuevo_valor = (data.get('valor') or '').strip()
+        nuevo_label = (data.get('label') or nuevo_valor).strip()  # Use label from request or fallback to valor
         # Normalize role labels on update as well
         if nuevo_valor and 'roles' in (data.get('categoria') or ''):
             # when caller supplies categoria, honor it; otherwise we'll detect below from doc
@@ -2396,8 +2397,8 @@ def update_settings_catalogo_item(item_id):
             for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}}):
                 if slugify_estado(row.get('valor')) == slug_nuevo:
                     return jsonify({'error': 'Ya existe un valor equivalente en esa categoría'}), 409
-        # Actualizar valor
-        col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor}})
+        # Actualizar valor y label
+        col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor, 'label': nuevo_label}})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
         try:
             log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor, 'empresa_id': empresa_id})

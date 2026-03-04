@@ -1565,7 +1565,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valor: nuevo }),
+        body: JSON.stringify({ valor: nuevo, label: nuevo }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -1842,7 +1842,7 @@ export default function ConfigScreen({ route, currentUser }) {
                       returnKeyType="done"
                     />
                   ) : (
-                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : item.valor}</Text>
+                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
                   )}
                   <TouchableOpacity
                     style={[styles.chipEdit, (esRolProtegido || esEstadoProtegido) && styles.chipEditDisabled]}
