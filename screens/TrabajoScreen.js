@@ -544,14 +544,7 @@ export default function TrabajoScreen({ currentUser }) {
   const ESTADO_FINALIZADO_COLOR = '#1F9D55';
 
   const ESTADOS_DEFAULT = [
-    { value: 'diseno', label: 'Diseño' },
-    { value: 'pendiente-de-aprobacion', label: 'Pendiente de Aprobación' },
-    { value: 'pendiente-de-cliche', label: 'Pendiente de Cliché' },
-    { value: 'pendiente-de-impresion', label: 'Pendiente de Impresión' },
-    { value: 'pendiente-post-impresion', label: 'Pendiente Post-Impresión' },
-    { value: 'finalizado', label: 'Finalizado' },
-    { value: 'parado', label: 'Parado' },
-    { value: 'cancelado', label: 'Cancelado' },
+    { value: 'en-diseno', label: 'En Diseño' },
   ];
 
   const ESTADOS_COLORS = [
@@ -560,7 +553,8 @@ export default function TrabajoScreen({ currentUser }) {
 
   // Mapa fijo de estado → color para consistencia
   const ESTADO_COLOR_MAP = {
-    'diseno': '#1976D2',
+    'en-diseno': '#1976D2',
+    'diseno': '#1976D2', // compat con pedidos antiguos
     'pendiente-de-aprobacion': '#F57C00',
     'pendiente-de-cliche': '#C2185B',
     'pendiente-de-impresion': '#7B1FA2',
@@ -596,7 +590,7 @@ export default function TrabajoScreen({ currentUser }) {
   const [estadoRules, setEstadoRules] = useState({
     bloqueados_produccion: ['cancelado', 'parado', 'finalizado'],
     en_cola_produccion: ['pendiente-de-impresion', 'pendiente-post-impresion'],
-    preimpresion: ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'],
+    preimpresion: ['en-diseno'],
     estados_finalizados: ['finalizado'],
     ocultar_timeline: ['parado', 'cancelado'],
     ocultar_grafica: ['parado', 'cancelado', 'finalizado'],
@@ -676,7 +670,8 @@ export default function TrabajoScreen({ currentUser }) {
     
     // Para estados conocidos, usar estilos predefinidos
     switch (value) {
-      case 'diseno':
+      case 'en-diseno':
+      case 'diseno': // compat con pedidos antiguos
         return [styles.statusDiseno, styles.statusDisenoText];
       case 'pendiente-de-aprobacion':
         return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];

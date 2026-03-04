@@ -225,7 +225,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   const getStatusColor = (estado) => {
     const color = generateColorFromHash(estado);
     switch (estado) {
-      case 'diseno':
+      case 'en-diseno':
+      case 'diseno': // compat con pedidos antiguos
         return [styles.statusDiseno, styles.statusDisenoText];
       case 'pendiente-de-aprobacion':
         return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];

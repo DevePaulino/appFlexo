@@ -2814,7 +2814,7 @@ def aceptar_presupuesto(trabajo_id):
             }
             try:
                 available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
-                default_label = available.get('diseno') or 'Diseño'
+                default_label = next(iter(available.values()), 'En Diseño')
             except Exception:
                 default_label = 'Diseño'
             doc_pedido['estado'] = default_label

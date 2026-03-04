@@ -771,7 +771,8 @@ export default function ConfigScreen({ route, currentUser }) {
 
   // Mapa fijo de colores para estados del sistema (consistente con las otras vistas)
   const ESTADO_COLOR_MAP = {
-    'diseno': '#1976D2',
+    'en-diseno': '#1976D2',
+    'diseno': '#1976D2', // compat con pedidos antiguos
     'pendiente-de-aprobacion': '#F57C00',
     'pendiente-de-cliche': '#C2185B',
     'pendiente-de-impresion': '#7B1FA2',
