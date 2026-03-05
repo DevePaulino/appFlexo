@@ -651,7 +651,14 @@ export default function TrabajoScreen({ currentUser }) {
       .then((res) => res.json())
       .then((data) => {
         if (data && data.rules) {
-          setEstadoRules((prev) => ({ ...prev, ...data.rules }));
+          // Normalize every rule value to slug to guard against labels from older data
+          const normalized = {};
+          Object.entries(data.rules).forEach(([key, arr]) => {
+            normalized[key] = Array.isArray(arr)
+              ? [...new Set(arr.map((v) => slugifyEstado(String(v || ''))))]
+              : [];
+          });
+          setEstadoRules((prev) => ({ ...prev, ...normalized }));
         }
       })
       .catch(() => {});
@@ -671,35 +678,12 @@ export default function TrabajoScreen({ currentUser }) {
   const getStatusColor = (estado) => {
     const value = normalizarEstadoValue(estado);
     const color = getEstadoDotColor(value);
-    
-    // Para estados conocidos, usar estilos predefinidos
-    switch (value) {
-      case 'en-diseno':
-      case 'diseno': // compat con pedidos antiguos
-        return [styles.statusDiseno, styles.statusDisenoText];
-      case 'pendiente-de-aprobacion':
-        return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];
-      case 'pendiente-de-cliche':
-        return [styles.statusPendienteCliche, styles.statusPendienteClicheText];
-      case 'pendiente-de-impresion':
-        return [styles.statusPendienteImpresion, styles.statusPendienteImpresionText];
-      case 'pendiente-post-impresion':
-        return [styles.statusPendientePostImpresion, styles.statusPendientePostImpresionText];
-      case 'finalizado':
-        return [styles.statusFinalizado, styles.statusFinalizadoText];
-      case 'parado':
-        return [styles.statusParado, styles.statusParadoText];
-      case 'cancelado':
-        return [styles.statusCancelado, styles.statusCanceladoText];
-      default:
-        // Para estados nuevos, generar estilos dinámicos
-        const backgroundColor = color + '20'; // 20% opacidad (hex 33)
-        const textColor = color;
-        return [
-          { ...styles.statusBadge, backgroundColor },
-          { ...styles.statusText, color: textColor }
-        ];
-    }
+    // Dynamic approach: derive badge background from the state's color at ~20% opacity
+    const backgroundColor = color + '33'; // hex alpha 0x33 ≈ 20% opacity
+    return [
+      { ...styles.statusBadge, backgroundColor },
+      { ...styles.statusText, color }
+    ];
   };
 
   const getStatusLabel = (estado) => {

@@ -1122,39 +1122,39 @@ def get_estados_pedido_disponibles(empresa_id=None):
 
 
 def infer_estados_rules(available_states):
-    values = {item['valor'] for item in available_states}
-    labels = {item['valor']: (item.get('label') or '').lower() for item in available_states}
+    # Work exclusively with slugs so that rules are consistent with the frontend
+    slug_set = {slugify_estado(item['valor']) for item in available_states}
+    # Map slug → lowercased label for keyword matching
+    slug_labels = {slugify_estado(item['valor']): (item.get('label') or item.get('valor') or '').lower()
+                   for item in available_states}
 
     def find_by_keywords(words):
-        matches = []
-        for value, label in labels.items():
-            if any(word in label for word in words):
-                matches.append(value)
-        return matches
+        return [slug for slug, label in slug_labels.items()
+                if any(word in label for word in words)]
 
     inferred = {
         'bloqueados_produccion': list(dict.fromkeys(
-            [v for v in ['cancelado', 'parado', 'finalizado'] if v in values] +
+            [v for v in ['cancelado', 'parado', 'finalizado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad'])
         )),
         'en_cola_produccion': list(dict.fromkeys(
-            [v for v in ['pendiente-de-impresion', 'pendiente-post-impresion'] if v in values] +
+            [v for v in ['pendiente-de-impresion', 'pendiente-post-impresion'] if v in slug_set] +
             find_by_keywords(['impresion', 'impresión'])
         )),
         'preimpresion': list(dict.fromkeys(
-            [v for v in ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'] if v in values] +
+            [v for v in ['en-diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'] if v in slug_set] +
             find_by_keywords(['diseno', 'diseño', 'aprob', 'cliche', 'clich'])
         )),
         'estados_finalizados': list(dict.fromkeys(
-            [v for v in ['finalizado'] if v in values] +
+            [v for v in ['finalizado'] if v in slug_set] +
             find_by_keywords(['final'])
         )),
         'ocultar_timeline': list(dict.fromkeys(
-            [v for v in ['parado', 'cancelado'] if v in values] +
+            [v for v in ['parado', 'cancelado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad'])
         )),
         'ocultar_grafica': list(dict.fromkeys(
-            [v for v in ['parado', 'cancelado', 'finalizado'] if v in values] +
+            [v for v in ['parado', 'cancelado', 'finalizado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad', 'final'])
         )),
     }
@@ -1163,7 +1163,8 @@ def infer_estados_rules(available_states):
 
 def get_estados_pedido_rules(empresa_id=None):
     available_states = get_estados_pedido_disponibles(empresa_id)
-    allowed_values = {item['valor'] for item in available_states}
+    # Use slugs as the canonical identifier (consistent with frontend)
+    allowed_slugs = {slugify_estado(item['valor']) for item in available_states}
     empresa_id = normalize_empresa_id(empresa_id)
     col = get_empresa_collection('config_general', empresa_id)
     doc = col.find_one({'clave': 'estados_pedido_rules', 'empresa_id': empresa_id})
@@ -1182,12 +1183,12 @@ def get_estados_pedido_rules(empresa_id=None):
         normalized = []
         for val in candidate:
             slug = slugify_estado(str(val))
-            if slug and slug in allowed_values and slug not in normalized:
+            if slug and slug in allowed_slugs and slug not in normalized:
                 normalized.append(slug)
         if not normalized:
-            normalized = [v for v in inferred.get(key, []) if v in allowed_values]
+            normalized = [v for v in inferred.get(key, []) if v in allowed_slugs]
         if not normalized:
-            normalized = [v for v in default_vals if v in allowed_values]
+            normalized = [v for v in default_vals if v in allowed_slugs]
         resolved[key] = normalized
     return {'rules': resolved, 'available_states': available_states}
 
