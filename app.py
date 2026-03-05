@@ -143,7 +143,7 @@ def ensure_default_users():
                 'email': root_email,
                 'rol': 'root',
                 'password_hash': hash_password(root_pwd),
-                'empresa_id': 0,
+                'empresa_id': '0',
                 'empresa_nombre': 'System',
                 'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
             }
@@ -158,7 +158,7 @@ def ensure_default_users():
                 'email': admin_email,
                 'rol': 'administrador',
                 'password_hash': hash_password(admin_pwd),
-                'empresa_id': int(os.environ.get('DEFAULT_ADMIN_EMPRESA_ID') or 1),
+                'empresa_id': str(os.environ.get('DEFAULT_ADMIN_EMPRESA_ID') or '1'),
                 'empresa_nombre': os.environ.get('DEFAULT_ADMIN_EMPRESA_NOMBRE') or 'Empresa 1',
                 'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
             }
@@ -185,6 +185,17 @@ def get_empresa_collection(nombre, empresa_id):
     if name in ('trabajo_orden', 'trabajo-orden', 'trabajos_orden'):
         name = 'pedido_orden'
     return mongo.db[name]
+
+
+def normalize_empresa_id(empresa_id):
+    """Normaliza empresa_id a string consistente. NUNCA hace int().
+    '0' = sistema/global (root), '1' = admin por defecto, '<ObjectId>' = empresa registrada.
+    Las empresas registradas vía /api/auth/register usan str(user._id) como empresa_id.
+    """
+    if empresa_id is None:
+        return '0'
+    s = str(empresa_id).strip()
+    return s if s and s not in ('None', 'none', 'null', '') else '0'
 
 
 def log_audit(action, request_user=None, details=None):
@@ -450,10 +461,10 @@ def is_valid_cif(value):
 
 
 def get_empresa_billing(empresa_id):
-    empresa_id = int(empresa_id or 0)
-    if empresa_id <= 0:
+    empresa_id = normalize_empresa_id(empresa_id)
+    if empresa_id == '0':
         return {
-            'empresa_id': 0,
+            'empresa_id': '0',
             'billing_model': 'creditos',
             'payment_method': None,
             'subscription_active': False,
@@ -590,7 +601,7 @@ def get_request_user():
                     'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
                     'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
                     'rol': data.get('rol') or data.get('role') or 'operario',
-                    'empresa_id': int(data.get('empresa_id') or data.get('empresa') or 1)
+                    'empresa_id': normalize_empresa_id(data.get('empresa_id') or data.get('empresa') or '1')
                 }
                 # Check for X-Role header override (for role switching without logout)
                 x_role = request.headers.get('X-Role')
@@ -602,7 +613,7 @@ def get_request_user():
                 return user
             except Exception:
                 pass
-        user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
+        user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': '1'}
         # Check for X-Role header override even in dev mode
         x_role = request.headers.get('X-Role')
         if x_role:
@@ -651,7 +662,7 @@ def get_request_user():
     return user
 
 
-def can_role_permission(role_key, permission_key):
+def can_role_permission(role_key, permission_key, empresa_id=None):
     try:
         if not role_key or not permission_key:
             return False
@@ -659,7 +670,16 @@ def can_role_permission(role_key, permission_key):
         if str(role_key).strip() == 'root':
             return True
 
-        permissions = get_role_permissions()
+        # Resolver empresa_id desde el contexto de la request si no se pasa explícitamente
+        if empresa_id is None:
+            try:
+                req_user = getattr(g, '_request_user', None)
+                if req_user:
+                    empresa_id = req_user.get('empresa_id')
+            except Exception:
+                pass
+
+        permissions = get_role_permissions(empresa_id)
         role = str(role_key).strip()
         # Buscar primero con el nombre original, luego slugificado
         role_perms = permissions.get(role)
@@ -675,17 +695,14 @@ def can_role_permission(role_key, permission_key):
         return False
 
 
-def get_role_permissions(empresa_id=0):
-    """Leer la matriz de permisos desde `config_general` (empresa 0 = global).
+def get_role_permissions(empresa_id=None):
+    """Leer la matriz de permisos desde `config_general` filtrado por empresa.
     Devuelve un dict { role_key: {permission_key: bool, ...}, ... }. Si no existe,
     devuelve `ROLE_PERMISSIONS_DEFAULT`.
     """
-    try:
-        empresa_id = int(empresa_id or 0)
-    except Exception:
-        empresa_id = 0
+    empresa_id = normalize_empresa_id(empresa_id)
     col_general = get_empresa_collection('config_general', empresa_id)
-    doc = col_general.find_one({'clave': 'role_permissions'})
+    doc = col_general.find_one({'clave': 'role_permissions', 'empresa_id': empresa_id})
     parsed = None
     if doc and doc.get('valor'):
         try:
@@ -769,14 +786,14 @@ def require_request_user():
                     'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
                     'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
                     'rol': data.get('rol') or data.get('role') or 'operario',
-                    'empresa_id': int(data.get('empresa_id') or data.get('empresa') or 1)
+                    'empresa_id': normalize_empresa_id(data.get('empresa_id') or data.get('empresa') or '1')
                 }
                 g._request_user = user
                 return user, None
             except Exception:
                 pass
         # default dev bypass
-        return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}, None
+        return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': '1'}, None
 
     # When JWT enabled, resolve via token
     user = get_request_user()
@@ -1058,9 +1075,9 @@ def normalize_legacy_json_storage(apply_changes=False):
 
 
 def get_estados_pedido_disponibles(empresa_id=None):
-    empresa_id = int(empresa_id or 0)
+    empresa_id = normalize_empresa_id(empresa_id)
     col = get_empresa_collection('config_opciones', empresa_id)
-    rows = list(col.find({'categoria': 'estados_pedido'}).sort([('orden', 1), ('_id', 1)]))
+    rows = list(col.find({'categoria': 'estados_pedido', 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
     if not rows:
         return ESTADOS_PEDIDO_DEFAULT
     parsed = []
@@ -1118,9 +1135,9 @@ def infer_estados_rules(available_states):
 def get_estados_pedido_rules(empresa_id=None):
     available_states = get_estados_pedido_disponibles(empresa_id)
     allowed_values = {item['valor'] for item in available_states}
-    empresa_id = int(empresa_id or 0)
+    empresa_id = normalize_empresa_id(empresa_id)
     col = get_empresa_collection('config_general', empresa_id)
-    doc = col.find_one({'clave': 'estados_pedido_rules'})
+    doc = col.find_one({'clave': 'estados_pedido_rules', 'empresa_id': empresa_id})
     stored = {}
     if doc and doc.get('valor'):
         try:
@@ -1169,7 +1186,7 @@ def get_maquinas():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
@@ -1237,7 +1254,7 @@ def create_maquina():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         nombre = data.get('nombre')
@@ -1292,7 +1309,7 @@ def update_maquina(maquina_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         nombre = data.get('nombre')
@@ -1369,7 +1386,7 @@ def delete_maquina(maquina_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
@@ -1415,7 +1432,7 @@ def get_clientes():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         clientes = list(col.find({'empresa_id': empresa_id}))
         clientes = [fix_id(c) for c in clientes]
@@ -1458,7 +1475,7 @@ def create_cliente():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         data = request.get_json() or {}
 
@@ -1489,7 +1506,7 @@ def update_cliente(cliente_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         try:
             oid = ObjectId(cliente_id)
@@ -1523,7 +1540,7 @@ def delete_cliente(cliente_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         # cliente_id viene como string (id), convertir a ObjectId si es posible
         try:
@@ -1558,8 +1575,48 @@ def debug_clientes_html():
 ALLOWED_SETTINGS_CATEGORIES = {'roles', 'materiales', 'acabados', 'tintas_especiales', 'estados_pedido'}
 
 
-        
-        
+def seed_empresa_defaults(empresa_id):
+    """Siembra todos los datos por defecto para una nueva empresa.
+    Es seguro llamarla varias veces (nunca inserta duplicados).
+    """
+    empresa_id = normalize_empresa_id(empresa_id)
+    col_op = get_empresa_collection('config_opciones', empresa_id)
+    col_gen = get_empresa_collection('config_general', empresa_id)
+
+    defaults_opciones = {
+        'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
+        'estados_pedido': [
+            'En Diseño', 'Pendiente de Aprobación', 'Pendiente de Cliché',
+            'Pendiente de Impresión', 'Pendiente Post-Impresión',
+            'Finalizado', 'Parado', 'Cancelado',
+        ],
+        'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
+        'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
+        'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
+    }
+    for cat, valores in defaults_opciones.items():
+        for idx, valor in enumerate(valores, start=1):
+            if not col_op.find_one({'categoria': cat, 'valor': valor, 'empresa_id': empresa_id}):
+                col_op.insert_one({
+                    'categoria': cat, 'valor': valor, 'label': valor,
+                    'orden': idx, 'empresa_id': empresa_id,
+                    'fecha_creacion': datetime.now().isoformat(),
+                })
+
+    config_gen_defaults = [
+        ('role_permissions', json.dumps(ROLE_PERMISSIONS_DEFAULT)),
+        ('modo_creacion', 'manual'),
+        ('session_timeout_minutes', str(SESSION_TIMEOUT_MINUTES_DEFAULT)),
+    ]
+    for clave, valor_cfg in config_gen_defaults:
+        if not col_gen.find_one({'clave': clave, 'empresa_id': empresa_id}):
+            col_gen.insert_one({
+                'clave': clave, 'valor': valor_cfg,
+                'empresa_id': empresa_id,
+                'fecha_creacion': datetime.now().isoformat(),
+            })
+
+
 @app.route('/api/auth/register', methods=['POST'])
 def register_public_user():
     try:
@@ -1607,27 +1664,35 @@ def register_public_user():
         }
         result = col.insert_one(doc)
         usuario_id = str(result.inserted_id)
-        # Simular empresa_id como el id del usuario creado
-        empresa_id = usuario_id
-        # Initialize default roles/options for the new company (do not include global/internal 'root')
+        empresa_id = usuario_id  # empresa_id = ObjectId del usuario fundador
+
+        # Persistir empresa_id en el documento del usuario
+        col.update_one({'_id': result.inserted_id}, {'$set': {'empresa_id': empresa_id}})
+
+        # Crear registro de empresa
         try:
-            col_opciones_empresa = get_empresa_collection('config_opciones', empresa_id)
-            default_roles = ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión']
-            for idx, role_val in enumerate(default_roles, start=1):
-                # avoid inserting duplicates (case-insensitive)
-                existing = col_opciones_empresa.find_one({'categoria': 'roles', 'valor': {'$regex': f'^{re.escape(role_val)}$', '$options': 'i'}})
-                if not existing:
-                    col_opciones_empresa.insert_one({
-                        'categoria': 'roles',
-                        'valor': role_val,
-                        'label': role_val,
-                        'orden': idx,
-                        'fecha_creacion': datetime.now().isoformat(),
-                        'empresa_id': empresa_id,
-                    })
+            mongo.db['empresas'].update_one(
+                {'empresa_id': empresa_id},
+                {'$setOnInsert': {
+                    'empresa_id': empresa_id,
+                    'nombre': empresa_nombre,
+                    'cif': empresa_cif,
+                    'admin_user_id': empresa_id,
+                    'activa': True,
+                    'plan': billing_model,
+                    'fecha_creacion': datetime.now().isoformat(),
+                }},
+                upsert=True,
+            )
         except Exception:
-            # Do not fail registration if roles init fails
             pass
+
+        # Sembrar todos los datos por defecto para la nueva empresa
+        try:
+            seed_empresa_defaults(empresa_id)
+        except Exception:
+            pass
+
         # Issue token if JWT enabled
         token = create_jwt({'usuario_id': usuario_id, 'email': email}) if ENABLE_JWT else None
 
@@ -1662,9 +1727,12 @@ def api_usuarios():
             request_user, auth_error = require_request_user()
             if auth_error:
                 return auth_error
-            empresa_id = int(request_user.get('empresa_id') or 0)
-            col = get_empresa_collection('usuarios', None)
-            usuarios = list(col.find({}))
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+            col = get_empresa_collection('usuarios', empresa_id)
+            if str(request_user.get('rol')).lower() == 'root':
+                usuarios = list(col.find({}))
+            else:
+                usuarios = list(col.find({'empresa_id': empresa_id}))
             usuarios_out = [fix_id(u) for u in usuarios]
             return jsonify({'usuarios': usuarios_out}), 200
 
@@ -1672,6 +1740,8 @@ def api_usuarios():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # Sólo usuarios con rol 'administrador' o 'root' pueden crear otros usuarios
         requester_role = str(request_user.get('rol') or '').strip().lower()
@@ -1689,7 +1759,7 @@ def api_usuarios():
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify({'error': 'Email no válido'}), 400
 
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         if col.find_one({'email': email}):
             return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
 
@@ -1700,7 +1770,7 @@ def api_usuarios():
             'email': email,
             'rol': rol,
             'password_hash': hash_password(temp_pwd),
-            'empresa_id': int(request_user.get('empresa_id') or 0),
+            'empresa_id': empresa_id,
             'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
         }
         result = col.insert_one(doc)
@@ -1842,7 +1912,7 @@ def actualizar_usuario(usuario_id):
         if auth_error:
             return auth_error
         # ...existing code...
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # Permisos de edición de usuario adaptados a MongoDB pendiente de implementar si es necesario
 
@@ -1870,7 +1940,7 @@ def actualizar_usuario(usuario_id):
 
 
         # Actualizar usuario en MongoDB
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         try:
             oid = ObjectId(usuario_id)
         except Exception:
@@ -1888,10 +1958,10 @@ def actualizar_usuario(usuario_id):
         if not update_doc:
             return jsonify({'error': 'Nada que actualizar'}), 400
 
-        result = col.update_one({'_id': oid}, {'$set': update_doc})
+        result = col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': update_doc})
         if result.matched_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
-        usuario = col.find_one({'_id': oid})
+        usuario = col.find_one({'_id': oid, 'empresa_id': empresa_id})
         try:
             log_audit('update_user', request_user, {'updated_user_id': str(usuario.get('_id')), 'updated_fields': list(update_doc.keys())})
         except Exception:
@@ -1931,7 +2001,7 @@ def create_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
 
         usuario_id = int(data.get('usuario_id') or request_user.get('id') or 0)
@@ -1995,7 +2065,7 @@ def confirm_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         session_id = str(data.get('checkout_session_id') or data.get('session_id') or '').strip()
         if not session_id:
@@ -2017,7 +2087,7 @@ def get_creditos_usuario(usuario_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Implementar consulta de créditos con MongoDB
         return jsonify({'error': 'No implementado: migrar consulta de créditos a MongoDB'}), 501
@@ -2031,7 +2101,7 @@ def cargar_creditos_usuario(usuario_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         creditos = int(data.get('creditos') or 0)
@@ -2054,7 +2124,7 @@ def consumir_creditos_billing():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         usuario_id = int(data.get('usuario_id') or 0)
@@ -2087,14 +2157,14 @@ def eliminar_usuario(usuario_id):
         if auth_error:
             return auth_error
         # request_role = normalize_role(request_user.get('rol'))  # Legacy, no usado con MongoDB
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         try:
             oid = ObjectId(usuario_id)
         except Exception:
             oid = usuario_id
-        result = col.delete_one({'_id': oid})
+        result = col.delete_one({'_id': oid, 'empresa_id': empresa_id})
         if result.deleted_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
         try:
@@ -2109,10 +2179,13 @@ def eliminar_usuario(usuario_id):
 @app.route('/api/settings', methods=['GET'])
 def get_settings_catalogo():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         categoria = (request.args.get('categoria') or '').strip().lower()
-        empresa_id = 0
         col = get_empresa_collection('config_opciones', empresa_id)
-        
+
         # Ensure all protected categories have their default values
         def ensure_protected_categories():
             """
@@ -2128,15 +2201,16 @@ def get_settings_catalogo():
                     'En Diseño'
                 ]
             }
-            
+
             for cat, valores in defaults_catalogo.items():
                 for idx, valor in enumerate(valores, start=1):
-                    # Check if this value already exists in this category
+                    # Check if this value already exists in this category for this empresa
                     exists = col.count_documents({
                         'categoria': cat,
-                        'valor': valor
+                        'valor': valor,
+                        'empresa_id': empresa_id
                     }) > 0
-                    
+
                     if not exists:
                         # Insert only if doesn't exist
                         col.insert_one({
@@ -2144,6 +2218,7 @@ def get_settings_catalogo():
                             'valor': valor,
                             'label': valor,
                             'orden': idx,
+                            'empresa_id': empresa_id,
                             'fecha_creacion': datetime.now().isoformat()
                         })
 
@@ -2152,7 +2227,7 @@ def get_settings_catalogo():
                 return jsonify({'error': 'Categoría no válida'}), 400
             # Ensure category has default values before querying
             ensure_protected_categories()
-            rows = list(col.find({'categoria': categoria}).sort([('orden', 1), ('_id', 1)]))
+            rows = list(col.find({'categoria': categoria, 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
             items = [{
                 'id': str(row.get('_id')),
                 'categoria': row.get('categoria'),
@@ -2161,10 +2236,10 @@ def get_settings_catalogo():
                 'fecha_creacion': row.get('fecha_creacion')
             } for row in rows]
             return jsonify({'categoria': categoria, 'items': items}), 200
-        
+
         # Si no hay categoría, devolver todas
         ensure_protected_categories()
-        rows = list(col.find({}).sort([('categoria', 1), ('orden', 1), ('_id', 1)]))
+        rows = list(col.find({'empresa_id': empresa_id}).sort([('categoria', 1), ('orden', 1), ('_id', 1)]))
         settings = {key: [] for key in ALLOWED_SETTINGS_CATEGORIES}
         for row in rows:
             categoria_row = row.get('categoria')
@@ -2186,16 +2261,17 @@ def get_settings_catalogo():
 @app.route('/api/settings/estados-pedido-rules', methods=['GET', 'PUT'])
 def api_estados_pedido_rules():
     try:
-        if request.method == 'GET':
-            # Devuelve las reglas inferidas/almacenadas y los estados disponibles
-            payload = get_estados_pedido_rules()
-            return jsonify(payload), 200
-
-        # PUT -> Guardar reglas
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = 0
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        if request.method == 'GET':
+            # Devuelve las reglas inferidas/almacenadas y los estados disponibles
+            payload = get_estados_pedido_rules(empresa_id)
+            return jsonify(payload), 200
+
+        # PUT -> Guardar reglas
         data = request.get_json() or {}
         rules = data.get('rules')
         if not isinstance(rules, dict):
@@ -2203,7 +2279,11 @@ def api_estados_pedido_rules():
 
         col = get_empresa_collection('config_general', empresa_id)
         # Guardar como JSON string
-        col.update_one({'clave': 'estados_pedido_rules'}, {'$set': {'valor': json.dumps(rules), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col.update_one(
+            {'clave': 'estados_pedido_rules', 'empresa_id': empresa_id},
+            {'$set': {'valor': json.dumps(rules), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
         try:
             log_audit('update_estados_pedido_rules', request_user, {'rules_keys': list(rules.keys())})
         except Exception:
@@ -2220,13 +2300,15 @@ def api_roles_permissions():
     PUT -> guarda el objeto JSON `permissions` en `config_general` bajo la clave `role_permissions`.
     """
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         # GET: devolver
         if request.method == 'GET':
-            request_user, auth_error = require_request_user()
-            if auth_error:
-                return auth_error
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'role_permissions'})
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'role_permissions', 'empresa_id': empresa_id})
             parsed = None
             if doc and doc.get('valor'):
                 try:
@@ -2237,8 +2319,8 @@ def api_roles_permissions():
                 parsed = ROLE_PERMISSIONS_DEFAULT
 
             # Also return the list of known permissions and available roles
-            col_roles = get_empresa_collection('config_opciones', 0)
-            rows = list(col_roles.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
+            col_roles = get_empresa_collection('config_opciones', empresa_id)
+            rows = list(col_roles.find({'categoria': 'roles', 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
             roles = []
             for r in rows:
                 label = (r.get('valor') or '').strip()
@@ -2249,9 +2331,6 @@ def api_roles_permissions():
             return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
 
         # PUT: guardar
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
         data = request.get_json() or {}
         permissions = data.get('permissions') or data.get('roles_permissions') or data.get('rolesPermissions')
         if not isinstance(permissions, dict):
@@ -2271,8 +2350,12 @@ def api_roles_permissions():
                     if admin_perms.get(perm_key) is False:
                         return jsonify({'error': 'El rol administrador no puede perder permisos. Imposible desactivar permisos para administrador'}), 400
 
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'role_permissions'}, {'$set': {'valor': json.dumps(permissions), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'role_permissions', 'empresa_id': empresa_id},
+            {'$set': {'valor': json.dumps(permissions), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
         try:
             log_audit('update_role_permissions', request_user, {'roles': list(permissions.keys())})
         except Exception:
@@ -2290,23 +2373,29 @@ def api_roles_permissions():
 @app.route('/api/settings/modo-creacion', methods=['GET', 'PUT'])
 def api_modo_creacion():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         if request.method == 'GET':
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'modo_creacion'})
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
             valor = (doc.get('valor') if doc and doc.get('valor') else 'manual')
             valor = valor if valor in ['manual', 'automatico'] else 'manual'
             return jsonify({'modo_creacion': valor}), 200
 
         # PUT
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
         data = request.get_json() or {}
         modo = str(data.get('modo_creacion') or data.get('modo') or '').strip().lower()
         if modo not in ['manual', 'automatico']:
             return jsonify({'error': 'modo_creacion no válido (manual|automatico)'}), 400
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'modo_creacion'}, {'$set': {'valor': modo, 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'modo_creacion', 'empresa_id': empresa_id},
+            {'$set': {'valor': modo, 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
         try:
             log_audit('update_modo_creacion', request_user, {'modo': modo})
         except Exception:
@@ -2319,16 +2408,18 @@ def api_modo_creacion():
 @app.route('/api/settings/session-timeout', methods=['GET', 'PUT'])
 def api_session_timeout():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         if request.method == 'GET':
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'session_timeout_minutes'})
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'session_timeout_minutes', 'empresa_id': empresa_id})
             value = int(doc.get('valor')) if doc and doc.get('valor') and str(doc.get('valor')).isdigit() else SESSION_TIMEOUT_MINUTES_DEFAULT
             return jsonify({'session_timeout_minutes': int(value), 'min': SESSION_TIMEOUT_MINUTES_MIN, 'max': SESSION_TIMEOUT_MINUTES_MAX}), 200
 
         # PUT
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
         data = request.get_json() or {}
         try:
             minutes = int(data.get('session_timeout_minutes'))
@@ -2336,8 +2427,12 @@ def api_session_timeout():
             return jsonify({'error': 'session_timeout_minutes debe ser un entero'}), 400
         if minutes < SESSION_TIMEOUT_MINUTES_MIN or minutes > SESSION_TIMEOUT_MINUTES_MAX:
             return jsonify({'error': f'session_timeout_minutes fuera de rango ({SESSION_TIMEOUT_MINUTES_MIN}-{SESSION_TIMEOUT_MINUTES_MAX})'}), 400
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'session_timeout_minutes'}, {'$set': {'valor': str(minutes), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'session_timeout_minutes', 'empresa_id': empresa_id},
+            {'$set': {'valor': str(minutes), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
         try:
             log_audit('update_session_timeout', request_user, {'minutes': minutes})
         except Exception:
@@ -2350,29 +2445,35 @@ def api_session_timeout():
 @app.route('/api/settings/opcion', methods=['GET', 'POST'])
 def crear_config_opcion():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         categoria = request.args.get('categoria', '').strip().lower()
         valor = request.args.get('valor', '').strip()
         color = request.args.get('color', '').strip()  # Color para estados_pedido
-        
+
         # Validar que no se creen opciones vacías
         if not categoria or not valor:
             return jsonify({'error': 'categoria y valor son requeridos y no pueden estar vacíos'}), 400
-        
+
         # Normalize role labels: capitalize first letter
         if categoria == 'roles' and valor:
             valor = capitalize_first(valor)
-        
+
         # Validar que el valor no sea literalmente 'None' o similar
         if valor.lower() in ['none', 'null', 'undefined']:
             return jsonify({'error': f'Valor inválido: "{valor}" está reservado'}), 400
-        
-        col = get_empresa_collection('config_opciones', 0)
-        siguiente_orden = (col.find({'categoria': categoria}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria}) else 0) + 1
+
+        col = get_empresa_collection('config_opciones', empresa_id)
+        siguiente_orden = (col.find({'categoria': categoria, 'empresa_id': empresa_id}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria, 'empresa_id': empresa_id}) else 0) + 1
         doc = {
             'categoria': categoria,
             'valor': valor,
             'label': valor,  # Include label field for roles and estados_pedido
             'orden': siguiente_orden,
+            'empresa_id': empresa_id,
             'fecha_creacion': datetime.now().isoformat()
         }
         # Guardar color si es un estado de pedido
@@ -2380,7 +2481,7 @@ def crear_config_opcion():
             doc['color'] = color
         result = col.insert_one(doc)
         try:
-            log_audit('create_setting_item', request_user if 'request_user' in locals() else None, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})
+            log_audit('create_setting_item', request_user, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})
         except Exception:
             pass
         return jsonify({'success': True, 'id': str(result.inserted_id)}), 201
@@ -2391,6 +2492,11 @@ def crear_config_opcion():
 @app.route('/api/settings/reorder', methods=['POST'])
 def reorder_settings_catalogo_items():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         data = request.get_json() or {}
         categoria = (data.get('categoria') or '').strip().lower()
         ordered_ids = data.get('ordered_ids') or []
@@ -2402,14 +2508,14 @@ def reorder_settings_catalogo_items():
 
         # MongoDB: IDs son strings (ObjectId)
         ordered_ids = [str(item_id) for item_id in ordered_ids]
-        col = get_empresa_collection('config_opciones', 0)
-        ids_categoria = [str(row['_id']) for row in col.find({'categoria': categoria})]
+        col = get_empresa_collection('config_opciones', empresa_id)
+        ids_categoria = [str(row['_id']) for row in col.find({'categoria': categoria, 'empresa_id': empresa_id})]
         if set(ids_categoria) != set(ordered_ids):
             return jsonify({'error': 'ordered_ids no coincide con los elementos de la categoría'}), 400
 
         # Proteger orden de roles base
         if categoria == 'roles':
-            rows_roles = list(col.find({'categoria': 'roles'}))
+            rows_roles = list(col.find({'categoria': 'roles', 'empresa_id': empresa_id}))
             id_by_role_key = {}
             for row in rows_roles:
                 role_id = str(row['_id'])
@@ -2423,9 +2529,9 @@ def reorder_settings_catalogo_items():
 
         # Actualizar orden
         for idx, item_id in enumerate(ordered_ids, start=1):
-            col.update_one({'_id': ObjectId(item_id), 'categoria': categoria}, {'$set': {'orden': idx}})
+            col.update_one({'_id': ObjectId(item_id), 'categoria': categoria, 'empresa_id': empresa_id}, {'$set': {'orden': idx}})
         try:
-            log_audit('reorder_settings', request_user if 'request_user' in locals() else None, {'categoria': categoria, 'ordered_ids': ordered_ids})
+            log_audit('reorder_settings', request_user, {'categoria': categoria, 'ordered_ids': ordered_ids})
         except Exception:
             pass
         return jsonify({'success': True}), 200
@@ -2437,32 +2543,37 @@ def reorder_settings_catalogo_items():
 def check_estado_usage():
     """Valida si un estado está siendo usado en algún pedido/trabajo"""
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         estado_id = request.args.get('estado_id', '').strip()
         if not estado_id:
             return jsonify({'error': 'estado_id requerido'}), 400
-        
+
         try:
             estado_id_obj = ObjectId(estado_id)
         except Exception:
             return jsonify({'error': 'estado_id inválido'}), 400
-        
+
         # Obtener el estado de config para saber su valor
-        col_config = get_empresa_collection('config_opciones', 0)
-        estado_config = col_config.find_one({'_id': estado_id_obj, 'categoria': 'estados_pedido'})
-        
+        col_config = get_empresa_collection('config_opciones', empresa_id)
+        estado_config = col_config.find_one({'_id': estado_id_obj, 'categoria': 'estados_pedido', 'empresa_id': empresa_id})
+
         if not estado_config:
             return jsonify({'error': 'Estado no encontrado'}), 404
-        
+
         estado_valor_original = estado_config.get('valor', '')
         # Normalizar el valor para comparación
         estado_valor_slugified = slugify_estado(estado_valor_original)
-        
+
         # Contar cuántos trabajos tienen este estado
-        col_trabajos = get_empresa_collection('trabajos', 0)
-        count = col_trabajos.count_documents({'estado': estado_valor_slugified})
-        
+        col_trabajos = get_empresa_collection('trabajos', empresa_id)
+        count = col_trabajos.count_documents({'estado': estado_valor_slugified, 'empresa_id': empresa_id})
+
         in_use = count > 0
-        
+
         return jsonify({
             'estado_id': estado_id,
             'estado_valor': estado_valor_original,
@@ -2477,32 +2588,37 @@ def check_estado_usage():
 def check_rol_usage():
     """Valida si un rol está siendo usado por algún usuario"""
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         rol_id = request.args.get('rol_id', '').strip()
         if not rol_id:
             return jsonify({'error': 'rol_id requerido'}), 400
-        
+
         try:
             rol_id_obj = ObjectId(rol_id)
         except Exception:
             return jsonify({'error': 'rol_id inválido'}), 400
-        
+
         # Obtener el rol de config para saber su valor
-        col_config = get_empresa_collection('config_opciones', 0)
-        rol_config = col_config.find_one({'_id': rol_id_obj, 'categoria': 'roles'})
-        
+        col_config = get_empresa_collection('config_opciones', empresa_id)
+        rol_config = col_config.find_one({'_id': rol_id_obj, 'categoria': 'roles', 'empresa_id': empresa_id})
+
         if not rol_config:
             return jsonify({'rol_id': rol_id, 'in_use': False, 'count': 0, 'not_found': True}), 200
-        
+
         rol_valor_original = rol_config.get('valor', '')
         # Normalizar el valor para comparación
         rol_valor_slugified = slugify_estado(rol_valor_original)
-        
+
         # Contar cuántos usuarios tienen este rol
-        col_usuarios = get_empresa_collection('usuarios', 0)
-        count = col_usuarios.count_documents({'rol': rol_valor_slugified})
-        
+        col_usuarios = get_empresa_collection('usuarios', empresa_id)
+        count = col_usuarios.count_documents({'rol': rol_valor_slugified, 'empresa_id': empresa_id})
+
         in_use = count > 0
-        
+
         return jsonify({
             'rol_id': rol_id,
             'rol_valor': rol_valor_original,
@@ -2530,12 +2646,12 @@ def update_settings_catalogo_item(item_id):
         if not nuevo_valor:
             return jsonify({'error': 'Valor requerido'}), 400
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('config_opciones', empresa_id)
         # Buscar el documento por _id
         from bson import ObjectId
         try:
-            doc = col.find_one({'_id': ObjectId(item_id)})
+            doc = col.find_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         except Exception:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         if not doc:
@@ -2563,11 +2679,11 @@ def update_settings_catalogo_item(item_id):
         if categoria == 'estados_pedido' and slug_nuevo in PROTECTED_ESTADOS_PEDIDO_KEYS and slug_nuevo != slug_actual:
             return jsonify({'error': 'Los estados fijos no admiten variantes de nombre'}), 409
         # Verificar duplicados
-        if col.find_one({'categoria': categoria, 'valor': {'$regex': f'^{nuevo_valor}$', '$options': 'i'}, '_id': {'$ne': ObjectId(item_id)}}):
+        if col.find_one({'categoria': categoria, 'valor': {'$regex': f'^{nuevo_valor}$', '$options': 'i'}, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
             return jsonify({'error': 'Ese valor ya existe en la categoría'}), 409
         # Verificar conflicto de slug
         if categoria in ['roles', 'estados_pedido']:
-            for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}}):
+            for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
                 if slugify_estado(row.get('valor')) == slug_nuevo:
                     return jsonify({'error': 'Ya existe un valor equivalente en esa categoría'}), 409
         # Actualizar valor y label
@@ -2598,10 +2714,10 @@ def delete_settings_catalogo_item(item_id):
             return auth_error
 
         from bson import ObjectId
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('config_opciones', empresa_id)
         try:
-            doc = col.find_one({'_id': ObjectId(item_id)})
+            doc = col.find_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         except Exception:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         if not doc:
@@ -2612,7 +2728,7 @@ def delete_settings_catalogo_item(item_id):
             return jsonify({'error': f'No se puede eliminar el rol base "{valor}"'}), 409
         if categoria == 'estados_pedido' and slugify_estado(valor) in PROTECTED_ESTADOS_PEDIDO_KEYS:
             return jsonify({'error': f'No se puede eliminar el estado fijo "{valor}"'}), 409
-        result = col.delete_one({'_id': ObjectId(item_id)})
+        result = col.delete_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         if result.deleted_count == 0:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         try:
@@ -2631,7 +2747,7 @@ def get_pedidos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         pedidos = list(col.find({'empresa_id': empresa_id}))
         trabajos_col = get_empresa_collection('trabajos', empresa_id)
@@ -2658,7 +2774,7 @@ def get_pedido(pedido_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -2695,7 +2811,7 @@ def get_presupuesto(trabajo_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         # Lógica de consulta de presupuesto adaptada a MongoDB pendiente de implementar si es necesario
         return jsonify({'success': True, 'mensaje': 'Consulta de presupuesto pendiente de implementar'}), 200
     except Exception as e:
@@ -2718,7 +2834,7 @@ def aceptar_presupuesto(trabajo_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
 
         # Buscar presupuesto por trabajo_id
@@ -2870,15 +2986,12 @@ def crear_pedido_desde_erp():
             request_user, auth_error = require_request_user()
             if auth_error:
                 return auth_error
-            empresa_id = int(request_user.get('empresa_id') or 0)
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
             user_id = request_user.get('id')
             role = request_user.get('rol')
         else:
-            try:
-                empresa_id = int(empresa_id)
-            except ValueError:
-                return jsonify({'error': 'X-Empresa-Id debe ser un número entero'}), 400
-        
+            empresa_id = normalize_empresa_id(empresa_id)
+
         # Crear objeto request_user para logging
         request_user = {
             'id': user_id,
@@ -3017,15 +3130,12 @@ def validar_modo_automatico():
             request_user, auth_error = require_request_user()
             if auth_error:
                 return auth_error
-            empresa_id = int(request_user.get('empresa_id') or 0)
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         else:
-            try:
-                empresa_id = int(empresa_id)
-            except ValueError:
-                return jsonify({'error': 'X-Empresa-Id debe ser un número entero'}), 400
-        
-        col_general = get_empresa_collection('config_general', 0)
-        doc = col_general.find_one({'clave': 'modo_creacion'})
+            empresa_id = normalize_empresa_id(empresa_id)
+
+        col_general = get_empresa_collection('config_general', empresa_id)
+        doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
         valor = (doc.get('valor') if doc and doc.get('valor') else 'manual')
         valor = valor if valor in ['manual', 'automatico'] else 'manual'
         
@@ -3045,7 +3155,7 @@ def get_presupuestos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         col = get_empresa_collection('presupuestos', empresa_id)
         presupuestos = list(col.find({'empresa_id': empresa_id}))
@@ -3099,7 +3209,7 @@ def update_presupuesto(presupuesto_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         col = get_empresa_collection('presupuestos', empresa_id)
@@ -3202,7 +3312,7 @@ def crear_presupuesto():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_presupuesto = data.get('numero_presupuesto')
@@ -3289,7 +3399,7 @@ def crear_pedido_manual():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         nombre = data.get('nombre')
@@ -3331,7 +3441,7 @@ def crear_documento_integracion():
         request_user = get_request_user()
         if not request_user:
             return jsonify({'error': 'Autenticación requerida para integración'}), 401
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         tipo = (data.get('tipo') or '').strip().lower()
@@ -3386,10 +3496,10 @@ def get_trabajos_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         from datetime import datetime, timedelta
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         # TODO: Lógica MongoDB para obtener trabajos y reglas de estado
         
         # Calcular fecha de hace 15 días
@@ -3409,7 +3519,7 @@ def crear_pedido():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_pedido = data.get('numero_pedido')
@@ -3469,7 +3579,7 @@ def migrate_estados():
         if user_role not in ('administrador', 'root', 'admin'):
             return jsonify({'error': 'Permiso denegado'}), 403
         
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         
         source_estado_id = data.get('source_estado_id')
@@ -3540,7 +3650,7 @@ def update_pedido(pedido_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -3617,7 +3727,7 @@ def delete_pedido(pedido_id):
         if user_role not in ('administrador', 'root', 'admin'):
             return jsonify({'error': 'Permiso denegado'}), 403
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -3644,7 +3754,7 @@ def enviar_trabajo_produccion():
         if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
             return jsonify({'error': 'No autorizado para cambiar estados'}), 403
         
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         # Logging para depuración: mostrar body recibido
@@ -3883,7 +3993,7 @@ def api_get_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         maquina_param = request.args.get('maquina')
         if not maquina_param:
             return jsonify({'error': 'maquina parameter requerido'}), 400
@@ -4032,7 +4142,7 @@ def mover_trabajo_maquina():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajo_id = data.get('trabajo_id')
@@ -4231,7 +4341,7 @@ def reordenar_trabajos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajos = data.get('trabajos', [])  # Lista de {trabajo_id, nueva_posicion}
@@ -4354,7 +4464,7 @@ def cambiar_estado_trabajo(trabajo_id):
             print(f"DEBUG: Permission denied for role={actual_role}, manage_estados_pedido check failed", flush=True)
             return jsonify({'error': 'No autorizado para cambiar estados'}), 403
         
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json()
         nuevo_estado = data.get('estado')
         if not nuevo_estado:
@@ -4390,7 +4500,7 @@ def rebuild_production_counters():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json(silent=True) or {}
         maquina_filter = data.get('maquina_id', None)
 
@@ -4515,7 +4625,7 @@ def get_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para obtener el orden de los trabajos
         rows = []
@@ -4532,7 +4642,7 @@ def save_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajos = data.get('trabajos', [])
@@ -4561,7 +4671,7 @@ def create_trabajo():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         nombre = (data.get('nombre') or '').strip()
         cliente = data.get('cliente') or ''
@@ -4668,7 +4778,7 @@ def reset_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para resetear el orden
         # SQL legacy eliminado por migración a MongoDB
@@ -4729,7 +4839,7 @@ def generar_datos_prueba():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para insertar presupuestos de ejemplo
         
@@ -4861,7 +4971,7 @@ def debug_info():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para debugging de la BD
         
