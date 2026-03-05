@@ -8,8 +8,10 @@ const TINTAS_BASE_CMYK = [
     { label: 'Y', color: '#FFF200', isCMYK: true },
     { label: 'K', color: '#232323', isCMYK: true }
 ];
-const troquelEstado = ['Nuevo', 'Usado'];
-const troquelForma = ['Rectangular', 'Circular', 'Irregular'];
+const troquelEstado = ['Disponible', 'En uso'];
+const troquelTipo = ['regular', 'irregular', 'corbata'];
+const troquelForma = ['Rectangular', 'Circular', 'Irregular', 'Ovalado'];
+const API_TROQUELES = 'http://localhost:8080/api/troqueles';
 
 function borderColorState(value, isRequired, isNumeric = false, submitted = false) {
     if (!isRequired) return '#CCC';
@@ -484,6 +486,11 @@ export default function NuevoPresupuestoModal({
     const [clientePickerVisible, setClientePickerVisible] = useState(false);
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [clienteInputFocused, setClienteInputFocused] = useState(false);
+    const [troquelesCat, setTroquelesCat] = useState([]);
+    const [troquelSel, setTroquelSel] = useState(null);
+    const [showTroquelCreate, setShowTroquelCreate] = useState(false);
+    const [troquelCreateForm, setTroquelCreateForm] = useState({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
+    const [savingTroquel, setSavingTroquel] = useState(false);
 
     // pedido id when editing
     const [pedidoId, setPedidoId] = useState(null);
@@ -518,6 +525,17 @@ export default function NuevoPresupuestoModal({
             // ignore
         }
     }, [initialValues]);
+
+    // Auto-select troquel when catalog loads (for editing existing pedidos)
+    useEffect(() => {
+        if (troquelesCat.length > 0 && !troquelSel && initialValues) {
+            const troquelId = initialValues.datos_presupuesto?.troquelId || initialValues.troquelId;
+            if (troquelId) {
+                const found = troquelesCat.find(t => (t._id || t.id) === troquelId);
+                if (found) handleTroquelSelect(found);
+            }
+        }
+    }, [troquelesCat]);
 
     const emailNormalizado = (email || '').trim();
     const cifNormalizado = normalizeCif(cif);
@@ -655,11 +673,23 @@ export default function NuevoPresupuestoModal({
 
     const cargarCatalogos = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/settings');
-            const data = response.ok ? await response.json() : { settings: {} };
-            const settings = data.settings || {};
+            const authHdrs = {
+                'Content-Type': 'application/json',
+                'X-Empresa-Id': currentUser?.empresa_id || '1',
+                'X-User-Id': currentUser?.id || 'admin',
+                'X-Role': currentUser?.role || 'administrador',
+            };
+            const [settingsRes, catRes] = await Promise.all([
+                fetch('http://localhost:8080/api/settings'),
+                fetch('http://localhost:8080/api/materiales/catalogo', { headers: authHdrs }),
+            ]);
+            const settingsData = settingsRes.ok ? await settingsRes.json() : { settings: {} };
+            const settings = settingsData.settings || {};
+            const catData = catRes.ok ? await catRes.json() : { catalogo: [] };
+            // Use full materials catalog if available, else fall back to settings.materiales
+            const catalogoMateriales = (catData.catalogo || []).map(item => ({ valor: item.nombre }));
             setCatalogos({
-                materiales: settings.materiales || [],
+                materiales: catalogoMateriales.length > 0 ? catalogoMateriales : (settings.materiales || []),
                 acabados: settings.acabados || [],
                 tintas_especiales: settings.tintas_especiales || []
             });
@@ -693,11 +723,75 @@ export default function NuevoPresupuestoModal({
         }
     };
 
+    const cargarTroqueles = async () => {
+        try {
+            const authHdrs = {
+                'Content-Type': 'application/json',
+                'X-Empresa-Id': currentUser?.empresa_id || '1',
+                'X-User-Id': currentUser?.id || 'admin',
+                'X-Role': currentUser?.role || 'administrador',
+            };
+            const resp = await fetch(API_TROQUELES, { headers: authHdrs });
+            const data = resp.ok ? await resp.json() : { troqueles: [] };
+            setTroquelesCat(data.troqueles || []);
+        } catch {
+            setTroquelesCat([]);
+        }
+    };
+
+    const handleTroquelSelect = (troquel) => {
+        setTroquelSel(troquel);
+        if (troquel) {
+            setTroquelEstadoSel(troquel.estado || '');
+            setTroquelFormaSel(troquel.forma || '');
+            setTroquelCoste('');
+        } else {
+            setTroquelEstadoSel('');
+            setTroquelFormaSel('');
+            setTroquelCoste('');
+        }
+    };
+
+    const saveTroquelFromModal = async () => {
+        const numero = (troquelCreateForm.numero || '').trim();
+        if (!numero) return alert('El número/referencia del troquel es obligatorio');
+        setSavingTroquel(true);
+        try {
+            const body = {
+                numero,
+                tipo: troquelCreateForm.tipo || 'regular',
+                forma: troquelCreateForm.forma,
+                estado: troquelCreateForm.estado,
+                anchoMotivo: troquelCreateForm.anchoMotivo,
+                altoMotivo: troquelCreateForm.altoMotivo,
+                motivosAncho: troquelCreateForm.motivosAncho,
+                separacionAncho: troquelCreateForm.separacionAncho,
+                valorZ: troquelCreateForm.valorZ,
+                distanciaSesgado: troquelCreateForm.distanciaSesgado,
+            };
+            const resp = await fetch(API_TROQUELES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = resp.ok ? await resp.json() : {};
+            if (!resp.ok) return alert(data.error || 'Error guardando troquel');
+            const resetForm = { numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' };
+            setShowTroquelCreate(false);
+            setTroquelCreateForm(resetForm);
+            await cargarTroqueles();
+            // Auto-select the new troquel
+            const nuevo = data.troquel;
+            if (nuevo) handleTroquelSelect({ ...nuevo, id: nuevo._id || nuevo.id });
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setSavingTroquel(false);
+        }
+    };
+
     useEffect(() => {
         if (visible) {
             cargarClientesGuardados();
             cargarCatalogos();
             cargarUsuariosComerciales();
+            cargarTroqueles();
             if (showMaquinaField) {
                 cargarMaquinasActivas();
             }
@@ -787,9 +881,15 @@ export default function NuevoPresupuestoModal({
 
         const fechaEntregaValida = !showFechaEntrega || !!fechaEntrega;
         const maquinaValida = !showMaquinaField || !!maquina;
-        if (fechaEntregaAntesCreacion) return;
+        if (fechaEntregaAntesCreacion) {
+            Alert.alert('Error', 'La fecha de entrega no puede ser anterior a la fecha de creación.');
+            return;
+        }
 
-        if (showMaquinaField && maquinaIncompatible) return;
+        if (showMaquinaField && maquinaIncompatible) {
+            Alert.alert('Máquina incompatible', 'La máquina seleccionada no soporta el número de tintas elegidas.');
+            return;
+        }
 
         const acabadoValido = Array.isArray(acabado) ? acabado.length > 0 : !!acabado;
 
@@ -838,6 +938,7 @@ export default function NuevoPresupuestoModal({
                 troquelEstadoSel,
                 troquelFormaSel,
                 troquelCoste,
+                troquelId: troquelSel?._id || troquelSel?.id || null,
                 observaciones
             };
             if (pedidoId) presupuesto.pedido_id = pedidoId;
@@ -896,6 +997,7 @@ export default function NuevoPresupuestoModal({
         setTroquelEstadoSel('');
         setTroquelFormaSel('');
         setTroquelCoste('');
+        setTroquelSel(null);
         setObservaciones('');
         setCoberturaResult(null);
         setSubmitted(false);
@@ -1372,6 +1474,72 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
 
+                    {/* TROQUEL */}
+                    <View style={styles.section}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <Text style={styles.sectionTitle}>Troquel</Text>
+                            {!isReadOnly && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setTroquelCreateForm({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
+                                        setShowTroquelCreate(true);
+                                    }}
+                                    style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                >
+                                    <Text style={{ color: '#4F46E5', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        {troquelesCat.length === 0 ? (
+                            <Text style={{ color: '#888', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
+                        ) : Platform.OS === 'web' ? (
+                            <select
+                                style={{ fontSize: 14, border: '1px solid #CCC', backgroundColor: '#FBFBFD', padding: '9px 12px', borderRadius: 8, width: '100%', color: '#333', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                                value={troquelSel?._id || troquelSel?.id || ''}
+                                disabled={isReadOnly}
+                                onChange={e => {
+                                    const found = troquelesCat.find(t => (t._id || t.id) === e.target.value);
+                                    handleTroquelSelect(found || null);
+                                }}
+                            >
+                                <option value="">Sin troquel</option>
+                                {troquelesCat.map((t, i) => (
+                                    <option key={t._id || t.id || i} value={t._id || t.id}>
+                                        {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                <TouchableOpacity
+                                    disabled={isReadOnly}
+                                    onPress={() => handleTroquelSelect(null)}
+                                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#2563EB' : '#f0f0f0' }}
+                                >
+                                    <Text style={{ color: !troquelSel ? '#fff' : '#555', fontSize: 13 }}>Sin troquel</Text>
+                                </TouchableOpacity>
+                                {troquelesCat.map((t, i) => {
+                                    const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
+                                    return (
+                                        <TouchableOpacity
+                                            key={t._id || t.id || i}
+                                            disabled={isReadOnly}
+                                            onPress={() => handleTroquelSelect(t)}
+                                            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#2563EB' : '#f0f0f0' }}
+                                        >
+                                            <Text style={{ color: isSelected ? '#fff' : '#555', fontSize: 13 }}>{t.numero}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
+                        {troquelSel && (
+                            <Text style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                                {[troquelSel.forma, troquelSel.estado, troquelSel.anchoMotivo && troquelSel.altoMotivo ? `${troquelSel.anchoMotivo}×${troquelSel.altoMotivo} mm` : null].filter(Boolean).join(' · ')}
+                            </Text>
+                        )}
+                    </View>
+
                     {/* SUBMIT */}
                     <View style={styles.submitContainer}>
                         <TouchableOpacity
@@ -1503,6 +1671,146 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
                 </Modal>
+
+                {/* ── Troquel create sub-modal ── */}
+                <Modal visible={showTroquelCreate} transparent animationType="fade" onRequestClose={() => setShowTroquelCreate(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480 }}>
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1D2939', marginBottom: 16 }}>Nuevo troquel</Text>
+
+                            <Text style={styles.label}>Número / Referencia *</Text>
+                            <TextInput
+                                style={styles.input(troquelCreateForm.numero, true, false, false)}
+                                value={troquelCreateForm.numero}
+                                onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, numero: v }))}
+                                placeholder="Ej. TR-001"
+                                autoFocus
+                            />
+
+                            <Text style={[styles.label, { marginTop: 10 }]}>Tipo</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                                {troquelTipo.map((t) => (
+                                    <TouchableOpacity
+                                        key={t}
+                                        onPress={() => setTroquelCreateForm(p => ({ ...p, tipo: t }))}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.tipo === t ? '#2563EB' : '#f0f0f0' }}
+                                    >
+                                        <Text style={{ color: troquelCreateForm.tipo === t ? '#fff' : '#444', fontSize: 13 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={[styles.label]}>Forma</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                                {troquelForma.map((f) => (
+                                    <TouchableOpacity
+                                        key={f}
+                                        onPress={() => setTroquelCreateForm(p => ({ ...p, forma: f }))}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.forma === f ? '#2563EB' : '#f0f0f0' }}
+                                    >
+                                        <Text style={{ color: troquelCreateForm.forma === f ? '#fff' : '#444', fontSize: 13 }}>{f}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={[styles.label]}>Estado</Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                                {troquelEstado.map((e) => (
+                                    <TouchableOpacity
+                                        key={e}
+                                        onPress={() => setTroquelCreateForm(p => ({ ...p, estado: e }))}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.estado === e ? '#2563EB' : '#f0f0f0' }}
+                                    >
+                                        <Text style={{ color: troquelCreateForm.estado === e ? '#fff' : '#444', fontSize: 13 }}>{e}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Ancho motivo (mm)</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.anchoMotivo}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, anchoMotivo: v }))}
+                                        placeholder="Ej. 100"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Alto motivo (mm)</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.altoMotivo}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, altoMotivo: v }))}
+                                        placeholder="Ej. 150"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Motivos ancho</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.motivosAncho}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, motivosAncho: v }))}
+                                        placeholder="Ej. 4"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Separación (mm)</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.separacionAncho}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, separacionAncho: v }))}
+                                        placeholder="Ej. 3"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Valor Z (mm)</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.valorZ}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, valorZ: v }))}
+                                        placeholder="Ej. 110"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Dist. sesgado (mm)</Text>
+                                    <TextInput
+                                        style={styles.input('', false, true, false)}
+                                        value={troquelCreateForm.distanciaSesgado}
+                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, distanciaSesgado: v }))}
+                                        placeholder="Ej. 0"
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                                <TouchableOpacity
+                                    onPress={() => setShowTroquelCreate(false)}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#f5f5f5' }}
+                                >
+                                    <Text style={{ color: '#555', fontWeight: '600' }}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={saveTroquelFromModal}
+                                    disabled={savingTroquel}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2563EB' }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: '700' }}>{savingTroquel ? 'Guardando...' : 'Guardar'}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
             </View>
         </Modal>
     );

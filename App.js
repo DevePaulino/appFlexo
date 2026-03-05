@@ -15,6 +15,7 @@ import TroquelessScreen from './screens/TroquelessScreen';
 import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
+import MaterialScreen from './screens/MaterialScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 
 const API_BASE = 'http://localhost:8080';
@@ -30,7 +31,7 @@ const AUTH_EXCLUDED_PATHS = [
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting'];
+const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting', 'Materiales'];
 const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
 
 const SETTINGS_SUBMENU = [
@@ -38,6 +39,7 @@ const SETTINGS_SUBMENU = [
   { key: 'settings-creditos', label: 'Créditos', target: { type: 'setting-section', section: 'creditos' } },
   { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'setting-section', section: 'funcionalidades' } },
   { key: 'settings-impresion', label: 'Impresión', target: { type: 'setting-section', section: 'impresion' } },
+  { key: 'settings-materiales', label: 'Materiales', target: { type: 'tab', route: 'Materiales' } },
   { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'tab', route: 'Máquinas' } },
   { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'tab', route: 'Troqueles' } },
 ];
@@ -54,6 +56,7 @@ const linking = {
           Clientes: 'clientes',
           Máquinas: 'maquinas',
           Troqueles: 'troqueles',
+          Materiales: 'materiales-settings',
           Setting: 'setting',
         },
       },
@@ -323,6 +326,11 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRole
         name="Troqueles"
         options={{ tabBarLabel: 'Troqueles' }}
         children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
+      />
+      <Tab.Screen
+        name="Materiales"
+        options={{ tabBarLabel: 'Materiales' }}
+        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Setting"

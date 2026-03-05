@@ -66,6 +66,7 @@ CORS(app)
 app.debug = True
 
 import traceback as _traceback
+import uuid
 @app.errorhandler(Exception)
 def _handle_uncaught_exception(e):
     # Let HTTP exceptions (404, 400, etc.) be handled by Flask/werkzeug normally
@@ -766,6 +767,10 @@ def get_required_permission_for_request(path, method_upper):
     if p.startswith('/api/produccion') and method_upper in mutating:
         return 'edit_produccion'
 
+    # Materiales (catálogo, stock, consumos)
+    if p.startswith('/api/materiales') and method_upper in mutating:
+        return 'manage_app_settings'
+
     return None
 
 
@@ -984,6 +989,84 @@ def init_db():
         traceback.print_exc()
         pass
 
+    # Migrar materiales legacy → catalogo_materiales para empresa '1'
+    try:
+        col_catalogo = db['catalogo_materiales']
+        legacy_mats = list(db['config_opciones'].find({'categoria': 'materiales', 'empresa_id': '1'}).sort('orden', 1))
+        for idx_m, mat_doc in enumerate(legacy_mats, start=1):
+            nombre = (mat_doc.get('label') or mat_doc.get('valor') or '').strip()
+            if not nombre:
+                continue
+            if not col_catalogo.find_one({'nombre': nombre, 'empresa_id': '1'}):
+                col_catalogo.insert_one({
+                    'empresa_id': '1',
+                    'nombre': nombre,
+                    'fabricantes': [],
+                    'orden': mat_doc.get('orden', idx_m),
+                    'fecha_creacion': mat_doc.get('fecha_creacion', datetime.now().isoformat()),
+                    'activo': True,
+                })
+    except Exception as e:
+        print(f'Error migrando materiales legacy en init_db: {e}')
+
+
+def _migrar_materiales_legacy(empresa_id):
+    """Copia entradas de config_opciones categoria:materiales → catalogo_materiales.
+    Idempotente: no inserta si ya existe el nombre."""
+    try:
+        empresa_id = normalize_empresa_id(empresa_id)
+        col_opciones = get_empresa_collection('config_opciones', empresa_id)
+        col_catalogo = get_empresa_collection('catalogo_materiales', empresa_id)
+        legacy = list(col_opciones.find({'categoria': 'materiales', 'empresa_id': empresa_id}).sort('orden', 1))
+        migrated = 0
+        for m in legacy:
+            nombre = (m.get('label') or m.get('valor') or '').strip()
+            if not nombre:
+                continue
+            if col_catalogo.find_one({'nombre': nombre, 'empresa_id': empresa_id}):
+                continue
+            col_catalogo.insert_one({
+                'empresa_id': empresa_id,
+                'nombre': nombre,
+                'fabricantes': [],
+                'orden': m.get('orden', 0),
+                'fecha_creacion': m.get('fecha_creacion', datetime.now().isoformat()),
+                'activo': True,
+            })
+            migrated += 1
+        return migrated
+    except Exception as e:
+        print(f'Error migrando materiales legacy: {e}')
+        return 0
+
+
+def _seed_catalogo_materiales_defaults(empresa_id):
+    """Siembra catálogo de materiales por defecto para empresa nueva."""
+    empresa_id = normalize_empresa_id(empresa_id)
+    col_catalogo = get_empresa_collection('catalogo_materiales', empresa_id)
+    defaults = [
+        {
+            'nombre': 'Polipropileno',
+            'fabricantes': [
+                {'id': str(uuid.uuid4()), 'nombre': 'Avery', 'anchos_cm': [33.0, 40.0]},
+                {'id': str(uuid.uuid4()), 'nombre': 'Ritrama', 'anchos_cm': [32.0, 38.0]},
+            ],
+        },
+        {'nombre': 'Papel', 'fabricantes': []},
+        {'nombre': 'PVC', 'fabricantes': []},
+        {'nombre': 'PE', 'fabricantes': []},
+        {'nombre': 'PET', 'fabricantes': []},
+    ]
+    for idx, mat in enumerate(defaults, start=1):
+        if not col_catalogo.find_one({'nombre': mat['nombre'], 'empresa_id': empresa_id}):
+            col_catalogo.insert_one({
+                'empresa_id': empresa_id,
+                'nombre': mat['nombre'],
+                'fabricantes': mat['fabricantes'],
+                'orden': idx,
+                'fecha_creacion': datetime.now().isoformat(),
+                'activo': True,
+            })
 
 
 def slugify_estado(texto):
@@ -1660,6 +1743,9 @@ def seed_empresa_defaults(empresa_id):
                 'empresa_id': empresa_id,
                 'fecha_creacion': datetime.now().isoformat(),
             })
+
+    # Seed catálogo de materiales enriquecido
+    _seed_catalogo_materiales_defaults(empresa_id)
 
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -2867,6 +2953,658 @@ def get_pedido(pedido_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════════
+# MATERIALES — Catálogo, Stock y Consumos
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/materiales/catalogo', methods=['OPTIONS'])
+def materiales_catalogo_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['OPTIONS'])
+def materiales_catalogo_item_options(material_id):
+    return make_response('', 200)
+
+@app.route('/api/materiales/stock', methods=['OPTIONS'])
+def materiales_stock_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['OPTIONS'])
+def materiales_stock_item_options(stock_id):
+    return make_response('', 200)
+
+@app.route('/api/materiales/consumos', methods=['OPTIONS'])
+def materiales_consumos_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/migracion', methods=['OPTIONS'])
+def materiales_migracion_options():
+    return make_response('', 200)
+
+
+@app.route('/api/materiales/catalogo', methods=['GET'])
+def get_catalogo_materiales():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        include_inactivos = request.args.get('include_inactivos', 'false').lower() == 'true'
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        query = {'empresa_id': empresa_id}
+        if not include_inactivos:
+            query['activo'] = True
+        docs = list(col.find(query).sort([('orden', 1), ('nombre', 1)]))
+        return jsonify({'catalogo': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['GET'])
+def get_catalogo_material_single(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Material no encontrado'}), 404
+        return jsonify({'material': fix_id(doc)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo', methods=['POST'])
+def create_catalogo_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre del material es requerido'}), 400
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        if col.find_one({'nombre': nombre, 'empresa_id': empresa_id, 'activo': True}):
+            return jsonify({'error': f'Ya existe un material con el nombre "{nombre}"'}), 409
+        fabricantes = data.get('fabricantes') or []
+        for f in fabricantes:
+            if not f.get('id'):
+                f['id'] = str(uuid.uuid4())
+        max_doc = col.find_one({'empresa_id': empresa_id, 'activo': True}, sort=[('orden', -1)])
+        siguiente_orden = (max_doc.get('orden', 0) + 1) if max_doc else 1
+        doc = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'fabricantes': fabricantes,
+            'orden': int(data.get('orden') or siguiente_orden),
+            'fecha_creacion': datetime.now().isoformat(),
+            'activo': True,
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'success': True, 'material': fix_id(doc)}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['PUT'])
+def update_catalogo_material(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Material no encontrado'}), 404
+        data = request.get_json() or {}
+        update = {}
+        if 'nombre' in data and data.get('nombre'):
+            update['nombre'] = str(data['nombre']).strip()
+        if 'fabricantes' in data:
+            fabricantes = data['fabricantes'] or []
+            for f in fabricantes:
+                if not f.get('id'):
+                    f['id'] = str(uuid.uuid4())
+            update['fabricantes'] = fabricantes
+        if 'orden' in data:
+            update['orden'] = int(data['orden'])
+        if 'activo' in data:
+            update['activo'] = bool(data['activo'])
+        if update:
+            col.update_one({'_id': oid}, {'$set': update})
+        updated = col.find_one({'_id': oid})
+        return jsonify({'success': True, 'material': fix_id(updated)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['DELETE'])
+def delete_catalogo_material(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Material no encontrado'}), 404
+        col.update_one({'_id': oid}, {'$set': {'activo': False}})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock', methods=['GET'])
+def get_stock_materiales():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        query = {'empresa_id': empresa_id}
+        activo_param = request.args.get('activo', 'true').lower()
+        if activo_param == 'true':
+            query['activo'] = True
+        elif activo_param == 'false':
+            query['activo'] = False
+        mat = request.args.get('material_nombre', '').strip()
+        if mat:
+            query['material_nombre'] = mat
+        fab = request.args.get('fabricante', '').strip()
+        if fab:
+            query['fabricante'] = fab
+        docs = list(col.find(query).sort([('material_nombre', 1), ('fabricante', 1), ('ancho_cm', 1)]))
+        return jsonify({'stock': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock', methods=['POST'])
+def add_stock_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        material_nombre = (data.get('material_nombre') or '').strip()
+        if not material_nombre:
+            return jsonify({'error': 'material_nombre es requerido'}), 400
+        try:
+            ancho_cm = float(data.get('ancho_cm') or 0)
+            metros_total = float(data.get('metros_total') or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'ancho_cm y metros_total deben ser números'}), 400
+        if metros_total <= 0:
+            return jsonify({'error': 'metros_total debe ser mayor que 0'}), 400
+        now = datetime.now().isoformat()
+        doc = {
+            'empresa_id': empresa_id,
+            'material_nombre': material_nombre,
+            'fabricante': (data.get('fabricante') or '').strip(),
+            'ancho_cm': ancho_cm,
+            'gramaje': float(data.get('gramaje') or 0),
+            'metros_total': metros_total,
+            'metros_disponibles': metros_total,
+            'numero_lote': (data.get('numero_lote') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_entrada': now,
+            'fecha_actualizacion': now,
+            'activo': True,
+            'es_retal': bool(data.get('es_retal', False)),
+            'retal_origen_pedido': (data.get('retal_origen_pedido') or '').strip(),
+        }
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'success': True, 'stock_entry': fix_id(doc)}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['PUT'])
+def update_stock_material(stock_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Stock no encontrado'}), 404
+        data = request.get_json() or {}
+        update = {'fecha_actualizacion': datetime.now().isoformat()}
+        if 'material_nombre' in data and str(data['material_nombre'] or '').strip():
+            update['material_nombre'] = str(data['material_nombre']).strip()
+        if 'fabricante' in data:
+            update['fabricante'] = str(data['fabricante'] or '').strip()
+        if 'ancho_cm' in data:
+            try:
+                update['ancho_cm'] = float(data['ancho_cm'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'ancho_cm debe ser un número'}), 400
+        if 'gramaje' in data:
+            try:
+                update['gramaje'] = float(data['gramaje'] or 0)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'gramaje debe ser un número'}), 400
+        if 'metros_total' in data:
+            try:
+                update['metros_total'] = float(data['metros_total'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'metros_total debe ser un número'}), 400
+        if 'metros_disponibles' in data:
+            try:
+                update['metros_disponibles'] = float(data['metros_disponibles'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'metros_disponibles debe ser un número'}), 400
+        if 'numero_lote' in data:
+            update['numero_lote'] = str(data['numero_lote'] or '').strip()
+        if 'notas' in data:
+            update['notas'] = str(data['notas'] or '')
+        if 'activo' in data:
+            update['activo'] = bool(data['activo'])
+        col.update_one({'_id': oid}, {'$set': update})
+        updated = col.find_one({'_id': oid})
+        return jsonify({'success': True, 'stock_entry': fix_id(updated)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['DELETE'])
+def delete_stock_material(stock_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Stock no encontrado'}), 404
+        col.update_one({'_id': oid}, {'$set': {'activo': False}})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/consumos', methods=['GET'])
+def get_consumos_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('consumos_material', empresa_id)
+        query = {'empresa_id': empresa_id}
+        pedido_id = request.args.get('pedido_id', '').strip()
+        if pedido_id:
+            query['pedido_id'] = pedido_id
+        mat = request.args.get('material_nombre', '').strip()
+        if mat:
+            query['material_nombre'] = mat
+        try:
+            page = max(1, int(request.args.get('page', 1)))
+            limit = min(100, max(1, int(request.args.get('limit', 50))))
+        except (ValueError, TypeError):
+            page, limit = 1, 50
+        skip = (page - 1) * limit
+        total = col.count_documents(query)
+        docs = list(col.find(query).sort([('fecha', -1)]).skip(skip).limit(limit))
+        return jsonify({'consumos': [fix_id(d) for d in docs], 'total': total, 'page': page, 'limit': limit}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/consumos', methods=['POST'])
+def registrar_consumo_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        pedido_id = str(data.get('pedido_id') or '').strip()
+        stock_id_str = str(data.get('stock_id') or '').strip()
+
+        # Accept largo_trabajo_m (new) or metros_consumidos (legacy)
+        try:
+            largo_trabajo_m = float(data.get('largo_trabajo_m') or data.get('metros_consumidos') or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'largo_trabajo_m debe ser un número'}), 400
+
+        try:
+            ancho_trabajo_cm = float(data.get('ancho_trabajo_cm') or 0)
+        except (TypeError, ValueError):
+            ancho_trabajo_cm = 0
+
+        metros_consumidos = largo_trabajo_m
+
+        if not pedido_id or not stock_id_str or metros_consumidos <= 0:
+            return jsonify({'error': 'pedido_id, stock_id y largo_trabajo_m > 0 son requeridos'}), 400
+
+        stock_col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id_str)
+        except Exception:
+            return jsonify({'error': 'stock_id inválido'}), 400
+
+        stock_entry = stock_col.find_one({'_id': oid, 'empresa_id': empresa_id, 'activo': True})
+        if not stock_entry:
+            return jsonify({'error': 'Stock no encontrado o inactivo'}), 404
+        if stock_entry['metros_disponibles'] < metros_consumidos:
+            return jsonify({'error': f'Stock insuficiente: disponible {stock_entry["metros_disponibles"]:.2f} m, solicitado {metros_consumidos:.2f} m'}), 400
+
+        ancho_rollo = stock_entry.get('ancho_cm', 0)
+        if ancho_trabajo_cm > 0 and ancho_rollo > 0:
+            aprovechamiento_pct = round((ancho_trabajo_cm / ancho_rollo) * 100, 1)
+            desperdicio_cm = round(ancho_rollo - ancho_trabajo_cm, 1)
+        else:
+            aprovechamiento_pct = 100.0
+            desperdicio_cm = 0.0
+
+        metros_restantes = round(stock_entry['metros_disponibles'] - metros_consumidos, 4)
+        now = datetime.now().isoformat()
+        stock_col.update_one({'_id': oid}, {'$set': {'metros_disponibles': metros_restantes, 'fecha_actualizacion': now}})
+
+        consumo_col = get_empresa_collection('consumos_material', empresa_id)
+        consumo = {
+            'empresa_id': empresa_id,
+            'pedido_id': pedido_id,
+            'numero_pedido': str(data.get('numero_pedido') or ''),
+            'stock_id': stock_id_str,
+            'material_nombre': stock_entry['material_nombre'],
+            'fabricante': stock_entry.get('fabricante', ''),
+            'ancho_cm': ancho_rollo,
+            'ancho_trabajo_cm': ancho_trabajo_cm if ancho_trabajo_cm > 0 else ancho_rollo,
+            'metros_consumidos': metros_consumidos,
+            'metros_sobrante': metros_restantes,
+            'aprovechamiento_pct': aprovechamiento_pct,
+            'desperdicio_cm': desperdicio_cm,
+            'fecha': now,
+            'usuario_id': str(data.get('usuario_id') or request_user.get('id') or ''),
+        }
+        result = consumo_col.insert_one(consumo)
+        consumo['_id'] = str(result.inserted_id)
+
+        # Auto-create retal if requested and there's leftover width
+        retal_entry = None
+        crear_retal = bool(data.get('crear_retal', False))
+        if crear_retal and desperdicio_cm > 0 and metros_consumidos > 0:
+            retal_doc = {
+                'empresa_id': empresa_id,
+                'material_nombre': stock_entry['material_nombre'],
+                'fabricante': stock_entry.get('fabricante', ''),
+                'ancho_cm': desperdicio_cm,
+                'metros_total': metros_consumidos,
+                'metros_disponibles': metros_consumidos,
+                'numero_lote': f"RETAL-{pedido_id[:8]}",
+                'notas': f"Retal del pedido {data.get('numero_pedido') or pedido_id}",
+                'es_retal': True,
+                'retal_origen_pedido': pedido_id,
+                'fecha_entrada': now,
+                'fecha_actualizacion': now,
+                'activo': True,
+            }
+            retal_result = stock_col.insert_one(retal_doc)
+            retal_doc['_id'] = str(retal_result.inserted_id)
+            retal_entry = fix_id(retal_doc)
+
+        updated_stock = stock_col.find_one({'_id': oid})
+        return jsonify({
+            'success': True,
+            'consumo': fix_id(consumo),
+            'stock_restante': fix_id(updated_stock),
+            'retal_creado': retal_entry,
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/migracion', methods=['POST'])
+def migrar_materiales_legacy_endpoint():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        migrated = _migrar_materiales_legacy(empresa_id)
+        return jsonify({'success': True, 'migrated': migrated}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores', methods=['OPTIONS'])
+def options_materiales_proveedores():
+    return make_response('', 200)
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['OPTIONS'])
+def options_materiales_proveedor(proveedor_id):
+    return make_response('', 200)
+
+
+@app.route('/api/materiales/proveedores', methods=['GET'])
+def get_proveedores_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        docs = list(col.find({'empresa_id': empresa_id}).sort('nombre', 1))
+        for doc in docs:
+            doc['_id'] = str(doc['_id'])
+        return jsonify({'proveedores': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores', methods=['POST'])
+def create_proveedor_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre del proveedor es obligatorio'}), 400
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        doc = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'contacto': (data.get('contacto') or '').strip(),
+            'telefono': (data.get('telefono') or '').strip(),
+            'email': (data.get('email') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_alta': datetime.utcnow().isoformat(),
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'proveedor': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['PUT'])
+def update_proveedor_material(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        update = {}
+        for field in ['nombre', 'contacto', 'telefono', 'email', 'notas']:
+            if field in data:
+                update[field] = (data[field] or '').strip()
+        if not update:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+        if 'nombre' in update and not update['nombre']:
+            return jsonify({'error': 'El nombre no puede estar vacío'}), 400
+        result = col.update_one(
+            {'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id},
+            {'$set': update}
+        )
+        if result.matched_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['DELETE'])
+def delete_proveedor_material(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        result = col.delete_one({'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
+# TROQUELES
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/troqueles', methods=['OPTIONS'])
+def options_troqueles():
+    return make_response('', 200)
+
+@app.route('/api/troqueles/<troquel_id>', methods=['OPTIONS'])
+def options_troquel_id(troquel_id):
+    return make_response('', 200)
+
+@app.route('/api/troqueles', methods=['GET'])
+def get_troqueles():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('troqueles', empresa_id)
+        docs = list(col.find({'empresa_id': empresa_id}, {
+            '_id': 1, 'numero': 1, 'tipo': 1, 'forma': 1, 'estado': 1,
+            'anchoMotivo': 1, 'altoMotivo': 1, 'motivosAncho': 1,
+            'separacionAncho': 1, 'valorZ': 1, 'distanciaSesgado': 1,
+            'created_at': 1
+        }))
+        for d in docs:
+            d['_id'] = str(d['_id'])
+        return jsonify({'troqueles': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles', methods=['POST'])
+def create_troquel():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        numero = (data.get('numero') or data.get('referencia') or '').strip()
+        if not numero:
+            return jsonify({'error': 'El número del troquel es obligatorio'}), 400
+        doc = {
+            'empresa_id': empresa_id,
+            'numero': numero,
+            'tipo': data.get('tipo', 'regular'),
+            'forma': data.get('forma', 'Rectangular'),
+            'estado': data.get('estado', 'Disponible'),
+            'anchoMotivo': str(data.get('anchoMotivo') or ''),
+            'altoMotivo': str(data.get('altoMotivo') or ''),
+            'motivosAncho': str(data.get('motivosAncho') or ''),
+            'separacionAncho': str(data.get('separacionAncho') or ''),
+            'valorZ': str(data.get('valorZ') or ''),
+            'distanciaSesgado': str(data.get('distanciaSesgado') or ''),
+            'created_at': datetime.utcnow(),
+        }
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        doc['created_at'] = doc['created_at'].isoformat()
+        return jsonify({'troquel': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles/<troquel_id>', methods=['PUT'])
+def update_troquel(troquel_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        update = {}
+        if 'numero' in data or 'referencia' in data:
+            numero = (data.get('numero') or data.get('referencia') or '').strip()
+            if not numero:
+                return jsonify({'error': 'El número del troquel es obligatorio'}), 400
+            update['numero'] = numero
+        for field in ('tipo', 'forma', 'estado', 'anchoMotivo', 'altoMotivo',
+                      'motivosAncho', 'separacionAncho', 'valorZ', 'distanciaSesgado'):
+            if field in data:
+                update[field] = str(data[field] or '')
+        if not update:
+            return jsonify({'error': 'Nada que actualizar'}), 400
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.update_one({'_id': ObjectId(troquel_id), 'empresa_id': empresa_id}, {'$set': update})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Troquel no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles/<troquel_id>', methods=['DELETE'])
+def delete_troquel(troquel_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.delete_one({'_id': ObjectId(troquel_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Troquel no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/presupuestos/<int:trabajo_id>', methods=['GET'])
 def get_presupuesto(trabajo_id):
     try:
@@ -2940,7 +3678,7 @@ def aceptar_presupuesto(trabajo_id):
         incoming_dj = data.get('datosPresupuesto') or data.get('datos_presupuesto') or {}
 
         # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos
-        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'troquelId', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
         # Merge: start from existing, then top-level data, then incoming_dj
         merged_dj = dict(existing_dj or {})
         for k in extra_keys:
@@ -3397,7 +4135,7 @@ def crear_presupuesto():
         referencia = data.get('referencia')
         datos_json = data.get('datos_json') or {}
         # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos_json
-        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'troquelId', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
         for k in extra_keys:
             if k in data and (k not in datos_json or datos_json.get(k) is None):
                 datos_json[k] = data.get(k)
@@ -3636,9 +4374,23 @@ def crear_pedido():
             default_label = 'En Diseño'
         doc['estado'] = default_label
         doc['fecha_finalizacion'] = None
-        result = col.insert_one(doc)
-        return jsonify({'success': True, 'pedido_id': str(result.inserted_id)}), 201
+        try:
+            result = col.insert_one(doc)
+            pedido_id = str(result.inserted_id)
+        except pymongo.errors.DuplicateKeyError:
+            # POST /api/trabajos already inserted a stub document into the pedidos
+            # collection (because get_empresa_collection maps 'trabajos' → 'pedidos').
+            # That stub has (empresa_id, trabajo_id) set, so a second insert fails.
+            # Solution: update the existing stub with the full pedido data.
+            existing = col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+            if not existing:
+                raise
+            update_fields = {k: v for k, v in doc.items() if k != '_id'}
+            col.update_one({'_id': existing['_id']}, {'$set': update_fields})
+            pedido_id = str(existing['_id'])
+        return jsonify({'success': True, 'pedido_id': pedido_id}), 201
     except Exception as e:
+        _traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 

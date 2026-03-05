@@ -40,6 +40,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           troquelEstadoSel: formulario.troquelEstadoSel,
           troquelFormaSel: formulario.troquelFormaSel,
           troquelCoste: formulario.troquelCoste,
+          troquelId: formulario.troquelId || null,
           observaciones: formulario.observaciones,
         };
 
@@ -102,7 +103,23 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           razon_social: formulario.razonSocial,
           cif: formulario.cif,
           personas_contacto: formulario.personasContacto,
-          email: formulario.email
+          email: formulario.email,
+          vendedor: formulario.vendedor,
+          referencia: formulario.referencia,
+          fecha: formulario.fecha,
+          formatoAncho: formulario.formatoAncho,
+          formatoLargo: formulario.formatoLargo,
+          maquina: formulario.maquina,
+          material: formulario.material,
+          acabado: formulario.acabado,
+          tirada: formulario.tirada,
+          selectedTintas: formulario.selectedTintas,
+          detalleTintaEspecial: formulario.detalleTintaEspecial,
+          troquelEstadoSel: formulario.troquelEstadoSel,
+          troquelFormaSel: formulario.troquelFormaSel,
+          troquelCoste: formulario.troquelCoste,
+          troquelId: formulario.troquelId || null,
+          observaciones: formulario.observaciones,
         }
       };
 
@@ -117,7 +134,6 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
         return;
       }
 
-      Alert.alert('Éxito', 'Pedido creado exitosamente');
       onSave({
         ...formulario,
         nombre: nombreTrabajo,

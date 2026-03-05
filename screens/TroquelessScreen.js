@@ -116,6 +116,8 @@ function construirTroquelDesdeFila(row, fallbackNumero) {
   };
 }
 
+const API_TROQUELES = 'http://localhost:8080/api/troqueles';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -494,10 +496,7 @@ const styles = StyleSheet.create({
 
 export default function TroquelessScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
-  const [troqueles, setTroqueles] = useState([
-    { id: 1, numero: 'TR-001', estado: 'Disponible', forma: 'Rectangular', tipo: 'regular', anchoMotivo: '100', altoMotivo: '150' },
-    { id: 2, numero: 'TR-002', estado: 'En uso', forma: 'Irregular', tipo: 'irregular', valorZ: '110' },
-  ]);
+  const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
   const [paginaTroqueles, setPaginaTroqueles] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -583,14 +582,28 @@ export default function TroquelessScreen({ currentUser }) {
     }
   };
 
+  const cargarTroqueles = async () => {
+    try {
+      const resp = await fetch(API_TROQUELES);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const lista = (data.troqueles || data || []).map((t) => ({ ...t, id: t._id || t.id }));
+      setTroqueles(lista);
+    } catch (e) {
+      // silently fail
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       cargarRolActivo();
+      cargarTroqueles();
     }, [])
   );
 
   useEffect(() => {
     cargarRolActivo();
+    cargarTroqueles();
   }, []);
 
   const mostrarPermisoDenegado = () => {
@@ -629,16 +642,18 @@ export default function TroquelessScreen({ currentUser }) {
     setTroquelEditando(null);
   };
 
-  const handleGuardarTroquel = (troquel) => {
+  const handleGuardarTroquel = async (troquel) => {
     if (modoEdicionTroquel) {
       if (!puedeEditarTroqueles) {
         mostrarPermisoDenegado();
         return;
       }
 
+      const troquelId = troquelEditando?._id || troquelEditando?.id;
       const numeroEditado = String(troquel?.numero || troquel?.referencia || '').trim().toLowerCase();
       const existeDuplicadoEdicion = troqueles.some((item) => {
-        if (item.id === troquel.id) return false;
+        const itemId = item._id || item.id;
+        if (itemId === troquelId) return false;
         const numero = String(item?.numero || item?.referencia || '').trim().toLowerCase();
         return numero && numero === numeroEditado;
       });
@@ -654,16 +669,24 @@ export default function TroquelessScreen({ currentUser }) {
         return;
       }
 
-      setTroqueles((prev) => prev.map((item) => (
-        item.id === troquel.id
-          ? { ...item, ...troquel, id: item.id, estado: troquel.estado || item.estado }
-          : item
-      )));
-      setTroquelSeleccionado((prev) => (
-        prev?.id === troquel.id
-          ? { ...prev, ...troquel, id: prev.id, estado: troquel.estado || prev.estado }
-          : prev
-      ));
+      try {
+        const resp = await fetch(`${API_TROQUELES}/${troquelId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(troquel),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err.error || err.message || 'Error al guardar';
+          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+          return;
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') { window.alert('Error de red al guardar'); } else { Alert.alert('Error', 'Error de red'); }
+        return;
+      }
+
+      await cargarTroqueles();
       return;
     }
 
@@ -684,10 +707,27 @@ export default function TroquelessScreen({ currentUser }) {
       return;
     }
 
-    setTroqueles([...troqueles, troquel]);
+    try {
+      const resp = await fetch(API_TROQUELES, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(troquel),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        const msg = err.error || err.message || 'Error al crear';
+        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+        return;
+      }
+    } catch (e) {
+      if (Platform.OS === 'web') { window.alert('Error de red al crear'); } else { Alert.alert('Error', 'Error de red'); }
+      return;
+    }
+
+    await cargarTroqueles();
   };
 
-  const importarTroquelesDesdeCsv = (csvText) => {
+  const importarTroquelesDesdeCsv = async (csvText) => {
     const lineas = String(csvText || '')
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -728,16 +768,36 @@ export default function TroquelessScreen({ currentUser }) {
       importados.push(troquel);
     }
 
+    let importadosOk = 0;
+    const erroresApi = [];
+
     if (importados.length > 0) {
-      setTroqueles((prev) => [...prev, ...importados]);
+      for (const t of importados) {
+        try {
+          const resp = await fetch(API_TROQUELES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(t),
+          });
+          if (resp.ok) {
+            importadosOk += 1;
+          } else {
+            erroresApi.push(t.numero);
+          }
+        } catch (e) {
+          erroresApi.push(t.numero);
+        }
+      }
+      await cargarTroqueles();
     }
 
-    const resumenErrores = errores.length > 0 ? `\nErrores: ${errores.length}` : '';
+    const resumenErrores = errores.length > 0 ? `\nErrores de formato: ${errores.length}` : '';
+    const resumenApi = erroresApi.length > 0 ? `\nErrores al guardar: ${erroresApi.length}` : '';
     const previewErrores = errores.slice(0, 3).join('\n');
     const detalleErrores = previewErrores ? `\n\n${previewErrores}${errores.length > 3 ? '\n...' : ''}` : '';
     Alert.alert(
       'Importación finalizada',
-      `Importados: ${importados.length}${resumenErrores}${detalleErrores}`
+      `Importados: ${importadosOk}${resumenErrores}${resumenApi}${detalleErrores}`
     );
   };
 
@@ -765,7 +825,7 @@ export default function TroquelessScreen({ currentUser }) {
         const file = event?.target?.files?.[0];
         if (!file) return;
         const text = await file.text();
-        importarTroquelesDesdeCsv(text);
+        await importarTroquelesDesdeCsv(text);
       } catch (e) {
         Alert.alert('Importación CSV', `No se pudo importar el archivo: ${e.message}`);
       }
@@ -784,11 +844,24 @@ export default function TroquelessScreen({ currentUser }) {
   };
 
   const confirmarEliminarTroquel = (troquel) => {
-    const ejecutar = () => {
-      setTroqueles((prev) => prev.filter((item) => item.id !== troquel.id));
+    const ejecutar = async () => {
+      const troquelId = troquel._id || troquel.id;
+      try {
+        const resp = await fetch(`${API_TROQUELES}/${troquelId}`, { method: 'DELETE' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err.error || 'Error al eliminar';
+          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+          return;
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') { window.alert('Error de red al eliminar'); } else { Alert.alert('Error', 'Error de red'); }
+        return;
+      }
       if (troquelSeleccionado?.id === troquel.id) {
         cerrarDetalle();
       }
+      await cargarTroqueles();
     };
 
     if (Platform.OS === 'web') {

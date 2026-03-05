@@ -439,6 +439,7 @@ export default function PresupuestoScreen({ currentUser }) {
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [modoCreacion, setModoCreacion] = useState('manual');
+  const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
   const { notificarNuevoPedido } = React.useContext(PedidosContext);
 
   const cargarModoCreacion = () => {
@@ -654,7 +655,7 @@ export default function PresupuestoScreen({ currentUser }) {
       });
   };
 
-  const handleAceptarPresupuesto = (presupuesto) => {
+  const handleAceptarPresupuesto = async (presupuesto) => {
     // Enviar todos los datos del presupuesto al crear el pedido
     const datosPresupuesto = {
       numero_presupuesto: presupuesto.numero_presupuesto,
@@ -665,7 +666,7 @@ export default function PresupuestoScreen({ currentUser }) {
       fecha_entrega: presupuesto.fecha_entrega,
       ...presupuesto // Incluir todos los datos adicionales
     };
-    
+
     const targetId = presupuesto.trabajo_id || presupuesto.id || presupuesto._id;
     if (!targetId) {
       console.error('No se encuentra trabajo_id en presupuesto:', presupuesto);
@@ -681,35 +682,111 @@ export default function PresupuestoScreen({ currentUser }) {
       'X-Role': currentUser?.role || 'administrador'
     };
 
-    fetch(`http://localhost:8080/api/presupuestos/aceptar/${targetId}`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify(datosPresupuesto)
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // Actualizar presupuesto localmente
-        const updated = presupuestos.map((p) =>
-          p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data && data.pedido ? data.pedido.fecha_pedido : p.fecha_aprobacion } : p
-        );
-        setPresupuestos(updated);
+    try {
+      const res = await fetch(`http://localhost:8080/api/presupuestos/aceptar/${targetId}`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(datosPresupuesto)
+      });
+      const data = await res.json();
 
-        // Si el servidor devolvió el pedido, navega a Pedidos pasando el pedido
-        if (data && data.pedido) {
+      // Actualizar presupuesto localmente
+      const updated = presupuestos.map((p) =>
+        p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data?.pedido ? data.pedido.fecha_pedido : p.fecha_aprobacion } : p
+      );
+      setPresupuestos(updated);
+
+      if (data && data.pedido) {
+        // Comprobar si hay stock disponible para el material del presupuesto
+        const materialNombre = presupuesto.material || presupuesto.datos_presupuesto?.material || '';
+        if (materialNombre) {
           try {
-            notificarNuevoPedido();
-            navigation.navigate('Pedidos', { newPedido: data.pedido });
-            return;
+            const stockRes = await fetch(
+              `http://localhost:8080/api/materiales/stock?material_nombre=${encodeURIComponent(materialNombre)}&activo=true`,
+              { headers: authHeaders }
+            );
+            const stockData = await stockRes.json();
+            const tirada = parseFloat(presupuesto.tirada || 0);
+            const fl = parseFloat(presupuesto.formatoLargo || 0);
+            const fa = parseFloat(presupuesto.formatoAncho || 0);
+            const metrosEst = tirada > 0 && fl > 0 ? tirada * fl / 1000 : 0;
+            const entries = (stockData.stock || []).filter((e) =>
+              e.es_retal &&
+              e.metros_disponibles > 0 &&
+              (fa <= 0 || e.ancho_cm >= fa / 10) &&
+              (metrosEst <= 0 || e.metros_disponibles >= metrosEst)
+            );
+            if (entries.length > 0) {
+              setStockModal({
+                visible: true,
+                pedido: data.pedido,
+                authHeaders,
+                stockEntries: entries,
+                selectedStockId: entries[0].id,
+                metros: metrosEst > 0 ? metrosEst.toFixed(2) : '',
+                formatoAncho: fa,
+              });
+              return; // esperar acción del usuario en el modal
+            }
           } catch (e) {
-            console.warn('Navigation error al enviar newPedido:', e);
+            console.warn('Error comprobando stock de material:', e);
           }
         }
 
-        // Fallback: notificar y navegar para que la pantalla recargue
-        notificarNuevoPedido();
-        navigation.navigate('Pedidos');
-      })
-      .catch((err) => console.error('Error aceptando presupuesto:', err));
+        // Sin stock disponible o sin material → navegar directamente
+        try {
+          notificarNuevoPedido();
+          navigation.navigate('Pedidos', { newPedido: data.pedido });
+        } catch (e) {
+          console.warn('Navigation error al enviar newPedido:', e);
+          notificarNuevoPedido();
+          navigation.navigate('Pedidos');
+        }
+        return;
+      }
+
+      // Fallback: notificar y navegar para que la pantalla recargue
+      notificarNuevoPedido();
+      navigation.navigate('Pedidos');
+    } catch (err) {
+      console.error('Error aceptando presupuesto:', err);
+    }
+  };
+
+  const handleConfirmarConsumo = async () => {
+    const { pedido, authHeaders: hdrs, selectedStockId, metros } = stockModal;
+    const metrosNum = parseFloat(metros);
+    if (!selectedStockId || isNaN(metrosNum) || metrosNum <= 0) {
+      alert('Selecciona un material e indica los metros a consumir.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:8080/api/materiales/consumos', {
+        method: 'POST',
+        headers: hdrs,
+        body: JSON.stringify({
+          stock_id: selectedStockId,
+          pedido_id: pedido._id || pedido.id,
+          numero_pedido: String(pedido.numero_pedido || ''),
+          metros_consumidos: metrosNum
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Error al registrar consumo de stock');
+        return;
+      }
+    } catch (e) {
+      console.warn('Error registrando consumo de stock:', e);
+    }
+    const pedidoRef = stockModal.pedido;
+    setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
+    notificarNuevoPedido();
+    try {
+      navigation.navigate('Pedidos', { newPedido: pedidoRef });
+    } catch (e) {
+      navigation.navigate('Pedidos');
+    }
   };
 
   const handleAbrirDetalle = (presupuesto) => {
@@ -1068,6 +1145,80 @@ export default function PresupuestoScreen({ currentUser }) {
                   </View>
                 </View>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal deducción de stock de material */}
+      <Modal visible={stockModal.visible} transparent animationType="fade">
+        <View style={styles.detailOverlay}>
+          <View style={[styles.detailCard, { maxWidth: 520, maxHeight: '80%' }]}>
+            <View style={styles.detailHeader}>
+              <Text style={styles.detailTitle}>Deducir stock de material</Text>
+              <TouchableOpacity onPress={() => {
+                const pedidoRef = stockModal.pedido;
+                setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
+                notificarNuevoPedido();
+                try { navigation.navigate('Pedidos', { newPedido: pedidoRef }); }
+                catch (e) { navigation.navigate('Pedidos'); }
+              }}>
+                <Text style={styles.detailClose}>Omitir</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              {stockModal.stockEntries.length > 0 && (
+                <Text style={{ marginBottom: 12, color: '#555', fontSize: 13 }}>
+                  {'Retales de '}
+                  <Text style={{ fontWeight: '600' }}>{stockModal.stockEntries[0]?.material_nombre || ''}</Text>
+                  {stockModal.formatoAncho > 0 ? `  ·  Ancho mínimo: ${(stockModal.formatoAncho / 10).toFixed(1)} cm` : ''}
+                  {stockModal.metros ? `  ·  Metros necesarios: ${stockModal.metros} m` : ''}
+                </Text>
+              )}
+              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>Selecciona el material:</Text>
+              {stockModal.stockEntries.map((entry) => (
+                <TouchableOpacity
+                  key={entry.id}
+                  onPress={() => setStockModal((prev) => ({ ...prev, selectedStockId: entry.id }))}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 6,
+                    borderRadius: 6, borderWidth: 1,
+                    borderColor: stockModal.selectedStockId === entry.id ? '#1565C0' : '#D1D5DB',
+                    backgroundColor: stockModal.selectedStockId === entry.id ? '#EFF6FF' : '#fff'
+                  }}
+                >
+                  <View style={{
+                    width: 14, height: 14, borderRadius: 7, borderWidth: 2,
+                    borderColor: stockModal.selectedStockId === entry.id ? '#1565C0' : '#9CA3AF',
+                    backgroundColor: stockModal.selectedStockId === entry.id ? '#1565C0' : 'transparent',
+                    marginRight: 10
+                  }} />
+                  <Text style={{ flex: 1, fontSize: 13, color: '#374151' }}>
+                    {entry.fabricante} · {entry.ancho_cm} cm{entry.gramaje ? ` · ${entry.gramaje} g/m²` : ''} · Disponibles: {entry.metros_disponibles} m
+                    {entry.numero_lote ? ` · Lote: ${entry.numero_lote}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>Metros a consumir:</Text>
+              <TextInput
+                value={stockModal.metros}
+                onChangeText={(t) => setStockModal((prev) => ({ ...prev, metros: t }))}
+                keyboardType="numeric"
+                placeholder="Ej: 400"
+                style={{
+                  borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 6,
+                  padding: 8, fontSize: 14, marginBottom: 20, backgroundColor: '#fff'
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleConfirmarConsumo}
+                style={{
+                  backgroundColor: '#1565C0', borderRadius: 6,
+                  paddingVertical: 10, alignItems: 'center'
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Registrar y continuar</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>

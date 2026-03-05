@@ -672,14 +672,12 @@ export default function ConfigScreen({ route, currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const [settings, setSettings] = useState({
     roles: [],
-    materiales: [],
     acabados: [],
     tintas_especiales: [],
     estados_pedido: [],
   });
   const [inputs, setInputs] = useState({
     roles: '',
-    materiales: '',
     acabados: '',
     tintas_especiales: '',
     estados_pedido: '',
@@ -818,7 +816,6 @@ export default function ConfigScreen({ route, currentUser }) {
       if (response.ok && data.settings) {
         setSettings({
           roles: data.settings.roles || [],
-          materiales: data.settings.materiales || [],
           acabados: data.settings.acabados || [],
           tintas_especiales: data.settings.tintas_especiales || [],
           estados_pedido: data.settings.estados_pedido || [],
@@ -2406,9 +2403,9 @@ export default function ConfigScreen({ route, currentUser }) {
       {showImpresion && (
       <View style={styles.blockContainer}>
         {showBlockTitles && <Text style={styles.groupTitle}>Impresión</Text>}
-        {renderCategoria('materiales', 'Materiales')}
         {renderCategoria('acabados', 'Acabados / Post impresión')}
         {renderCategoria('tintas_especiales', 'Tintas especiales')}
+
       </View>
       )}
 
@@ -2517,6 +2514,7 @@ export default function ConfigScreen({ route, currentUser }) {
           </View>
         </View>
       </Modal>
+
       </View>
     </ScrollView>
   );
