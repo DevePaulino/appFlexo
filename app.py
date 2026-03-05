@@ -343,8 +343,21 @@ ROLE_PERMISSIONS_DEFAULT = {
 
 # Defaults for pedido states and rules used when DB has no config
 ESTADOS_PEDIDO_DEFAULT = [
-    {'valor': 'En Diseño', 'label': 'En Diseño'},
+    {'valor': 'En Diseño', 'label': 'En Diseño', 'color': '#1976D2'},
 ]
+
+# Default colors for standard states (kept in sync with frontend ESTADO_COLOR_MAP)
+DEFAULT_ESTADO_COLORS = {
+    'en-diseno': '#1976D2',
+    'diseno': '#1976D2',
+    'pendiente-de-aprobacion': '#F57C00',
+    'pendiente-de-cliche': '#C2185B',
+    'pendiente-de-impresion': '#7B1FA2',
+    'pendiente-post-impresion': '#00796B',
+    'finalizado': '#388E3C',
+    'parado': '#D32F2F',
+    'cancelado': '#616161',
+}
 
 ESTADOS_RULES_DEFAULT = {
     'bloqueados_produccion': [],
@@ -893,29 +906,29 @@ def init_db():
     """Initialize default configuration entries in database"""
     from pymongo import MongoClient
     from os import environ
-    
+
     # Connect directly to MongoDB (bypass PyMongo which may not be ready)
-    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforge')
+    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforgepro')
     try:
         client = MongoClient(mongo_uri)
-        db = client['printforge']
+        db = client['printforgepro']
         col_opciones = db['config_opciones']
     except Exception as e:
         print(f"Error connecting to MongoDB in init_db(): {e}")
         return
-    
-    # Mapeo de slugs a nombres legibles para estados
+
+    # Mapeo de slugs a (label, color) para estados
     states_slug_to_label = {
-        'diseno': 'Diseño',
-        'pendiente-de-aprobacion': 'Pendiente de Aprobación',
-        'pendiente-de-cliche': 'Pendiente de Cliché',
-        'pendiente-de-impresion': 'Pendiente de Impresión',
-        'pendiente-post-impresion': 'Pendiente Post-Impresión',
-        'finalizado': 'Finalizado',
-        'parado': 'Parado',
-        'cancelado': 'Cancelado'
+        'en-diseno': ('En Diseño', DEFAULT_ESTADO_COLORS['en-diseno']),
+        'pendiente-de-aprobacion': ('Pendiente de Aprobación', DEFAULT_ESTADO_COLORS['pendiente-de-aprobacion']),
+        'pendiente-de-cliche': ('Pendiente de Cliché', DEFAULT_ESTADO_COLORS['pendiente-de-cliche']),
+        'pendiente-de-impresion': ('Pendiente de Impresión', DEFAULT_ESTADO_COLORS['pendiente-de-impresion']),
+        'pendiente-post-impresion': ('Pendiente Post-Impresión', DEFAULT_ESTADO_COLORS['pendiente-post-impresion']),
+        'finalizado': ('Finalizado', DEFAULT_ESTADO_COLORS['finalizado']),
+        'parado': ('Parado', DEFAULT_ESTADO_COLORS['parado']),
+        'cancelado': ('Cancelado', DEFAULT_ESTADO_COLORS['cancelado']),
     }
-    
+
     defaults_catalogo = {
         'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
         'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
@@ -923,35 +936,46 @@ def init_db():
         'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
         'estados_pedido': list(states_slug_to_label.keys())
     }
-    
+
     try:
         for categoria, valores in defaults_catalogo.items():
             for idx, valor in enumerate(valores, start=1):
                 # Use new schema: 'valor' and 'orden' (no legacy 'value'/'order')
                 if categoria == 'estados_pedido':
-                    # For estados: valor is the slug (key), label is human-readable (value)
-                    label = states_slug_to_label.get(valor, valor)
-                    # Check if exists by human-readable label (prevent duplicates)
+                    # For estados: valor is the slug (key), label+color from map
+                    label, color = states_slug_to_label.get(valor, (valor, None))
+                    # Check if exists by human-readable label for this empresa
                     exists = col_opciones.count_documents({
-                        'categoria': categoria, 
-                        'valor': label  # Check using the actual value field
+                        'categoria': categoria,
+                        'valor': label,
+                        'empresa_id': '1'
                     }) > 0
                     if not exists:
                         col_opciones.insert_one({
                             'categoria': categoria,
-                            'valor': label,  # Store human-readable label
+                            'valor': label,
                             'label': label,
+                            'color': color,
                             'orden': idx,
+                            'empresa_id': '1',
                             'fecha_creacion': datetime.now().isoformat()
                         })
+                    else:
+                        # Update color if missing
+                        if color:
+                            col_opciones.update_one(
+                                {'categoria': categoria, 'valor': label, 'empresa_id': '1', 'color': None},
+                                {'$set': {'color': color}}
+                            )
                 else:
-                    # For other categories, check if value exists
-                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor}) == 0:
+                    # For other categories, check if value exists for empresa='1'
+                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor, 'empresa_id': '1'}) == 0:
                         col_opciones.insert_one({
                             'categoria': categoria,
                             'valor': valor,
                             'label': valor,
                             'orden': idx,
+                            'empresa_id': '1',
                             'fecha_creacion': datetime.now().isoformat()
                         })
     except Exception as e:
@@ -1088,7 +1112,12 @@ def get_estados_pedido_disponibles(empresa_id=None):
         if not label or not valor_slug or valor_slug in used:
             continue
         used.add(valor_slug)
-        parsed.append({'valor': label, 'label': label})
+        # Use stored color if available, else fall back to default map
+        color = row.get('color') or DEFAULT_ESTADO_COLORS.get(valor_slug)
+        item = {'valor': label, 'label': label}
+        if color:
+            item['color'] = color
+        parsed.append(item)
     return parsed if parsed else ESTADOS_PEDIDO_DEFAULT
 
 
@@ -1597,11 +1626,26 @@ def seed_empresa_defaults(empresa_id):
     for cat, valores in defaults_opciones.items():
         for idx, valor in enumerate(valores, start=1):
             if not col_op.find_one({'categoria': cat, 'valor': valor, 'empresa_id': empresa_id}):
-                col_op.insert_one({
+                doc = {
                     'categoria': cat, 'valor': valor, 'label': valor,
                     'orden': idx, 'empresa_id': empresa_id,
                     'fecha_creacion': datetime.now().isoformat(),
-                })
+                }
+                if cat == 'estados_pedido':
+                    slug = slugify_estado(valor)
+                    color = DEFAULT_ESTADO_COLORS.get(slug)
+                    if color:
+                        doc['color'] = color
+                col_op.insert_one(doc)
+            elif cat == 'estados_pedido':
+                # Backfill color if missing
+                slug = slugify_estado(valor)
+                color = DEFAULT_ESTADO_COLORS.get(slug)
+                if color:
+                    col_op.update_one(
+                        {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
+                        {'$set': {'color': color}}
+                    )
 
     config_gen_defaults = [
         ('role_permissions', json.dumps(ROLE_PERMISSIONS_DEFAULT)),
@@ -2213,14 +2257,29 @@ def get_settings_catalogo():
 
                     if not exists:
                         # Insert only if doesn't exist
-                        col.insert_one({
+                        doc = {
                             'categoria': cat,
                             'valor': valor,
                             'label': valor,
                             'orden': idx,
                             'empresa_id': empresa_id,
                             'fecha_creacion': datetime.now().isoformat()
-                        })
+                        }
+                        if cat == 'estados_pedido':
+                            slug = slugify_estado(valor)
+                            color = DEFAULT_ESTADO_COLORS.get(slug)
+                            if color:
+                                doc['color'] = color
+                        col.insert_one(doc)
+                    elif cat == 'estados_pedido':
+                        # Backfill color if missing
+                        slug = slugify_estado(valor)
+                        color = DEFAULT_ESTADO_COLORS.get(slug)
+                        if color:
+                            col.update_one(
+                                {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
+                                {'$set': {'color': color}}
+                            )
 
         if categoria:
             if categoria not in ALLOWED_SETTINGS_CATEGORIES:
@@ -2232,6 +2291,7 @@ def get_settings_catalogo():
                 'id': str(row.get('_id')),
                 'categoria': row.get('categoria'),
                 'valor': row.get('valor'),
+                'color': row.get('color'),
                 'orden': row.get('orden', 0),
                 'fecha_creacion': row.get('fecha_creacion')
             } for row in rows]
@@ -2249,6 +2309,7 @@ def get_settings_catalogo():
                 'id': str(row.get('_id')),
                 'categoria': categoria_row,
                 'valor': row.get('valor'),
+                'color': row.get('color'),
                 'orden': row.get('orden', 0),
                 'fecha_creacion': row.get('fecha_creacion')
             })
@@ -2931,7 +2992,7 @@ def aceptar_presupuesto(trabajo_id):
                 available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
                 default_label = next(iter(available.values()), 'En Diseño')
             except Exception:
-                default_label = 'Diseño'
+                default_label = 'En Diseño'
             doc_pedido['estado'] = default_label
             doc_pedido['fecha_finalizacion'] = None
             result = pedidos_col.insert_one(doc_pedido)
@@ -3062,10 +3123,10 @@ def crear_pedido_desde_erp():
         # Establecer estado del pedido
         try:
             available_states = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
-            requested_estado = (data.get('estado') or 'diseno').lower()
-            estado = available_states.get(requested_estado) or available_states.get('diseno') or 'Diseño'
+            requested_estado = (data.get('estado') or 'en-diseno').lower()
+            estado = available_states.get(requested_estado) or next(iter(available_states.values()), 'En Diseño')
         except Exception:
-            estado = data.get('estado') or 'Diseño'
+            estado = data.get('estado') or 'En Diseño'
         
         doc_pedido['estado'] = estado
         doc_pedido['fecha_finalizacion'] = None
@@ -3279,9 +3340,9 @@ def update_presupuesto(presupuesto_id):
                     }
                     try:
                         available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
-                        default_label = available.get('diseno') or 'Diseño'
+                        default_label = next(iter(available.values()), 'En Diseño')
                     except Exception:
-                        default_label = 'Diseño'
+                        default_label = 'En Diseño'
                     doc_pedido['estado'] = default_label
                     doc_pedido['fecha_finalizacion'] = None
                     result_pedido = pedidos_col.insert_one(doc_pedido)
@@ -3371,9 +3432,9 @@ def crear_presupuesto():
                 }
                 try:
                     available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
-                    default_label = available.get('diseno') or 'Diseño'
+                    default_label = next(iter(available.values()), 'En Diseño')
                 except Exception:
-                    default_label = 'Diseño'
+                    default_label = 'En Diseño'
                 doc_pedido['estado'] = default_label
                 doc_pedido['fecha_finalizacion'] = None
                 result_pedido = pedidos_col.insert_one(doc_pedido)
@@ -3552,12 +3613,12 @@ def crear_pedido():
             'fecha_pedido': fecha_pedido,
             'datos_presupuesto': datos_presupuesto
         }
-        # Establecer estado por defecto ('Diseño') usando las etiquetas configuradas
+        # Establecer estado por defecto ('En Diseño') usando las etiquetas configuradas
         try:
             available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
-            default_label = available.get('diseno') or 'Diseño'
+            default_label = next(iter(available.values()), 'En Diseño')
         except Exception:
-            default_label = 'Diseño'
+            default_label = 'En Diseño'
         doc['estado'] = default_label
         doc['fecha_finalizacion'] = None
         result = col.insert_one(doc)

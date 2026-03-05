@@ -634,7 +634,9 @@ export default function TrabajoScreen({ currentUser }) {
         const parsed = items
           .map((item) => {
             const label = String(item?.valor || '').trim();
-            return { label, value: slugifyEstado(label) };
+            const entry = { label, value: slugifyEstado(label) };
+            if (item?.color) entry.color = item.color;
+            return entry;
           })
           .filter((item) => item.label && item.value);
 
