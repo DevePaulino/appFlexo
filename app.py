@@ -2119,12 +2119,11 @@ def get_settings_catalogo():
             Safely ensure all protected config categories exist with default values.
             Only inserts documents that are completely missing, never creates duplicates.
             """
-            # Define all protected default values matching init_db()
+            # Define only truly protected defaults (roles and estados_pedido).
+            # Materiales, acabados and tintas_especiales are user-editable catalogs:
+            # they must NOT be auto-recreated or users can never delete them.
             defaults_catalogo = {
                 'roles': ['Administrador'],
-                'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
-                'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
-                'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
                 'estados_pedido': [
                     'En Diseño'
                 ]
