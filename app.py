@@ -2971,11 +2971,25 @@ def aceptar_presupuesto(trabajo_id):
         if existing_pedido:
             # El pedido ya existe - actualizar campos vacíos
             pedido_id = str(existing_pedido.get('_id'))
-            # Solo actualizar si falta numero_pedido
+            update_fields = {}
             if not existing_pedido.get('numero_pedido'):
+                update_fields['numero_pedido'] = numero_pedido
+                update_fields['datos_presupuesto'] = datos_presupuesto
+            # Normalizar estado inválido/antiguo (ej: 'Pendiente' de datos viejos)
+            try:
+                available_states = get_estados_pedido_disponibles(empresa_id)
+                valid_slugs = {slugify_estado(item['valor']) for item in available_states}
+                existing_slug = slugify_estado(existing_pedido.get('estado') or '')
+                if not existing_slug or existing_slug not in valid_slugs:
+                    default_label = next((item['valor'] for item in available_states), 'En Diseño')
+                    update_fields['estado'] = default_label
+                    existing_pedido['estado'] = default_label
+            except Exception:
+                pass
+            if update_fields:
                 pedidos_col.update_one(
                     {'_id': existing_pedido.get('_id')},
-                    {'$set': {'numero_pedido': numero_pedido, 'datos_presupuesto': datos_presupuesto}}
+                    {'$set': update_fields}
                 )
             doc_pedido = existing_pedido
             doc_pedido['_id'] = pedido_id

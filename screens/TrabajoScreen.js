@@ -621,8 +621,9 @@ export default function TrabajoScreen({ currentUser }) {
   const normalizarEstadoValue = (estadoRaw) => {
     const slug = slugifyEstado(estadoRaw || '');
     if (!slug) return ESTADOS_DEFAULT[0].value;
-    // Migración: slug antiguo 'diseno' (de 'Diseño') → nuevo 'en-diseno' (de 'En Diseño')
-    if (slug === 'diseno') return 'en-diseno';
+    // Migración: slugs antiguos → canónicos
+    if (slug === 'diseno') return 'en-diseno';      // 'Diseño' → 'En Diseño'
+    if (slug === 'pendiente') return 'en-diseno';   // viejo placeholder → primer estado real
     return slug;
   };
 
@@ -836,7 +837,7 @@ export default function TrabajoScreen({ currentUser }) {
           // Normalizar estados a slugificado para consistencia
           const pedidosNormalizados = (Array.isArray(data.pedidos) ? data.pedidos : []).map(p => ({
             ...p,
-            estado: slugifyEstado(p.estado || '')
+            estado: normalizarEstadoValue(p.estado || '')
           }));
           setTrabajos(pedidosNormalizados);
         } else {
