@@ -584,6 +584,7 @@ export default function TrabajoScreen({ currentUser }) {
   const [editingInitialValues, setEditingInitialValues] = useState(null);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [modalDetalleVisible, setModalDetalleVisible] = useState(false);
+  const [detalleRefreshKey, setDetalleRefreshKey] = useState(0);
   const [maquinas, setMaquinas] = useState([]);
   const [modalMaquinasVisible, setModalMaquinasVisible] = useState(false);
   const [trabajoParaProduccion, setTrabajoParaProduccion] = useState(null);
@@ -1399,15 +1400,6 @@ export default function TrabajoScreen({ currentUser }) {
         </ScrollView>
       )}
 
-      <NuevoPedidoModal
-        visible={modalVisible}
-        onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
-        onSave={(p) => { setModalVisible(false); setEditingInitialValues(null); handleNuevoPedido(p); }}
-        initialValues={editingInitialValues}
-        currentUser={currentUser}
-        puedeCrear={puedeCrear}
-      />
-
       {/* Modal deducción de stock al crear pedido manual */}
       <Modal visible={stockModal.visible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' }}>
@@ -1476,38 +1468,17 @@ export default function TrabajoScreen({ currentUser }) {
         pedidoId={pedidoSeleccionado}
         onDeleted={() => { setModalDetalleVisible(false); cargarPedidos(); }}
         currentUser={currentUser}
-        onEdit={async (pedido) => {
-          setModalDetalleVisible(false);
-          try {
-            console.log('TrabajoScreen.onEdit invoked with:', pedido);
-            // If the passed object looks like a reduced entry, fetch full pedido
-            let fullPedido = pedido;
-            const needsFetch = !pedido || !pedido.datos_presupuesto || (!pedido.id && !pedido.pedido_id);
-            if (needsFetch) {
-              const pid = pedido && (pedido.pedido_id || pedido.id || pedido._id) ? (pedido.pedido_id || pedido.id || pedido._id) : pedidoSeleccionado;
-              if (pid) {
-                const resp = await fetch(`http://localhost:8080/api/pedidos/${pid}`);
-                if (resp.ok) {
-                  fullPedido = await resp.json();
-                }
-              }
-            }
-            // normalize ids and datos_presupuesto
-            if (fullPedido) {
-              fullPedido.id = fullPedido.id || fullPedido.pedido_id || fullPedido._id || fullPedido.id;
-              fullPedido.pedido_id = fullPedido.pedido_id || fullPedido.id || fullPedido._id;
-              fullPedido.datos_presupuesto = fullPedido.datos_presupuesto || {};
-            }
-            console.log('TrabajoScreen.onEdit fullPedido:', fullPedido);
-            setEditingInitialValues(fullPedido || null);
-            console.log('TrabajoScreen: abriendo NuevoPedidoModal con initialValues (id):', fullPedido && (fullPedido.id || fullPedido.pedido_id || fullPedido._id));
-            setModalVisible(true);
-          } catch (err) {
-            console.error('Error cargando pedido para editar', err);
-            setEditingInitialValues(pedido || null);
-            setModalVisible(true);
-          }
-        }}
+        refreshKey={detalleRefreshKey}
+        onEdit={() => { cargarPedidos(); }}
+      />
+
+      <NuevoPedidoModal
+        visible={modalVisible}
+        onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
+        onSave={(p) => { setModalVisible(false); setEditingInitialValues(null); setDetalleRefreshKey(k => k + 1); handleNuevoPedido(p); }}
+        initialValues={editingInitialValues}
+        currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
 
       <Modal

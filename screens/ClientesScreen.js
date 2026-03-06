@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnNewText: {
     color: '#FFFFFF',
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -545,7 +545,7 @@ export default function ClientesScreen({ currentUser }) {
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -641,7 +641,7 @@ export default function ClientesScreen({ currentUser }) {
               value={nuevoNombre}
               onChangeText={setNuevoNombre}
               placeholder="Nombre cliente"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
             {nombreVacio && <Text style={styles.errorText}>El nombre del cliente es obligatorio</Text>}
 
@@ -651,7 +651,7 @@ export default function ClientesScreen({ currentUser }) {
               value={nuevoRazonSocial}
               onChangeText={setNuevoRazonSocial}
               placeholder="Razón social"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
 
             <Text style={styles.fieldLabel}>CIF</Text>
@@ -660,7 +660,7 @@ export default function ClientesScreen({ currentUser }) {
               value={nuevoCif}
               onChangeText={setNuevoCif}
               placeholder="A1234567B"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
             />
             {cifNuevoInvalido && <Text style={styles.errorText}>CIF no válido (ejemplo: A1234567B)</Text>}
@@ -671,7 +671,7 @@ export default function ClientesScreen({ currentUser }) {
               value={nuevoContacto}
               onChangeText={setNuevoContacto}
               placeholder="Nombre(s) de contacto"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
 
             <Text style={styles.fieldLabel}>Email</Text>
@@ -680,7 +680,7 @@ export default function ClientesScreen({ currentUser }) {
               value={nuevoEmail}
               onChangeText={setNuevoEmail}
               placeholder="email@cliente.com"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="none"
               keyboardType="email-address"
             />

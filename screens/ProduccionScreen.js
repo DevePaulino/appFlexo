@@ -867,7 +867,7 @@ export default function ProduccionScreen() {
           placeholder="Buscar en producción por cualquier campo..."
           value={busquedaProduccion}
           onChangeText={setBusquedaProduccion}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
       <ScrollView style={styles.content}>

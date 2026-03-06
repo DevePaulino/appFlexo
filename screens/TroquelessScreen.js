@@ -180,13 +180,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnNewText: {
     color: '#FFFFFF',
   },
   btnImport: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnImportTop: {
     paddingHorizontal: 10,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -982,7 +982,7 @@ export default function TroquelessScreen({ currentUser }) {
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 

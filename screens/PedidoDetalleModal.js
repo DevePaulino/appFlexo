@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { usePermission } from './usePermission';
+import NuevoPedidoModal from './NuevoPedidoModal';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -24,12 +25,13 @@ const styles = StyleSheet.create({
   },
   modal: {
     width: '98%',
+    height: '94%',
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     padding: 16,
-    maxHeight: '94%',
+    flexDirection: 'column',
   },
   header: {
     backgroundColor: '#1E293B',
@@ -190,20 +192,26 @@ const styles = StyleSheet.create({
   },
 
   // ── Gestión de archivos ─────────────────────────────────────────────────
-  fileUploadBtn: {
+  fileSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#475569',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 10,
+    marginTop: 4,
   },
-  fileUploadBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+  fileUploadIconBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fileUploadIconBtnText: {
+    fontSize: 16,
+    color: '#475569',
+    lineHeight: 20,
+    fontWeight: '600',
   },
   fileRow: {
     flexDirection: 'row',
@@ -268,12 +276,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   versionTab: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingLeft: 12,
-    paddingRight: 6,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
@@ -284,13 +291,22 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   versionTabDeleteBtn: {
-    padding: 2,
-    borderRadius: 3,
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#94A3B8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   versionTabDeleteBtnText: {
-    fontSize: 9,
-    color: '#94A3B8',
-    lineHeight: 13,
+    fontSize: 8,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 10,
   },
   versionTabText: {
     fontSize: 13,
@@ -305,6 +321,48 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginTop: 1,
   },
+  versionTabsCol: {
+    flexDirection: 'column',
+    gap: 4,
+    minWidth: 62,
+    flexShrink: 0,
+    paddingTop: 6,
+    paddingRight: 6,
+  },
+
+  // ── PDF Lightbox ─────────────────────────────────────────────────────────
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  lightboxContent: {
+    width: '92%',
+    height: '92%',
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  lightboxCloseBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lightboxCloseBtnText: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800',
+  },
 
   // ── PDF preview ─────────────────────────────────────────────────────────
   previewRow: {
@@ -314,14 +372,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pdfPreviewWrapper: {
-    width: '25%',
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
+    width: '16%',
+    aspectRatio: 3 / 4,
+    borderRadius: 6,
     overflow: 'hidden',
     flexShrink: 0,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   metaColumn: {
     flex: 1,
@@ -335,37 +391,73 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 6,
   },
-  tintaItem: {
+  sepChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  sepChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 3,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  tintaDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    gap: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  sepChipWarn: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+  },
+  sepSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.15)',
     flexShrink: 0,
   },
-  tintaNombre: {
-    fontSize: 12,
-    fontWeight: '600',
+  sepNombre: {
+    fontSize: 11,
+    fontWeight: '500',
     color: '#1E293B',
     flex: 1,
   },
-  tintaTipo: {
+  sepWarnIcon: {
     fontSize: 10,
-    color: '#94A3B8',
-    fontStyle: 'italic',
+    color: '#D97706',
+    flexShrink: 0,
   },
-  tintaValores: {
+  mismatchBanner: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  mismatchText: {
     fontSize: 10,
-    color: '#64748B',
-    marginTop: 1,
+    color: '#92400E',
+    lineHeight: 15,
+  },
+  matchBanner: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  matchText: {
+    fontSize: 10,
+    color: '#166534',
+    fontWeight: '600',
   },
   pdfOpenHint: {
     fontSize: 10,
@@ -381,9 +473,11 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: 'wrap',
   },
-  eskoBtn: {
+  eskoToolCol: {
     flex: 1,
     minWidth: 80,
+  },
+  eskoBtn: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -395,15 +489,205 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  eskoOutputBox: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    borderRadius: 6,
+    minHeight: 36,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eskoOutputEmptyText: {
+    fontSize: 10,
+    color: '#CBD5E1',
+    fontStyle: 'italic',
+  },
+  // ── Tabs navegación ──────────────────────────────────────────────────
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 10,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabBtnActive: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    backgroundColor: '#1E293B',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  tabTextActive: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  filesSectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  fileCountBadge: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginLeft: 2,
+  },
+  fileCountBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  filesSeparator: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 14,
+  },
+  // ── Barra de acciones inferior ────────────────────────────────────
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    marginTop: 4,
+  },
+  bottomMainBtns: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  bottomEditBtn: {
+    backgroundColor: '#475569',
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    minWidth: 130,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  bottomEditBtnText: {
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  bottomCancelBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    minWidth: 130,
+  },
+  bottomCancelBtnText: {
+    color: '#475569',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  bottomDeleteBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomDeleteBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  // ── Display de tintas 2 columnas ──────────────────────────────────
+  inkSection: {
+    marginBottom: 10,
+  },
+  inkSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 8,
+  },
+  inkColsRow: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  inkCol: {
+    flex: 1,
+  },
+  inkColBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    paddingLeft: 12,
+  },
+  inkColTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  inkChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 8,
+  },
+  inkSwatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    flexShrink: 0,
+  },
+  inkChipLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1E293B',
+    flex: 1,
+  },
 });
 
-export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit, currentUser = null }) {
+export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit, currentUser = null, refreshKey = 0 }) {
   const canDelete = usePermission('eliminar_archivos');
+  const canEdit   = usePermission('edit_pedidos');
+  const [editVisible, setEditVisible]           = useState(false);
+  const [editInitialValues, setEditInitialValues] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [activeRole, setActiveRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [chargingAction, setChargingAction] = useState(null);
+  const [activeTab, setActiveTab] = useState('datos');
 
   // Archivos
   const [archivos, setArchivos] = useState({ artes: [], unitario: [] });
@@ -411,8 +695,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [uploadingArtes, setUploadingArtes] = useState(false);
   const [uploadingUnitario, setUploadingUnitario] = useState(false);
+  const [artesExpanded, setArtesExpanded] = useState(false);
   const [pdfMeta, setPdfMeta] = useState(null);
   const [pdfMetaLoading, setPdfMetaLoading] = useState(false);
+  const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
   const fileInputArtesRef    = useRef(null);
   const fileInputUnitarioRef = useRef(null);
 
@@ -436,6 +722,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     if (!visible) {
       setArchivos({ artes: [], unitario: [] });
       setSelectedVersion(null);
+      setActiveTab('datos');
+      setPdfLightboxUrl(null);
       return;
     }
     if (pedidoId) {
@@ -443,7 +731,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       cargarRolActivo();
       cargarArchivos();
     }
-  }, [visible, pedidoId]);
+  }, [visible, pedidoId, refreshKey]);
 
   const normalizarRolActivo = (value) =>
     String(value || '')
@@ -524,6 +812,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) { Alert.alert('Error al subir', data.error || 'No se pudieron subir los archivos'); return; }
       await cargarArchivos();
+      setArtesExpanded(true);
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {
@@ -647,38 +936,446 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <>
+      <Modal visible={visible} transparent animationType="fade">
       <View style={styles.container}>
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Detalle del Pedido</Text>
-            {canDelete && (
-              <View style={styles.headerActions}>
-                <TouchableOpacity
-                  style={[styles.actionIcon, { backgroundColor: 'rgba(255,255,255,0.06)' }]}
-                  onPress={async () => {
-                    if (!pedido) return;
-                    let fullPedido = pedido;
-                    const pid = pedido && (pedido.id || pedido.pedido_id || pedido._id) ? (pedido.id || pedido.pedido_id || pedido._id) : null;
-                    if (pid) {
-                      try {
-                        const resp = await fetch(`${API_BASE}/api/pedidos/${pid}`);
-                        if (resp.ok) fullPedido = await resp.json();
-                      } catch (e) {}
-                    }
-                    if (typeof onEdit === 'function') {
-                      onEdit(fullPedido);
-                      if (typeof onClose === 'function') onClose();
-                      return;
-                    }
-                    Alert.alert('Editar', 'Funcionalidad de edición no configurada.');
-                  }}
-                >
-                  <Text style={styles.actionIconText}>✎</Text>
-                </TouchableOpacity>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
+          {/* ── Pestañas ── */}
+          <View style={styles.tabBar}>
+            <TouchableOpacity
+              style={activeTab === 'datos' ? styles.tabBtnActive : styles.tabBtn}
+              onPress={() => setActiveTab('datos')}
+            >
+              <Text style={activeTab === 'datos' ? styles.tabTextActive : styles.tabText}>Pedido</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={activeTab === 'archivos' ? styles.tabBtnActive : styles.tabBtn}
+              onPress={() => setActiveTab('archivos')}
+            >
+              <Text style={activeTab === 'archivos' ? styles.tabTextActive : styles.tabText}>Archivos</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flex: 1, overflow: 'hidden' }}>
+            {loading ? (
+              <View style={styles.loading}>
+                <ActivityIndicator size="large" color="#3AB274" />
+              </View>
+            ) : error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : pedido ? (
+              <ScrollView style={{ flex: 1 }}>
+
+              {/* ═══════════════════ TAB: PEDIDO ═══════════════════ */}
+              {activeTab === 'datos' && (
+                <View style={styles.topGrid}>
+                  {(() => {
+                    const dp = pedido.datos_presupuesto || null;
+                    const hasPresupuesto = dp && Object.keys(dp).some((k) => {
+                      const v = dp[k];
+                      if (v === null || v === undefined) return false;
+                      if (Array.isArray(v)) return v.length > 0;
+                      if (typeof v === 'string') return v.trim() !== '';
+                      return true;
+                    });
+
+                    if (hasPresupuesto) {
+                      return (
+                        <>
+                          <View style={styles.leftCol}>
+                            <View style={styles.sectionCard}>
+                              <Text style={styles.sectionTitle}>Pedido</Text>
+                              {renderRow('Número:', pedido.numero_pedido || '-')}
+                              {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
+                              {renderRow('Referencia:', pedido.referencia || '-')}
+                              {renderRow('Nombre trabajo:', pedido.nombre || '-')}
+                              {renderRow('Estado:', pedido.estado || '-')}
+                              {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
+                              {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
+                            </View>
+                            <View style={styles.sectionCard}>
+                              <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
+                              {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
+                              {renderRow('Razón social:', dp?.razon_social || pedido.razon_social || '-')}
+                              {renderRow('CIF:', dp?.cif || pedido.cif || '-')}
+                              {renderRow('Contacto:', dp?.personas_contacto || pedido.personas_contacto || '-')}
+                              {renderRow('Email:', dp?.email || pedido.email || '-')}
+                              {renderRow('Vendedor:', dp?.vendedor || '-')}
+                            </View>
+                          </View>
+
+                          <View style={styles.rightCol}>
+                            <View style={styles.sectionCard}>
+                              <Text style={styles.sectionTitle}>Presupuesto / Producto</Text>
+                              {renderRow('Nº Presupuesto:', dp?.numero_presupuesto || pedido.numero_presupuesto || '-')}
+                              {renderRow('Referencia presupuesto:', dp?.referencia || '-')}
+                              {renderRow('Formato:', dp?.formatoAncho ? `${dp.formatoAncho} x ${dp.formatoLargo || '-'} mm` : '-')}
+                              {renderRow('Máquina:', dp?.maquina || pedido.maquina || '-')}
+                              {renderRow('Material:', dp?.material || '-')}
+                              {renderRow('Acabado:', Array.isArray(dp?.acabado) ? (dp.acabado.length ? dp.acabado.join(', ') : '-') : (dp?.acabado || '-'))}
+                              {renderRow('Tirada:', dp?.tirada ? `${dp.tirada} unidades` : '-')}
+                              {/* ── Tintas como texto ── */}
+                              {(() => {
+                                const CMYK_LABELS = { C: 'Cyan', M: 'Magenta', Y: 'Yellow', K: 'Negro' };
+                                const items = [];
+                                (dp?.selectedTintas || []).filter((t) => ['C','M','Y','K'].includes(t)).forEach((t) => items.push(CMYK_LABELS[t]));
+                                const spotMap = new Map();
+                                (dp?.selectedTintas || []).filter((t) => !['C','M','Y','K'].includes(t)).forEach((t) => spotMap.set(t, t));
+                                (dp?.pantones || []).forEach((p) => {
+                                  const lbl = p.label || p.key || '';
+                                  if (!lbl || spotMap.has(lbl) || ['C','M','Y','K'].includes(lbl)) return;
+                                  spotMap.set(lbl, lbl);
+                                });
+                                spotMap.forEach((lbl) => items.push(lbl));
+                                (Array.isArray(dp?.detalleTintaEspecial) ? dp.detalleTintaEspecial : [])
+                                  .forEach((te) => { if (te && !items.includes(te)) items.push(te); });
+                                if (items.length === 0) return null;
+                                return renderRow('Tintas:', items.join(' · '));
+                              })()}
+                              {renderRow('Troquel estado:', dp?.troquelEstadoSel || '-')}
+                              {renderRow('Troquel forma:', dp?.troquelFormaSel || '-')}
+                              {renderRow('Troquel coste:', dp?.troquelCoste || '-')}
+                              <View style={styles.fullWidthRow}>
+                                <Text style={styles.fullWidthLabel}>Observaciones:</Text>
+                                <Text style={styles.fullWidthValue}>{dp?.observaciones || '-'}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <View style={styles.leftCol}>
+                          <View style={styles.sectionCard}>
+                            <Text style={styles.sectionTitle}>Pedido</Text>
+                            {renderRow('Número:', pedido.numero_pedido || '-')}
+                            {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
+                            {renderRow('Referencia:', pedido.referencia || '-')}
+                            {renderRow('Nombre trabajo:', pedido.nombre || '-')}
+                            {renderRow('Estado:', pedido.estado || '-')}
+                            {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
+                            {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
+                          </View>
+                        </View>
+                        <View style={styles.rightCol}>
+                          <View style={styles.sectionCard}>
+                            <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
+                            {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
+                            {renderRow('Razón social:', pedido.razon_social || '-')}
+                            {renderRow('CIF:', pedido.cif || '-')}
+                            {renderRow('Contacto:', pedido.personas_contacto || '-')}
+                            {renderRow('Email:', pedido.email || '-')}
+                            {renderRow('Vendedor:', (pedido.datos_presupuesto && pedido.datos_presupuesto.vendedor) || '-')}
+                          </View>
+                        </View>
+                      </>
+                    );
+                  })()}
+                </View>
+              )}
+
+              {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
+              {activeTab === 'archivos' && (
+                <View style={styles.sectionCard}>
+
+                  {/* ── Artes Finales del Cliente ── */}
+                  <View style={styles.fileSectionHeader}>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}
+                      onPress={() => setArtesExpanded(v => !v)}
+                    >
+                      <Text style={{ fontSize: 9, color: '#94A3B8', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
+                      <Text style={styles.filesSectionLabel}>Artes Finales del Cliente</Text>
+                      {archivos.artes.length > 0 && (
+                        <View style={styles.fileCountBadge}>
+                          <Text style={styles.fileCountBadgeText}>{archivos.artes.length}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    {uploadingArtes
+                      ? <ActivityIndicator size="small" color="#94A3B8" />
+                      : (
+                        <TouchableOpacity
+                          style={styles.fileUploadIconBtn}
+                          onPress={() => fileInputArtesRef.current && fileInputArtesRef.current.click()}
+                        >
+                          <Text style={styles.fileUploadIconBtnText}>+</Text>
+                        </TouchableOpacity>
+                      )
+                    }
+                  </View>
+
+                  {Platform.OS === 'web' && (
+                    <input
+                      type="file"
+                      ref={fileInputArtesRef}
+                      style={{ display: 'none' }}
+                      multiple
+                      accept=".pdf,.ai,.eps,.jpg,.jpeg,.png"
+                      onChange={(e) => handleUploadArtes(e.target.files)}
+                    />
+                  )}
+
+                  {artesExpanded && (archivosLoading && archivos.artes.length === 0 ? (
+                    <ActivityIndicator size="small" color="#475569" />
+                  ) : archivos.artes.length === 0 ? (
+                    <Text style={styles.emptyFilesText}>Sin archivos de cliente</Text>
+                  ) : (
+                    archivos.artes.map((archivo) => {
+                      const ext = (archivo.nombre_original || '').split('.').pop().toUpperCase().slice(0, 4);
+                      return (
+                        <View key={archivo.id} style={styles.fileRow}>
+                          <View style={styles.fileIcon}>
+                            <Text style={styles.fileIconText}>{ext}</Text>
+                          </View>
+                          <Text style={styles.fileName} numberOfLines={1}>{archivo.nombre_original}</Text>
+                          <Text style={styles.fileMeta}>{formatearTamanio(archivo.tamanio)}</Text>
+                          <TouchableOpacity
+                            style={[styles.fileActionBtn, styles.fileDownloadBtn]}
+                            onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${archivo.id}`, '_blank'); }}
+                          >
+                            <Text style={styles.fileActionBtnText}>↓</Text>
+                          </TouchableOpacity>
+                          {canDelete && (
+                            <TouchableOpacity
+                              style={[styles.fileActionBtn, styles.fileDeleteBtn]}
+                              onPress={() => handleEliminarArchivo(archivo.id)}
+                            >
+                              <Text style={styles.fileActionBtnText}>✕</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  ))}
+
+                  {/* ── Separador ── */}
+                  <View style={styles.filesSeparator} />
+
+                  {/* ── Unitario ── */}
+                  <View style={styles.fileSectionHeader}>
+                    <Text style={styles.filesSectionLabel}>Unitario</Text>
+                    {uploadingUnitario
+                      ? <ActivityIndicator size="small" color="#94A3B8" />
+                      : (
+                        <TouchableOpacity
+                          style={styles.fileUploadIconBtn}
+                          onPress={() => fileInputUnitarioRef.current && fileInputUnitarioRef.current.click()}
+                        >
+                          <Text style={styles.fileUploadIconBtnText}>+</Text>
+                        </TouchableOpacity>
+                      )
+                    }
+                  </View>
+
+                  {Platform.OS === 'web' && (
+                    <input
+                      type="file"
+                      ref={fileInputUnitarioRef}
+                      style={{ display: 'none' }}
+                      accept=".pdf"
+                      onChange={(e) => e.target.files[0] && handleUploadUnitario(e.target.files[0])}
+                    />
+                  )}
+
+                  {archivosLoading && archivos.unitario.length === 0 ? (
+                    <ActivityIndicator size="small" color="#475569" />
+                  ) : archivos.unitario.length === 0 ? (
+                    <Text style={styles.emptyFilesText}>Sin PDF unitario — sube la primera versión</Text>
+                  ) : (
+                    <>
+                      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+
+                        {/* LEFT: Tabs de versión en vertical */}
+                        <View style={styles.versionTabsCol}>
+                          {archivos.unitario.map((u) => {
+                            const isActive = u.version === selectedVersion;
+                            const fecha = u.fecha_subida ? u.fecha_subida.split('T')[0].split('-').reverse().join('/') : '';
+                            return (
+                              <View key={u.id} style={[styles.versionTab, isActive && styles.versionTabActive]}>
+                                <TouchableOpacity
+                                  onPress={() => setSelectedVersion(u.version)}
+                                  style={{ flex: 1 }}
+                                >
+                                  <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
+                                    v{u.version}
+                                  </Text>
+                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
+                                </TouchableOpacity>
+                                {canDelete && (
+                                  <TouchableOpacity
+                                    onPress={() => handleEliminarArchivo(u.id)}
+                                    style={[styles.versionTabDeleteBtn, isActive && { backgroundColor: '#475569' }]}
+                                  >
+                                    <Text style={styles.versionTabDeleteBtnText}>✕</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            );
+                          })}
+                        </View>
+
+                        {/* RIGHT: Preview + separaciones + botones Esko */}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+
+                          {/* Fila: thumbnail + separaciones */}
+                          {(() => {
+                            const selected = archivos.unitario.find((u) => u.version === selectedVersion);
+                            if (!selected) return null;
+                            const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline`;
+
+                            // ── Detección de mismatch tintas PDF vs pedido ──────────
+                            const CMYK_NORM = { c: 'cyan', m: 'magenta', y: 'yellow', k: 'black' };
+                            const inkKey = (name) => {
+                              const n = String(name).toLowerCase().trim();
+                              if (CMYK_NORM[n]) return CMYK_NORM[n];
+                              const digits = n.match(/\d+/);
+                              return digits ? digits[0] : n;
+                            };
+                            const dp = pedido?.datos_presupuesto || {};
+                            const pedidoKeys = new Set([
+                              ...(dp.selectedTintas || []).map(inkKey),
+                              ...(dp.pantones || []).map((p) => inkKey(p.label || p.key || '')),
+                              ...(Array.isArray(dp.detalleTintaEspecial) ? dp.detalleTintaEspecial : []).map(inkKey),
+                            ]);
+                            const pdfSeps = pdfMeta?.separaciones || [];
+                            const pdfKeys = new Set(pdfSeps.map((s) => inkKey(s.nombre)));
+                            const hasPedidoInks = pedidoKeys.size > 0 && pdfSeps.length > 0;
+                            const extraEnPdf = hasPedidoInks
+                              ? pdfSeps.filter((s) => s.tipo !== 'especial' && !pedidoKeys.has(inkKey(s.nombre)))
+                              : [];
+                            const extraEnPedido = hasPedidoInks
+                              ? [
+                                  ...(dp.selectedTintas || []).filter((t) => !pdfKeys.has(inkKey(t))),
+                                  ...(dp.pantones || []).filter((p) => !pdfKeys.has(inkKey(p.label || p.key || ''))).map((p) => p.label || p.key),
+                                  ...(Array.isArray(dp.detalleTintaEspecial) ? dp.detalleTintaEspecial : []).filter((te) => te && !pdfKeys.has(inkKey(te))),
+                                ]
+                              : [];
+                            const extraEnPdfSet = new Set(extraEnPdf.map((s) => s.nombre));
+
+                            return (
+                              <View style={styles.previewRow}>
+                                {/* Thumbnail PDF */}
+                                <View style={styles.pdfPreviewWrapper}>
+                                  {Platform.OS === 'web' ? (
+                                    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+                                      <iframe
+                                        key={selected.id}
+                                        src={`${inlineUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                                        style={{ border: 'none', outline: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%' }}
+                                        title={`Unitario v${selected.version}`}
+                                      />
+                                      <div
+                                        onClick={() => setPdfLightboxUrl(inlineUrl)}
+                                        style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
+                                        title="Ampliar PDF"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                                      <Text style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center' }}>{selected.nombre_original}</Text>
+                                    </View>
+                                  )}
+                                </View>
+
+                                {/* Columna separaciones */}
+                                <View style={styles.metaColumn}>
+                                  <Text style={styles.metaTitle}>Separaciones</Text>
+                                  {pdfMetaLoading ? (
+                                    <ActivityIndicator size="small" color="#94A3B8" />
+                                  ) : pdfSeps.length === 0 ? (
+                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>Sin datos</Text>
+                                  ) : (
+                                    <>
+                                      <View style={styles.sepChipsWrap}>
+                                        {pdfSeps.map((s, i) => {
+                                          const warn = extraEnPdfSet.has(s.nombre);
+                                          return (
+                                            <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
+                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
+                                              <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
+                                              {warn && <Text style={styles.sepWarnIcon}>⚠</Text>}
+                                            </View>
+                                          );
+                                        })}
+                                      </View>
+                                      {hasPedidoInks && extraEnPdf.length === 0 && extraEnPedido.length === 0 ? (
+                                        <View style={styles.matchBanner}>
+                                          <Text style={styles.matchText}>✓ Tintas coinciden con el pedido</Text>
+                                        </View>
+                                      ) : (extraEnPdf.length > 0 || extraEnPedido.length > 0) ? (
+                                        <View style={styles.mismatchBanner}>
+                                          {extraEnPdf.length > 0 && (
+                                            <Text style={styles.mismatchText}>
+                                              En PDF, no en pedido: {extraEnPdf.map((s) => s.nombre).join(', ')}
+                                            </Text>
+                                          )}
+                                          {extraEnPedido.length > 0 && (
+                                            <Text style={[styles.mismatchText, { marginTop: extraEnPdf.length > 0 ? 2 : 0 }]}>
+                                              En pedido, no en PDF: {extraEnPedido.join(', ')}
+                                            </Text>
+                                          )}
+                                        </View>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </View>
+                              </View>
+                            );
+                          })()}
+
+                          {/* Botones Esko */}
+                          <View style={styles.eskoActionsRow}>
+                            {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
+                              const accion = mapToolToAccion(title);
+                              const isLoading = chargingAction === accion;
+                              return (
+                                <View key={title} style={styles.eskoToolCol}>
+                                  <TouchableOpacity
+                                    style={[styles.eskoBtn, isLoading && { opacity: 0.6 }]}
+                                    onPress={() => handleDescargarTool(title)}
+                                    disabled={!!isLoading}
+                                  >
+                                    <Text style={styles.eskoBtnText}>
+                                      {isLoading ? '...' : title}
+                                    </Text>
+                                  </TouchableOpacity>
+                                  {/* Contenedor archivos procesados Esko */}
+                                  <View style={styles.eskoOutputBox}>
+                                    <Text style={styles.eskoOutputEmptyText}>—</Text>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+
+                        </View>
+                      </View>
+                    </>
+                  )}
+
+                </View>
+              )}
+
+              </ScrollView>
+            ) : null}
+          </View>
+
+          {/* ── Barra de acciones inferior ── */}
+          {pedido && (
+            <View style={styles.bottomBar}>
+              {canDelete && (
                 <TouchableOpacity
-                  style={[styles.actionIcon, { backgroundColor: 'rgba(255,107,107,0.9)' }]}
+                  style={styles.bottomDeleteBtn}
                   onPress={async () => {
                     if (!pedido?.id) return;
                     const confirmDelete = (typeof window !== 'undefined' && window.confirm)
@@ -699,346 +1396,65 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     } catch (err) { Alert.alert('Error', 'Error de conexión: ' + err.message); }
                   }}
                 >
-                  <Text style={styles.actionIconText}>🗑</Text>
+                  <Text style={styles.bottomDeleteBtnText}>Eliminar</Text>
+                </TouchableOpacity>
+              )}
+              <View style={styles.bottomMainBtns}>
+                <TouchableOpacity style={styles.bottomCancelBtn} onPress={onClose}>
+                  <Text style={styles.bottomCancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.bottomEditBtn}
+                  onPress={async () => {
+                    if (!pedido) return;
+                    let fullPedido = pedido;
+                    const pid = pedido.id || pedido.pedido_id || pedido._id || null;
+                    if (pid) {
+                      try {
+                        const resp = await fetch(`${API_BASE}/api/pedidos/${pid}`);
+                        if (resp.ok) fullPedido = await resp.json();
+                      } catch (e) {}
+                    }
+                    setEditInitialValues(fullPedido);
+                    setEditVisible(true);
+                  }}
+                >
+                  <Text style={styles.bottomEditBtnText}>Editar pedido</Text>
                 </TouchableOpacity>
               </View>
-            )}
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <View style={styles.loading}>
-              <ActivityIndicator size="large" color="#3AB274" />
             </View>
-          ) : error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : pedido ? (
-            <ScrollView>
-              {/* ── Info cards (pedido + cliente + presupuesto) ──────────── */}
-              <View style={styles.topGrid}>
-                {(() => {
-                  const dp = pedido.datos_presupuesto || null;
-                  const hasPresupuesto = dp && Object.keys(dp).some((k) => {
-                    const v = dp[k];
-                    if (v === null || v === undefined) return false;
-                    if (Array.isArray(v)) return v.length > 0;
-                    if (typeof v === 'string') return v.trim() !== '';
-                    return true;
-                  });
-
-                  if (hasPresupuesto) {
-                    return (
-                      <>
-                        <View style={styles.leftCol}>
-                          <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>Pedido</Text>
-                            {renderRow('Número:', pedido.numero_pedido || '-')}
-                            {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
-                            {renderRow('Referencia:', pedido.referencia || '-')}
-                            {renderRow('Nombre trabajo:', pedido.nombre || '-')}
-                            {renderRow('Estado:', pedido.estado || '-')}
-                            {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                            {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
-                          </View>
-                          <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
-                            {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                            {renderRow('Razón social:', pedido.datos_presupuesto?.razon_social || pedido.razon_social || '-')}
-                            {renderRow('CIF:', pedido.datos_presupuesto?.cif || pedido.cif || '-')}
-                            {renderRow('Contacto:', pedido.datos_presupuesto?.personas_contacto || pedido.personas_contacto || '-')}
-                            {renderRow('Email:', pedido.datos_presupuesto?.email || pedido.email || '-')}
-                            {renderRow('Vendedor:', pedido.datos_presupuesto?.vendedor || '-')}
-                          </View>
-                        </View>
-
-                        <View style={styles.rightCol}>
-                          <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>Presupuesto / Producto</Text>
-                            {renderRow('Nº Presupuesto:', pedido.datos_presupuesto?.numero_presupuesto || pedido.numero_presupuesto || '-')}
-                            {renderRow('Referencia presupuesto:', pedido.datos_presupuesto?.referencia || '-')}
-                            {renderRow('Formato:', pedido.datos_presupuesto?.formatoAncho ? `${pedido.datos_presupuesto.formatoAncho} x ${pedido.datos_presupuesto.formatoLargo || '-'} mm` : '-')}
-                            {renderRow('Máquina:', pedido.datos_presupuesto?.maquina || pedido.maquina || '-')}
-                            {renderRow('Material:', pedido.datos_presupuesto?.material || '-')}
-                            {renderRow('Acabado:', Array.isArray(pedido.datos_presupuesto?.acabado) ? (pedido.datos_presupuesto.acabado.length ? pedido.datos_presupuesto.acabado.join(', ') : '-') : (pedido.datos_presupuesto?.acabado || '-'))}
-                            {renderRow('Tirada:', pedido.datos_presupuesto?.tirada ? `${pedido.datos_presupuesto.tirada} unidades` : '-')}
-                            {renderRow('Tintas:', Array.isArray(pedido.datos_presupuesto?.selectedTintas) ? pedido.datos_presupuesto.selectedTintas.join(', ') : pedido.datos_presupuesto?.selectedTintas || '-')}
-                            {renderRow('Tinta especial:', Array.isArray(pedido.datos_presupuesto?.detalleTintaEspecial) ? (pedido.datos_presupuesto.detalleTintaEspecial.length ? pedido.datos_presupuesto.detalleTintaEspecial.join(', ') : '-') : (pedido.datos_presupuesto?.detalleTintaEspecial || '-'))}
-                            {renderRow('Troquel estado:', pedido.datos_presupuesto?.troquelEstadoSel || '-')}
-                            {renderRow('Troquel forma:', pedido.datos_presupuesto?.troquelFormaSel || '-')}
-                            {renderRow('Troquel coste:', pedido.datos_presupuesto?.troquelCoste || '-')}
-                            <View style={styles.fullWidthRow}>
-                              <Text style={styles.fullWidthLabel}>Observaciones:</Text>
-                              <Text style={styles.fullWidthValue}>{pedido.datos_presupuesto?.observaciones || '-'}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </>
-                    );
-                  }
-
-                  return (
-                    <>
-                      <View style={styles.leftCol}>
-                        <View style={styles.sectionCard}>
-                          <Text style={styles.sectionTitle}>Pedido</Text>
-                          {renderRow('Número:', pedido.numero_pedido || '-')}
-                          {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
-                          {renderRow('Referencia:', pedido.referencia || '-')}
-                          {renderRow('Nombre trabajo:', pedido.nombre || '-')}
-                          {renderRow('Estado:', pedido.estado || '-')}
-                          {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                          {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
-                        </View>
-                      </View>
-                      <View style={styles.rightCol}>
-                        <View style={styles.sectionCard}>
-                          <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
-                          {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                          {renderRow('Razón social:', pedido.razon_social || '-')}
-                          {renderRow('CIF:', pedido.cif || '-')}
-                          {renderRow('Contacto:', pedido.personas_contacto || '-')}
-                          {renderRow('Email:', pedido.email || '-')}
-                          {renderRow('Vendedor:', (pedido.datos_presupuesto && pedido.datos_presupuesto.vendedor) || '-')}
-                        </View>
-                      </View>
-                    </>
-                  );
-                })()}
-              </View>
-
-              {/* ── Artes Finales del Cliente ─────────────────────────────── */}
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Artes Finales del Cliente</Text>
-
-                {Platform.OS === 'web' && (
-                  <input
-                    type="file"
-                    ref={fileInputArtesRef}
-                    style={{ display: 'none' }}
-                    multiple
-                    accept=".pdf,.ai,.eps,.jpg,.jpeg,.png"
-                    onChange={(e) => handleUploadArtes(e.target.files)}
-                  />
-                )}
-
-                <TouchableOpacity
-                  style={[styles.fileUploadBtn, uploadingArtes && { opacity: 0.6 }]}
-                  onPress={() => fileInputArtesRef.current && fileInputArtesRef.current.click()}
-                  disabled={uploadingArtes}
-                >
-                  {uploadingArtes && <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />}
-                  <Text style={styles.fileUploadBtnText}>
-                    {uploadingArtes ? 'Subiendo...' : '+ Subir archivos'}
-                  </Text>
-                </TouchableOpacity>
-
-                {archivosLoading && archivos.artes.length === 0 ? (
-                  <ActivityIndicator size="small" color="#475569" />
-                ) : archivos.artes.length === 0 ? (
-                  <Text style={styles.emptyFilesText}>Sin archivos de cliente</Text>
-                ) : (
-                  archivos.artes.map((archivo) => {
-                    const ext = (archivo.nombre_original || '').split('.').pop().toUpperCase().slice(0, 4);
-                    return (
-                      <View key={archivo.id} style={styles.fileRow}>
-                        <View style={styles.fileIcon}>
-                          <Text style={styles.fileIconText}>{ext}</Text>
-                        </View>
-                        <Text style={styles.fileName} numberOfLines={1}>{archivo.nombre_original}</Text>
-                        <Text style={styles.fileMeta}>{formatearTamanio(archivo.tamanio)}</Text>
-                        <TouchableOpacity
-                          style={[styles.fileActionBtn, styles.fileDownloadBtn]}
-                          onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${archivo.id}`, '_blank'); }}
-                        >
-                          <Text style={styles.fileActionBtnText}>↓</Text>
-                        </TouchableOpacity>
-                        {canDelete && (
-                          <TouchableOpacity
-                            style={[styles.fileActionBtn, styles.fileDeleteBtn]}
-                            onPress={() => handleEliminarArchivo(archivo.id)}
-                          >
-                            <Text style={styles.fileActionBtnText}>✕</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-
-              {/* ── Unitario ──────────────────────────────────────────────── */}
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Unitario</Text>
-
-                {Platform.OS === 'web' && (
-                  <input
-                    type="file"
-                    ref={fileInputUnitarioRef}
-                    style={{ display: 'none' }}
-                    accept=".pdf"
-                    onChange={(e) => e.target.files[0] && handleUploadUnitario(e.target.files[0])}
-                  />
-                )}
-
-                <TouchableOpacity
-                  style={[styles.fileUploadBtn, uploadingUnitario && { opacity: 0.6 }]}
-                  onPress={() => fileInputUnitarioRef.current && fileInputUnitarioRef.current.click()}
-                  disabled={uploadingUnitario}
-                >
-                  {uploadingUnitario && <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />}
-                  <Text style={styles.fileUploadBtnText}>
-                    {uploadingUnitario ? 'Subiendo...' : '+ Subir nueva versión'}
-                  </Text>
-                </TouchableOpacity>
-
-                {archivosLoading && archivos.unitario.length === 0 ? (
-                  <ActivityIndicator size="small" color="#475569" />
-                ) : archivos.unitario.length === 0 ? (
-                  <Text style={styles.emptyFilesText}>Sin PDF unitario — sube la primera versión</Text>
-                ) : (
-                  <>
-                    {/* Tabs de versión */}
-                    <View style={styles.versionTabsRow}>
-                      {archivos.unitario.map((u) => {
-                        const isActive = u.version === selectedVersion;
-                        const fecha = u.fecha_subida ? u.fecha_subida.split('T')[0].split('-').reverse().join('/') : '';
-                        return (
-                          <View key={u.id} style={[styles.versionTab, isActive && styles.versionTabActive]}>
-                            <TouchableOpacity
-                              onPress={() => setSelectedVersion(u.version)}
-                              style={{ flex: 1 }}
-                            >
-                              <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
-                                v{u.version}
-                              </Text>
-                              {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
-                            </TouchableOpacity>
-                            {canDelete && (
-                              <TouchableOpacity
-                                onPress={() => handleEliminarArchivo(u.id)}
-                                style={styles.versionTabDeleteBtn}
-                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                              >
-                                <Text style={[styles.versionTabDeleteBtnText, isActive && { color: '#FCA5A5' }]}>✕</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </View>
-
-                    {/* Fila: thumbnail + metadatos tintas */}
-                    {(() => {
-                      const selected = archivos.unitario.find((u) => u.version === selectedVersion);
-                      if (!selected) return null;
-                      const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline`;
-
-                      // color representativo del punto de tinta
-                      const dotColor = (t) => {
-                        if (t.modelo === 'CMYK') {
-                          const n = t.nombre.toLowerCase();
-                          if (n === 'cyan')    return '#00AEEF';
-                          if (n === 'magenta') return '#EC008C';
-                          if (n === 'yellow')  return '#FFD700';
-                          if (n === 'black')   return '#1A1A1A';
-                          // genérico CMYK basado en valores
-                          const c = (t.c||0)/100, m = (t.m||0)/100, y = (t.y||0)/100, k = (t.k||0)/100;
-                          const r = Math.round(255*(1-c)*(1-k));
-                          const g = Math.round(255*(1-m)*(1-k));
-                          const b = Math.round(255*(1-y)*(1-k));
-                          return `rgb(${r},${g},${b})`;
-                        }
-                        if (t.modelo === 'RGB') return `rgb(${t.r||0},${t.g||0},${t.b||0})`;
-                        return '#8B5CF6'; // spot sin valores → violeta
-                      };
-
-                      const fmtValores = (t) => {
-                        if (t.modelo === 'CMYK') return `C${t.c} M${t.m} Y${t.y} K${t.k}`;
-                        if (t.modelo === 'LAB')  return `L${t.l} a${t.a_lab} b${t.b_lab}`;
-                        if (t.modelo === 'RGB')  return `R${t.r} G${t.g} B${t.b}`;
-                        return null;
-                      };
-
-                      return (
-                        <View style={styles.previewRow}>
-                          {/* Thumbnail PDF */}
-                          <View style={styles.pdfPreviewWrapper}>
-                            {Platform.OS === 'web' ? (
-                              <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                                <iframe
-                                  key={selected.id}
-                                  src={`${inlineUrl}#toolbar=0&navpanes=0&zoom=page-fit`}
-                                  style={{ border: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%' }}
-                                  title={`Unitario v${selected.version}`}
-                                />
-                                <div
-                                  onClick={() => window.open(inlineUrl, '_blank')}
-                                  style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
-                                  title="Abrir PDF en nueva pestaña"
-                                />
-                              </div>
-                            ) : (
-                              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                                <Text style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center' }}>{selected.nombre_original}</Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Columna metadatos / tintas */}
-                          <View style={styles.metaColumn}>
-                            <Text style={styles.metaTitle}>Tintas</Text>
-                            {pdfMetaLoading ? (
-                              <ActivityIndicator size="small" color="#94A3B8" />
-                            ) : !pdfMeta || !pdfMeta.tintas || pdfMeta.tintas.length === 0 ? (
-                              <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>Sin datos de tintas</Text>
-                            ) : (
-                              pdfMeta.tintas.map((t, i) => (
-                                <View key={i} style={styles.tintaItem}>
-                                  <View style={[styles.tintaDot, { backgroundColor: dotColor(t) }]} />
-                                  <View style={{ flex: 1, minWidth: 0 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                      <Text style={styles.tintaNombre} numberOfLines={1}>{t.nombre}</Text>
-                                      <Text style={styles.tintaTipo}>{t.tipo === 'process' ? 'proceso' : 'especial'}</Text>
-                                    </View>
-                                    {fmtValores(t) && <Text style={styles.tintaValores}>{fmtValores(t)}</Text>}
-                                  </View>
-                                </View>
-                              ))
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })()}
-
-                    {/* Botones Esko (debajo del preview) */}
-                    <View style={styles.eskoActionsRow}>
-                      {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
-                        const accion = mapToolToAccion(title);
-                        const isLoading = chargingAction === accion;
-                        return (
-                          <TouchableOpacity
-                            key={title}
-                            style={[styles.eskoBtn, isLoading && { opacity: 0.6 }]}
-                            onPress={() => handleDescargarTool(title)}
-                            disabled={!!isLoading}
-                          >
-                            <Text style={styles.eskoBtnText}>
-                              {isLoading ? '...' : title}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </>
-                )}
-              </View>
-
-            </ScrollView>
-          ) : null}
+          )}
         </View>
       </View>
+
+      {/* ── Lightbox PDF ── */}
+      {pdfLightboxUrl && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setPdfLightboxUrl(null)}>
+          <View style={styles.lightboxOverlay}>
+            <View style={styles.lightboxContent}>
+              {Platform.OS === 'web' && (
+                <iframe
+                  src={pdfLightboxUrl}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  title="Vista previa PDF"
+                />
+              )}
+              <TouchableOpacity style={styles.lightboxCloseBtn} onPress={() => setPdfLightboxUrl(null)}>
+                <Text style={styles.lightboxCloseBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </Modal>
+    <NuevoPedidoModal
+      visible={editVisible}
+      onClose={() => { setEditVisible(false); setEditInitialValues(null); }}
+      onSave={(p) => { setEditVisible(false); setEditInitialValues(null); cargarPedido(); if (typeof onEdit === 'function') onEdit(p); }}
+      initialValues={editInitialValues}
+      currentUser={currentUser}
+      puedeCrear={canEdit}
+    />
+    </>
   );
 }

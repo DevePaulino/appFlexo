@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnPrimary: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnSecondary: {
     backgroundColor: '#F1F5F9',
@@ -267,6 +267,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: TR-001"
+              placeholderTextColor="#94A3B8"
               value={refTroquel}
               onChangeText={setRefTroquel}
             />
@@ -293,6 +294,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 100"
+              placeholderTextColor="#94A3B8"
               value={anchoMotivo}
               onChangeText={setAnchoMotivo}
               keyboardType="numeric"
@@ -302,6 +304,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 150"
+              placeholderTextColor="#94A3B8"
               value={altoMotivo}
               onChangeText={setAltoMotivo}
               keyboardType="numeric"
@@ -311,6 +314,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 4"
+              placeholderTextColor="#94A3B8"
               value={motivosAncho}
               onChangeText={setMotivosAncho}
               keyboardType="numeric"
@@ -320,6 +324,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 2"
+              placeholderTextColor="#94A3B8"
               value={separacionAncho}
               onChangeText={setSeparacionAncho}
               keyboardType="numeric"
@@ -329,6 +334,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 110"
+              placeholderTextColor="#94A3B8"
               value={valorZ}
               onChangeText={setValorZ}
               keyboardType="numeric"
@@ -338,6 +344,7 @@ export default function NuevoTroquelModal({
             <TextInput
               style={styles.input}
               placeholder="Ej: 3"
+              placeholderTextColor="#94A3B8"
               value={distanciaSesgado}
               onChangeText={setDistanciaSesgado}
               keyboardType="numeric"

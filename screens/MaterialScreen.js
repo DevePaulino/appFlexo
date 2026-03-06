@@ -791,6 +791,7 @@ export default function MaterialScreen({ currentUser }) {
               value={stockFilter}
               onChangeText={setStockFilter}
               placeholder="Nombre material..."
+              placeholderTextColor="#94A3B8"
             />
           )}
         </View>
@@ -960,6 +961,7 @@ export default function MaterialScreen({ currentUser }) {
             value={catNombre}
             onChangeText={setCatNombre}
             placeholder="Ej. Polipropileno"
+            placeholderTextColor="#94A3B8"
             autoFocus
           />
 
@@ -986,6 +988,7 @@ export default function MaterialScreen({ currentUser }) {
                   value={catAnchoInputs[fab.id] || ''}
                   onChangeText={v => setCatAnchoInputs(prev => ({ ...prev, [fab.id]: v }))}
                   placeholder="Ancho cm"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="decimal-pad"
                 />
                 <TouchableOpacity style={styles.btnSecondarySmall} onPress={() => addAncho(fab.id)}>
@@ -1016,6 +1019,7 @@ export default function MaterialScreen({ currentUser }) {
                 value={catFabInput}
                 onChangeText={setCatFabInput}
                 placeholder="Nombre proveedor"
+                placeholderTextColor="#94A3B8"
               />
             )}
             <TouchableOpacity style={styles.btnSecondarySmall} onPress={addFabricante}>
@@ -1069,6 +1073,7 @@ export default function MaterialScreen({ currentUser }) {
             value={stockForm.material_nombre}
             onChangeText={v => setStockForm(p => ({ ...p, material_nombre: v }))}
             placeholder="Nombre del material"
+            placeholderTextColor="#94A3B8"
           />
         )}
 
@@ -1097,6 +1102,7 @@ export default function MaterialScreen({ currentUser }) {
             value={stockForm.fabricante}
             onChangeText={v => setStockForm(p => ({ ...p, fabricante: v }))}
             placeholder="Nombre del fabricante"
+            placeholderTextColor="#94A3B8"
           />
         )}
 
@@ -1122,6 +1128,7 @@ export default function MaterialScreen({ currentUser }) {
             onChangeText={v => setStockForm(p => ({ ...p, ancho_cm: v }))}
             keyboardType="decimal-pad"
             placeholder="Ej. 33"
+            placeholderTextColor="#94A3B8"
           />
         )}
 
@@ -1132,6 +1139,7 @@ export default function MaterialScreen({ currentUser }) {
           onChangeText={v => setStockForm(p => ({ ...p, gramaje: v }))}
           keyboardType="decimal-pad"
           placeholder="Ej. 80"
+          placeholderTextColor="#94A3B8"
         />
 
         <Text style={styles.fieldLabel}>Metros totales *</Text>
@@ -1141,6 +1149,7 @@ export default function MaterialScreen({ currentUser }) {
           onChangeText={v => setStockForm(p => ({ ...p, metros_total: v }))}
           keyboardType="decimal-pad"
           placeholder="Ej. 5000"
+          placeholderTextColor="#94A3B8"
         />
 
         <Text style={styles.fieldLabel}>Número de lote</Text>
@@ -1149,6 +1158,7 @@ export default function MaterialScreen({ currentUser }) {
           value={stockForm.numero_lote}
           onChangeText={v => setStockForm(p => ({ ...p, numero_lote: v }))}
           placeholder="Ej. LOT-2026-001"
+          placeholderTextColor="#94A3B8"
         />
 
         <Text style={styles.fieldLabel}>Notas</Text>
@@ -1158,6 +1168,7 @@ export default function MaterialScreen({ currentUser }) {
           onChangeText={v => setStockForm(p => ({ ...p, notas: v }))}
           multiline
           placeholder="Observaciones..."
+          placeholderTextColor="#94A3B8"
         />
       </>
     );
@@ -1203,6 +1214,7 @@ export default function MaterialScreen({ currentUser }) {
                   onChangeText={setStockEditNotas}
                   multiline
                   placeholder="Observaciones sobre este material..."
+                  placeholderTextColor="#94A3B8"
                   autoFocus
                 />
               </>
@@ -1296,6 +1308,7 @@ export default function MaterialScreen({ currentUser }) {
                 value={consumoForm.stock_id}
                 onChangeText={v => setConsumoForm(p => ({ ...p, stock_id: v }))}
                 placeholder="ID del stock"
+                placeholderTextColor="#94A3B8"
               />
             )}
 
@@ -1305,6 +1318,7 @@ export default function MaterialScreen({ currentUser }) {
               value={consumoForm.pedido_ref}
               onChangeText={v => setConsumoForm(p => ({ ...p, pedido_ref: v }))}
               placeholder="Ej. #2026-045 (opcional)"
+              placeholderTextColor="#94A3B8"
             />
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -1316,6 +1330,7 @@ export default function MaterialScreen({ currentUser }) {
                   onChangeText={v => setConsumoForm(p => ({ ...p, ancho_trabajo_cm: v }))}
                   keyboardType="decimal-pad"
                   placeholder={selEntry ? `máx ${selEntry.ancho_cm} cm` : 'Ej. 54'}
+                  placeholderTextColor="#94A3B8"
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -1326,6 +1341,7 @@ export default function MaterialScreen({ currentUser }) {
                   onChangeText={v => setConsumoForm(p => ({ ...p, largo_trabajo_m: v }))}
                   keyboardType="decimal-pad"
                   placeholder="Ej. 10"
+                  placeholderTextColor="#94A3B8"
                 />
               </View>
             </View>
@@ -1411,6 +1427,7 @@ export default function MaterialScreen({ currentUser }) {
             value={provForm.nombre}
             onChangeText={v => setProvForm(p => ({ ...p, nombre: v }))}
             placeholder="Ej. Antalis, Sihl, HP..."
+            placeholderTextColor="#94A3B8"
             autoFocus
           />
 
@@ -1420,6 +1437,7 @@ export default function MaterialScreen({ currentUser }) {
             value={provForm.contacto}
             onChangeText={v => setProvForm(p => ({ ...p, contacto: v }))}
             placeholder="Nombre del comercial"
+            placeholderTextColor="#94A3B8"
           />
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -1430,6 +1448,7 @@ export default function MaterialScreen({ currentUser }) {
                 value={provForm.telefono}
                 onChangeText={v => setProvForm(p => ({ ...p, telefono: v }))}
                 placeholder="+34 600 000 000"
+                placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
               />
             </View>
@@ -1440,6 +1459,7 @@ export default function MaterialScreen({ currentUser }) {
                 value={provForm.email}
                 onChangeText={v => setProvForm(p => ({ ...p, email: v }))}
                 placeholder="comercial@proveedor.com"
+                placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
               />
             </View>
@@ -1452,6 +1472,7 @@ export default function MaterialScreen({ currentUser }) {
             onChangeText={v => setProvForm(p => ({ ...p, notas: v }))}
             multiline
             placeholder="Condiciones, plazos de entrega..."
+            placeholderTextColor="#94A3B8"
           />
 
           <View style={styles.modalActions}>
@@ -1540,9 +1561,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabBtnActive: { borderBottomColor: '#2563EB' },
+  tabBtnActive: { backgroundColor: '#1E293B', borderBottomColor: 'transparent' },
   tabBtnText: { fontSize: 14, color: '#475569', fontWeight: '500' },
-  tabBtnTextActive: { color: '#2563EB', fontWeight: '700' },
+  tabBtnTextActive: { color: '#F8FAFC', fontWeight: '700' },
 
   // Tab content
   tabContent: { flex: 1, padding: 16 },
@@ -1555,7 +1576,7 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
   filterLabel: { fontSize: 13, color: '#475569', fontWeight: '500' },
   filterSelectWrap: { flex: 1, maxWidth: 260 },
-  filterSelect: { width: '100%', height: 32, border: '1px solid #E2E8F0', borderRadius: 10, padding: '4px 8px', fontSize: 13, backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outline: 'none' },
+  filterSelect: { width: '100%', height: 32, border: '1px solid #E2E8F0', borderRadius: 10, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 13, backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outlineWidth: 0 },
   filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
 
   // Table
@@ -1634,7 +1655,7 @@ const styles = StyleSheet.create({
 
   // Primary/secondary buttons
   btnPrimary: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1659,7 +1680,7 @@ const styles = StyleSheet.create({
 
   // Pagination
   paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 16 },
-  paginationBtn: { backgroundColor: '#2563EB', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7 },
+  paginationBtn: { backgroundColor: '#475569', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7 },
   paginationBtnDisabled: { backgroundColor: '#CCC' },
   paginationBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
   paginationInfo: { fontSize: 13, color: '#475569' },
@@ -1702,12 +1723,12 @@ const styles = StyleSheet.create({
     height: 36,
     border: '1px solid #E2E8F0',
     borderRadius: 10,
-    padding: '4px 8px',
+    paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
     fontSize: 13,
     backgroundColor: '#F8FAFC',
     color: '#0F172A',
     cursor: 'pointer',
-    outline: 'none',
+    outlineWidth: 0,
   },
 
   // Fabricante edit rows

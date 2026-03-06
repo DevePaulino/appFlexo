@@ -22,12 +22,12 @@ export const C = {
   // Borders
   border:        '#E2E8F0',  // slate-200  (cards, sections)
   borderStrong:  '#CBD5E1',  // slate-300  (inputs default)
-  borderFocus:   '#2563EB',  // primary focus ring
+  borderFocus:   '#475569',  // primary focus ring
 
   // Brand / Primary
-  primary:       '#2563EB',  // blue-600
-  primaryDark:   '#1D4ED8',  // blue-700
-  primaryLight:  '#EFF6FF',  // blue-50
+  primary:       '#475569',  // slate-600
+  primaryDark:   '#334155',  // slate-700
+  primaryLight:  '#F1F5F9',  // slate-100
   primaryText:   '#FFFFFF',
 
   // Secondary action
@@ -50,7 +50,7 @@ export const C = {
   successText:   '#16A34A',  successBg: '#F0FDF4',
   warningText:   '#D97706',  warningBg: '#FFFBEB',
   errorText:     '#DC2626',  errorBg:   '#FEF2F2',
-  infoText:      '#2563EB',  infoBg:    '#EFF6FF',
+  infoText:      '#475569',  infoBg:    '#F1F5F9',
   purpleText:    '#7C3AED',  purpleBg:  '#F5F3FF',
   tealText:      '#0D9488',  tealBg:    '#F0FDFA',
 };

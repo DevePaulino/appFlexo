@@ -1082,8 +1082,8 @@ export default function NuevoPresupuestoModal({
 
     return (
         <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 16 }}>
-                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', maxHeight: '92%', overflow: 'hidden', shadowColor: '#0F172A', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 10 }}>
+                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', overflow: 'hidden', flexDirection: 'column' }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>
@@ -1645,25 +1645,21 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
 
-                    {/* SUBMIT */}
-                    <View style={styles.submitContainer}>
-                        <TouchableOpacity
-                            style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
-                            onPress={() => puedeCrear && handleSubmit()}
-                            disabled={!puedeCrear}
-                        >
-                            <Text style={[styles.bigBtnText, { color: '#F8FAFC' }]}>{submitLabel}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
-                            <Text style={styles.bigBtnText}>Cancelar</Text>
-                        </TouchableOpacity>
-                    </View>
-                    {!puedeCrear && (
-                        <View style={{ paddingHorizontal: 16, marginTop: 6 }}>
-                            <Text style={{ color: '#777', fontSize: 12 }}>Tu rol no permite crear presupuestos.</Text>
-                        </View>
-                    )}
                 </ScrollView>
+
+                {/* ── Barra de acciones inferior ── */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                    <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
+                        <Text style={styles.bigBtnText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
+                        onPress={() => puedeCrear && handleSubmit()}
+                        disabled={!puedeCrear}
+                    >
+                        <Text style={[styles.bigBtnText, { color: '#F8FAFC' }]}>{submitLabel}</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {showDatePicker && Platform.OS !== 'web' && (
                     <DateTimePicker

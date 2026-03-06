@@ -6111,87 +6111,269 @@ def eliminar_archivo(archivo_id):
 
 # ── Helpers PDF ──────────────────────────────────────────────────────────────
 
-def _extraer_tintas_pdf(ruta):
-    """
-    Extrae tintas/colorantes de un PDF.
-    Estrategia:
-      1) XMP > xmpTPg:SwatchGroups > xmpG:Colorants  (Adobe InDesign / Illustrator)
-      2) Fallback: ColorSpace resources de página (Separation / DeviceN)
-    Devuelve lista de dicts: {nombre, tipo, modelo, ...valores_color}
-    """
-    tintas = []
+# Carga PANTONE map una sola vez (sRGB por nombre de PANTONE)
+_PANTONE_MAP: dict = {}
+try:
+    _pantone_map_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'pantone_map.json')
+    with open(_pantone_map_path, encoding='utf-8') as _f:
+        _PANTONE_MAP = json.load(_f)
+except Exception:
+    pass
+
+# Colores fijos para tintas de proceso CMYK
+_PROCESO_COLORES = {
+    'cyan': '#00AEEF', 'c': '#00AEEF',
+    'magenta': '#EC008C', 'm': '#EC008C',
+    'yellow': '#FFF200', 'y': '#FFF200',
+    'black': '#232323', 'k': '#232323',
+}
+
+# Nombres técnicos de die-cuts / elementos de troquelado (no son tintas de impresión)
+_DIE_CUT_NAMES = {
+    'troquel', 'cutter', 'die', 'die cut', 'die line', 'dieline',
+    'laser', 'crease', 'fold', 'score', 'stucco', 'varnish', 'barniz', 'charol',
+    'cut', 'corte', 'perf', 'perforation',
+}
+
+
+def _resolve(obj):
+    """Resuelve IndirectObject a su valor real."""
     try:
-        reader = PdfReader(ruta)
-
-        # ── 1. XMP SwatchGroups ───────────────────────────────────────────────
-        xmp = reader.xmp_metadata
-        if xmp is not None:
-            ns_rdf = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-            ns_g   = 'http://ns.adobe.com/xap/1.0/g/'
-            try:
-                root = xmp.xml_element  # ElementTree.Element
-                for li in root.iter(f'{{{ns_rdf}}}li'):
-                    nombre = li.findtext(f'{{{ns_g}}}swatchName')
-                    if not nombre:
-                        continue
-                    tipo_raw = (li.findtext(f'{{{ns_g}}}type') or '').upper()
-                    tipo  = 'process' if tipo_raw == 'PROCESS' else 'spot'
-                    modo  = (li.findtext(f'{{{ns_g}}}mode') or '').upper()
-                    tinta = {'nombre': nombre, 'tipo': tipo, 'modelo': modo}
-                    if modo == 'CMYK':
-                        tinta['c'] = round(float(li.findtext(f'{{{ns_g}}}cyan')    or 0), 1)
-                        tinta['m'] = round(float(li.findtext(f'{{{ns_g}}}magenta') or 0), 1)
-                        tinta['y'] = round(float(li.findtext(f'{{{ns_g}}}yellow')  or 0), 1)
-                        tinta['k'] = round(float(li.findtext(f'{{{ns_g}}}black')   or 0), 1)
-                    elif modo == 'LAB':
-                        tinta['l']     = round(float(li.findtext(f'{{{ns_g}}}L') or 0), 2)
-                        tinta['a_lab'] = round(float(li.findtext(f'{{{ns_g}}}A') or 0), 2)
-                        tinta['b_lab'] = round(float(li.findtext(f'{{{ns_g}}}B') or 0), 2)
-                    elif modo == 'RGB':
-                        tinta['r'] = int(float(li.findtext(f'{{{ns_g}}}red')   or 0))
-                        tinta['g'] = int(float(li.findtext(f'{{{ns_g}}}green') or 0))
-                        tinta['b'] = int(float(li.findtext(f'{{{ns_g}}}blue')  or 0))
-                    tintas.append(tinta)
-            except Exception:
-                pass
-
-        # ── 2. Fallback: ColorSpace resources ────────────────────────────────
-        if not tintas:
-            seen = set()
-            process_names = {'cyan', 'magenta', 'yellow', 'black', 'red', 'green', 'blue', 'gray', 'grey'}
-            for page in reader.pages:
-                try:
-                    cs_dict = (page.get('/Resources') or {}).get('/ColorSpace') or {}
-                    for _key, val in cs_dict.items():
-                        if not isinstance(val, list) or len(val) < 2:
-                            continue
-                        cs_type = str(val[0])
-                        if cs_type == '/Separation':
-                            nombre = str(val[1]).lstrip('/')
-                            if nombre in ('None', 'All') or nombre in seen:
-                                continue
-                            seen.add(nombre)
-                            tipo = 'process' if nombre.lower() in process_names else 'spot'
-                            tintas.append({'nombre': nombre, 'tipo': tipo, 'modelo': None})
-                        elif cs_type == '/DeviceN' and isinstance(val[1], list):
-                            for n in val[1]:
-                                nombre = str(n).lstrip('/')
-                                if nombre in ('None', 'All') or nombre in seen:
-                                    continue
-                                seen.add(nombre)
-                                tipo = 'process' if nombre.lower() in process_names else 'spot'
-                                tintas.append({'nombre': nombre, 'tipo': tipo, 'modelo': None})
-                except Exception:
-                    continue
+        from PyPDF2.generic import IndirectObject
+        if isinstance(obj, IndirectObject):
+            return obj.get_object()
     except Exception:
         pass
-    return tintas
+    return obj
+
+
+def _es_die_cut(nombre):
+    """Devuelve True si el nombre de separación corresponde a un elemento técnico (no tinta)."""
+    n = nombre.lower().strip()
+    if n in _DIE_CUT_NAMES:
+        return True
+    return any(d in n for d in ('troquel', 'cutter', 'dieline', 'die line', 'crease', 'stucco'))
+
+
+def _color_para_separacion(nombre, tint_fn_raw=None):
+    """
+    Devuelve string de color para mostrar la separación:
+      1) Colores fijos para C/M/Y/K
+      2) Lookup en pantone_map.json (sRGB → hex)
+      3) Tint function del PDF (LAB → CSS lab() o CMYK → hex)
+    """
+    # 1. Proceso CMYK
+    color = _PROCESO_COLORES.get(nombre.lower())
+    if color:
+        return color
+
+    # 2. PANTONE map
+    for key in (nombre, f'PANTONE {nombre} C', nombre.upper(), f'PANTONE {nombre.upper()} C'):
+        entry = _PANTONE_MAP.get(key)
+        if entry:
+            r, g, b = entry['srgb']
+            return f'#{r:02X}{g:02X}{b:02X}'
+
+    # 3. Heurísticas por nombre (inks custom sin entrada en pantone_map)
+    n_low = nombre.lower()
+    if any(w in n_low for w in ('negro', 'noir', 'black', 'schwarz', 'nero', 'siyah', 'pluma')):
+        return '#1A1A1A'
+    if any(w in n_low for w in ('blanco', 'blanc', 'white', 'weiss', 'bianco')):
+        return '#E8E8E8'
+    if any(w in n_low for w in ('oro', 'gold', 'dorado', 'golden')):
+        return '#C9A227'
+    if any(w in n_low for w in ('plata', 'silver', 'argent', 'metaliz', 'cromad')):
+        return '#A8A9AD'
+    if any(w in n_low for w in ('rojo', 'red', 'rouge', 'rosso', 'rot')):
+        return '#CC2B2B'
+    if any(w in n_low for w in ('azul', 'blue', 'bleu', 'blu', 'blau')):
+        return '#1A56DB'
+    if any(w in n_low for w in ('verde', 'green', 'vert', 'gruen', 'grün')):
+        return '#1D7A3A'
+
+    # 4. Tint function del PDF
+    if tint_fn_raw is not None:
+        try:
+            fn = _resolve(tint_fn_raw)
+            if isinstance(fn, dict):
+                c1 = fn.get('/C1')
+                if c1:
+                    vals = [float(_resolve(x)) for x in c1]
+                    if len(vals) == 3:
+                        return f'lab({round(vals[0], 1)}% {round(vals[1], 2)} {round(vals[2], 2)})'
+                    if len(vals) >= 4:
+                        c2, m2, y2, k2 = vals[0], vals[1], vals[2], vals[3]
+                        r = max(0, min(255, round(255 * (1 - c2) * (1 - k2))))
+                        g = max(0, min(255, round(255 * (1 - m2) * (1 - k2))))
+                        b = max(0, min(255, round(255 * (1 - y2) * (1 - k2))))
+                        return f'#{r:02X}{g:02X}{b:02X}'
+        except Exception:
+            pass
+    return None
+
+
+def _coleccion_to_tipo(coleccion):
+    """Clasifica una separación según la colección Esko."""
+    c = str(coleccion).lower()
+    if c == 'process':
+        return 'proceso'
+    if 'pantone' in c or 'hks' in c or 'toyo' in c or 'dic' in c:
+        return 'spot'
+    return 'especial'          # designer, cutter, varnish, etc.
+
+
+def _ht_type1_values(ht):
+    """Extrae lpi/angulo/forma de un halftone Type 1 dict."""
+    try:
+        lpi    = float(_resolve(ht.get('/Frequency') or 0)) or None
+        angulo = float(_resolve(ht.get('/Angle') or 0))
+        forma  = str(_resolve(ht.get('/SpotFunction') or '')).lstrip('/') or None
+        return {'lpi': round(lpi, 1) if lpi else None,
+                'angulo': round(angulo, 1),
+                'forma':  forma}
+    except Exception:
+        return {}
+
+
+def _extraer_separaciones_pdf(ruta):
+    """
+    Extrae separaciones de un PDF de preimpresión.
+
+    Estrategia (en orden de prioridad):
+      1) OutputIntents → PrintingOrder + Esko_Colorants  (Esko CE / ArtPro+)
+      2) ExtGState → /HT  para lineatura y ángulos si están embebidos
+      3) Fallback: ColorSpace resources de página (cualquier PDF)
+
+    Filtros aplicados:
+      - Se descartan separaciones no referenciadas en ninguna página (0% uso)
+      - Se descartan die-cuts / elementos técnicos (troquel, cutter, etc.)
+
+    Colores (campo 'color'):
+      1) Fijos para CMYK proceso
+      2) pantone_map.json  (sRGB)
+      3) Tint function del PDF (LAB → CSS lab() o CMYK → hex)
+
+    Devuelve lista de dicts: {nombre, tipo, color?, lpi?, angulo?, forma?}
+    """
+    separaciones = []
+    try:
+        reader = PdfReader(ruta)
+        cat = _resolve(reader.trailer.get('/Root') or {})
+
+        # ── Escaneo de páginas: referencias reales + tint functions ──────────
+        page_referenced = set()   # seps que aparecen en algún ColorSpace de página
+        tint_fns: dict = {}       # nombre → tint fn object para extraer color
+        process_names = {'cyan', 'magenta', 'yellow', 'black', 'c', 'm', 'y', 'k'}
+        for page in reader.pages:
+            res = _resolve(page.get('/Resources') or {})
+            cs_dict = _resolve(res.get('/ColorSpace') or {})
+            for _key, raw_val in cs_dict.items():
+                val = _resolve(raw_val)
+                if not isinstance(val, list) or len(val) < 2:
+                    continue
+                cs_type = str(val[0])
+                if cs_type == '/Separation':
+                    nombre = str(_resolve(val[1])).lstrip('/')
+                    page_referenced.add(nombre)
+                    if len(val) >= 4 and nombre not in tint_fns:
+                        tint_fns[nombre] = val[3]
+                elif cs_type == '/DeviceN':
+                    names_obj = _resolve(val[1])
+                    for n in (names_obj if isinstance(names_obj, list) else []):
+                        page_referenced.add(str(_resolve(n)).lstrip('/'))
+
+        # ── Estrategia 1: OutputIntents ──────────────────────────────────────
+        oi_arr = _resolve(cat.get('/OutputIntents') or [])
+        for oi_raw in (oi_arr or []):
+            oi = _resolve(oi_raw)
+            if not isinstance(oi, dict):
+                continue
+            mh    = _resolve(oi.get('/MixingHints') or {})
+            order = _resolve(mh.get('/PrintingOrder') or [])
+            esko  = _resolve(oi.get('/Esko_Colorants') or {})
+            if not order:
+                continue
+            for sep in order:
+                nombre = str(_resolve(sep)).lstrip('/')
+                if nombre not in page_referenced:
+                    continue          # sin cobertura real en ninguna página
+                if _es_die_cut(nombre):
+                    continue          # elemento técnico, no tinta de impresión
+                col_info  = _resolve(esko.get(sep) or {}) if esko else {}
+                coleccion = str(_resolve(col_info.get('/Collection', ''))) if isinstance(col_info, dict) else ''
+                tipo  = _coleccion_to_tipo(coleccion)
+                color = _color_para_separacion(nombre, tint_fns.get(nombre))
+                entry = {'nombre': nombre, 'tipo': tipo}
+                if color:
+                    entry['color'] = color
+                separaciones.append(entry)
+            break  # primer OutputIntent válido es suficiente
+
+        # ── Estrategia 2: ExtGState /HT → lineatura y ángulos ────────────────
+        ht_global: dict = {}
+        for page in reader.pages:
+            res = _resolve(page.get('/Resources') or {})
+            gs  = _resolve(res.get('/ExtGState') or {})
+            for _gname, gval in gs.items():
+                g = _resolve(gval)
+                if not isinstance(g, dict):
+                    continue
+                ht_raw = g.get('/HT')
+                if ht_raw is None:
+                    continue
+                ht = _resolve(ht_raw)
+                if not isinstance(ht, dict):
+                    continue
+                ht_type = int(_resolve(ht.get('/HalftoneType') or 0))
+                if ht_type == 1:
+                    vals = _ht_type1_values(ht)
+                    if vals.get('lpi'):
+                        ht_global[None] = vals
+                elif ht_type == 5:
+                    for k in ht.keys():
+                        sname = str(k).lstrip('/')
+                        if sname in ('HalftoneType', 'Default'):
+                            continue
+                        ht_sub = _resolve(ht[k])
+                        if isinstance(ht_sub, dict):
+                            vals = _ht_type1_values(ht_sub)
+                            if vals.get('lpi'):
+                                ht_global[sname] = vals
+                    if ht.get('/Default'):
+                        def_vals = _ht_type1_values(_resolve(ht['/Default']))
+                        if def_vals.get('lpi'):
+                            ht_global.setdefault(None, def_vals)
+
+        if ht_global:
+            for s in separaciones:
+                vals = ht_global.get(s['nombre']) or ht_global.get(None) or {}
+                s.update({k: v for k, v in vals.items() if v is not None})
+
+        # ── Estrategia 3: Fallback ColorSpace ────────────────────────────────
+        if not separaciones:
+            seen: set = set()
+            for nombre in page_referenced:
+                if nombre in ('None', 'All') or nombre in seen:
+                    continue
+                if _es_die_cut(nombre):
+                    continue
+                seen.add(nombre)
+                tipo  = 'proceso' if nombre.lower() in process_names else 'spot'
+                color = _color_para_separacion(nombre, tint_fns.get(nombre))
+                entry = {'nombre': nombre, 'tipo': tipo}
+                if color:
+                    entry['color'] = color
+                separaciones.append(entry)
+
+    except Exception:
+        pass
+    return separaciones
 
 
 @app.route('/api/archivos/<archivo_id>/metadatos', methods=['GET'])
 def metadatos_archivo(archivo_id):
     """
-    Devuelve metadatos de un archivo PDF: tintas (XMP SwatchGroups o ColorSpace resources),
+    Devuelve metadatos de un PDF: separaciones (nombre, tipo, lpi?, angulo?),
     nombre original, tamaño y versión.
     """
     try:
@@ -6210,7 +6392,7 @@ def metadatos_archivo(archivo_id):
         if not os.path.isfile(full_path):
             return jsonify({'error': 'Archivo no encontrado en disco'}), 404
         mime = doc.get('mime_type', '')
-        tintas = _extraer_tintas_pdf(full_path) if 'pdf' in mime.lower() else []
+        separaciones = _extraer_separaciones_pdf(full_path) if 'pdf' in mime.lower() else []
         fecha = doc.get('fecha_subida', '')
         if hasattr(fecha, 'isoformat'):
             fecha = fecha.isoformat()
@@ -6219,11 +6401,10 @@ def metadatos_archivo(archivo_id):
             'tamanio':         doc.get('tamanio', 0),
             'version':         doc.get('version'),
             'fecha_subida':    str(fecha),
-            'tintas':          tintas,
+            'separaciones':    separaciones,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run("0.0.0.0", 8080, debug=False, use_reloader=False)

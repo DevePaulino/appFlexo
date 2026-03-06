@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 0,
     cursor: 'pointer',
-    outline: 'none',
+    outlineWidth: 0,
   },
   headerText: {
     fontSize: 12,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   paginationButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 6,
   },
   paginationButtonDisabled: {

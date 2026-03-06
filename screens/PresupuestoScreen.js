@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnNewText: {
     color: '#FFFFFF',
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1FADF',
   },
   numeroPresupuestoLink: {
-    color: '#2563EB',
+    color: '#475569',
     fontWeight: '700',
   },
   detailOverlay: {
@@ -966,7 +966,7 @@ export default function PresupuestoScreen({ currentUser }) {
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 

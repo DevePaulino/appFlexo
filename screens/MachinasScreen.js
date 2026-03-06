@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnNewText: {
     color: '#FFFFFF',
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -563,7 +563,7 @@ export default function MachinasScreen({ currentUser }) {
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -726,11 +726,11 @@ export default function MachinasScreen({ currentUser }) {
                           border: '1px solid #E2E8F0',
                           borderRadius: 10,
                           backgroundColor: '#F8FAFC',
-                          padding: '4px 8px',
-                          fontSize: '14px',
+                          paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
+                          fontSize: 14,
                           color: '#0F172A',
                           cursor: 'pointer',
-                          outline: 'none',
+                          outlineWidth: 0,
                         }}
                       >
                         <option value="Activa">Activa</option>

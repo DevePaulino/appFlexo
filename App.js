@@ -20,6 +20,13 @@ import ConfigScreen from './screens/ConfigScreen';
 import MaterialScreen from './screens/MaterialScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 
+// Inject global web CSS: placeholder text italic + muted color
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const s = document.createElement('style');
+  s.textContent = 'input::placeholder, textarea::placeholder { font-style: italic; color: #94A3B8 !important; }';
+  document.head.appendChild(s);
+}
+
 const API_BASE = 'http://localhost:8080';
 const API_SESSION_TIMEOUT_URL = `${API_BASE}/api/settings/session-timeout`;
 const AUTH_EXCLUDED_PATHS = [
@@ -244,10 +251,9 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
               key={route.key}
               ref={isSetting ? settingTabRef : undefined}
               onPress={() => handleTabPress(route, isFocused)}
-              style={styles.tabBtn}
+              style={[styles.tabBtn, isActive && styles.tabBtnActive]}
             >
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
-              {isActive && route.name !== 'Setting' && <View style={styles.tabIndicator} />}
             </Pressable>
           );
           })}
@@ -279,7 +285,6 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
                   style={[styles.settingsSubmenuItem, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemActive]}
                 >
                   <Text style={[styles.settingsSubmenuItemText, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemTextActive]}>{item.label}</Text>
-                  {isSubmenuTargetActive(item.target) && <View style={styles.settingsSubmenuIndicator} />}
                 </Pressable>
               ))}
             </View>
@@ -370,13 +375,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 44,
   },
+  tabBtnActive: {
+    backgroundColor: '#1E293B',
+    margin: 4,
+    borderRadius: 6,
+  },
   tabLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: C.textMuted,
   },
   tabLabelActive: {
-    color: C.primary,
+    color: '#F8FAFC',
   },
   tabIndicator: {
     marginTop: 6,
@@ -434,7 +444,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   settingsSubmenuItemActive: {
-    backgroundColor: C.primaryLight,
+    backgroundColor: '#1E293B',
+    borderRadius: 6,
   },
   settingsSubmenuItemText: {
     color: C.textMuted,
@@ -442,7 +453,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   settingsSubmenuItemTextActive: {
-    color: C.primary,
+    color: '#F8FAFC',
   },
   settingsSubmenuIndicator: {
     marginTop: 6,
