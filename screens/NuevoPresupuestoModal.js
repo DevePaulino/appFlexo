@@ -45,7 +45,21 @@ const styles = {
         borderWidth: 1.5,
         borderColor: '#E2E8F0'
     },
-    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#2563EB', marginBottom: 10, letterSpacing: 0.2 },
+    sectionTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#334155',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        backgroundColor: '#E2E8F0',
+        paddingHorizontal: 16,
+        paddingVertical: 9,
+        marginHorizontal: -16,
+        marginTop: -16,
+        marginBottom: 14,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+    },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
     label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
@@ -93,7 +107,7 @@ const styles = {
     coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: '#2563EB', paddingHorizontal: 22, paddingVertical: 10,
+        backgroundColor: '#475569', paddingHorizontal: 22, paddingVertical: 10,
         borderRadius: 14,
         alignItems: 'center',
         shadowColor: '#0F172A',
@@ -304,7 +318,7 @@ const TintasSelector = ({
     addingMatchHex
     , disabled = false
 }) => (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8, alignItems: 'flex-start' }}>
         {opcionesTintas.map((tinta) => {
             const active = selectedTintas.includes(tinta.label);
             return (
@@ -357,6 +371,7 @@ const TintasSelector = ({
                 value={addingValue}
                 onChangeText={onChangeAdding}
                 placeholder="Nº Pantone"
+                placeholderTextColor="#94A3B8"
                 autoFocus
                 onSubmitEditing={(e) => {
                     const txt = (e.nativeEvent && e.nativeEvent.text) || addingValue;
@@ -366,26 +381,29 @@ const TintasSelector = ({
                     if (typeof onConfirmAdding === 'function') onConfirmAdding(addingValue);
                 }}
                 style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    borderRadius: 22,
-                    minWidth: 80,
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    minWidth: 70,
                     textAlign: 'center',
                     marginRight: 8,
                     marginBottom: 8,
-                    backgroundColor: addingMatchHex || '#EFEFEF',
-                    color: addingMatchHex ? '#FFF' : '#6C6C70',
+                    borderWidth: 1,
+                    borderColor: addingMatchHex ? 'transparent' : '#E2E8F0',
+                    backgroundColor: addingMatchHex || '#F8FAFC',
+                    color: addingMatchHex ? '#FFF' : '#0F172A',
+                    fontSize: 13,
                 }}
             />
         ) : (
             <TouchableOpacity
-                style={{ paddingHorizontal: 14, paddingVertical: 12, borderRadius: 22, backgroundColor: '#EFEFEF', borderWidth: 1, borderColor: '#DDD', marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center' }}
+                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
                 onPress={() => {
                     if (disabled) return;
                     if (typeof onStartAdd === 'function') onStartAdd();
                 }}
             >
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#6C6C70' }}>+</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>+</Text>
             </TouchableOpacity>
         )}
     </View>
@@ -455,7 +473,7 @@ export default function NuevoPresupuestoModal({
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerField, setDatePickerField] = useState('fecha');
     const [referencia, setReferencia] = useState('');
-    const [vendedor, setVendedor] = useState('');
+    const [vendedor, setVendedor] = useState(currentUser?.nombre || '');
     const [maquina, setMaquina] = useState('');
     const [material, setMaterial] = useState('');
     const [acabado, setAcabado] = useState([]);
@@ -473,6 +491,7 @@ export default function NuevoPresupuestoModal({
     const [coberturaError, setCoberturaError] = useState('');
     const [clientesGuardados, setClientesGuardados] = useState([]);
     const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState(null);
+    const [clienteExpandido, setClienteExpandido] = useState(false);
     const [cargandoClientes, setCargandoClientes] = useState(false);
     const [maquinasActivas, setMaquinasActivas] = useState([]);
     const [catalogos, setCatalogos] = useState({
@@ -509,7 +528,7 @@ export default function NuevoPresupuestoModal({
             setFecha(initialValues.datos_presupuesto?.fecha || initialValues.fecha_pedido || initialValues.fecha || getNowDateStr());
             setFechaEntrega(initialValues.datos_presupuesto?.fecha || initialValues.fecha_entrega || initialValues.fechaEntrega || getDatePlusDaysStr(7));
             setReferencia(initialValues.referencia || initialValues.datos_presupuesto?.referencia || '');
-            setVendedor(initialValues.datos_presupuesto?.vendedor || '');
+            setVendedor(initialValues.datos_presupuesto?.vendedor || currentUser?.nombre || '');
             setMaquina(initialValues.datos_presupuesto?.maquina || initialValues.maquina || '');
             setMaterial(initialValues.datos_presupuesto?.material || initialValues.material || '');
             setAcabado(initialValues.datos_presupuesto?.acabado || initialValues.acabado || []);
@@ -711,9 +730,14 @@ export default function NuevoPresupuestoModal({
         try {
             const response = await fetch('http://localhost:8080/api/usuarios?rol=comercial');
             const data = response.ok ? await response.json() : { usuarios: [] };
-            setUsuariosComerciales(Array.isArray(data.usuarios) ? data.usuarios : []);
+            let lista = Array.isArray(data.usuarios) ? data.usuarios : [];
+            // Ensure the logged-in user always appears in the list
+            if (currentUser?.nombre && !lista.some((u) => u.nombre === currentUser.nombre)) {
+                lista = [{ id: currentUser.id || 'current', nombre: currentUser.nombre }, ...lista];
+            }
+            setUsuariosComerciales(lista);
         } catch {
-            setUsuariosComerciales([]);
+            setUsuariosComerciales(currentUser?.nombre ? [{ id: currentUser.id || 'current', nombre: currentUser.nombre }] : []);
         }
     };
 
@@ -869,6 +893,7 @@ export default function NuevoPresupuestoModal({
         setClientePickerVisible(false);
         setBusquedaCliente('');
         setClienteInputFocused(false);
+        setClienteExpandido(false);
     };
 
     const pickImageEtiqueta = Platform.OS === 'web'
@@ -1042,6 +1067,7 @@ export default function NuevoPresupuestoModal({
         setSubmitted(false);
         setCoberturaError('');
         setClienteSeleccionadoId(null);
+        setClienteExpandido(false);
         setClientePickerVisible(false);
         setBusquedaCliente('');
         setPedidoId(null);
@@ -1075,12 +1101,14 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>Cliente</Text>
                                         <TouchableOpacity
-                                            style={styles.clientePickerBtn}
+                                            style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#F1F5F9' } : null]}
                                             onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
                                         >
-                                            <Text style={styles.clientePickerBtnText}>Seleccionar cliente guardado</Text>
+                                            <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>
+                                                {cliente ? (razonSocial || cliente) : 'Seleccionar cliente guardado'}
+                                            </Text>
                                         </TouchableOpacity>
-                                        <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>
+                                        {!cliente && <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>}
                                         {/* eliminado campo placeholder innecesario para aprovechar espacio */}
                                     </View>
                                     <View style={styles.col}>
@@ -1217,7 +1245,7 @@ export default function NuevoPresupuestoModal({
                                                     value={vendedor}
                                                     onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
                                                     disabled={isReadOnly}
-                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '4px 8px', fontSize: '14px', color: '#0F172A', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
+                                                    style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 14, color: '#0F172A', outlineWidth: 0, WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
                                                 >
                                                     <option value="">Seleccionar comercial</option>
                                                     {usuariosComerciales.map((u) => (
@@ -1244,72 +1272,96 @@ export default function NuevoPresupuestoModal({
                                             value={referencia}
                                             onChangeText={(t) => { if (isReadOnly) return; setReferencia(t); }}
                                             placeholder="Trabajo/referencia"
+                                            placeholderTextColor="#94A3B8"
                                             style={styles.input(referencia, true, false, submitted)}
                                             editable={!isReadOnly}
                                         />
                                     </View>
                                 </View>
-                                <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Razón social</Text>
-                                        <TextInput
-                                            value={razonSocial}
-                                            onChangeText={() => {}}
-                                            placeholder="Razón social"
-                                            style={styles.input(razonSocial, false, false, submitted)}
-                                            editable={false}
-                                        />
-                                    </View>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>CIF</Text>
-                                        <TextInput
-                                            value={cif}
-                                            onChangeText={() => {}}
-                                            placeholder="CIF"
-                                            style={[
-                                                styles.input(cif, false, false, submitted),
-                                                submitted && cifInvalido ? { borderColor: '#D21820' } : null
-                                            ]}
-                                            editable={false}
-                                        />
-                                        {submitted && cifInvalido && (
-                                            <Text style={styles.errorText}>CIF no válido (formato esperado: A1234567B)</Text>
+                                {cliente ? (
+                                    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
+                                        <TouchableOpacity
+                                            onPress={() => setClienteExpandido(v => !v)}
+                                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F8FAFC' }}
+                                        >
+                                            <Text style={{ fontSize: 12, color: '#64748B', flex: 1 }} numberOfLines={1}>
+                                                {[cif, personasContacto, email].filter(Boolean).join(' · ')}
+                                            </Text>
+                                            <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', marginLeft: 10 }}>
+                                                {clienteExpandido ? '▲ Menos' : '▼ Ver datos'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {clienteExpandido && (
+                                            <View style={{ padding: 12, paddingTop: 8 }}>
+                                                <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Razón social</Text>
+                                                        <TextInput
+                                                            value={razonSocial}
+                                                            onChangeText={() => {}}
+                                                            placeholder="Razón social"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={styles.input(razonSocial, false, false, submitted)}
+                                                            editable={false}
+                                                        />
+                                                    </View>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>CIF</Text>
+                                                        <TextInput
+                                                            value={cif}
+                                                            onChangeText={() => {}}
+                                                            placeholder="CIF"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={[
+                                                                styles.input(cif, false, false, submitted),
+                                                                submitted && cifInvalido ? { borderColor: '#D21820' } : null
+                                                            ]}
+                                                            editable={false}
+                                                        />
+                                                        {submitted && cifInvalido && (
+                                                            <Text style={styles.errorText}>CIF no válido (formato esperado: A1234567B)</Text>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Personas de contacto</Text>
+                                                        <TextInput
+                                                            value={personasContacto}
+                                                            onChangeText={() => {}}
+                                                            placeholder="Nombre(s) de contacto"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={styles.input(personasContacto, false, false, submitted)}
+                                                            editable={false}
+                                                        />
+                                                    </View>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Email</Text>
+                                                        <TextInput
+                                                            value={email}
+                                                            onChangeText={() => {}}
+                                                            placeholder="email@cliente.com"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={[
+                                                                styles.input(email, false, false, submitted),
+                                                                submitted && emailInvalido ? { borderColor: '#D21820' } : null
+                                                            ]}
+                                                            keyboardType="email-address"
+                                                            autoCapitalize="none"
+                                                            editable={false}
+                                                        />
+                                                        {submitted && emailInvalido && (
+                                                            <Text style={styles.errorText}>Email no válido</Text>
+                                                        )}
+                                                        {submitted && emailVacio && (
+                                                            <Text style={styles.errorText}>El email es obligatorio</Text>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </View>
                                         )}
                                     </View>
-                                </View>
-                                <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Personas de contacto</Text>
-                                        <TextInput
-                                            value={personasContacto}
-                                            onChangeText={() => {}}
-                                            placeholder="Nombre(s) de contacto"
-                                            style={styles.input(personasContacto, false, false, submitted)}
-                                            editable={false}
-                                        />
-                                    </View>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Email</Text>
-                                        <TextInput
-                                            value={email}
-                                            onChangeText={() => {}}
-                                            placeholder="email@cliente.com"
-                                            style={[
-                                                styles.input(email, false, false, submitted),
-                                                submitted && emailInvalido ? { borderColor: '#D21820' } : null
-                                            ]}
-                                            keyboardType="email-address"
-                                            autoCapitalize="none"
-                                            editable={false}
-                                        />
-                                        {submitted && emailInvalido && (
-                                            <Text style={styles.errorText}>Email no válido</Text>
-                                        )}
-                                        {submitted && emailVacio && (
-                                            <Text style={styles.errorText}>El email es obligatorio</Text>
-                                        )}
-                                    </View>
-                                </View>
+                                ) : null}
                             </View>
                         </View>
                     </View>
@@ -1329,9 +1381,9 @@ export default function NuevoPresupuestoModal({
                                                 setMaquinaCreateForm({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
                                                 setShowMaquinaCreate(true);
                                             }}
-                                            style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                         >
-                                            <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
+                                            <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -1341,7 +1393,7 @@ export default function NuevoPresupuestoModal({
                                         borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
                                         backgroundColor: '#F8FAFC',
                                         borderRadius: 10,
-                                        marginBottom: 10,
+                                        marginBottom: 8,
                                         overflow: 'hidden'
                                     }}>
                                         <select
@@ -1349,12 +1401,12 @@ export default function NuevoPresupuestoModal({
                                             onChange={(e) => setMaquina(e.target.value)}
                                             style={{
                                                 width: '100%',
-                                                border: 'none',
+                                                borderWidth: 0,
                                                 backgroundColor: 'transparent',
-                                                padding: '4px 8px',
-                                                fontSize: '14px',
+                                                paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10,
+                                                fontSize: 14,
                                                 color: '#0F172A',
-                                                outline: 'none',
+                                                outlineWidth: 0,
                                                 cursor: 'pointer',
                                             }}
                                         >
@@ -1423,9 +1475,9 @@ export default function NuevoPresupuestoModal({
                                             setTroquelCreateForm({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
                                             setShowTroquelCreate(true);
                                         }}
-                                        style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                        style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                     >
-                                        <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
+                                        <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -1434,7 +1486,7 @@ export default function NuevoPresupuestoModal({
                             ) : Platform.OS === 'web' ? (
                                 <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                                     <select
-                                        style={{ fontSize: 14, border: 'none', backgroundColor: 'transparent', padding: '6px 10px', width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outline: 'none' }}
+                                        style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }}
                                         value={troquelSel?._id || troquelSel?.id || ''}
                                         disabled={isReadOnly}
                                         onChange={e => {
@@ -1455,7 +1507,7 @@ export default function NuevoPresupuestoModal({
                                     <TouchableOpacity
                                         disabled={isReadOnly}
                                         onPress={() => handleTroquelSelect(null)}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#2563EB' : '#F1F5F9' }}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#F1F5F9' }}
                                     >
                                         <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>Sin troquel</Text>
                                     </TouchableOpacity>
@@ -1466,7 +1518,7 @@ export default function NuevoPresupuestoModal({
                                                 key={t._id || t.id || i}
                                                 disabled={isReadOnly}
                                                 onPress={() => handleTroquelSelect(t)}
-                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#2563EB' : '#F1F5F9' }}
+                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#475569' : '#F1F5F9' }}
                                             >
                                                 <Text style={{ color: isSelected ? '#fff' : '#475569', fontSize: 13 }}>{t.numero}</Text>
                                             </TouchableOpacity>
@@ -1474,31 +1526,31 @@ export default function NuevoPresupuestoModal({
                                     })}
                                 </View>
                             )}
-                            {troquelSel && (
-                                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginTop: 4 }}>
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                                        {[
-                                            { label: 'Número', value: troquelSel.numero },
-                                            { label: 'Tipo', value: troquelSel.tipo },
-                                            { label: 'Forma', value: troquelSel.forma },
-                                            { label: 'Estado', value: troquelSel.estado },
-                                            { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null },
-                                            { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null },
-                                            { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null },
-                                            { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null },
-                                            { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null },
-                                            { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null },
-                                        ].filter(f => f.value != null && f.value !== '').map(f => (
-                                            <View key={f.label} style={{ minWidth: 110 }}>
-                                                <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text>
-                                                <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
                         </View>
                     </View>
+                    {troquelSel && (
+                        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 10 }}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                {[
+                                    { label: 'Número', value: troquelSel.numero },
+                                    { label: 'Tipo', value: troquelSel.tipo },
+                                    { label: 'Forma', value: troquelSel.forma },
+                                    { label: 'Estado', value: troquelSel.estado },
+                                    { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null },
+                                    { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null },
+                                    { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null },
+                                    { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null },
+                                    { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null },
+                                    { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null },
+                                ].filter(f => f.value != null && f.value !== '').map(f => (
+                                    <View key={f.label} style={{ minWidth: 110 }}>
+                                        <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text>
+                                        <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                         <View style={styles.row}>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Material</Text>
@@ -1532,6 +1584,7 @@ export default function NuevoPresupuestoModal({
                                     onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
                                     keyboardType="numeric"
                                     placeholder="Cantidad"
+                                    placeholderTextColor="#94A3B8"
                                     style={styles.input(tirada, true, true, submitted)}
                                     editable={!isReadOnly}
                                 />
@@ -1584,6 +1637,7 @@ export default function NuevoPresupuestoModal({
                                         value={Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.join(', ') : ''}
                                         onChangeText={(text) => setDetalleTintaEspecial(parseTintasEspecialesTexto(text))}
                                         placeholder="Ej: metalizada, oro"
+                                        placeholderTextColor="#94A3B8"
                                         style={styles.input(detalleTintaEspecial, false, false, submitted)}
                                     />
                                 )}
@@ -1641,6 +1695,7 @@ export default function NuevoPresupuestoModal({
                                 value={busquedaCliente}
                                 onChangeText={setBusquedaCliente}
                                 placeholder="Buscar por nombre, CIF, contacto o email"
+                                placeholderTextColor="#94A3B8"
                                 style={styles.input(busquedaCliente, false, false, false)}
                             />
 
@@ -1694,6 +1749,7 @@ export default function NuevoPresupuestoModal({
                                 value={troquelCreateForm.numero}
                                 onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, numero: v }))}
                                 placeholder="Ej. TR-001"
+                                placeholderTextColor="#94A3B8"
                                 autoFocus
                             />
 
@@ -1703,7 +1759,7 @@ export default function NuevoPresupuestoModal({
                                     <TouchableOpacity
                                         key={t}
                                         onPress={() => setTroquelCreateForm(p => ({ ...p, tipo: t }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.tipo === t ? '#2563EB' : '#f0f0f0' }}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.tipo === t ? '#475569' : '#f0f0f0' }}
                                     >
                                         <Text style={{ color: troquelCreateForm.tipo === t ? '#fff' : '#444', fontSize: 13 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
                                     </TouchableOpacity>
@@ -1716,7 +1772,7 @@ export default function NuevoPresupuestoModal({
                                     <TouchableOpacity
                                         key={f}
                                         onPress={() => setTroquelCreateForm(p => ({ ...p, forma: f }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.forma === f ? '#2563EB' : '#f0f0f0' }}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.forma === f ? '#475569' : '#f0f0f0' }}
                                     >
                                         <Text style={{ color: troquelCreateForm.forma === f ? '#fff' : '#444', fontSize: 13 }}>{f}</Text>
                                     </TouchableOpacity>
@@ -1729,7 +1785,7 @@ export default function NuevoPresupuestoModal({
                                     <TouchableOpacity
                                         key={e}
                                         onPress={() => setTroquelCreateForm(p => ({ ...p, estado: e }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.estado === e ? '#2563EB' : '#f0f0f0' }}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.estado === e ? '#475569' : '#f0f0f0' }}
                                     >
                                         <Text style={{ color: troquelCreateForm.estado === e ? '#fff' : '#444', fontSize: 13 }}>{e}</Text>
                                     </TouchableOpacity>
@@ -1744,6 +1800,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.anchoMotivo}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, anchoMotivo: v }))}
                                         placeholder="Ej. 100"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1754,6 +1811,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.altoMotivo}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, altoMotivo: v }))}
                                         placeholder="Ej. 150"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1764,6 +1822,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.motivosAncho}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, motivosAncho: v }))}
                                         placeholder="Ej. 4"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1777,6 +1836,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.separacionAncho}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, separacionAncho: v }))}
                                         placeholder="Ej. 3"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1787,6 +1847,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.valorZ}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, valorZ: v }))}
                                         placeholder="Ej. 110"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1797,6 +1858,7 @@ export default function NuevoPresupuestoModal({
                                         value={troquelCreateForm.distanciaSesgado}
                                         onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, distanciaSesgado: v }))}
                                         placeholder="Ej. 0"
+                                        placeholderTextColor="#94A3B8"
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
@@ -1812,7 +1874,7 @@ export default function NuevoPresupuestoModal({
                                 <TouchableOpacity
                                     onPress={saveTroquelFromModal}
                                     disabled={savingTroquel}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2563EB' }}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#475569' }}
                                 >
                                     <Text style={{ color: '#fff', fontWeight: '700' }}>{savingTroquel ? 'Guardando...' : 'Guardar'}</Text>
                                 </TouchableOpacity>
@@ -1840,6 +1902,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.nombre}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, nombre: v }))}
                                             placeholder="Ej. Rotativa A"
+                                            placeholderTextColor="#94A3B8"
                                             autoFocus
                                         />
                                     </View>
@@ -1850,6 +1913,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.anio_fabricacion}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, anio_fabricacion: v }))}
                                             placeholder="Ej. 2018"
+                                            placeholderTextColor="#94A3B8"
                                         />
                                     </View>
                                     <View style={{ flex: 1, minWidth: 140 }}>
@@ -1859,6 +1923,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.tipo_maquina}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, tipo_maquina: v }))}
                                             placeholder="Ej. Flexográfica"
+                                            placeholderTextColor="#94A3B8"
                                         />
                                     </View>
                                     <View style={{ flex: 1, minWidth: 140 }}>
@@ -1868,6 +1933,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.numero_colores}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, numero_colores: v }))}
                                             placeholder="Ej. 4"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -1878,7 +1944,7 @@ export default function NuevoPresupuestoModal({
                                                 <select
                                                     value={maquinaCreateForm.estado || 'Activa'}
                                                     onChange={(e) => setMaquinaCreateForm(p => ({ ...p, estado: e.target.value }))}
-                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px 10px', fontSize: '14px', color: '#0F172A', cursor: 'pointer', outline: 'none' }}
+                                                    style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, fontSize: 14, color: '#0F172A', cursor: 'pointer', outlineWidth: 0 }}
                                                 >
                                                     <option value="Activa">Activa</option>
                                                     <option value="Inactiva">Inactiva</option>
@@ -1888,7 +1954,7 @@ export default function NuevoPresupuestoModal({
                                             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
                                                 {['Activa', 'Inactiva'].map(op => (
                                                     <TouchableOpacity key={op} onPress={() => setMaquinaCreateForm(p => ({ ...p, estado: op }))}
-                                                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: maquinaCreateForm.estado === op ? '#2563EB' : '#F1F5F9' }}>
+                                                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: maquinaCreateForm.estado === op ? '#475569' : '#F1F5F9' }}>
                                                         <Text style={{ color: maquinaCreateForm.estado === op ? '#fff' : '#475569', fontSize: 13 }}>{op}</Text>
                                                     </TouchableOpacity>
                                                 ))}
@@ -1902,6 +1968,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.ancho_max_material_mm}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_material_mm: v }))}
                                             placeholder="Ej. 450"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -1912,6 +1979,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.ancho_max_impresion_mm}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_impresion_mm: v }))}
                                             placeholder="Ej. 420"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -1922,6 +1990,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.velocidad_max_maquina_mmin}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, velocidad_max_maquina_mmin: v }))}
                                             placeholder="Ej. 150"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -1932,6 +2001,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.espesor_planchas_mm}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, espesor_planchas_mm: v }))}
                                             placeholder="Ej. 1.14"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -1942,6 +2012,7 @@ export default function NuevoPresupuestoModal({
                                             value={maquinaCreateForm.sistemas_secado}
                                             onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, sistemas_secado: v }))}
                                             placeholder="Ej. UV, secado por aire"
+                                            placeholderTextColor="#94A3B8"
                                         />
                                     </View>
                                 </View>
@@ -1956,7 +2027,7 @@ export default function NuevoPresupuestoModal({
                                 <TouchableOpacity
                                     onPress={saveMaquinaFromModal}
                                     disabled={savingMaquina}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#2563EB' }}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#475569' }}
                                 >
                                     <Text style={{ color: '#fff', fontWeight: '700' }}>{savingMaquina ? 'Guardando...' : 'Guardar'}</Text>
                                 </TouchableOpacity>

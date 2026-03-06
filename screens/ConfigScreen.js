@@ -31,6 +31,7 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'edit_pedidos', title: 'Editar pedidos', hint: 'Creación y cambios de pedidos y trabajos.' },
   { key: 'edit_presupuestos', title: 'Editar presupuestos', hint: 'Creación, edición y aprobación de presupuestos.' },
   { key: 'edit_produccion', title: 'Editar producción', hint: 'Enviar, mover, reordenar y cambiar estado en producción.' },
+  { key: 'eliminar_archivos', title: 'Eliminar archivos de pedidos', hint: 'Permite borrar artes y versiones unitario en el detalle de un pedido.' },
 ];
 
 const styles = StyleSheet.create({
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     minWidth: 234,
   },
   addBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 10,
     paddingHorizontal: 14,
     justifyContent: 'center',
@@ -257,8 +258,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   modeBtnActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: '#475569',
+    borderColor: '#475569',
   },
   modeBtnText: {
     color: '#374151',
@@ -383,8 +384,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   pedidoRuleChipActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: '#475569',
+    borderColor: '#475569',
   },
   pedidoRuleChipText: {
     color: '#374151',
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
   saveRulesBtnPedido: {
     marginTop: 12,
     alignSelf: 'flex-start',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 9,
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   usersBtnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   usersPaginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   usersActionBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -607,7 +608,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#B42318',
   },
   usersActionBtnBilling: {
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#334155',
   },
   usersActionBtnText: {
     color: '#FFF',
@@ -629,7 +630,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   usersBtnPrimary: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   usersBtnText: {
     color: '#fff',
@@ -681,7 +682,7 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
-function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditSave }) {
+function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: item.id });
 
   const rnRef = useCallback(
@@ -692,45 +693,76 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
     [setNodeRef]
   );
 
+  const isEditing = editing.id === item.id;
+  const displayColor = isEditing && editing.color ? editing.color : getColor(item.valor);
+
   const rowStyle = [
     styles.estadoChipRow,
     isDragging && { opacity: 0.75, zIndex: 999 },
     transform ? { transform: [{ translateX: transform.x }, { translateY: transform.y }] } : null,
+    isEditing && { flexDirection: 'column', alignItems: 'stretch' },
   ];
 
   return (
     <View ref={rnRef} style={rowStyle} {...attributes}>
-      <View style={styles.dragHandle} {...listeners}>
-        <Text style={styles.dragHandleText}>⠿</Text>
-      </View>
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: getColor(item.valor), marginRight: 8, flexShrink: 0 }} />
-      {editing.id === item.id ? (
-        <TextInput
-          style={[styles.input, { flex: 1, paddingVertical: 4 }]}
-          value={editing.text}
-          onChangeText={onEditChange}
-          onBlur={onEditSave}
-          onSubmitEditing={onEditSave}
-          autoFocus
-          returnKeyType="done"
-        />
+      {isEditing ? (
+        <View style={{ width: '100%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={styles.dragHandle} {...listeners}>
+              <Text style={styles.dragHandleText}>⠿</Text>
+            </View>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: displayColor, flexShrink: 0 }} />
+            <TextInput
+              style={[styles.input, { flex: 1, paddingVertical: 4, marginBottom: 0 }]}
+              value={editing.text}
+              onChangeText={onEditChange}
+              onSubmitEditing={onEditSave}
+              autoFocus
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.chipEdit} onPress={onEditSave}>
+              <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingBottom: 2 }}>
+            {(palette || []).map(color => (
+              <TouchableOpacity
+                key={color}
+                onPress={() => onEditColorChange(color)}
+                style={{
+                  width: 22, height: 22, borderRadius: 11,
+                  backgroundColor: color,
+                  borderWidth: editing.color === color ? 2 : 1,
+                  borderColor: editing.color === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
+                  transform: editing.color === color ? [{ scale: 1.2 }] : [],
+                }}
+              />
+            ))}
+          </View>
+        </View>
       ) : (
-        <Text style={[styles.chipText, { flex: 1 }]}>{item.label || item.valor}</Text>
+        <>
+          <View style={styles.dragHandle} {...listeners}>
+            <Text style={styles.dragHandleText}>⠿</Text>
+          </View>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: displayColor, marginRight: 8, flexShrink: 0 }} />
+          <Text style={[styles.chipText, { flex: 1 }]}>{item.label || item.valor}</Text>
+          <TouchableOpacity
+            style={[styles.chipEdit, isProtected && styles.chipEditDisabled]}
+            disabled={isProtected}
+            onPress={() => onEdit(item)}
+          >
+            <Text style={styles.chipEditText}>✎</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.chipDelete, isProtected && styles.chipDeleteDisabled]}
+            disabled={isProtected}
+            onPress={() => onDelete(item.id)}
+          >
+            <Text style={styles.chipDeleteText}>✕</Text>
+          </TouchableOpacity>
+        </>
       )}
-      <TouchableOpacity
-        style={[styles.chipEdit, isProtected && styles.chipEditDisabled]}
-        disabled={isProtected}
-        onPress={() => onEdit(item)}
-      >
-        <Text style={styles.chipEditText}>✎</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.chipDelete, isProtected && styles.chipDeleteDisabled]}
-        disabled={isProtected}
-        onPress={() => onDelete(item.id)}
-      >
-        <Text style={styles.chipDeleteText}>✕</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -766,7 +798,8 @@ export default function ConfigScreen({ route, currentUser }) {
   const [rolePermissions, setRolePermissions] = useState({});
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
-  const [editing, setEditing] = useState({ category: null, id: null, text: '' });
+  const [editing, setEditing] = useState({ category: null, id: null, text: '', color: '' });
+  const [newEstadoColor, setNewEstadoColor] = useState('');
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState('30');
   const [sessionTimeoutMin, setSessionTimeoutMin] = useState(5);
@@ -835,6 +868,14 @@ export default function ConfigScreen({ route, currentUser }) {
     return vibrantes[index];
   };
 
+  // Paleta de colores ofrecida al usuario al crear/editar estados
+  const ESTADO_PALETTE = [
+    '#334155', '#64748B', '#1976D2', '#3B82F6',
+    '#0F766E', '#14B8A6', '#7B1FA2', '#A855F7',
+    '#C2185B', '#EC4899', '#D32F2F', '#EF4444',
+    '#FF5722', '#F59E0B', '#1F9D55', '#22C55E',
+  ];
+
   // Mapa fijo de colores para estados del sistema (consistente con las otras vistas)
   const ESTADO_COLOR_MAP = {
     'en-diseno': '#1976D2',
@@ -850,16 +891,16 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const getEstadoColor = (estadoValor) => {
     const normalized = slugifyEstado(estadoValor);
-    // Primero intenta usar color fijo del sistema
-    if (ESTADO_COLOR_MAP[normalized]) {
-      return ESTADO_COLOR_MAP[normalized];
-    }
-    // Luego intenta usar color persistido
+    // 1. Color personalizado guardado en BD (tiene prioridad sobre el mapa del sistema)
     const estadoItem = (settings.estados_pedido || []).find(item => slugifyEstado(item.valor) === normalized);
     if (estadoItem?.color) {
       return estadoItem.color;
     }
-    // Por último, genera un color dinámico
+    // 2. Color fijo del sistema como fallback
+    if (ESTADO_COLOR_MAP[normalized]) {
+      return ESTADO_COLOR_MAP[normalized];
+    }
+    // 3. Color generado dinámicamente
     return generateColorFromHash(estadoValor);
   };
 
@@ -1554,7 +1595,8 @@ export default function ConfigScreen({ route, currentUser }) {
       // Generar color para estados_pedido
       let color = '';
       if (categoria === 'estados_pedido') {
-        color = generateColorFromHash(valor);
+        color = newEstadoColor || generateColorFromHash(valor);
+        setNewEstadoColor('');
       }
 
       // Backend expects creation via /api/settings/opcion with query params
@@ -1747,27 +1789,32 @@ export default function ConfigScreen({ route, currentUser }) {
     }
 
     // Activate inline editing state (works on web and native)
-    setEditing({ category: categoria, id: item.id, text: String(item?.valor || '') });
+    const currentColor = item?.color || '';
+    setEditing({ category: categoria, id: item.id, text: String(item?.valor || ''), color: currentColor });
   };
 
   const saveEditedValor = async () => {
-    const { category, id, text } = editing;
+    const { category, id, text, color } = editing;
     if (!category || !id) {
-      setEditing({ category: null, id: null, text: '' });
+      setEditing({ category: null, id: null, text: '', color: '' });
       return;
     }
     const nuevo = String(text || '').trim();
     const lista = settings[category] || [];
-    const original = (lista.find((it) => it.id === id) || {}).valor || '';
-    if (!nuevo || nuevo.toLowerCase() === String(original || '').toLowerCase()) {
-      setEditing({ category: null, id: null, text: '' });
+    const original = (lista.find((it) => it.id === id) || {});
+    const originalValor = original.valor || '';
+    const originalColor = original.color || '';
+    const textUnchanged = !nuevo || nuevo.toLowerCase() === String(originalValor || '').toLowerCase();
+    const colorUnchanged = !color || color === originalColor;
+    if (textUnchanged && colorUnchanged) {
+      setEditing({ category: null, id: null, text: '', color: '' });
       return;
     }
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valor: nuevo, label: nuevo }),
+        body: JSON.stringify({ valor: nuevo || originalValor, label: nuevo || originalValor, ...(color ? { color } : {}) }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -1784,7 +1831,7 @@ export default function ConfigScreen({ route, currentUser }) {
     } catch (e) {
       Alert.alert('Error', `No se pudo editar: ${e.message}`);
     } finally {
-      setEditing({ category: null, id: null, text: '' });
+      setEditing({ category: null, id: null, text: '', color: '' });
     }
   };
 
@@ -1986,12 +2033,35 @@ export default function ConfigScreen({ route, currentUser }) {
             value={inputs[categoryKey]}
             onChangeText={(text) => setInputs((prev) => ({ ...prev, [categoryKey]: text }))}
             placeholder={`Añadir ${categoryTitle.toLowerCase()}`}
-            placeholderTextColor="#999"
+            placeholderTextColor="#94A3B8"
           />
           <TouchableOpacity style={styles.addBtn} onPress={() => agregarValor(categoryKey)}>
             <Text style={styles.addBtnText}>+ Añadir</Text>
           </TouchableOpacity>
         </View>
+        {categoryKey === 'estados_pedido' && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
+            {ESTADO_PALETTE.map(color => (
+              <TouchableOpacity
+                key={color}
+                onPress={() => setNewEstadoColor(prev => prev === color ? '' : color)}
+                style={{
+                  width: 22, height: 22, borderRadius: 11,
+                  backgroundColor: color,
+                  borderWidth: newEstadoColor === color ? 2 : 1,
+                  borderColor: newEstadoColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
+                  transform: newEstadoColor === color ? [{ scale: 1.2 }] : [],
+                }}
+              />
+            ))}
+            {inputs.estados_pedido ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newEstadoColor || generateColorFromHash(inputs.estados_pedido), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>Vista previa</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
 
         {items.length === 0 ? (
           <Text style={styles.muted}>No hay valores configurados</Text>
@@ -2011,7 +2081,9 @@ export default function ConfigScreen({ route, currentUser }) {
                       getColor={getEstadoColor}
                       editing={editing}
                       onEditChange={(t) => setEditing((prev) => ({ ...prev, text: t }))}
+                      onEditColorChange={(c) => setEditing((prev) => ({ ...prev, color: c }))}
                       onEditSave={saveEditedValor}
+                      palette={ESTADO_PALETTE}
                     />
                   );
                 })}
@@ -2087,7 +2159,7 @@ export default function ConfigScreen({ route, currentUser }) {
                 value={busquedaUsuarios}
                 onChangeText={setBusquedaUsuarios}
                 placeholder="Buscar por nombre, email o rol..."
-                placeholderTextColor="#999"
+                placeholderTextColor="#94A3B8"
               />
 
               {usuariosFiltrados.length === 0 ? (
@@ -2160,7 +2232,7 @@ export default function ConfigScreen({ route, currentUser }) {
                       value={nuevoUsuarioNombre}
                       onChangeText={setNuevoUsuarioNombre}
                       placeholder="Nombre usuario"
-                      placeholderTextColor="#999"
+                      placeholderTextColor="#94A3B8"
                     />
                     {nombreUsuarioVacio && <Text style={styles.errorText}>El nombre es obligatorio</Text>}
 
@@ -2172,7 +2244,7 @@ export default function ConfigScreen({ route, currentUser }) {
                       placeholder="email@dominio.com"
                       autoCapitalize="none"
                       keyboardType="email-address"
-                      placeholderTextColor="#999"
+                      placeholderTextColor="#94A3B8"
                     />
                     {emailUsuarioVacio && <Text style={styles.errorText}>El email es obligatorio</Text>}
                     {emailUsuarioInvalido && <Text style={styles.errorText}>Introduce un email válido (ej: usuario@dominio.com)</Text>}
@@ -2389,7 +2461,7 @@ export default function ConfigScreen({ route, currentUser }) {
             value={busquedaUsuarios}
             onChangeText={setBusquedaUsuarios}
             placeholder="Buscar por nombre, email o rol..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#94A3B8"
           />
 
           {usuariosFiltrados.length === 0 ? (
@@ -2471,7 +2543,7 @@ export default function ConfigScreen({ route, currentUser }) {
               onChangeText={(text) => setRecargaCreditos(String(text || '').replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               placeholder="Ej: 50"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
 
             <Text style={styles.usersFieldLabel}>Método de pago</Text>

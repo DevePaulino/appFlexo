@@ -30,9 +30,10 @@ import hmac
 from urllib import request as urllib_request, parse as urllib_parse, error as urllib_error
 from collections import defaultdict
 from email.message import EmailMessage
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_file
 from flask import make_response
 from werkzeug.exceptions import HTTPException
+from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from PIL import Image, ImageCms
 from PyPDF2 import PdfReader
@@ -67,6 +68,7 @@ app.debug = True
 
 import traceback as _traceback
 import uuid
+import xml.etree.ElementTree as ET
 @app.errorhandler(Exception)
 def _handle_uncaught_exception(e):
     # Let HTTP exceptions (404, 400, etc.) be handled by Flask/werkzeug normally
@@ -76,9 +78,19 @@ def _handle_uncaught_exception(e):
     print('UNCAUGHT EXCEPTION:\n', tb)
     return jsonify({'error': str(e), 'trace': tb}), 500
 
+@app.errorhandler(413)
+def request_entity_too_large(_):
+    return jsonify({'error': 'El archivo supera el límite de tamaño permitido (máx 200 MB)'}), 413
+
 # Configuración MongoDB (puedes cambiar la URI a tu MongoDB Atlas si quieres)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/printforgepro"
 mongo = PyMongo(app)
+
+# ─── File Upload Configuration ────────────────────────────────────────────────
+UPLOAD_BASE_DIR = os.environ.get('UPLOAD_BASE_DIR', os.path.join(BASE_DIR, 'uploads'))
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_UPLOAD_MB', '200')) * 1024 * 1024
+ALLOWED_EXTENSIONS_ARTES    = {'pdf', 'ai', 'eps', 'jpg', 'jpeg', 'png'}
+ALLOWED_EXTENSIONS_UNITARIO = {'pdf'}
 
 # Simple JWT helpers (lightweight, enabled via ENABLE_JWT=1)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-jwt-secret')
@@ -228,6 +240,22 @@ def fix_id(doc):
         del doc['_id']
     return doc
 
+
+def _allowed_file(filename, allowed_set):
+    """Return True if filename has an extension in allowed_set."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_set
+
+
+def _get_upload_dir(empresa_id, pedido_id, subdir):
+    """
+    Build and create (if needed) the directory for a pedido's files.
+    subdir: 'artes' | 'unitario'
+    Returns the absolute directory path.
+    """
+    path = os.path.join(UPLOAD_BASE_DIR, str(empresa_id), str(pedido_id), subdir)
+    os.makedirs(path, exist_ok=True)
+    return path
+
 ROLE_LABELS = {
     'operario': 'Operario',
     'administrador': 'Administrador',
@@ -257,6 +285,7 @@ PERMISSION_KEYS = [
     'edit_pedidos',
     'edit_presupuestos',
     'edit_produccion',
+    'eliminar_archivos',
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
@@ -268,6 +297,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': False,
         'edit_presupuestos': False,
         'edit_produccion': True,
+        'eliminar_archivos': False,
     },
     'administrador': {
         'manage_app_settings': True,
@@ -278,6 +308,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': True,
+        'eliminar_archivos': True,
     },
     'root': {
         'manage_app_settings': True,
@@ -288,6 +319,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': True,
+        'eliminar_archivos': True,
     },
     # Department roles
     'comercial': {
@@ -299,6 +331,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': False,
+        'eliminar_archivos': True,
     },
     'diseno': {
         'manage_app_settings': False,
@@ -309,6 +342,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': False,
+        'eliminar_archivos': True,
     },
     'impresion': {
         'manage_app_settings': False,
@@ -319,6 +353,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': False,
         'edit_presupuestos': False,
         'edit_produccion': True,
+        'eliminar_archivos': False,
     },
     'post-impresion': {
         'manage_app_settings': False,
@@ -329,6 +364,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': False,
         'edit_presupuestos': False,
         'edit_produccion': True,
+        'eliminar_archivos': False,
     },
     'oficina': {
         'manage_app_settings': False,
@@ -339,6 +375,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': False,
+        'eliminar_archivos': False,
     },
 }
 
@@ -703,7 +740,15 @@ def can_role_permission(role_key, permission_key, empresa_id=None):
         if role_perms is None:
             role_perms = ROLE_PERMISSIONS_DEFAULT.get(role) or ROLE_PERMISSIONS_DEFAULT.get(slugify_estado(role))
         if isinstance(role_perms, dict):
-            return bool(role_perms.get(permission_key, False))
+            # Si la clave existe en la BD úsala; si no (permiso nuevo no guardado aún) cae al default
+            if permission_key in role_perms:
+                return bool(role_perms[permission_key])
+            default_perms = (
+                ROLE_PERMISSIONS_DEFAULT.get(role)
+                or ROLE_PERMISSIONS_DEFAULT.get(slugify_estado(role))
+                or {}
+            )
+            return bool(default_perms.get(permission_key, False))
         return False
     except Exception:
         return False
@@ -823,10 +868,22 @@ def require_request_user():
 @app.after_request
 def apply_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'no-referrer'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8080;"
+    # Allow PDF inline preview to be embedded in iframe from same origin
+    if request.endpoint == 'preview_archivo_inline':
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self' http://localhost:8080; "
+            "frame-ancestors 'self' http://localhost:8081 http://localhost:8080;"
+        )
+    else:
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; img-src 'self' data: blob:; "
+            "script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' http://localhost:8080;"
+        )
     return response
 
 
@@ -934,11 +991,11 @@ def init_db():
         'cancelado': ('Cancelado', DEFAULT_ESTADO_COLORS['cancelado']),
     }
 
+    # Only seed truly protected system data on startup.
+    # User-editable catalogs (tintas_especiales, acabados, materiales, extra roles)
+    # must NOT be re-seeded here or deleted items reappear on every restart.
     defaults_catalogo = {
-        'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
-        'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
-        'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
-        'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
+        'roles': ['Administrador'],
         'estados_pedido': list(states_slug_to_label.keys())
     }
 
@@ -2823,6 +2880,11 @@ def update_settings_catalogo_item(item_id):
         if categoria == 'roles' and nuevo_valor:
             nuevo_valor = capitalize_first(nuevo_valor)
         if valor_actual.strip().lower() == nuevo_valor.strip().lower():
+            # Name unchanged — but color might still need updating
+            nuevo_color_check = (data.get('color') or '').strip()
+            if categoria == 'estados_pedido' and nuevo_color_check:
+                col.update_one({'_id': ObjectId(item_id)}, {'$set': {'color': nuevo_color_check}})
+                return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': True}), 200
             return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': False}), 200
         slug_actual = slugify_estado(valor_actual)
         slug_nuevo = slugify_estado(nuevo_valor)
@@ -2845,8 +2907,12 @@ def update_settings_catalogo_item(item_id):
             for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
                 if slugify_estado(row.get('valor')) == slug_nuevo:
                     return jsonify({'error': 'Ya existe un valor equivalente en esa categoría'}), 409
-        # Actualizar valor y label
-        col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor, 'label': nuevo_label}})
+        # Actualizar valor, label y color (si se provee y es un estado de pedido)
+        update_fields = {'valor': nuevo_valor, 'label': nuevo_label}
+        nuevo_color = (data.get('color') or '').strip()
+        if categoria == 'estados_pedido' and nuevo_color:
+            update_fields['color'] = nuevo_color
+        col.update_one({'_id': ObjectId(item_id)}, {'$set': update_fields})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
         try:
             log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor, 'empresa_id': empresa_id})
@@ -5845,6 +5911,319 @@ def debug_info():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GESTIÓN DE ARCHIVOS  (Artes Finales del Cliente  +  Unitario versionado)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/pedidos/<pedido_id>/archivos', methods=['POST'])
+def upload_archivos_pedido(pedido_id):
+    """
+    Sube uno o más archivos a un pedido.
+    Form-data:
+      tipo  : 'arte' | 'unitario'
+      files : uno o más archivos  (unitario: 1 archivo por subida = nueva versión)
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+        if not pedidos_col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        tipo = request.form.get('tipo', '').strip()
+        if tipo not in ('arte', 'unitario'):
+            return jsonify({'error': 'tipo debe ser "arte" o "unitario"'}), 400
+
+        files = [f for f in request.files.getlist('files') if f.filename != '']
+        if not files:
+            return jsonify({'error': 'No se recibieron archivos'}), 400
+        if tipo == 'unitario' and len(files) > 1:
+            return jsonify({'error': 'Unitario acepta solo un archivo por subida'}), 400
+
+        allowed   = ALLOWED_EXTENSIONS_ARTES if tipo == 'arte' else ALLOWED_EXTENSIONS_UNITARIO
+        subdir    = 'artes' if tipo == 'arte' else 'unitario'
+        col       = get_empresa_collection('pedido_archivos', empresa_id)
+        resultado = []
+
+        for f in files:
+            if not _allowed_file(f.filename, allowed):
+                return jsonify({'error': f'Extensión no permitida para "{f.filename}". Permitidas: {", ".join(sorted(allowed))}'}), 400
+
+            version = None
+            if tipo == 'unitario':
+                last = col.find_one(
+                    {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'unitario'},
+                    sort=[('version', pymongo.DESCENDING)]
+                )
+                version = (last['version'] + 1) if last and last.get('version') else 1
+
+            safe_name   = secure_filename(f.filename) or 'archivo'
+            file_uid    = uuid.uuid4().hex[:8]
+            stored_name = (f'{file_uid}_v{version}_{safe_name}' if tipo == 'unitario'
+                           else f'{file_uid}_{safe_name}')
+            upload_dir  = _get_upload_dir(empresa_id, pedido_id, subdir)
+            full_path   = os.path.join(upload_dir, stored_name)
+            f.save(full_path)
+
+            doc = {
+                'pedido_id':       pedido_id,
+                'empresa_id':      empresa_id,
+                'tipo':            tipo,
+                'nombre_original': f.filename,
+                'nombre_archivo':  stored_name,
+                'ruta_relativa':   '/'.join([str(empresa_id), str(pedido_id), subdir, stored_name]),
+                'version':         version,
+                'tamanio':         os.path.getsize(full_path),
+                'mime_type':       f.mimetype or '',
+                'subido_por':      request_user.get('nombre') or str(request_user.get('id') or ''),
+                'fecha_subida':    datetime.now().isoformat(),
+            }
+            inserted = col.insert_one(doc)
+            resultado.append(fix_id(col.find_one({'_id': inserted.inserted_id})))
+
+        return jsonify({'archivos': resultado}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/archivos', methods=['GET'])
+def get_archivos_pedido(pedido_id):
+    """Lista todos los archivos de un pedido. Filtro opcional: ?tipo=arte|unitario"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col   = get_empresa_collection('pedido_archivos', empresa_id)
+        query = {'pedido_id': pedido_id, 'empresa_id': empresa_id}
+        tipo  = request.args.get('tipo')
+        if tipo in ('arte', 'unitario'):
+            query['tipo'] = tipo
+        docs = list(col.find(query).sort([
+            ('tipo',         pymongo.ASCENDING),
+            ('version',      pymongo.ASCENDING),
+            ('fecha_subida', pymongo.ASCENDING),
+        ]))
+        return jsonify({'archivos': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>', methods=['GET'])
+def descargar_archivo(archivo_id):
+    """Descarga un archivo como attachment (fuerza descarga en el navegador)."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        return send_file(
+            full_path,
+            mimetype=doc.get('mime_type') or 'application/octet-stream',
+            as_attachment=True,
+            download_name=doc.get('nombre_original') or doc['nombre_archivo'],
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>/inline', methods=['GET'])
+def preview_archivo_inline(archivo_id):
+    """
+    Sirve el archivo inline para vista previa en iframe.
+    El hook apply_security_headers exime esta función del X-Frame-Options: DENY.
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        return send_file(
+            full_path,
+            mimetype=doc.get('mime_type') or 'application/pdf',
+            as_attachment=False,
+            download_name=doc.get('nombre_original') or doc['nombre_archivo'],
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>', methods=['DELETE'])
+def eliminar_archivo(archivo_id):
+    """
+    Elimina un archivo (arte o versión unitario).
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        try:
+            if os.path.isfile(full_path):
+                os.remove(full_path)
+        except Exception as fs_err:
+            print(f'Warning: no se pudo eliminar {full_path}: {fs_err}')
+        col.delete_one({'_id': oid})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Helpers PDF ──────────────────────────────────────────────────────────────
+
+def _extraer_tintas_pdf(ruta):
+    """
+    Extrae tintas/colorantes de un PDF.
+    Estrategia:
+      1) XMP > xmpTPg:SwatchGroups > xmpG:Colorants  (Adobe InDesign / Illustrator)
+      2) Fallback: ColorSpace resources de página (Separation / DeviceN)
+    Devuelve lista de dicts: {nombre, tipo, modelo, ...valores_color}
+    """
+    tintas = []
+    try:
+        reader = PdfReader(ruta)
+
+        # ── 1. XMP SwatchGroups ───────────────────────────────────────────────
+        xmp = reader.xmp_metadata
+        if xmp is not None:
+            ns_rdf = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+            ns_g   = 'http://ns.adobe.com/xap/1.0/g/'
+            try:
+                root = xmp.xml_element  # ElementTree.Element
+                for li in root.iter(f'{{{ns_rdf}}}li'):
+                    nombre = li.findtext(f'{{{ns_g}}}swatchName')
+                    if not nombre:
+                        continue
+                    tipo_raw = (li.findtext(f'{{{ns_g}}}type') or '').upper()
+                    tipo  = 'process' if tipo_raw == 'PROCESS' else 'spot'
+                    modo  = (li.findtext(f'{{{ns_g}}}mode') or '').upper()
+                    tinta = {'nombre': nombre, 'tipo': tipo, 'modelo': modo}
+                    if modo == 'CMYK':
+                        tinta['c'] = round(float(li.findtext(f'{{{ns_g}}}cyan')    or 0), 1)
+                        tinta['m'] = round(float(li.findtext(f'{{{ns_g}}}magenta') or 0), 1)
+                        tinta['y'] = round(float(li.findtext(f'{{{ns_g}}}yellow')  or 0), 1)
+                        tinta['k'] = round(float(li.findtext(f'{{{ns_g}}}black')   or 0), 1)
+                    elif modo == 'LAB':
+                        tinta['l']     = round(float(li.findtext(f'{{{ns_g}}}L') or 0), 2)
+                        tinta['a_lab'] = round(float(li.findtext(f'{{{ns_g}}}A') or 0), 2)
+                        tinta['b_lab'] = round(float(li.findtext(f'{{{ns_g}}}B') or 0), 2)
+                    elif modo == 'RGB':
+                        tinta['r'] = int(float(li.findtext(f'{{{ns_g}}}red')   or 0))
+                        tinta['g'] = int(float(li.findtext(f'{{{ns_g}}}green') or 0))
+                        tinta['b'] = int(float(li.findtext(f'{{{ns_g}}}blue')  or 0))
+                    tintas.append(tinta)
+            except Exception:
+                pass
+
+        # ── 2. Fallback: ColorSpace resources ────────────────────────────────
+        if not tintas:
+            seen = set()
+            process_names = {'cyan', 'magenta', 'yellow', 'black', 'red', 'green', 'blue', 'gray', 'grey'}
+            for page in reader.pages:
+                try:
+                    cs_dict = (page.get('/Resources') or {}).get('/ColorSpace') or {}
+                    for _key, val in cs_dict.items():
+                        if not isinstance(val, list) or len(val) < 2:
+                            continue
+                        cs_type = str(val[0])
+                        if cs_type == '/Separation':
+                            nombre = str(val[1]).lstrip('/')
+                            if nombre in ('None', 'All') or nombre in seen:
+                                continue
+                            seen.add(nombre)
+                            tipo = 'process' if nombre.lower() in process_names else 'spot'
+                            tintas.append({'nombre': nombre, 'tipo': tipo, 'modelo': None})
+                        elif cs_type == '/DeviceN' and isinstance(val[1], list):
+                            for n in val[1]:
+                                nombre = str(n).lstrip('/')
+                                if nombre in ('None', 'All') or nombre in seen:
+                                    continue
+                                seen.add(nombre)
+                                tipo = 'process' if nombre.lower() in process_names else 'spot'
+                                tintas.append({'nombre': nombre, 'tipo': tipo, 'modelo': None})
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return tintas
+
+
+@app.route('/api/archivos/<archivo_id>/metadatos', methods=['GET'])
+def metadatos_archivo(archivo_id):
+    """
+    Devuelve metadatos de un archivo PDF: tintas (XMP SwatchGroups o ColorSpace resources),
+    nombre original, tamaño y versión.
+    """
+    try:
+        empresa_id = normalize_empresa_id(
+            (request.headers.get('X-Empresa-Id') or '1').strip()
+        )
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        mime = doc.get('mime_type', '')
+        tintas = _extraer_tintas_pdf(full_path) if 'pdf' in mime.lower() else []
+        fecha = doc.get('fecha_subida', '')
+        if hasattr(fecha, 'isoformat'):
+            fecha = fecha.isoformat()
+        return jsonify({
+            'nombre_original': doc.get('nombre_original', ''),
+            'tamanio':         doc.get('tamanio', 0),
+            'version':         doc.get('version'),
+            'fecha_subida':    str(fecha),
+            'tintas':          tintas,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run("0.0.0.0", 8080, debug=False, use_reloader=False)

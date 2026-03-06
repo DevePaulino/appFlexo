@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
   },
   btnNewText: {
     color: '#FFFFFF',
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1156,7 +1156,7 @@ export default function TrabajoScreen({ currentUser }) {
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -1312,7 +1312,7 @@ export default function TrabajoScreen({ currentUser }) {
                   <select
                     disabled={!canChangeEstado}
                     style={{
-                      padding: '4px 8px',
+                      paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
                       borderRadius: 10,
                       border: '1px solid #E2E8F0',
                       backgroundColor: '#F8FAFC',
@@ -1321,7 +1321,7 @@ export default function TrabajoScreen({ currentUser }) {
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
                       color: '#0F172A',
-                      outline: 'none',
+                      outlineWidth: 0,
                       opacity: canChangeEstado ? 1 : 0.65,
                       pointerEvents: canChangeEstado ? 'auto' : 'none',
                     }}
@@ -1475,6 +1475,7 @@ export default function TrabajoScreen({ currentUser }) {
         onClose={() => { setModalDetalleVisible(false); }}
         pedidoId={pedidoSeleccionado}
         onDeleted={() => { setModalDetalleVisible(false); cargarPedidos(); }}
+        currentUser={currentUser}
         onEdit={async (pedido) => {
           setModalDetalleVisible(false);
           try {
