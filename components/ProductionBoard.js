@@ -449,6 +449,25 @@ const styles = StyleSheet.create({
   colMaquina: {
     flex: 0.13,
   },
+  maquinaPickerWrap: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+  },
+  maquinaPickerWrapDisabled: {
+    opacity: 0.5,
+  },
+  maquinaPicker: {
+    height: 36,
+    color: '#0F172A',
+    fontSize: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    cursor: 'pointer',
+    outline: 'none',
+  },
   headerText: {
     fontSize: 12,
     fontWeight: '700',

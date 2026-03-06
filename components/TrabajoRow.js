@@ -77,20 +77,22 @@ function TrabajoRow({
         </View>
       </View>
       <View style={[styles.tableCell, styles.colMaquina]}>
-        <Picker
-          selectedValue={maquinaFilaId}
-          onValueChange={(nuevaMaquina) => {
-            if (String(nuevaMaquina) !== String(maquinaFilaId)) {
-              handleCambiarMaquina(canonicalId, nuevaMaquina);
-            }
-          }}
-          enabled={cambiandoMaquina !== canonicalId}
-          style={{ height: 36 }}
-        >
-          {maquinas.map((maq) => (
-            <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
-          ))}
-        </Picker>
+        <View style={[styles.maquinaPickerWrap, cambiandoMaquina === canonicalId && styles.maquinaPickerWrapDisabled]}>
+          <Picker
+            selectedValue={maquinaFilaId}
+            onValueChange={(nuevaMaquina) => {
+              if (String(nuevaMaquina) !== String(maquinaFilaId)) {
+                handleCambiarMaquina(canonicalId, nuevaMaquina);
+              }
+            }}
+            enabled={cambiandoMaquina !== canonicalId}
+            style={styles.maquinaPicker}
+          >
+            {maquinas.map((maq) => (
+              <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
+            ))}
+          </Picker>
+        </View>
       </View>
     </View>
   );
