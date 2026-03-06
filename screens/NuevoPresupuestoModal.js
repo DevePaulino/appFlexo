@@ -514,7 +514,13 @@ export default function NuevoPresupuestoModal({
             setMaterial(initialValues.datos_presupuesto?.material || initialValues.material || '');
             setAcabado(initialValues.datos_presupuesto?.acabado || initialValues.acabado || []);
             setTirada(initialValues.datos_presupuesto?.tirada || initialValues.tirada || '');
-            setSelectedTintas(initialValues.datos_presupuesto?.selectedTintas || initialValues.selectedTintas || []);
+            const savedPantones = initialValues.datos_presupuesto?.pantones || initialValues.pantones || [];
+            const savedSelectedTintas = initialValues.datos_presupuesto?.selectedTintas || initialValues.selectedTintas || [];
+            const validPantoneLabels = new Set(savedPantones.map(p => p.label));
+            const cmykLabels = new Set(['C', 'M', 'Y', 'K']);
+            const filteredTintas = savedSelectedTintas.filter(l => cmykLabels.has(l) || validPantoneLabels.has(l));
+            setPantones(savedPantones);
+            setSelectedTintas(filteredTintas);
             setDetalleTintaEspecial(initialValues.datos_presupuesto?.detalleTintaEspecial || initialValues.detalleTintaEspecial || []);
             setTroquelEstadoSel(initialValues.datos_presupuesto?.troquelEstadoSel || initialValues.troquelEstadoSel || '');
             setTroquelFormaSel(initialValues.datos_presupuesto?.troquelFormaSel || initialValues.troquelFormaSel || '');
@@ -566,7 +572,8 @@ export default function NuevoPresupuestoModal({
     const materiales = (catalogos.materiales || []).map((item) => item.valor).filter(Boolean);
     const acabados = (catalogos.acabados || []).map((item) => item.valor).filter(Boolean);
     const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor).filter(Boolean);
-    const numeroTintasSeleccionadas = selectedTintas.length;
+    const tintasEspecialesCount = Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.length : (detalleTintaEspecial ? 1 : 0);
+    const numeroTintasSeleccionadas = selectedTintas.length + tintasEspecialesCount;
     const puedeSeleccionarMaquina = (itemMaquina) => {
         if (!showMaquinaField) return true;
         const coloresMaquina = Number(itemMaquina?.numero_colores || 0);
@@ -586,7 +593,6 @@ export default function NuevoPresupuestoModal({
     }
     // three positional Pantone slots that replace the old P1/P2/P3 buttons
     const [pantones, setPantones] = useState([]); // dynamic list of added pantones
-    const [pantoneModalVisible, setPantoneModalVisible] = useState(false);
     const [pantoneInput, setPantoneInput] = useState('');
     const [addingPantone, setAddingPantone] = useState(false);
 
@@ -1022,6 +1028,9 @@ export default function NuevoPresupuestoModal({
         setTirada('');
         setSelectedTintas([]);
         setDetalleTintaEspecial([]);
+        setPantones([]);
+        setAddingPantone(false);
+        setPantoneInput('');
         setImagenCobertura(null);
         setEtiquetaUri(null);
         setTroquelEstadoSel('');
@@ -1556,7 +1565,7 @@ export default function NuevoPresupuestoModal({
                                     addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
                                     disabled={isReadOnly}
                                 />
-                                <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {selectedTintas.length}</Text>
+                                <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {numeroTintasSeleccionadas}</Text>
                                 
                             </View>
                             <View style={styles.col}>
@@ -1673,47 +1682,6 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
                 </Modal>
-                <Modal
-                    visible={pantoneModalVisible}
-                    transparent
-                    animationType="fade"
-                    onRequestClose={() => setPantoneModalVisible(false)}
-                >
-                    <View style={styles.pickerModalOverlay}>
-                        <View style={styles.pickerModalCard}>
-                            <Text style={styles.pickerModalTitle}>Añadir Pantone</Text>
-                            <TextInput
-                                value={pantoneInput}
-                                onChangeText={setPantoneInput}
-                                placeholder="Ej: 485 o PANTONE 485 C"
-                                style={styles.input(pantoneInput, false, false, false)}
-                            />
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
-                                <TouchableOpacity style={styles.bigBtn} onPress={() => setPantoneModalVisible(false)}>
-                                    <Text style={styles.bigBtnText}>Cancelar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.bigBtn, { marginLeft: 8 }]}
-                                    onPress={() => {
-                                        if (pantoneInput && pantoneInput.trim()) {
-                                            const txt = pantoneInput.trim();
-                                            if (pantoneTargetIndex !== null && pantoneTargetIndex !== undefined) {
-                                                addPantoneAt(pantoneTargetIndex, txt);
-                                            } else {
-                                                addPantone(txt);
-                                            }
-                                        }
-                                        setPantoneTargetIndex(null);
-                                        setPantoneModalVisible(false);
-                                    }}
-                                >
-                                    <Text style={styles.bigBtnText}>Añadir</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-
                 {/* ── Troquel create sub-modal ── */}
                 <Modal visible={showTroquelCreate} transparent animationType="fade" onRequestClose={() => setShowTroquelCreate(false)}>
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
