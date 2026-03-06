@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePermission } from './usePermission';
@@ -205,22 +207,33 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 11,
   },
-  chipMove: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#EEF2F6',
+  dragHandle: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 4,
+    marginRight: 8,
+    borderRadius: 6,
+    cursor: 'grab',
   },
-  chipMoveDisabled: {
-    opacity: 0.35,
+  dragHandleText: {
+    color: '#94A3B8',
+    fontSize: 16,
+    lineHeight: 16,
+    userSelect: 'none',
   },
-  chipMoveText: {
-    color: '#374151',
-    fontWeight: '900',
-    fontSize: 11,
+  estadoChipList: {
+    gap: 4,
+  },
+  estadoChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   muted: { color: '#475569', fontSize: 12 },
   modeRow: {
@@ -668,6 +681,60 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
+function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditSave }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: item.id });
+
+  const rnRef = useCallback(
+    (node) => {
+      if (!node) return;
+      setNodeRef(node.getNativeNode?.() ?? node);
+    },
+    [setNodeRef]
+  );
+
+  const rowStyle = [
+    styles.estadoChipRow,
+    isDragging && { opacity: 0.75, zIndex: 999 },
+    transform ? { transform: [{ translateX: transform.x }, { translateY: transform.y }] } : null,
+  ];
+
+  return (
+    <View ref={rnRef} style={rowStyle} {...attributes}>
+      <View style={styles.dragHandle} {...listeners}>
+        <Text style={styles.dragHandleText}>⠿</Text>
+      </View>
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: getColor(item.valor), marginRight: 8, flexShrink: 0 }} />
+      {editing.id === item.id ? (
+        <TextInput
+          style={[styles.input, { flex: 1, paddingVertical: 4 }]}
+          value={editing.text}
+          onChangeText={onEditChange}
+          onBlur={onEditSave}
+          onSubmitEditing={onEditSave}
+          autoFocus
+          returnKeyType="done"
+        />
+      ) : (
+        <Text style={[styles.chipText, { flex: 1 }]}>{item.label || item.valor}</Text>
+      )}
+      <TouchableOpacity
+        style={[styles.chipEdit, isProtected && styles.chipEditDisabled]}
+        disabled={isProtected}
+        onPress={() => onEdit(item)}
+      >
+        <Text style={styles.chipEditText}>✎</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.chipDelete, isProtected && styles.chipDeleteDisabled]}
+        disabled={isProtected}
+        onPress={() => onDelete(item.id)}
+      >
+        <Text style={styles.chipDeleteText}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function ConfigScreen({ route, currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const [settings, setSettings] = useState({
@@ -700,6 +767,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
   const [editing, setEditing] = useState({ category: null, id: null, text: '' });
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState('30');
   const [sessionTimeoutMin, setSessionTimeoutMin] = useState(5);
   const [sessionTimeoutMax, setSessionTimeoutMax] = useState(480);
@@ -1883,23 +1951,16 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
-  const moverEstadoPedido = async (itemId, direction) => {
-    const items = [...(settings.estados_pedido || [])];
-    const currentIndex = items.findIndex((item) => item.id === itemId);
-    if (currentIndex < 0) return;
-
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= items.length) return;
-
-    const reordered = [...items];
-    const tmp = reordered[currentIndex];
-    reordered[currentIndex] = reordered[targetIndex];
-    reordered[targetIndex] = tmp;
-
+  const handleEstadosDragEnd = async ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+    const items = settings.estados_pedido || [];
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove([...items], oldIndex, newIndex);
     setSettings((prev) => ({ ...prev, estados_pedido: reordered }));
-
     try {
-      await reordenarCategoria('estados_pedido', reordered.map((item) => item.id));
+      await reordenarCategoria('estados_pedido', reordered.map((i) => i.id));
       await cargarSettings();
     } catch (e) {
       await cargarSettings();
@@ -1934,34 +1995,35 @@ export default function ConfigScreen({ route, currentUser }) {
 
         {items.length === 0 ? (
           <Text style={styles.muted}>No hay valores configurados</Text>
+        ) : categoryKey === 'estados_pedido' ? (
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleEstadosDragEnd}>
+            <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              <View style={styles.estadoChipList}>
+                {items.map((item) => {
+                  const esEstadoProtegido = estadosProtegidos.has(slugifyEstado(item?.valor || ''));
+                  return (
+                    <SortableEstadoChip
+                      key={item.id}
+                      item={item}
+                      isProtected={esEstadoProtegido}
+                      onEdit={(i) => editarValor(i, categoryKey)}
+                      onDelete={eliminarValor}
+                      getColor={getEstadoColor}
+                      editing={editing}
+                      onEditChange={(t) => setEditing((prev) => ({ ...prev, text: t }))}
+                      onEditSave={saveEditedValor}
+                    />
+                  );
+                })}
+              </View>
+            </SortableContext>
+          </DndContext>
         ) : (
           <View style={styles.chipList}>
-            {items.map((item, index) => {
-              const esEstadoPedido = categoryKey === 'estados_pedido';
+            {items.map((item) => {
               const esRolProtegido = categoryKey === 'roles' && rolesProtegidos.has(slugifyEstado(item?.valor || ''));
-              const esEstadoProtegido = esEstadoPedido && estadosProtegidos.has(slugifyEstado(item?.valor || ''));
-              const puedeSubir = index > 0;
-              const puedeBajar = index < items.length - 1;
               return (
                 <View key={item.id} style={styles.chip}>
-                  {esEstadoPedido && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.chipMove, !puedeSubir && styles.chipMoveDisabled]}
-                        disabled={!puedeSubir}
-                        onPress={() => moverEstadoPedido(item.id, 'up')}
-                      >
-                        <Text style={styles.chipMoveText}>↑</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.chipMove, !puedeBajar && styles.chipMoveDisabled]}
-                        disabled={!puedeBajar}
-                        onPress={() => moverEstadoPedido(item.id, 'down')}
-                      >
-                        <Text style={styles.chipMoveText}>↓</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
                   {editing.id === item.id && editing.category === categoryKey ? (
                     <TextInput
                       style={[styles.input, { minWidth: 120, paddingVertical: 6 }]}
@@ -1973,31 +2035,18 @@ export default function ConfigScreen({ route, currentUser }) {
                       returnKeyType="done"
                     />
                   ) : (
-                    <>
-                      {esEstadoPedido && (
-                        <View
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: 5,
-                            backgroundColor: getEstadoColor(item.valor),
-                            marginRight: 8,
-                          }}
-                        />
-                      )}
-                      <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
-                    </>
+                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
                   )}
                   <TouchableOpacity
-                    style={[styles.chipEdit, (esRolProtegido || esEstadoProtegido) && styles.chipEditDisabled]}
-                    disabled={esRolProtegido || esEstadoProtegido}
+                    style={[styles.chipEdit, esRolProtegido && styles.chipEditDisabled]}
+                    disabled={esRolProtegido}
                     onPress={() => editarValor(item, categoryKey)}
                   >
                     <Text style={styles.chipEditText}>✎</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.chipDelete, (esRolProtegido || esEstadoProtegido) && styles.chipDeleteDisabled]}
-                    disabled={esRolProtegido || esEstadoProtegido}
+                    style={[styles.chipDelete, esRolProtegido && styles.chipDeleteDisabled]}
+                    disabled={esRolProtegido}
                     onPress={() => eliminarValor(item.id)}
                   >
                     <Text style={styles.chipDeleteText}>✕</Text>
