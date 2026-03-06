@@ -490,7 +490,7 @@ export default function NuevoPresupuestoModal({
     const [troquelCreateForm, setTroquelCreateForm] = useState({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
     const [savingTroquel, setSavingTroquel] = useState(false);
     const [showMaquinaCreate, setShowMaquinaCreate] = useState(false);
-    const [maquinaCreateForm, setMaquinaCreateForm] = useState({ nombre: '', numero_colores: '', tipo_maquina: '' });
+    const [maquinaCreateForm, setMaquinaCreateForm] = useState({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
     const [savingMaquina, setSavingMaquina] = useState(false);
 
     // pedido id when editing
@@ -788,13 +788,21 @@ export default function NuevoPresupuestoModal({
     const saveMaquinaFromModal = async () => {
         const nombre = (maquinaCreateForm.nombre || '').trim();
         if (!nombre) return alert('El nombre de la máquina es obligatorio');
+        const parseNum = (v) => { const n = Number(v); return (v === '' || v === null || v === undefined || isNaN(n)) ? null : n; };
         setSavingMaquina(true);
         try {
             const body = {
                 nombre,
-                numero_colores: maquinaCreateForm.numero_colores ? Number(maquinaCreateForm.numero_colores) : null,
+                anio_fabricacion: maquinaCreateForm.anio_fabricacion.trim() || null,
                 tipo_maquina: maquinaCreateForm.tipo_maquina.trim() || null,
-                estado: 'Activa',
+                numero_colores: parseNum(maquinaCreateForm.numero_colores),
+                estado: maquinaCreateForm.estado || 'Activa',
+                ancho_max_material_mm: parseNum(maquinaCreateForm.ancho_max_material_mm),
+                ancho_max_impresion_mm: parseNum(maquinaCreateForm.ancho_max_impresion_mm),
+                velocidad_max_maquina_mmin: parseNum(maquinaCreateForm.velocidad_max_maquina_mmin),
+                velocidad_max_impresion_mmin: parseNum(maquinaCreateForm.velocidad_max_maquina_mmin),
+                espesor_planchas_mm: parseNum(maquinaCreateForm.espesor_planchas_mm),
+                sistemas_secado: maquinaCreateForm.sistemas_secado.trim() || null,
             };
             const res = await fetch('http://localhost:8080/api/maquinas', {
                 method: 'POST',
@@ -804,7 +812,7 @@ export default function NuevoPresupuestoModal({
             const data = await res.json().catch(() => ({}));
             if (!res.ok) return alert(data.error || 'Error guardando máquina');
             setShowMaquinaCreate(false);
-            setMaquinaCreateForm({ nombre: '', numero_colores: '', tipo_maquina: '' });
+            setMaquinaCreateForm({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
             await cargarMaquinasActivas();
             setMaquina(nombre);
         } catch (e) {
@@ -1309,7 +1317,7 @@ export default function NuevoPresupuestoModal({
                                     {!isReadOnly && (
                                         <TouchableOpacity
                                             onPress={() => {
-                                                setMaquinaCreateForm({ nombre: '', numero_colores: '', tipo_maquina: '' });
+                                                setMaquinaCreateForm({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
                                                 setShowMaquinaCreate(true);
                                             }}
                                             style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
@@ -1848,36 +1856,129 @@ export default function NuevoPresupuestoModal({
                 {/* ── Máquina create sub-modal ── */}
                 <Modal visible={showMaquinaCreate} transparent animationType="fade" onRequestClose={() => setShowMaquinaCreate(false)}>
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400 }}>
-                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 16 }}>Nueva máquina</Text>
-
-                            <Text style={styles.label}>Nombre *</Text>
-                            <TextInput
-                                style={styles.input(maquinaCreateForm.nombre, true, false, false)}
-                                value={maquinaCreateForm.nombre}
-                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, nombre: v }))}
-                                placeholder="Ej. Rotativa A"
-                                autoFocus
-                            />
-
-                            <Text style={[styles.label, { marginTop: 10 }]}>Número de colores</Text>
-                            <TextInput
-                                style={styles.input(maquinaCreateForm.numero_colores, false, true, false)}
-                                value={maquinaCreateForm.numero_colores}
-                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, numero_colores: v }))}
-                                placeholder="Ej. 4"
-                                keyboardType="numeric"
-                            />
-
-                            <Text style={[styles.label, { marginTop: 10 }]}>Tipo de máquina</Text>
-                            <TextInput
-                                style={styles.input(maquinaCreateForm.tipo_maquina, false, false, false)}
-                                value={maquinaCreateForm.tipo_maquina}
-                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, tipo_maquina: v }))}
-                                placeholder="Ej. Flexográfica"
-                            />
-
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 0, width: '100%', maxWidth: 580, overflow: 'hidden' }}>
+                            <View style={{ backgroundColor: '#1E293B', paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 17, fontWeight: '800', color: '#F8FAFC' }}>Nueva máquina</Text>
+                                <TouchableOpacity onPress={() => setShowMaquinaCreate(false)}>
+                                    <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>Cerrar</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 8 }}>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                    <View style={{ width: '100%' }}>
+                                        <Text style={styles.label}>Marca y modelo *</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.nombre, true, false, false)}
+                                            value={maquinaCreateForm.nombre}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, nombre: v }))}
+                                            placeholder="Ej. Rotativa A"
+                                            autoFocus
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Año fabricación / versión</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.anio_fabricacion, false, false, false)}
+                                            value={maquinaCreateForm.anio_fabricacion}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, anio_fabricacion: v }))}
+                                            placeholder="Ej. 2018"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Tipo de máquina</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.tipo_maquina, false, false, false)}
+                                            value={maquinaCreateForm.tipo_maquina}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, tipo_maquina: v }))}
+                                            placeholder="Ej. Flexográfica"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Número de colores</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.numero_colores, false, true, false)}
+                                            value={maquinaCreateForm.numero_colores}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, numero_colores: v }))}
+                                            placeholder="Ej. 4"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Estado</Text>
+                                        {Platform.OS === 'web' ? (
+                                            <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
+                                                <select
+                                                    value={maquinaCreateForm.estado || 'Activa'}
+                                                    onChange={(e) => setMaquinaCreateForm(p => ({ ...p, estado: e.target.value }))}
+                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px 10px', fontSize: '14px', color: '#0F172A', cursor: 'pointer', outline: 'none' }}
+                                                >
+                                                    <option value="Activa">Activa</option>
+                                                    <option value="Inactiva">Inactiva</option>
+                                                </select>
+                                            </View>
+                                        ) : (
+                                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                                                {['Activa', 'Inactiva'].map(op => (
+                                                    <TouchableOpacity key={op} onPress={() => setMaquinaCreateForm(p => ({ ...p, estado: op }))}
+                                                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: maquinaCreateForm.estado === op ? '#2563EB' : '#F1F5F9' }}>
+                                                        <Text style={{ color: maquinaCreateForm.estado === op ? '#fff' : '#475569', fontSize: 13 }}>{op}</Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Ancho máx. material (mm)</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.ancho_max_material_mm, false, true, false)}
+                                            value={maquinaCreateForm.ancho_max_material_mm}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_material_mm: v }))}
+                                            placeholder="Ej. 450"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Ancho máx. impresión (mm)</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.ancho_max_impresion_mm, false, true, false)}
+                                            value={maquinaCreateForm.ancho_max_impresion_mm}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_impresion_mm: v }))}
+                                            placeholder="Ej. 420"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Velocidad máx. (m/min)</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.velocidad_max_maquina_mmin, false, true, false)}
+                                            value={maquinaCreateForm.velocidad_max_maquina_mmin}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, velocidad_max_maquina_mmin: v }))}
+                                            placeholder="Ej. 150"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, minWidth: 140 }}>
+                                        <Text style={styles.label}>Espesor planchas (mm)</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.espesor_planchas_mm, false, true, false)}
+                                            value={maquinaCreateForm.espesor_planchas_mm}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, espesor_planchas_mm: v }))}
+                                            placeholder="Ej. 1.14"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ width: '100%' }}>
+                                        <Text style={styles.label}>Sistemas de secado</Text>
+                                        <TextInput
+                                            style={styles.input(maquinaCreateForm.sistemas_secado, false, false, false)}
+                                            value={maquinaCreateForm.sistemas_secado}
+                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, sistemas_secado: v }))}
+                                            placeholder="Ej. UV, secado por aire"
+                                        />
+                                    </View>
+                                </View>
+                            </ScrollView>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
                                 <TouchableOpacity
                                     onPress={() => setShowMaquinaCreate(false)}
                                     style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}
