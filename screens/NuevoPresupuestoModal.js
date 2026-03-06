@@ -489,6 +489,9 @@ export default function NuevoPresupuestoModal({
     const [showTroquelCreate, setShowTroquelCreate] = useState(false);
     const [troquelCreateForm, setTroquelCreateForm] = useState({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
     const [savingTroquel, setSavingTroquel] = useState(false);
+    const [showMaquinaCreate, setShowMaquinaCreate] = useState(false);
+    const [maquinaCreateForm, setMaquinaCreateForm] = useState({ nombre: '', numero_colores: '', tipo_maquina: '' });
+    const [savingMaquina, setSavingMaquina] = useState(false);
 
     // pedido id when editing
     const [pedidoId, setPedidoId] = useState(null);
@@ -779,6 +782,35 @@ export default function NuevoPresupuestoModal({
             alert('Error de conexión');
         } finally {
             setSavingTroquel(false);
+        }
+    };
+
+    const saveMaquinaFromModal = async () => {
+        const nombre = (maquinaCreateForm.nombre || '').trim();
+        if (!nombre) return alert('El nombre de la máquina es obligatorio');
+        setSavingMaquina(true);
+        try {
+            const body = {
+                nombre,
+                numero_colores: maquinaCreateForm.numero_colores ? Number(maquinaCreateForm.numero_colores) : null,
+                tipo_maquina: maquinaCreateForm.tipo_maquina.trim() || null,
+                estado: 'Activa',
+            };
+            const res = await fetch('http://localhost:8080/api/maquinas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) return alert(data.error || 'Error guardando máquina');
+            setShowMaquinaCreate(false);
+            setMaquinaCreateForm({ nombre: '', numero_colores: '', tipo_maquina: '' });
+            await cargarMaquinasActivas();
+            setMaquina(nombre);
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setSavingMaquina(false);
         }
     };
 
@@ -1272,7 +1304,20 @@ export default function NuevoPresupuestoModal({
                         <View style={[styles.row, { alignItems: 'flex-start' }]}>
                             {showMaquinaField && (
                             <View style={styles.col}>
-                                <Text style={styles.label}>{maquinaLabel}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <Text style={[styles.label, { marginBottom: 0 }]}>{maquinaLabel}</Text>
+                                    {!isReadOnly && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setMaquinaCreateForm({ nombre: '', numero_colores: '', tipo_maquina: '' });
+                                                setShowMaquinaCreate(true);
+                                            }}
+                                            style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                        >
+                                            <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                                 {Platform.OS === 'web' ? (
                                     <View style={{
                                         borderWidth: 1,
@@ -1794,6 +1839,57 @@ export default function NuevoPresupuestoModal({
                                     style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2563EB' }}
                                 >
                                     <Text style={{ color: '#fff', fontWeight: '700' }}>{savingTroquel ? 'Guardando...' : 'Guardar'}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* ── Máquina create sub-modal ── */}
+                <Modal visible={showMaquinaCreate} transparent animationType="fade" onRequestClose={() => setShowMaquinaCreate(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400 }}>
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 16 }}>Nueva máquina</Text>
+
+                            <Text style={styles.label}>Nombre *</Text>
+                            <TextInput
+                                style={styles.input(maquinaCreateForm.nombre, true, false, false)}
+                                value={maquinaCreateForm.nombre}
+                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, nombre: v }))}
+                                placeholder="Ej. Rotativa A"
+                                autoFocus
+                            />
+
+                            <Text style={[styles.label, { marginTop: 10 }]}>Número de colores</Text>
+                            <TextInput
+                                style={styles.input(maquinaCreateForm.numero_colores, false, true, false)}
+                                value={maquinaCreateForm.numero_colores}
+                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, numero_colores: v }))}
+                                placeholder="Ej. 4"
+                                keyboardType="numeric"
+                            />
+
+                            <Text style={[styles.label, { marginTop: 10 }]}>Tipo de máquina</Text>
+                            <TextInput
+                                style={styles.input(maquinaCreateForm.tipo_maquina, false, false, false)}
+                                value={maquinaCreateForm.tipo_maquina}
+                                onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, tipo_maquina: v }))}
+                                placeholder="Ej. Flexográfica"
+                            />
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                                <TouchableOpacity
+                                    onPress={() => setShowMaquinaCreate(false)}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}
+                                >
+                                    <Text style={{ color: '#475569', fontWeight: '600' }}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={saveMaquinaFromModal}
+                                    disabled={savingMaquina}
+                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#2563EB' }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: '700' }}>{savingMaquina ? 'Guardando...' : 'Guardar'}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
