@@ -1572,11 +1572,22 @@ def verify_role_permission():
         data = request.get_json() or {}
         role = str(data.get('role') or '').strip()
         permission = str(data.get('permission') or '').strip()
-        
+
         if not role or not permission:
             return jsonify({'error': 'role y permission requeridos'}), 400
-        
-        has_permission = can_role_permission(role, permission)
+
+        # Resolver empresa_id para leer las reglas personalizadas del tenant correcto.
+        # Se acepta en el body o se infiere del usuario autenticado (token/dev-bypass).
+        empresa_id = str(data.get('empresa_id') or '').strip() or None
+        if not empresa_id:
+            try:
+                req_user = get_request_user()
+                if req_user:
+                    empresa_id = req_user.get('empresa_id')
+            except Exception:
+                pass
+
+        has_permission = can_role_permission(role, permission, empresa_id=empresa_id)
         return jsonify({'role': role, 'permission': permission, 'allowed': has_permission}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
