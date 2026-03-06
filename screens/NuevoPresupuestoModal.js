@@ -65,12 +65,12 @@ const styles = {
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
-        backgroundColor: '#A8A8AA', paddingHorizontal: 16, paddingVertical: 10,
-        borderRadius: 10,
-        alignItems: 'center', marginBottom: 8, minWidth: 160
+        backgroundColor: '#F1F5F9', paddingHorizontal: 22, paddingVertical: 11,
+        borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0',
+        alignItems: 'center', minWidth: 130
     },
     bigBtnText: {
-        color: '#FFF', fontWeight: '700', fontSize: 13
+        color: '#475569', fontWeight: '600', fontSize: 13
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 14, paddingVertical: 12,
@@ -91,7 +91,7 @@ const styles = {
         borderColor: color, backgroundColor: '#FBFBFD', marginRight: 8, marginBottom: 8, minWidth: 60, alignItems: 'center'
     }),
     coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
-    submitContainer: { alignItems: 'center', marginTop: 24, marginBottom: 20 },
+    submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
         backgroundColor: '#2563EB', paddingHorizontal: 22, paddingVertical: 10,
         borderRadius: 14,
@@ -1269,8 +1269,8 @@ export default function NuevoPresupuestoModal({
                     {/* PRODUCTO */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Producto</Text>
-                        {showMaquinaField && (
-                        <View style={styles.row}>
+                        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+                            {showMaquinaField && (
                             <View style={styles.col}>
                                 <Text style={styles.label}>{maquinaLabel}</Text>
                                 {Platform.OS === 'web' ? (
@@ -1351,48 +1351,8 @@ export default function NuevoPresupuestoModal({
                                     </Text>
                                 )}
                             </View>
-                        </View>
-                        )}
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Material</Text>
-                                <BotonSelector
-                                    opciones={materiales}
-                                    valorSeleccionado={material}
-                                    onSelect={setMaterial}
-                                    required={true}
-                                    submitted={submitted}
-                                    disabled={isReadOnly}
-                                />
-                            </View>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Acabado</Text>
-                                <BotonSelector
-                                    opciones={acabados}
-                                    valorSeleccionado={acabado}
-                                    onSelect={setAcabado}
-                                    multiple={true}
-                                    required={false}
-                                    submitted={submitted}
-                                    disabled={isReadOnly}
-                                />
-                            </View>
-                        </View>
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Tirada total</Text>
-                                <TextInput
-                                    value={tirada}
-                                    onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
-                                    keyboardType="numeric"
-                                    placeholder="Cantidad"
-                                    style={styles.input(tirada, true, true, submitted)}
-                                    editable={!isReadOnly}
-                                />
-                            </View>
-                        </View>
-                        {/* TROQUEL */}
-                        <View style={{ marginTop: 6 }}>
+                            )}
+                        <View style={styles.col}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                 <Text style={styles.label}>Troquel</Text>
                                 {!isReadOnly && (
@@ -1477,6 +1437,45 @@ export default function NuevoPresupuestoModal({
                             )}
                         </View>
                     </View>
+                        <View style={styles.row}>
+                            <View style={styles.col}>
+                                <Text style={styles.label}>Material</Text>
+                                <BotonSelector
+                                    opciones={materiales}
+                                    valorSeleccionado={material}
+                                    onSelect={setMaterial}
+                                    required={true}
+                                    submitted={submitted}
+                                    disabled={isReadOnly}
+                                />
+                            </View>
+                            <View style={styles.col}>
+                                <Text style={styles.label}>Acabado</Text>
+                                <BotonSelector
+                                    opciones={acabados}
+                                    valorSeleccionado={acabado}
+                                    onSelect={setAcabado}
+                                    multiple={true}
+                                    required={false}
+                                    submitted={submitted}
+                                    disabled={isReadOnly}
+                                />
+                            </View>
+                        </View>
+                        <View style={styles.row}>
+                            <View style={styles.col}>
+                                <Text style={styles.label}>Tirada total</Text>
+                                <TextInput
+                                    value={tirada}
+                                    onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
+                                    keyboardType="numeric"
+                                    placeholder="Cantidad"
+                                    style={styles.input(tirada, true, true, submitted)}
+                                    editable={!isReadOnly}
+                                />
+                            </View>
+                        </View>
+                    </View>
                     <View style={styles.divider} />
 
                     {/* IMPRESIÓN */}
@@ -1537,7 +1536,7 @@ export default function NuevoPresupuestoModal({
                             onPress={() => puedeCrear && handleSubmit()}
                             disabled={!puedeCrear}
                         >
-                            <Text style={styles.bigBtnText}>{submitLabel}</Text>
+                            <Text style={[styles.bigBtnText, { color: '#F8FAFC' }]}>{submitLabel}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
                             <Text style={styles.bigBtnText}>Cancelar</Text>
