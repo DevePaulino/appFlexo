@@ -484,20 +484,20 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                                 value={maquina}
                                 onChange={e => setMaquina(e.target.value)}
                                 style={{
-                                    fontSize: 16,
+                                    fontSize: 13,
                                     fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-                                    color: maquina ? '#232323' : '#AAA',
-                                    borderWidth: 0,
-                                    borderBottom: `2px solid ${borderColorState(maquina, true, false, submitted)}`,
-                                    background: '#FBFBFD',
-                                    borderRadius: 6,
+                                    color: '#0F172A',
+                                    border: '1px solid #E2E8F0',
+                                    backgroundColor: '#F8FAFC',
+                                    borderRadius: 10,
                                     minHeight: 39,
                                     outline: 'none',
-                                    padding: '10px 8px',
+                                    padding: '4px 8px',
                                     marginBottom: 8,
                                     fontWeight: 400,
                                     letterSpacing: 0,
                                     appearance: 'none',
+                                    cursor: 'pointer',
                                 }}>
                                 <option value="">Selecciona...</option>
                                 {maquinasEjemplo.map(opt => (

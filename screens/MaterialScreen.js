@@ -1555,7 +1555,7 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
   filterLabel: { fontSize: 13, color: '#475569', fontWeight: '500' },
   filterSelectWrap: { flex: 1, maxWidth: 260 },
-  filterSelect: { width: '100%', height: 32, border: '1px solid #DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
+  filterSelect: { width: '100%', height: 32, border: '1px solid #E2E8F0', borderRadius: 10, padding: '4px 8px', fontSize: 13, backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outline: 'none' },
   filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
 
   // Table
@@ -1700,11 +1700,14 @@ const styles = StyleSheet.create({
   fieldSelect: {
     width: '100%',
     height: 36,
-    border: '1px solid #DDD',
-    borderRadius: 6,
-    paddingHorizontal: 8,
+    border: '1px solid #E2E8F0',
+    borderRadius: 10,
+    padding: '4px 8px',
     fontSize: 13,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    cursor: 'pointer',
+    outline: 'none',
   },
 
   // Fabricante edit rows

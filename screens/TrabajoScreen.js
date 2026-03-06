@@ -1312,15 +1312,16 @@ export default function TrabajoScreen({ currentUser }) {
                   <select
                     disabled={!canChangeEstado}
                     style={{
-                      padding: '6px 8px',
-                      borderRadius: '4px',
-                      border: '1px solid #DDD',
-                      backgroundColor: getStatusColor(trabajo.estado)[0].backgroundColor || '#FFF',
-                      fontSize: '11px',
+                      padding: '4px 8px',
+                      borderRadius: 10,
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#F8FAFC',
+                      fontSize: 13,
                       fontWeight: '600',
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: getStatusColor(trabajo.estado)[1].color || '#232323',
+                      color: '#0F172A',
+                      outline: 'none',
                       opacity: canChangeEstado ? 1 : 0.65,
                       pointerEvents: canChangeEstado ? 'auto' : 'none',
                     }}

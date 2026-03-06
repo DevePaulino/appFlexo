@@ -1172,12 +1172,12 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>Comercial</Text>
                                         {Platform.OS === 'web' ? (
-                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#FBFBFD', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
+                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
                                                 <select
                                                     value={vendedor}
                                                     onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
                                                     disabled={isReadOnly}
-                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '10px 12px', fontSize: '14px', color: '#232323', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
+                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '4px 8px', fontSize: '14px', color: '#0F172A', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
                                                 >
                                                     <option value="">Seleccionar comercial</option>
                                                     {usuariosComerciales.map((u) => (
@@ -1308,7 +1308,7 @@ export default function NuevoPresupuestoModal({
                                         <View style={{
                                             borderWidth: 1,
                                             borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
-                                            backgroundColor: '#FBFBFD',
+                                            backgroundColor: '#F8FAFC',
                                             borderRadius: 10,
                                             marginBottom: 10,
                                             overflow: 'hidden'
@@ -1320,9 +1320,11 @@ export default function NuevoPresupuestoModal({
                                                     width: '100%',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    padding: '10px',
+                                                    padding: '4px 8px',
                                                     fontSize: '14px',
-                                                    color: '#232323'
+                                                    color: '#0F172A',
+                                                    outline: 'none',
+                                                    cursor: 'pointer',
                                                 }}
                                             >
                                                 <option value="">Seleccionar máquina activa</option>
@@ -1494,7 +1496,7 @@ export default function NuevoPresupuestoModal({
                             <Text style={{ color: '#888', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
                         ) : Platform.OS === 'web' ? (
                             <select
-                                style={{ fontSize: 14, border: '1px solid #CCC', backgroundColor: '#FBFBFD', padding: '9px 12px', borderRadius: 8, width: '100%', color: '#333', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                                style={{ fontSize: 14, border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outline: 'none' }}
                                 value={troquelSel?._id || troquelSel?.id || ''}
                                 disabled={isReadOnly}
                                 onChange={e => {

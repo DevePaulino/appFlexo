@@ -192,7 +192,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
                     // ignore
                   }
                 }}
-                style={{ fontSize: 12, fontWeight: 700, padding: '6px 8px', borderRadius: 6, border: '1px solid #E0E0E0', background: '#FFF' }}
+                style={{ fontSize: 13, fontWeight: 700, padding: '4px 8px', borderRadius: 10, border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outline: 'none' }}
               >
                 {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
                   <option key={r.key} value={r.key}>{r.label}</option>
@@ -201,6 +201,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
             </div>
           ) : (
             <View style={{ width: 180 }}>
+              <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#F8FAFC', overflow: 'hidden' }}>
               <Picker
                 selectedValue={String(currentUser?.rol || '').toLowerCase()}
                 onValueChange={async (next) => {
@@ -217,12 +218,13 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
                   }
                 }}
                 mode="dropdown"
-                style={{ height: 36 }}
+                style={{ height: 36, color: '#0F172A', fontSize: 12, backgroundColor: 'transparent', borderWidth: 0, cursor: 'pointer', outline: 'none' }}
               >
                 {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
                   <Picker.Item key={r.key} label={r.label} value={r.key} />
                 ))}
               </Picker>
+              </View>
             </View>
           )}
         </View>

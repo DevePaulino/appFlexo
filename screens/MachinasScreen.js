@@ -723,11 +723,14 @@ export default function MachinasScreen({ currentUser }) {
                         onChange={(e) => setForm({ ...form, estado: e.target.value })}
                         style={{
                           width: '100%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          padding: '10px',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 10,
+                          backgroundColor: '#F8FAFC',
+                          padding: '4px 8px',
                           fontSize: '14px',
-                          color: '#232323',
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          outline: 'none',
                         }}
                       >
                         <option value="Activa">Activa</option>
