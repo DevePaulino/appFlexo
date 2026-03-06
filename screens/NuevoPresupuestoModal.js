@@ -45,7 +45,7 @@ const styles = {
         borderWidth: 1.5,
         borderColor: '#E2E8F0'
     },
-    sectionTitle: { fontSize: 16, fontWeight: '900', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
     label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
@@ -54,7 +54,7 @@ const styles = {
         fontSize: 14,
         borderWidth: 1,
         borderColor: borderColorState(value, isRequired, isNumeric, submitted),
-        backgroundColor: '#FBFBFD',
+        backgroundColor: '#F8FAFC',
         paddingVertical: 10,
         paddingHorizontal: 10,
         borderRadius: 10,
@@ -456,8 +456,6 @@ export default function NuevoPresupuestoModal({
     const [datePickerField, setDatePickerField] = useState('fecha');
     const [referencia, setReferencia] = useState('');
     const [vendedor, setVendedor] = useState('');
-    const [formatoAncho, setFormatoAncho] = useState('');
-    const [formatoLargo, setFormatoLargo] = useState('');
     const [maquina, setMaquina] = useState('');
     const [material, setMaterial] = useState('');
     const [acabado, setAcabado] = useState([]);
@@ -509,8 +507,6 @@ export default function NuevoPresupuestoModal({
             setFechaEntrega(initialValues.datos_presupuesto?.fecha || initialValues.fecha_entrega || initialValues.fechaEntrega || getDatePlusDaysStr(7));
             setReferencia(initialValues.referencia || initialValues.datos_presupuesto?.referencia || '');
             setVendedor(initialValues.datos_presupuesto?.vendedor || '');
-            setFormatoAncho(initialValues.datos_presupuesto?.formatoAncho || initialValues.formatoAncho || '');
-            setFormatoLargo(initialValues.datos_presupuesto?.formatoLargo || initialValues.formatoLargo || '');
             setMaquina(initialValues.datos_presupuesto?.maquina || initialValues.maquina || '');
             setMaterial(initialValues.datos_presupuesto?.material || initialValues.material || '');
             setAcabado(initialValues.datos_presupuesto?.acabado || initialValues.acabado || []);
@@ -897,8 +893,6 @@ export default function NuevoPresupuestoModal({
         // Allow non-saved clients: require cliente name but don't force clienteSeleccionadoId
         if (!cliente) missing.push('Nombre cliente');
         if (!referencia) missing.push('Referencia');
-        if (!formatoAncho) missing.push('Formato ancho');
-        if (!formatoLargo) missing.push('Formato largo');
         if (!material) missing.push('Material');
         if (!acabadoValido) missing.push('Acabado');
         if (!tirada) missing.push('Tirada');
@@ -911,7 +905,7 @@ export default function NuevoPresupuestoModal({
             return;
         }
 
-        if (cliente && referencia && formatoAncho && formatoLargo && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
+        if (cliente && referencia && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
             // Clone arrays/objects to avoid passing references to component state
             const presupuesto = {
                 id: Date.now(),
@@ -925,8 +919,6 @@ export default function NuevoPresupuestoModal({
                 fechaEntrega,
                 referencia,
                 vendedor,
-                formatoAncho,
-                formatoLargo,
                 maquina,
                 material,
                 acabado: Array.isArray(acabado) ? [...acabado] : acabado,
@@ -984,8 +976,6 @@ export default function NuevoPresupuestoModal({
         setFechaEntrega(getDatePlusDaysStr(7));
         setReferencia('');
         setVendedor('');
-        setFormatoAncho('');
-        setFormatoLargo('');
         setMaquina('');
         setMaterial('');
         setAcabado([]);
@@ -1016,8 +1006,9 @@ export default function NuevoPresupuestoModal({
     }, [visible, initialValues]);
 
     return (
-        <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-            <View style={{ flex: 1, backgroundColor: '#E9EEF5' }}>
+        <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 16 }}>
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', maxHeight: '92%', overflow: 'hidden', shadowColor: '#0F172A', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>
@@ -1278,112 +1269,90 @@ export default function NuevoPresupuestoModal({
                     {/* PRODUCTO */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Producto</Text>
+                        {showMaquinaField && (
                         <View style={styles.row}>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Formato ancho (mm)</Text>
-                                <TextInput
-                                    value={formatoAncho}
-                                        onChangeText={(t) => { if (isReadOnly) return; setFormatoAncho(t); }}
-                                    keyboardType="numeric"
-                                    placeholder="Ej: 100"
-                                            style={styles.input(formatoAncho, true, true, submitted)}
-                                            editable={!isReadOnly}
-                                />
+                                <Text style={styles.label}>{maquinaLabel}</Text>
+                                {Platform.OS === 'web' ? (
+                                    <View style={{
+                                        borderWidth: 1,
+                                        borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
+                                        backgroundColor: '#F8FAFC',
+                                        borderRadius: 10,
+                                        marginBottom: 10,
+                                        overflow: 'hidden'
+                                    }}>
+                                        <select
+                                            value={maquina}
+                                            onChange={(e) => setMaquina(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                border: 'none',
+                                                backgroundColor: 'transparent',
+                                                padding: '4px 8px',
+                                                fontSize: '14px',
+                                                color: '#0F172A',
+                                                outline: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <option value="">Seleccionar máquina activa</option>
+                                            {maquinasActivas.map((itemMaquina) => (
+                                                <option
+                                                    key={itemMaquina.id}
+                                                    value={itemMaquina.nombre}
+                                                >
+                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} colores)${!puedeSeleccionarMaquina(itemMaquina) ? ' ⚠ no compatible' : ''}`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </View>
+                                ) : (
+                                    <View style={styles.selectorRow}>
+                                        {maquinasActivas.map((itemMaquina) => {
+                                            const activa = maquina === itemMaquina.nombre;
+                                            const habilitada = puedeSeleccionarMaquina(itemMaquina);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={itemMaquina.id}
+                                                    style={{
+                                                        paddingHorizontal: 12,
+                                                        paddingVertical: 8,
+                                                        backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
+                                                        borderRadius: 22,
+                                                        borderWidth: 2,
+                                                        borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#3AB274' : '#CCC'),
+                                                        marginRight: 8,
+                                                        marginBottom: 8,
+                                                        minWidth: 90,
+                                                        alignItems: 'center',
+                                                        opacity: habilitada ? 1 : 0.35,
+                                                    }}
+                                                    onPress={() => setMaquina(itemMaquina.nombre)}
+                                                >
+                                                    <Text style={{
+                                                        color: activa ? '#393B3F' : '#6C6C70',
+                                                        fontWeight: activa ? '700' : '500',
+                                                        fontSize: 13,
+                                                    }}>
+                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? ' ⚠' : ''}`}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+                                {submitted && !maquina && (
+                                    <Text style={styles.errorText}>Selecciona una máquina activa</Text>
+                                )}
+                                {submitted && maquinaIncompatible && (
+                                    <Text style={styles.errorText}>
+                                        La máquina seleccionada no soporta las tintas marcadas ({numeroTintasSeleccionadas}).
+                                    </Text>
+                                )}
                             </View>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Formato largo (mm)</Text>
-                                <TextInput
-                                    value={formatoLargo}
-                                        onChangeText={(t) => { if (isReadOnly) return; setFormatoLargo(t); }}
-                                    keyboardType="numeric"
-                                    placeholder="Ej: 200"
-                                            style={styles.input(formatoLargo, true, true, submitted)}
-                                            editable={!isReadOnly}
-                                />
-                            </View>
-                            {showMaquinaField && (
-                                <View style={styles.col}>
-                                    <Text style={styles.label}>{maquinaLabel}</Text>
-                                    {Platform.OS === 'web' ? (
-                                        <View style={{
-                                            borderWidth: 1,
-                                            borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
-                                            backgroundColor: '#F8FAFC',
-                                            borderRadius: 10,
-                                            marginBottom: 10,
-                                            overflow: 'hidden'
-                                        }}>
-                                            <select
-                                                value={maquina}
-                                                onChange={(e) => setMaquina(e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    padding: '4px 8px',
-                                                    fontSize: '14px',
-                                                    color: '#0F172A',
-                                                    outline: 'none',
-                                                    cursor: 'pointer',
-                                                }}
-                                            >
-                                                <option value="">Seleccionar máquina activa</option>
-                                                {maquinasActivas.map((itemMaquina) => (
-                                                    <option
-                                                        key={itemMaquina.id}
-                                                        value={itemMaquina.nombre}
-                                                    >
-                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} colores)${!puedeSeleccionarMaquina(itemMaquina) ? ' ⚠ no compatible' : ''}`}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.selectorRow}>
-                                            {maquinasActivas.map((itemMaquina) => {
-                                                const activa = maquina === itemMaquina.nombre;
-                                                const habilitada = puedeSeleccionarMaquina(itemMaquina);
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={itemMaquina.id}
-                                                        style={{
-                                                            paddingHorizontal: 12,
-                                                            paddingVertical: 8,
-                                                            backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
-                                                            borderRadius: 22,
-                                                            borderWidth: 2,
-                                                            borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#3AB274' : '#CCC'),
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            minWidth: 90,
-                                                            alignItems: 'center',
-                                                            opacity: habilitada ? 1 : 0.35,
-                                                        }}
-                                                        onPress={() => setMaquina(itemMaquina.nombre)}
-                                                    >
-                                                        <Text style={{
-                                                            color: activa ? '#393B3F' : '#6C6C70',
-                                                            fontWeight: activa ? '700' : '500',
-                                                            fontSize: 13,
-                                                        }}>
-                                                            {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? ' ⚠' : ''}`}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                        </View>
-                                    )}
-                                    {submitted && !maquina && (
-                                        <Text style={styles.errorText}>Selecciona una máquina activa</Text>
-                                    )}
-                                    {submitted && maquinaIncompatible && (
-                                        <Text style={styles.errorText}>
-                                            La máquina seleccionada no soporta las tintas marcadas ({numeroTintasSeleccionadas}).
-                                        </Text>
-                                    )}
-                                </View>
-                            )}
                         </View>
+                        )}
                         <View style={styles.row}>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Material</Text>
@@ -1421,6 +1390,91 @@ export default function NuevoPresupuestoModal({
                                     editable={!isReadOnly}
                                 />
                             </View>
+                        </View>
+                        {/* TROQUEL */}
+                        <View style={{ marginTop: 6 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <Text style={styles.label}>Troquel</Text>
+                                {!isReadOnly && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setTroquelCreateForm({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
+                                            setShowTroquelCreate(true);
+                                        }}
+                                        style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                    >
+                                        <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                            {troquelesCat.length === 0 ? (
+                                <Text style={{ color: '#94A3B8', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
+                            ) : Platform.OS === 'web' ? (
+                                <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                    <select
+                                        style={{ fontSize: 14, border: 'none', backgroundColor: 'transparent', padding: '6px 10px', width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outline: 'none' }}
+                                        value={troquelSel?._id || troquelSel?.id || ''}
+                                        disabled={isReadOnly}
+                                        onChange={e => {
+                                            const found = troquelesCat.find(t => (t._id || t.id) === e.target.value);
+                                            handleTroquelSelect(found || null);
+                                        }}
+                                    >
+                                        <option value="">Sin troquel</option>
+                                        {troquelesCat.map((t, i) => (
+                                            <option key={t._id || t.id || i} value={t._id || t.id}>
+                                                {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </View>
+                            ) : (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                    <TouchableOpacity
+                                        disabled={isReadOnly}
+                                        onPress={() => handleTroquelSelect(null)}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#2563EB' : '#F1F5F9' }}
+                                    >
+                                        <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>Sin troquel</Text>
+                                    </TouchableOpacity>
+                                    {troquelesCat.map((t, i) => {
+                                        const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
+                                        return (
+                                            <TouchableOpacity
+                                                key={t._id || t.id || i}
+                                                disabled={isReadOnly}
+                                                onPress={() => handleTroquelSelect(t)}
+                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#2563EB' : '#F1F5F9' }}
+                                            >
+                                                <Text style={{ color: isSelected ? '#fff' : '#475569', fontSize: 13 }}>{t.numero}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            )}
+                            {troquelSel && (
+                                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginTop: 4 }}>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                        {[
+                                            { label: 'Número', value: troquelSel.numero },
+                                            { label: 'Tipo', value: troquelSel.tipo },
+                                            { label: 'Forma', value: troquelSel.forma },
+                                            { label: 'Estado', value: troquelSel.estado },
+                                            { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null },
+                                            { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null },
+                                            { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null },
+                                            { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null },
+                                            { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null },
+                                            { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null },
+                                        ].filter(f => f.value != null && f.value !== '').map(f => (
+                                            <View key={f.label} style={{ minWidth: 110 }}>
+                                                <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text>
+                                                <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            )}
                         </View>
                     </View>
                     <View style={styles.divider} />
@@ -1474,72 +1528,6 @@ export default function NuevoPresupuestoModal({
                                 )}
                             </View>
                         </View>
-                    </View>
-
-                    {/* TROQUEL */}
-                    <View style={styles.section}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <Text style={styles.sectionTitle}>Troquel</Text>
-                            {!isReadOnly && (
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setTroquelCreateForm({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
-                                        setShowTroquelCreate(true);
-                                    }}
-                                    style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
-                                >
-                                    <Text style={{ color: '#4F46E5', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                        {troquelesCat.length === 0 ? (
-                            <Text style={{ color: '#888', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
-                        ) : Platform.OS === 'web' ? (
-                            <select
-                                style={{ fontSize: 14, border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outline: 'none' }}
-                                value={troquelSel?._id || troquelSel?.id || ''}
-                                disabled={isReadOnly}
-                                onChange={e => {
-                                    const found = troquelesCat.find(t => (t._id || t.id) === e.target.value);
-                                    handleTroquelSelect(found || null);
-                                }}
-                            >
-                                <option value="">Sin troquel</option>
-                                {troquelesCat.map((t, i) => (
-                                    <option key={t._id || t.id || i} value={t._id || t.id}>
-                                        {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                <TouchableOpacity
-                                    disabled={isReadOnly}
-                                    onPress={() => handleTroquelSelect(null)}
-                                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#2563EB' : '#f0f0f0' }}
-                                >
-                                    <Text style={{ color: !troquelSel ? '#fff' : '#555', fontSize: 13 }}>Sin troquel</Text>
-                                </TouchableOpacity>
-                                {troquelesCat.map((t, i) => {
-                                    const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
-                                    return (
-                                        <TouchableOpacity
-                                            key={t._id || t.id || i}
-                                            disabled={isReadOnly}
-                                            onPress={() => handleTroquelSelect(t)}
-                                            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#2563EB' : '#f0f0f0' }}
-                                        >
-                                            <Text style={{ color: isSelected ? '#fff' : '#555', fontSize: 13 }}>{t.numero}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        )}
-                        {troquelSel && (
-                            <Text style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-                                {[troquelSel.forma, troquelSel.estado, troquelSel.anchoMotivo && troquelSel.altoMotivo ? `${troquelSel.anchoMotivo}×${troquelSel.altoMotivo} mm` : null].filter(Boolean).join(' · ')}
-                            </Text>
-                        )}
                     </View>
 
                     {/* SUBMIT */}
@@ -1813,6 +1801,7 @@ export default function NuevoPresupuestoModal({
                     </View>
                 </Modal>
 
+                </View>
             </View>
         </Modal>
     );
