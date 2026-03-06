@@ -45,7 +45,7 @@ const styles = {
         borderWidth: 1.5,
         borderColor: '#E2E8F0'
     },
-    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#2563EB', marginBottom: 10, letterSpacing: 0.2 },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
     label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
@@ -73,14 +73,14 @@ const styles = {
         color: '#475569', fontWeight: '600', fontSize: 13
     },
     tintaBtn: (active, tinta) => ({
-        paddingHorizontal: 14, paddingVertical: 12,
-        backgroundColor: active ? '#E8E8EC' : '#FBFBFD',
-        borderRadius: 22,
-        borderWidth: active ? 2.4 : 1,
-        borderColor: active ? (tinta.isCMYK ? tinta.color : '#DDD') : '#DDD',
-        marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center'
+        paddingHorizontal: 10, paddingVertical: 8,
+        backgroundColor: active ? '#E2E8F0' : '#F8FAFC',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E2E8F0',
+        marginRight: 8, marginBottom: 8, minWidth: 40, alignItems: 'center'
     }),
-    tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 13, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     tintaCounter: {
         marginTop: -4, marginBottom: 8, backgroundColor: '#E2E8F0', alignSelf: 'flex-start', paddingHorizontal: 18,
         paddingVertical: 7, borderRadius: 14, fontWeight: '700', fontSize: 16, color: '#444', letterSpacing: 0.5
@@ -245,23 +245,23 @@ const BotonSelector = ({
                 : !valorSeleccionado;
             const border =
                 active
-                    ? '#3AB274'
+                    ? '#94A3B8'
                     : (sinSeleccion && required && submitted
                         ? '#D21820'
-                        : '#CCC');
+                        : '#E2E8F0');
             return (
                 <TouchableOpacity
                     key={opcion}
                     style={{
-                        paddingHorizontal: small ? 12 : 18,
-                        paddingVertical: small ? 8 : 12,
-                        backgroundColor: active ? '#E8E8EC' : '#FBFBFD',
-                        borderRadius: 22,
-                        borderWidth: 2,
+                        paddingHorizontal: small ? 10 : 14,
+                        paddingVertical: small ? 6 : 8,
+                        backgroundColor: active ? '#E2E8F0' : '#F8FAFC',
+                        borderRadius: 10,
+                        borderWidth: 1,
                         borderColor: border,
                         marginRight: 8,
                         marginBottom: 8,
-                        minWidth: small ? 70 : 90,
+                        minWidth: small ? 55 : 70,
                         alignItems: 'center'
                     }}
                     onPress={() => {
@@ -279,10 +279,10 @@ const BotonSelector = ({
                     }}
                 >
                     <Text style={{
-                        color: active ? '#393B3F' : '#6C6C70',
+                        color: active ? '#0F172A' : '#475569',
                         fontWeight: active ? '700' : '500',
                         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-                        fontSize: 15
+                        fontSize: 13
                     }}>{opcion}</Text>
                 </TouchableOpacity>
             );
