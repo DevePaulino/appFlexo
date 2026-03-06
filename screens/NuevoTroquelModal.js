@@ -3,11 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet 
 
 const styles = StyleSheet.create({
   modalHeader: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
+    borderBottomColor: '#334155',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -33,40 +33,40 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
     flex: 1,
   },
   section: {
     marginBottom: 10,
     marginTop: 4,
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#1D2939',
+    color: '#0F172A',
     marginBottom: 10,
   },
   label: {
     fontSize: 14,
-    color: '#444',
+    color: '#475569',
     fontWeight: '700',
     marginBottom: 6,
   },
   input: {
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#CCC',
+    borderColor: '#CBD5E1',
     backgroundColor: '#FBFBFD',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 10,
     marginBottom: 10,
-    color: '#232323',
+    color: '#0F172A',
   },
   row: {
     flexDirection: 'row',
@@ -88,19 +88,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBFBFD',
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#CCC',
+    borderColor: '#CBD5E1',
   },
   typeBtnActive: {
     backgroundColor: '#E8E8EC',
     borderColor: '#3AB274',
   },
   typeBtnText: {
-    color: '#6C6C70',
+    color: '#475569',
     fontWeight: '600',
     fontSize: 13,
   },
   typeBtnTextActive: {
-    color: '#232323',
+    color: '#0F172A',
     fontWeight: '700',
   },
   submitContainer: {
@@ -112,23 +112,25 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
   btnPrimary: {
-    backgroundColor: '#344054',
+    backgroundColor: '#2563EB',
   },
   btnSecondary: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   btnText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },
   divider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
     marginVertical: 12,
   },
 });

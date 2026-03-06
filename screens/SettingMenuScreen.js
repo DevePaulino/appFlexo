@@ -5,13 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
+    borderBottomColor: '#334155',
   },
   content: {
     padding: 16,
@@ -24,22 +24,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     padding: 14,
     marginBottom: 10,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: '#0F172A',
     marginBottom: 4,
   },
   cardText: {
     fontSize: 13,
-    color: '#667085',
+    color: '#475569',
   },
 });
 

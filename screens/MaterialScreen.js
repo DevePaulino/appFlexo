@@ -1540,23 +1540,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabBtnActive: { borderBottomColor: '#1976D2' },
-  tabBtnText: { fontSize: 14, color: '#666', fontWeight: '500' },
-  tabBtnTextActive: { color: '#1976D2', fontWeight: '700' },
+  tabBtnActive: { borderBottomColor: '#2563EB' },
+  tabBtnText: { fontSize: 14, color: '#475569', fontWeight: '500' },
+  tabBtnTextActive: { color: '#2563EB', fontWeight: '700' },
 
   // Tab content
   tabContent: { flex: 1, padding: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#333' },
-  loadingText: { textAlign: 'center', color: '#999', padding: 20 },
-  emptyText: { textAlign: 'center', color: '#999', padding: 24, fontStyle: 'italic' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  loadingText: { textAlign: 'center', color: '#94A3B8', padding: 20 },
+  emptyText: { textAlign: 'center', color: '#94A3B8', padding: 24, fontStyle: 'italic' },
 
   // Filter row
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
-  filterLabel: { fontSize: 13, color: '#555', fontWeight: '500' },
+  filterLabel: { fontSize: 13, color: '#475569', fontWeight: '500' },
   filterSelectWrap: { flex: 1, maxWidth: 260 },
-  filterSelect: { width: '100%', height: 32, border: '1px solid #DDD', borderRadius: 4, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
-  filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 4, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
+  filterSelect: { width: '100%', height: 32, border: '1px solid #DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
+  filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
 
   // Table
   tableHeader: {
@@ -1567,7 +1567,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 2,
   },
-  th: { fontSize: 11, fontWeight: '700', color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 },
+  th: { fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1577,7 +1577,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  td: { fontSize: 13, color: '#333', paddingRight: 8 },
+  td: { fontSize: 13, color: '#0F172A', paddingRight: 8 },
   tdActions: { flexDirection: 'row', gap: 6, justifyContent: 'flex-end' },
 
   // Expanded row (fabricantes)
@@ -1586,16 +1586,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: '#E2E8F0',
   },
-  expandedEmpty: { color: '#AAA', fontSize: 12, fontStyle: 'italic' },
+  expandedEmpty: { color: '#94A3B8', fontSize: 12, fontStyle: 'italic' },
   fabRow: { marginBottom: 8 },
-  fabNombre: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 },
+  fabNombre: { fontSize: 13, fontWeight: '600', color: '#0F172A', marginBottom: 4 },
   anchosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   anchosEmpty: { color: '#BBB', fontSize: 12, fontStyle: 'italic' },
   anchoChip: {
     backgroundColor: '#E3F2FD',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
@@ -1608,7 +1608,7 @@ const styles = StyleSheet.create({
   stockInfoRow: {
     flexDirection: 'row',
     backgroundColor: '#F5F8FF',
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#D0DDF7',
     padding: 12,
@@ -1618,23 +1618,23 @@ const styles = StyleSheet.create({
   stockInfoItem: { flex: 1, alignItems: 'center' },
   stockInfoLabel: { fontSize: 11, color: '#888', fontWeight: '600', textTransform: 'uppercase', marginBottom: 4 },
   stockInfoValue: { fontSize: 18, fontWeight: '700', color: '#222' },
-  stockInfoHint: { fontSize: 11, color: '#999', fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
+  stockInfoHint: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
 
   // Action buttons
   actionBtnSmall: {
     backgroundColor: '#F0F0F0',
-    borderRadius: 4,
+    borderRadius: 6,
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionBtnDanger: { backgroundColor: '#FFEBEE' },
-  actionBtnSmallText: { fontSize: 14, color: '#333' },
+  actionBtnSmallText: { fontSize: 14, color: '#0F172A' },
 
   // Primary/secondary buttons
   btnPrimary: {
-    backgroundColor: '#1976D2',
+    backgroundColor: '#2563EB',
     borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1648,10 +1648,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDD',
   },
-  btnCancelText: { color: '#555', fontWeight: '500', fontSize: 13 },
+  btnCancelText: { color: '#475569', fontWeight: '500', fontSize: 13 },
   btnSecondarySmall: {
     backgroundColor: '#E3F2FD',
-    borderRadius: 4,
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -1659,10 +1659,10 @@ const styles = StyleSheet.create({
 
   // Pagination
   paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 16 },
-  paginationBtn: { backgroundColor: '#1976D2', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7 },
+  paginationBtn: { backgroundColor: '#2563EB', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7 },
   paginationBtnDisabled: { backgroundColor: '#CCC' },
   paginationBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
-  paginationInfo: { fontSize: 13, color: '#555' },
+  paginationInfo: { fontSize: 13, color: '#475569' },
 
   // Modal
   modalOverlay: {
@@ -1685,7 +1685,7 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
 
   // Form fields in modal
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 5, marginTop: 10 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 5, marginTop: 10 },
   fieldLabelSmall: { fontSize: 12, color: '#888' },
   fieldInput: {
     borderWidth: 1,
@@ -1694,7 +1694,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: '#333',
+    color: '#0F172A',
     backgroundColor: '#FAFAFA',
   },
   fieldSelect: {
@@ -1717,8 +1717,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   fabEditHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  fabEditName: { fontSize: 13, fontWeight: '700', color: '#333' },
-  removeText: { fontSize: 12, color: '#D32F2F' },
+  fabEditName: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  removeText: { fontSize: 12, color: '#DC2626' },
   anchosEditRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 6 },
   anchoChipEdit: { backgroundColor: '#E8EAF6', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   anchoChipEditText: { fontSize: 12, color: '#3949AB' },
@@ -1726,7 +1726,7 @@ const styles = StyleSheet.create({
   anchoInput: {
     borderWidth: 1,
     borderColor: '#DDD',
-    borderRadius: 4,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 5,
     fontSize: 12,
@@ -1740,21 +1740,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: '#E2E8F0',
   },
 
   // ── Resumen tab ─────────────────────────────────────────────────────────
   chartCard: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#E8EDF2',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
+    elevation: 2,
   },
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 18 },
   resumenSectionHeader: {
@@ -1770,11 +1771,11 @@ const styles = StyleSheet.create({
   // Roll cards
   rollCard: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: '#E2E8F0',
   },
   rollCardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
   rollCardTitle: { fontSize: 14, fontWeight: '700', color: '#222' },
@@ -1784,16 +1785,16 @@ const styles = StyleSheet.create({
   rollCardPct: { fontSize: 14, fontWeight: '700' },
   rollCardMetros: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   rollCardMetrosText: { fontSize: 13 },
-  rollCardDate: { fontSize: 11, color: '#AAA' },
+  rollCardDate: { fontSize: 11, color: '#94A3B8' },
 
   // Progress bar
   progressBarBg: {
     height: 8,
-    backgroundColor: '#EEEEEE',
-    borderRadius: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 6,
     overflow: 'hidden',
   },
-  progressBarFill: { height: 8, borderRadius: 4 },
+  progressBarFill: { height: 8, borderRadius: 6 },
 
   // Retales grid
   retalesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -1801,7 +1802,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
     borderWidth: 1,
     borderColor: '#FFE0B2',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     minWidth: 140,
     flex: 1,
@@ -1809,22 +1810,22 @@ const styles = StyleSheet.create({
   },
   retalBadge: {
     backgroundColor: '#FF9800',
-    borderRadius: 4,
+    borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     alignSelf: 'flex-start',
     marginBottom: 6,
   },
   retalBadgeText: { fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 },
-  retalMaterial: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 2 },
-  retalDimensions: { fontSize: 12, color: '#555', marginBottom: 2 },
-  retalOrigen: { fontSize: 11, color: '#999', marginBottom: 4 },
+  retalMaterial: { fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 2 },
+  retalDimensions: { fontSize: 12, color: '#475569', marginBottom: 2 },
+  retalOrigen: { fontSize: 11, color: '#94A3B8', marginBottom: 4 },
   retalPct: { fontSize: 12, fontWeight: '700', marginTop: 4, textAlign: 'right' },
 
   // Consumo preview panel
   consumoPreview: {
     backgroundColor: '#F0F7FF',
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#BBDEFB',
     padding: 12,
@@ -1835,7 +1836,7 @@ const styles = StyleSheet.create({
   consumoPreviewLabel: { fontSize: 10, color: '#888', fontWeight: '600', textTransform: 'uppercase', marginBottom: 3 },
   consumoPreviewValue: { fontSize: 20, fontWeight: '700', color: '#222' },
   consumoPreviewWarning: {
-    marginTop: 8, fontSize: 12, color: '#D32F2F', fontWeight: '600', textAlign: 'center',
+    marginTop: 8, fontSize: 12, color: '#DC2626', fontWeight: '600', textAlign: 'center',
   },
   consumoRetalToggle: {
     flexDirection: 'row',
@@ -1856,9 +1857,9 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: '#E2E8F0',
   },
-  cantidadLabel: { fontSize: 13, fontWeight: '600', color: '#555' },
+  cantidadLabel: { fontSize: 13, fontWeight: '600', color: '#475569' },
   cantidadControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cantidadBtn: {
     width: 32,
@@ -1884,16 +1885,16 @@ const styles = StyleSheet.create({
   // Proveedores tab
   provCard: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: '#E2E8F0',
   },
   provCardMain: { flexDirection: 'row', alignItems: 'flex-start' },
   provCardNombre: { fontSize: 15, fontWeight: '700', color: '#1A1A2E', marginBottom: 3 },
-  provCardMeta: { fontSize: 12, color: '#666', marginBottom: 4 },
+  provCardMeta: { fontSize: 12, color: '#475569', marginBottom: 4 },
   provCardRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 3 },
   provCardChip: { fontSize: 12, color: '#1976D2', backgroundColor: '#E3F2FD', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  provCardNotas: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 4 },
+  provCardNotas: { fontSize: 12, color: '#94A3B8', fontStyle: 'italic', marginTop: 4 },
 });

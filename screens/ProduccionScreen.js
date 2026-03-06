@@ -8,21 +8,21 @@ import ProductionBoard from '../components/ProductionBoard';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -45,13 +45,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
@@ -60,23 +60,23 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 10,
   },
   chartsContainer: {
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     padding: 12,
     marginHorizontal: 10,
     marginTop: 10,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   chartsTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 10,
   },
   verticalChartWrap: {
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   verticalBarItemActive: {
-    backgroundColor: '#EEF2F6',
+    backgroundColor: '#F1F5F9',
   },
   verticalBarValue: {
     fontSize: 12,
@@ -115,20 +115,20 @@ const styles = StyleSheet.create({
   verticalBarTrack: {
     width: 32,
     height: 56,
-    backgroundColor: '#ECEFF1',
-    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
   verticalBarFill: {
     width: '100%',
-    borderRadius: 8,
+    borderRadius: 6,
   },
   verticalBarLabel: {
     marginTop: 4,
     fontSize: 9,
     fontWeight: '700',
-    color: '#232323',
+    color: '#0F172A',
     textAlign: 'center',
     width: '100%',
   },
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   chartEmpty: {
     fontSize: 12,
-    color: '#777',
+    color: '#475569',
   },
   filterRow: {
     marginTop: 10,
@@ -154,27 +154,27 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 12,
-    color: '#3B3B3B',
+    color: '#0F172A',
     flex: 1,
   },
   filterClearBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFF',
   },
   filterClearText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#344054',
+    color: '#0F172A',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   colPos: {
     width: '5%',
@@ -256,28 +256,28 @@ const styles = StyleSheet.create({
   selectButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 4,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   selectButtonText: {
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
   },
   tableRow: {
     flexDirection: 'row',
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
-    backgroundColor: '#F8F9FA',
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
     marginBottom: 2,
     alignItems: 'center',
   },
   rowAlternate: {
-    backgroundColor: '#EEF1F4',
+    backgroundColor: '#F1F5F9',
   },
   tableCell: {
     justifyContent: 'center',
@@ -286,12 +286,12 @@ const styles = StyleSheet.create({
   cellText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 3,
-    borderRadius: 3,
+    borderRadius: 6,
   },
   statusText: {
     fontSize: 10,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 18,
     padding: 20,
     width: '80%',
     maxHeight: '80%',
@@ -321,29 +321,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#232323',
+    color: '#0F172A',
   },
   maquinaOption: {
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
   },
   maquinaOptionText: {
     fontSize: 14,
-    color: '#232323',
+    color: '#0F172A',
   },
   closeButton: {
     marginTop: 16,
     paddingVertical: 10,
-    backgroundColor: '#EEE',
-    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
     alignItems: 'center',
   },
   closeButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#232323',
+    color: '#0F172A',
   },
   // Estados de color
   statusDiseno: {
@@ -389,10 +389,10 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
   statusCancelado: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   statusCanceladoText: {
-    color: '#9E9E9E',
+    color: '#94A3B8',
   },
   // Semáforo para retraso
   retrasoContainer: {

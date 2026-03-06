@@ -6,6 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { PedidosProvider } from './PedidosContext';
+import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { C, paperThemeColors } from './screens/theme';
 
 import TrabajoScreen from './screens/TrabajoScreen';
 import MachinasScreen from './screens/MachinasScreen';
@@ -348,9 +350,9 @@ const styles = StyleSheet.create({
   tabsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: C.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
     position: 'relative',
     zIndex: 5,
     paddingRight: 8,
@@ -369,31 +371,31 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A8A8AA',
+    color: C.textMuted,
   },
   tabLabelActive: {
-    color: '#4B5563',
+    color: C.primary,
   },
   tabIndicator: {
     marginTop: 6,
     height: 2,
     width: 42,
     borderRadius: 2,
-    backgroundColor: '#4B5563',
+    backgroundColor: C.primary,
   },
   topLogoutBtn: {
     borderWidth: 1,
-    borderColor: '#D0D5DD',
+    borderColor: C.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.surface,
     marginLeft: 6,
   },
   topLogoutBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4B5563',
+    color: C.secondary,
   },
   userInfoContainer: {
     paddingHorizontal: 10,
@@ -402,14 +404,14 @@ const styles = StyleSheet.create({
   },
   userInfoText: {
     fontSize: 12,
-    color: '#374151',
+    color: C.text,
     fontWeight: '700',
   },
   settingsSubmenuWrap: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#E4E7EC',
+    borderColor: C.border,
     borderTopWidth: 1,
     borderRadius: 10,
     paddingVertical: 4,
@@ -430,22 +432,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   settingsSubmenuItemActive: {
-    backgroundColor: 'transparent',
+    backgroundColor: C.primaryLight,
   },
   settingsSubmenuItemText: {
-    color: '#A8A8AA',
+    color: C.textMuted,
     fontSize: 12,
     fontWeight: '700',
   },
   settingsSubmenuItemTextActive: {
-    color: '#4B5563',
+    color: C.primary,
   },
   settingsSubmenuIndicator: {
     marginTop: 6,
     height: 2,
     width: 42,
     borderRadius: 2,
-    backgroundColor: '#4B5563',
+    backgroundColor: C.primary,
   },
 });
 
@@ -864,7 +866,10 @@ export default function App() {
     return null; // o un loading screen
   }
 
+  const paperTheme = { ...MD3LightTheme, colors: { ...MD3LightTheme.colors, ...paperThemeColors } };
+
   return (
+    <PaperProvider theme={paperTheme}>
     <PedidosProvider>
       {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
       <NavigationContainer linking={linking}>
@@ -906,5 +911,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </PedidosProvider>
+    </PaperProvider>
   );
 }

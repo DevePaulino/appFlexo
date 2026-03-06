@@ -35,7 +35,7 @@ function isValidCif(value) {
 }
 
 const styles = {
-    container: { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#E9EEF5', flex: 1 },
+    container: { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#F1F5F9', flex: 1 },
     section: {
         marginBottom: 10,
         marginTop: 4,
@@ -43,7 +43,7 @@ const styles = {
         borderRadius: 14,
         padding: 16,
         borderWidth: 1.5,
-        borderColor: '#D0D5DD'
+        borderColor: '#E2E8F0'
     },
     sectionTitle: { fontSize: 16, fontWeight: '900', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
@@ -60,13 +60,13 @@ const styles = {
         borderRadius: 10,
         marginBottom: 10,
         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-        color: '#232323'
+        color: '#0F172A'
     }),
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
         backgroundColor: '#A8A8AA', paddingHorizontal: 16, paddingVertical: 10,
-        borderRadius: 12,
+        borderRadius: 10,
         alignItems: 'center', marginBottom: 8, minWidth: 160
     },
     bigBtnText: {
@@ -80,9 +80,9 @@ const styles = {
         borderColor: active ? (tinta.isCMYK ? tinta.color : '#DDD') : '#DDD',
         marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center'
     }),
-    tintaTxt: { color: '#232323', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     tintaCounter: {
-        marginTop: -4, marginBottom: 8, backgroundColor: '#EEEEEE', alignSelf: 'flex-start', paddingHorizontal: 18,
+        marginTop: -4, marginBottom: 8, backgroundColor: '#E2E8F0', alignSelf: 'flex-start', paddingHorizontal: 18,
         paddingVertical: 7, borderRadius: 14, fontWeight: '700', fontSize: 16, color: '#444', letterSpacing: 0.5
     },
     coverageRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, marginBottom: 8 },
@@ -90,13 +90,13 @@ const styles = {
         paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, borderWidth: 2,
         borderColor: color, backgroundColor: '#FBFBFD', marginRight: 8, marginBottom: 8, minWidth: 60, alignItems: 'center'
     }),
-    coverageTxt: { color: '#232323', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     submitContainer: { alignItems: 'center', marginTop: 24, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: '#344054', paddingHorizontal: 22, paddingVertical: 10,
+        backgroundColor: '#2563EB', paddingHorizontal: 22, paddingVertical: 10,
         borderRadius: 14,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#0F172A',
         shadowOpacity: 0.12,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },
@@ -105,11 +105,11 @@ const styles = {
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#344054',
+        backgroundColor: '#1E293B',
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#243447',
+        borderBottomColor: '#334155',
         position: 'relative',
     },
     modalHeaderTitle: {
@@ -136,7 +136,7 @@ const styles = {
     },
     clientePickerBtn: {
         borderWidth: 1,
-        borderColor: '#CCC',
+        borderColor: '#CBD5E1',
         backgroundColor: '#FBFBFD',
         borderRadius: 10,
         paddingVertical: 10,
@@ -145,12 +145,12 @@ const styles = {
     },
     clientePickerBtnText: {
         fontSize: 14,
-        color: '#232323',
+        color: '#0F172A',
         fontWeight: '600',
     },
     clientePickerHint: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: -4,
         marginBottom: 10,
     },
@@ -164,14 +164,14 @@ const styles = {
         backgroundColor: '#FFF',
         borderRadius: 14,
         borderWidth: 1.5,
-        borderColor: '#D0D5DD',
+        borderColor: '#E2E8F0',
         maxHeight: '75%',
         padding: 14,
     },
     pickerModalTitle: {
         fontSize: 17,
         fontWeight: '800',
-        color: '#232323',
+        color: '#0F172A',
         marginBottom: 10,
     },
     pickerItem: {
@@ -186,11 +186,11 @@ const styles = {
     pickerItemTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#232323',
+        color: '#0F172A',
     },
     pickerItemSub: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: 2,
     },
     pickerFooter: {
@@ -216,11 +216,11 @@ const styles = {
     sugerenciaTitulo: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#232323',
+        color: '#0F172A',
     },
     sugerenciaSub: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: 2,
     }
 };
