@@ -1,91 +1,96 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useSortable } from '@dnd-kit/sortable';
 
-function TrabajoRow(props) {
-  const {
-    trabajo,
-    index,
-    maquinas,
-    maquinaActual,
-    canReorder,
-    draggingId,
-    targetIndex,
-    cambiandoMaquina,
-    handleMouseDown,
-    handleCambiarMaquina,
-    getStatusColor,
-    getStatusLabel,
-    getEntregaSemaforo,
-    formatearFecha,
-    rowRefsRef,
-    styles,
-    ITEM_HEIGHT,
-  } = props;
+function TrabajoRow({
+  trabajo,
+  index,
+  maquinas,
+  maquinaActual,
+  canReorder,
+  cambiandoMaquina,
+  handleCambiarMaquina,
+  getStatusColor,
+  getStatusLabel,
+  getEntregaSemaforo,
+  formatearFecha,
+  styles,
+}) {
+  const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: canonicalId });
 
-  const idxGlobal = index;
+  const rnRef = useCallback(
+    (node) => {
+      if (!node) return;
+      setNodeRef(node.getNativeNode?.() ?? node);
+    },
+    [setNodeRef]
+  );
+
   const [statusStyle, statusTextStyle] = getStatusColor(trabajo.estado);
   const entregaSemaforo = getEntregaSemaforo(trabajo.fecha_entrega);
-  const isDragging = draggingId === trabajo.id;
-  const showDropIndicator = canReorder && targetIndex === idxGlobal && !isDragging;
   const maquinaFilaId = trabajo._maquina_id ?? maquinas[maquinaActual]?.id;
 
-  const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
-  const displayId = canonicalId; // mostrar la id canónica completa en la UI
+  const rowStyle = [
+    styles.tableRow,
+    index % 2 === 1 && styles.rowAlternate,
+    isDragging && styles.draggedRow,
+    !canReorder && { cursor: 'default' },
+    transform ? { transform: [{ translateX: transform.x }, { translateY: transform.y }] } : null,
+  ];
+
   return (
-    <View key={canonicalId}>
-      {showDropIndicator && <View style={styles.dropIndicator} />}
-      <View
-        ref={(el) => { if (el) rowRefsRef.current[canonicalId] = el; }}
-        style={[
-          styles.tableRow,
-          idxGlobal % 2 === 1 && styles.rowAlternate,
-          canReorder && isDragging && styles.draggedRow,
-          !canReorder && { cursor: 'default' },
-          { height: ITEM_HEIGHT }
-        ]}
-      >
-        <View style={[styles.tableCell, styles.colPos]}>
-          <Text
-            style={styles.dragHandle}
-            onMouseDown={canReorder ? (e) => handleMouseDown(e, canonicalId, idxGlobal) : undefined}
-          >
-            {canReorder ? '≡' : '-'}
+    <View ref={rnRef} style={rowStyle} {...attributes}>
+      <View style={[styles.tableCell, styles.colPos]} {...(canReorder ? listeners : {})}>
+        <Text style={[styles.dragHandle, !canReorder && styles.dragHandleDisabled]}>
+          {canReorder ? '⠿' : '—'}
+        </Text>
+      </View>
+      <View style={[styles.tableCell, styles.colId]}>
+        <Text style={styles.cellText} numberOfLines={1}>{canonicalId}</Text>
+      </View>
+      <View style={[styles.tableCell, styles.colNombre]}>
+        <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
+      </View>
+      <View style={[styles.tableCell, styles.colCliente]}>
+        <Text style={styles.cellText} numberOfLines={1}>
+          {typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente?.nombre || '-')}
+        </Text>
+      </View>
+      <View style={[styles.tableCell, styles.colEstado]}>
+        <View style={[styles.statusBadge, statusStyle]}>
+          <Text style={[styles.statusText, statusTextStyle]} numberOfLines={1}>
+            {getStatusLabel(trabajo.estado)}
           </Text>
         </View>
-        <View style={[styles.tableCell, styles.colId]}>
-          <Text style={styles.cellText}>{displayId}</Text>
+      </View>
+      <View style={[styles.tableCell, styles.colFechaPedido]}>
+        <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_pedido)}</Text>
+      </View>
+      <View style={[styles.tableCell, styles.colFechaEntrega]}>
+        <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_entrega)}</Text>
+      </View>
+      <View style={[styles.tableCell, styles.colDias]}>
+        <View style={entregaSemaforo.container}>
+          <Text style={entregaSemaforo.text} numberOfLines={1}>{entregaSemaforo.label}</Text>
         </View>
-        <View style={[styles.tableCell, styles.colNombre]}>
-          <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colCliente]}>
-          <Text style={styles.cellText} numberOfLines={1}>{typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colEstado]}>
-          <View style={[styles.statusBadge, statusStyle]}>
-            <Text style={[styles.statusText, statusTextStyle]} numberOfLines={1}>{getStatusLabel(trabajo.estado)}</Text>
-          </View>
-        </View>
-        <View style={[styles.tableCell, styles.colFechaPedido]}>
-          <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_pedido)}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colFechaEntrega]}>
-          <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_entrega)}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colDias]}>
-          <View style={entregaSemaforo.container}><Text style={entregaSemaforo.text} numberOfLines={1}>{entregaSemaforo.label}</Text></View>
-        </View>
-        <View style={[styles.tableCell, styles.colMaquina]}>
-          <Picker
-            selectedValue={maquinaFilaId}
-            onValueChange={(nuevaMaquina) => { if (String(nuevaMaquina) !== String(maquinaFilaId)) handleCambiarMaquina(canonicalId, nuevaMaquina); }}
-            enabled={cambiandoMaquina !== canonicalId}
-            style={{ height: 36 }}
-          >
-            {maquinas.map((maq) => (<Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />))}
-          </Picker>
-        </View>
+      </View>
+      <View style={[styles.tableCell, styles.colMaquina]}>
+        <Picker
+          selectedValue={maquinaFilaId}
+          onValueChange={(nuevaMaquina) => {
+            if (String(nuevaMaquina) !== String(maquinaFilaId)) {
+              handleCambiarMaquina(canonicalId, nuevaMaquina);
+            }
+          }}
+          enabled={cambiandoMaquina !== canonicalId}
+          style={{ height: 36 }}
+        >
+          {maquinas.map((maq) => (
+            <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
+          ))}
+        </Picker>
       </View>
     </View>
   );
@@ -98,8 +103,6 @@ export default React.memo(TrabajoRow, (a, b) => {
     return (
       aid === bid &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
-      a.draggingId === b.draggingId &&
-      a.targetIndex === b.targetIndex &&
       a.maquinaActual === b.maquinaActual &&
       a.canReorder === b.canReorder
     );
