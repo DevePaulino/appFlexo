@@ -4,7 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { PedidosProvider } from './PedidosContext';
+import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { C, paperThemeColors } from './screens/theme';
 
 import TrabajoScreen from './screens/TrabajoScreen';
 import MachinasScreen from './screens/MachinasScreen';
@@ -14,7 +17,15 @@ import TroquelessScreen from './screens/TroquelessScreen';
 import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
+import MaterialScreen from './screens/MaterialScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
+
+// Inject global web CSS: placeholder text italic + muted color
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const s = document.createElement('style');
+  s.textContent = 'input::placeholder, textarea::placeholder { font-style: italic; color: #94A3B8 !important; }';
+  document.head.appendChild(s);
+}
 
 const API_BASE = 'http://localhost:8080';
 const API_SESSION_TIMEOUT_URL = `${API_BASE}/api/settings/session-timeout`;
@@ -29,7 +40,7 @@ const AUTH_EXCLUDED_PATHS = [
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting'];
+const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting', 'Materiales'];
 const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
 
 const SETTINGS_SUBMENU = [
@@ -37,6 +48,7 @@ const SETTINGS_SUBMENU = [
   { key: 'settings-creditos', label: 'Créditos', target: { type: 'setting-section', section: 'creditos' } },
   { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'setting-section', section: 'funcionalidades' } },
   { key: 'settings-impresion', label: 'Impresión', target: { type: 'setting-section', section: 'impresion' } },
+  { key: 'settings-materiales', label: 'Materiales', target: { type: 'tab', route: 'Materiales' } },
   { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'tab', route: 'Máquinas' } },
   { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'tab', route: 'Troqueles' } },
 ];
@@ -53,12 +65,14 @@ const linking = {
           Clientes: 'clientes',
           Máquinas: 'maquinas',
           Troqueles: 'troqueles',
+          Materiales: 'materiales-settings',
           Setting: 'setting',
         },
       },
       'Nueva Cotización': 'nueva-cotizacion',
       SettingsUsuariosRoles: 'setting/usuarios-roles',
       SettingsFuncionalidades: 'setting/funcionalidades',
+      
       SettingsImpresion: 'setting/impresion',
     },
   },
@@ -70,7 +84,7 @@ function normalizeTabName(tabName) {
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
-function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout }) {
+function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onRoleChange }) {
   const [submenuOpen, setSubmenuOpen] = React.useState(false);
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
@@ -79,6 +93,28 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const activeSettingSection = activeRouteName === 'Setting'
     ? String(activeRoute?.params?.section || 'usuarios-roles')
     : null;
+  const [rolesList, setRolesList] = React.useState([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/api/settings?categoria=roles`);
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && !cancelled) {
+          const items = data.items || [];
+          const list = (items || []).map((it) => {
+            const valor = String(it?.valor || it?.label || it?.key || '').trim();
+            return { key: String(valor).toLowerCase(), label: valor };
+          }).filter((r) => r.key);
+          setRolesList(list);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleTabPress = (route, isFocused) => {
     const isSetting = route.name === 'Setting';
@@ -147,6 +183,58 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   return (
     <View>
       <View style={styles.tabsBar}>
+        <View style={styles.userInfoContainer}>
+          {Platform.OS === 'web' ? (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <select
+                value={String(currentUser?.rol || '').toLowerCase()}
+                onChange={(e) => {
+                  try {
+                    const next = String(e.target.value || '').trim();
+                    if (typeof onRoleChange === 'function') onRoleChange(next);
+                    if (typeof window !== 'undefined' && window.localStorage) {
+                      window.localStorage.setItem('PFP_SELECTED_ROLE', next);
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                }}
+                style={{ fontSize: 13, fontWeight: 700, padding: '4px 8px', borderRadius: 10, border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outline: 'none' }}
+              >
+                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
+                  <option key={r.key} value={r.key}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <View style={{ width: 180 }}>
+              <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#F8FAFC', overflow: 'hidden' }}>
+              <Picker
+                selectedValue={String(currentUser?.rol || '').toLowerCase()}
+                onValueChange={async (next) => {
+                  try {
+                    const nextVal = String(next || '').trim();
+                    if (typeof onRoleChange === 'function') onRoleChange(nextVal);
+                    try {
+                      await AsyncStorage.setItem('PFP_SELECTED_ROLE', nextVal);
+                    } catch (e) {
+                      // ignore storage errors
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                }}
+                mode="dropdown"
+                style={{ height: 36, color: '#0F172A', fontSize: 12, backgroundColor: 'transparent', borderWidth: 0, cursor: 'pointer', outline: 'none' }}
+              >
+                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
+                  <Picker.Item key={r.key} label={r.label} value={r.key} />
+                ))}
+              </Picker>
+              </View>
+            </View>
+          )}
+        </View>
         <View style={styles.tabsList}>
           {state.routes
             .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
@@ -163,10 +251,9 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
               key={route.key}
               ref={isSetting ? settingTabRef : undefined}
               onPress={() => handleTabPress(route, isFocused)}
-              style={styles.tabBtn}
+              style={[styles.tabBtn, isActive && styles.tabBtnActive]}
             >
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
-              {isActive && route.name !== 'Setting' && <View style={styles.tabIndicator} />}
             </Pressable>
           );
           })}
@@ -198,7 +285,6 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
                   style={[styles.settingsSubmenuItem, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemActive]}
                 >
                   <Text style={[styles.settingsSubmenuItemText, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemTextActive]}>{item.label}</Text>
-                  {isSubmenuTargetActive(item.target) && <View style={styles.settingsSubmenuIndicator} />}
                 </Pressable>
               ))}
             </View>
@@ -209,10 +295,10 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   );
 }
 
-function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
+function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRoleChange }) {
   return (
     <Tab.Navigator
-      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} />}
+      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onRoleChange={onRoleChange} />}
       screenOptions={{
         tabBarStyle: { display: 'none' },
         animationEnabled: false,
@@ -222,52 +308,45 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
     >
       <Tab.Screen
         name="Pedidos"
-        component={TrabajoScreen}
-        options={{
-          tabBarLabel: 'Pedidos',
-        }}
+        options={{ tabBarLabel: 'Pedidos' }}
+        children={(props) => <TrabajoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Presupuesto"
-        component={PresupuestoScreen}
-        options={{
-          tabBarLabel: 'Presupuestos',
-        }}
+        options={{ tabBarLabel: 'Presupuestos' }}
+        children={(props) => <PresupuestoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Producción"
-        component={ProduccionScreen}
-        options={{
-          tabBarLabel: 'Producción',
-        }}
+        options={{ tabBarLabel: 'Producción' }}
+        children={(props) => <ProduccionScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Clientes"
-        component={ClientesScreen}
-        options={{
-          tabBarLabel: 'Clientes',
-        }}
+        options={{ tabBarLabel: 'Clientes' }}
+        children={(props) => <ClientesScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Máquinas"
-        component={MachinasScreen}
-        options={{
-          tabBarLabel: 'Máquinas',
-        }}
+        options={{ tabBarLabel: 'Máquinas' }}
+        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Troqueles"
-        component={TroquelessScreen}
-        options={{
-          tabBarLabel: 'Troqueles',
-        }}
+        options={{ tabBarLabel: 'Troqueles' }}
+        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
+      />
+      <Tab.Screen
+        name="Materiales"
+        options={{ tabBarLabel: 'Materiales' }}
+        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Setting"
         initialParams={{ section: 'usuarios-roles' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
         options={{
-          tabBarLabel: 'Setting',
+          tabBarLabel: 'Ajustes',
         }}
       />
     </Tab.Navigator>
@@ -277,59 +356,97 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser }) {
 const styles = StyleSheet.create({
   tabsBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    alignItems: 'flex-end',
+    backgroundColor: C.bg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
     position: 'relative',
     zIndex: 5,
     paddingRight: 8,
+    paddingTop: 8,
   },
   tabsList: {
     flex: 1,
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 8,
+    gap: 2,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    minHeight: 38,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    backgroundColor: '#DDE3EC',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopColor: '#C8D0DC',
+    borderLeftColor: '#C8D0DC',
+    borderRightColor: '#C8D0DC',
+  },
+  tabBtnActive: {
+    backgroundColor: C.surface,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: C.border,
+    borderLeftColor: C.border,
+    borderRightColor: C.border,
+    borderBottomColor: C.surface,
+    marginBottom: -1,
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
   tabLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#A8A8AA',
+    fontWeight: '500',
+    color: '#64748B',
   },
   tabLabelActive: {
-    color: '#4B5563',
-  },
-  tabIndicator: {
-    marginTop: 6,
-    height: 2,
-    width: 42,
-    borderRadius: 2,
-    backgroundColor: '#4B5563',
+    color: C.text,
+    fontWeight: '700',
   },
   topLogoutBtn: {
     borderWidth: 1,
-    borderColor: '#D0D5DD',
+    borderColor: C.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.surface,
     marginLeft: 6,
+    alignSelf: 'center',
+    marginBottom: 4,
   },
   topLogoutBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4B5563',
+    color: C.secondary,
+  },
+  userInfoContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  userInfoText: {
+    fontSize: 12,
+    color: C.text,
+    fontWeight: '700',
   },
   settingsSubmenuWrap: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#E4E7EC',
+    borderColor: C.border,
     borderTopWidth: 1,
     borderRadius: 10,
     paddingVertical: 4,
@@ -350,22 +467,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   settingsSubmenuItemActive: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#1E293B',
+    borderRadius: 6,
   },
   settingsSubmenuItemText: {
-    color: '#A8A8AA',
+    color: C.textMuted,
     fontSize: 12,
     fontWeight: '700',
   },
   settingsSubmenuItemTextActive: {
-    color: '#4B5563',
+    color: '#F8FAFC',
   },
   settingsSubmenuIndicator: {
     marginTop: 6,
     height: 2,
     width: 42,
     borderRadius: 2,
-    backgroundColor: '#4B5563',
+    backgroundColor: C.primary,
   },
 });
 
@@ -382,6 +500,43 @@ export default function App() {
   const markActivity = React.useCallback(() => {
     lastActivityRef.current = Date.now();
     autoLogoutTriggeredRef.current = false;
+  }, []);
+
+  // DEV TEMP: Forzar usuario `root` controlado por `localStorage.PFP_FORCE_ROOT`.
+  // - Para activar en el navegador: `localStorage.setItem('PFP_FORCE_ROOT','1')` y recarga.
+  // - Para desactivar: `localStorage.setItem('PFP_FORCE_ROOT','0')` y recarga (o eliminar la clave).
+  // Esto evita editar el código para activar/desactivar el forzado y facilita revertirlo.
+  React.useEffect(() => {
+    try {
+      const isWeb = typeof window !== 'undefined' && typeof window.location !== 'undefined';
+      if (!isWeb) return;
+
+      const flag = String(window.localStorage.getItem('PFP_FORCE_ROOT') || '').trim();
+      if (flag !== '1') {
+        // Do nothing unless explicitly enabled
+        // eslint-disable-next-line no-console
+        console.log("DEV: PFP_FORCE_ROOT not set to '1' — skipping force-root");
+        return;
+      }
+
+      const rootUser = { id: 'root', nombre: 'Root', rol: 'root', empresa_id: 1 };
+      const nowSec = Math.floor(Date.now() / 1000);
+      const rootSession = {
+        usuario: rootUser,
+        access_token: 'dev-access',
+        refresh_token: 'dev-refresh',
+        access_expires_at: nowSec + 3600 * 24,
+      };
+
+      setAuthUser(rootUser);
+      setAuthSession(rootSession);
+      AsyncStorage.setItem('authUser', JSON.stringify(rootUser)).catch(() => {});
+      AsyncStorage.setItem('authSession', JSON.stringify(rootSession)).catch(() => {});
+      // eslint-disable-next-line no-console
+      console.log('DEV: authUser/authSession forzados a root (controlado por PFP_FORCE_ROOT)');
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   React.useEffect(() => {
@@ -434,6 +589,18 @@ export default function App() {
       const nextHeaders = normalizeHeaders(init?.headers);
       if (accessToken && !nextHeaders.Authorization && !nextHeaders.authorization) {
         nextHeaders.Authorization = `Bearer ${accessToken}`;
+      }
+
+      // Usar el rol seleccionado del desplegable si existe
+      try {
+        const selectedRole = typeof window !== 'undefined' && window.localStorage 
+          ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+          : null;
+        if (selectedRole && !nextHeaders['X-Role']) {
+          nextHeaders['X-Role'] = selectedRole;
+        }
+      } catch (e) {
+        // ignore localStorage errors
       }
 
       let response = await originalFetch(input, { ...init, headers: nextHeaders });
@@ -492,6 +659,18 @@ export default function App() {
         const retryHeaders = normalizeHeaders(init?.headers);
         retryHeaders.Authorization = `Bearer ${refreshedSession.access_token}`;
         delete retryHeaders.authorization;
+
+        // Usar el rol seleccionado del desplegable también en retry
+        try {
+          const selectedRole = typeof window !== 'undefined' && window.localStorage 
+            ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+            : null;
+          if (selectedRole && !retryHeaders['X-Role']) {
+            retryHeaders['X-Role'] = selectedRole;
+          }
+        } catch (e) {
+          // ignore localStorage errors
+        }
 
         response = await originalFetch(input, { ...init, headers: retryHeaders });
         return response;
@@ -555,6 +734,23 @@ export default function App() {
           }
         }
 
+        // Si el usuario existe, aplicar el rol seleccionado en el desplegable
+        try {
+          const selectedRole = (typeof window !== 'undefined' && window.localStorage)
+            ? window.localStorage.getItem('PFP_SELECTED_ROLE')
+            : null;
+          if (selectedRole && nextUser) {
+            nextUser = { ...(nextUser || {}), rol: selectedRole };
+            try {
+              await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
+            } catch (e) {
+              // ignore AsyncStorage write errors
+            }
+          }
+        } catch (e) {
+          // ignore localStorage errors
+        }
+
         setAuthSession(nextSession || null);
         setAuthUser(nextUser || null);
       } catch (error) {
@@ -590,6 +786,36 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error saving auth user:', error);
+    }
+  };
+
+  const handleRoleChange = async (nextRole) => {
+    try {
+      if (!nextRole) return;
+      const baseUser = authUser || { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 };
+      const nextUser = { ...baseUser, rol: nextRole };
+      setAuthUser(nextUser);
+      try {
+        await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
+      } catch (e) {
+        // ignore
+      }
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('PFP_SELECTED_ROLE', String(nextRole || '').trim());
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+      try {
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: nextRole }));
+        }
+      } catch (e) {
+        // ignore event errors
+      }
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -676,8 +902,12 @@ export default function App() {
     return null; // o un loading screen
   }
 
+  const paperTheme = { ...MD3LightTheme, colors: { ...MD3LightTheme.colors, ...paperThemeColors } };
+
   return (
+    <PaperProvider theme={paperTheme}>
     <PedidosProvider>
+      {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
       <NavigationContainer linking={linking}>
         <Stack.Navigator
           screenOptions={{
@@ -687,7 +917,7 @@ export default function App() {
           {/* BYPASS AUTH PARA DESARROLLO */}
           <Stack.Screen
             name="Home"
-            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} />}
+            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} onRoleChange={handleRoleChange} />}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -707,6 +937,7 @@ export default function App() {
             children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
             options={{ title: 'Funcionalidades web', headerShown: true }}
           />
+          
           <Stack.Screen
             name="SettingsImpresion"
             initialParams={{ section: 'impresion' }}
@@ -716,5 +947,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </PedidosProvider>
+    </PaperProvider>
   );
 }

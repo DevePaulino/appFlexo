@@ -305,7 +305,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                                                 backgroundColor: '#FBFBFD',
                                                 border: '2px solid #CCC',
                                                 borderRadius: 22,
-                                                padding: '12px 8px',
+                                                paddingTop: 12, paddingBottom: 12, paddingLeft: 8, paddingRight: 8,
                                                 width: '100%',
                                                 color: '#393B3F',
                                                 fontWeight: 700,
@@ -357,7 +357,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                             <View style={styles.col}>
                                 <Text style={styles.label}>Cliente</Text>
                                 <TextInput
-                                    value={cliente}
+                                    value={typeof cliente === 'string' ? cliente : (cliente && cliente.nombre) || ''}
                                     onChangeText={setCliente}
                                     placeholder="Nombre"
                                     style={styles.input(cliente, true, false, submitted)}
@@ -484,20 +484,20 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                                 value={maquina}
                                 onChange={e => setMaquina(e.target.value)}
                                 style={{
-                                    fontSize: 16,
+                                    fontSize: 13,
                                     fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-                                    color: maquina ? '#232323' : '#AAA',
-                                    borderWidth: 0,
-                                    borderBottom: `2px solid ${borderColorState(maquina, true, false, submitted)}`,
-                                    background: '#FBFBFD',
-                                    borderRadius: 6,
+                                    color: '#0F172A',
+                                    border: '1px solid #E2E8F0',
+                                    backgroundColor: '#F8FAFC',
+                                    borderRadius: 10,
                                     minHeight: 39,
-                                    outline: 'none',
-                                    padding: '10px 8px',
+                                    outlineWidth: 0,
+                                    paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
                                     marginBottom: 8,
                                     fontWeight: 400,
                                     letterSpacing: 0,
                                     appearance: 'none',
+                                    cursor: 'pointer',
                                 }}>
                                 <option value="">Selecciona...</option>
                                 {maquinasEjemplo.map(opt => (
@@ -535,7 +535,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                             opciones={acabados}
                             valorSeleccionado={acabado}
                             onSelect={setAcabado}
-                            required={true}
+                            required={false}
                             submitted={submitted}
                         />
                     </View>

@@ -5,41 +5,64 @@ import { useNavigation } from '@react-navigation/native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
-    padding: 16,
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  content: {
-    padding: 16,
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 38,
   },
   title: {
+    flex: 1,
     fontSize: 24,
+    lineHeight: 28,
     fontWeight: '900',
     color: '#F8FAFC',
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
     textAlign: 'center',
-    width: '100%',
+  },
+  content: {
+    padding: 12,
+    paddingTop: 14,
   },
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#D0D5DD',
-    padding: 14,
+    borderColor: '#E2E8F0',
+    padding: 16,
     marginBottom: 10,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: '#0F172A',
     marginBottom: 4,
   },
   cardText: {
     fontSize: 13,
-    color: '#667085',
+    color: '#475569',
   },
 });
 
@@ -54,7 +77,7 @@ export default function SettingMenuScreen() {
     },
     {
       title: 'Funcionalidades web',
-      description: 'Modo de creación, estados y reglas de flujo.',
+      description: 'Funciones experimentales y modos de desarrollo.',
       route: 'SettingsFuncionalidades',
     },
     {
@@ -67,7 +90,11 @@ export default function SettingMenuScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Setting</Text>
+        <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.title}>Ajustes</Text>
+          <View style={{ width: 38 }} />
+        </View>
       </View>
       <View style={styles.content}>
         {items.map((item) => (

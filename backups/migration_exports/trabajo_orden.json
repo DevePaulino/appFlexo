@@ -1,0 +1,13 @@
+{"_id": {"$oid": "69a476626eba090c66ea1513"}, "empresa_id": 1, "trabajo_id": "69a4667b48d83c252607ca95", "maquina_id": "69a08da41a74ff76ee12472e", "posicion": 4}
+{"_id": {"$oid": "69a47f09ae4b34a90940505e"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320ecc", "maquina_id": "69a08da41a74ff76ee12472e", "posicion": 3}
+{"_id": {"$oid": "69a4823f70d84a81e44fb66f"}, "empresa_id": 1, "trabajo_id": "69a24d7db1dbf3f5d4be1f02", "maquina_id": "69a08da41a74ff76ee12472e", "posicion": 1}
+{"_id": {"$oid": "69a488fb6defb50972dcdbf7"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320ed2", "maquina_id": "69a0aabd068b375c6e64e821", "posicion": 1}
+{"_id": {"$oid": "69a4890d6defb50972dcdbf9"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320edb", "maquina_id": "69a08da41a74ff76ee12472e", "posicion": 5}
+{"_id": {"$oid": "69a4ac9b16a53a2aaaf70365"}, "empresa_id": 1, "trabajo_id": "69a4667b48d83c252607ca97", "maquina_id": "69a0aabd068b375c6e64e821", "posicion": 2}
+{"_id": {"$oid": "69a4b30616a53a2aaaf70377"}, "empresa_id": 1, "trabajo_id": "69a3394b649d8eaa4e2460d3", "maquina_id": "69a0aabd068b375c6e64e822", "posicion": 2}
+{"_id": {"$oid": "69a4b4c716a53a2aaaf7038f"}, "empresa_id": 1, "trabajo_id": "69a2a107b1dbf3f5d4be1f04", "maquina_id": "69a0aabd068b375c6e64e823", "posicion": 5}
+{"_id": {"$oid": "69a4b4ca16a53a2aaaf70390"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320ece", "maquina_id": "69a0aabd068b375c6e64e823", "posicion": 6}
+{"_id": {"$oid": "69a4b4cc16a53a2aaaf70391"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320edd", "maquina_id": "69a0aabd068b375c6e64e823", "posicion": 7}
+{"_id": {"$oid": "69a4b60d16a53a2aaaf70392"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320ed5", "maquina_id": "69a0aabd068b375c6e64e822", "posicion": 3}
+{"_id": {"$oid": "69a4b64b16a53a2aaaf70394"}, "empresa_id": 1, "trabajo_id": "69a0ac41ef06cbca81320ed7", "maquina_id": "69a0aabd068b375c6e64e823", "posicion": 8}
+{"_id": {"$oid": "69a4b65016a53a2aaaf70395"}, "empresa_id": 1, "trabajo_id": "69a466e448d83c252607ca98", "maquina_id": "69a0aabd068b375c6e64e823", "posicion": 9}

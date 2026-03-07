@@ -2,9 +2,13 @@ import React from 'react';
 import { Alert } from 'react-native';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 
-export default function NuevoPedidoModal({ visible, onClose, onSave, initialValues }) {
+export default function NuevoPedidoModal({ visible, onClose, onSave, initialValues, currentUser, puedeCrear }) {
   try { console.log('NuevoPedidoModal render -> visible:', visible, 'initialValues id:', initialValues && (initialValues.id || initialValues.pedido_id || initialValues._id)); } catch(e) {}
   const handleCrearPedidoDesdeFormulario = async (formulario) => {
+    if (!puedeCrear) {
+      Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear pedidos.');
+      return;
+    }
     const nombreTrabajo = formulario.nombre || formulario.referencia || `Trabajo ${formulario.numero}`;
 
     try {
@@ -25,17 +29,17 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           vendedor: formulario.vendedor,
           referencia: formulario.referencia,
           fecha: formulario.fecha,
-          formatoAncho: formulario.formatoAncho,
-          formatoLargo: formulario.formatoLargo,
           maquina: formulario.maquina,
           material: formulario.material,
           acabado: formulario.acabado,
           tirada: formulario.tirada,
           selectedTintas: formulario.selectedTintas,
+          pantones: formulario.pantones || [],
           detalleTintaEspecial: formulario.detalleTintaEspecial,
           troquelEstadoSel: formulario.troquelEstadoSel,
           troquelFormaSel: formulario.troquelFormaSel,
           troquelCoste: formulario.troquelCoste,
+          troquelId: formulario.troquelId || null,
           observaciones: formulario.observaciones,
         };
 
@@ -98,7 +102,22 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           razon_social: formulario.razonSocial,
           cif: formulario.cif,
           personas_contacto: formulario.personasContacto,
-          email: formulario.email
+          email: formulario.email,
+          vendedor: formulario.vendedor,
+          referencia: formulario.referencia,
+          fecha: formulario.fecha,
+          maquina: formulario.maquina,
+          material: formulario.material,
+          acabado: formulario.acabado,
+          tirada: formulario.tirada,
+          selectedTintas: formulario.selectedTintas,
+          pantones: formulario.pantones || [],
+          detalleTintaEspecial: formulario.detalleTintaEspecial,
+          troquelEstadoSel: formulario.troquelEstadoSel,
+          troquelFormaSel: formulario.troquelFormaSel,
+          troquelCoste: formulario.troquelCoste,
+          troquelId: formulario.troquelId || null,
+          observaciones: formulario.observaciones,
         }
       };
 
@@ -113,7 +132,6 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
         return;
       }
 
-      Alert.alert('Éxito', 'Pedido creado exitosamente');
       onSave({
         ...formulario,
         nombre: nombreTrabajo,
@@ -139,6 +157,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       fechaEntregaLabel="Fecha de entrega"
       showMaquinaField={true}
       maquinaLabel="Máquina"
+      currentUser={currentUser}
     />
   );
 }

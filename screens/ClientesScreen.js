@@ -1,34 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -37,36 +38,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
   btn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
   },
   btnNewText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
   },
   btnText: {
-    color: '#fff',
+    color: '#374151',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnPlusText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 28,
     lineHeight: 28,
@@ -92,8 +92,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 44,
     top: 8,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -121,13 +121,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7EC',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   colNombre: {
     flex: 0.18,
@@ -168,13 +168,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   deleteBtn: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#DC2626',
   },
   actionBtnText: {
     fontSize: 11,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#94A3B8',
     textAlign: 'center',
     marginTop: 32,
   },
@@ -196,21 +196,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
   },
   paginationBtnText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#344054',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -222,32 +222,32 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     padding: 16,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 12,
   },
   fieldLabel: {
     fontSize: 13,
-    color: '#444',
+    color: '#475569',
     fontWeight: '700',
     marginBottom: 6,
   },
   fieldInput: {
-    backgroundColor: '#FBFBFD',
+    backgroundColor: '#F8FAFC',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CCC',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 10,
   },
   fieldInputError: {
@@ -266,11 +266,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   btnCancel: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
   },
 });
 
-export default function ClientesScreen() {
+export default function ClientesScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const [clientes, setClientes] = useState([]);
   const [filtrados, setFiltrados] = useState(clientes);
@@ -515,14 +515,19 @@ export default function ClientesScreen() {
     };
   }, []);
 
+  const puedeCrear = usePermission('edit_clientes');
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Clientes</Text>
           <View style={styles.btnPlusWrap}>
             <Pressable
-              style={styles.btnPlus}
-              onPress={() => setModalVisible(true)}
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && setModalVisible(true)}
+              disabled={!puedeCrear}
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
@@ -530,18 +535,17 @@ export default function ClientesScreen() {
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>Nuevo cliente</Text>
+                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo cliente'}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.headerTitle}>Clientes</Text>
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -637,7 +641,7 @@ export default function ClientesScreen() {
               value={nuevoNombre}
               onChangeText={setNuevoNombre}
               placeholder="Nombre cliente"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
             {nombreVacio && <Text style={styles.errorText}>El nombre del cliente es obligatorio</Text>}
 
@@ -647,7 +651,7 @@ export default function ClientesScreen() {
               value={nuevoRazonSocial}
               onChangeText={setNuevoRazonSocial}
               placeholder="Razón social"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
 
             <Text style={styles.fieldLabel}>CIF</Text>
@@ -656,7 +660,7 @@ export default function ClientesScreen() {
               value={nuevoCif}
               onChangeText={setNuevoCif}
               placeholder="A1234567B"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
             />
             {cifNuevoInvalido && <Text style={styles.errorText}>CIF no válido (ejemplo: A1234567B)</Text>}
@@ -667,7 +671,7 @@ export default function ClientesScreen() {
               value={nuevoContacto}
               onChangeText={setNuevoContacto}
               placeholder="Nombre(s) de contacto"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
             />
 
             <Text style={styles.fieldLabel}>Email</Text>
@@ -676,7 +680,7 @@ export default function ClientesScreen() {
               value={nuevoEmail}
               onChangeText={setNuevoEmail}
               placeholder="email@cliente.com"
-              placeholderTextColor="#999"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="none"
               keyboardType="email-address"
             />

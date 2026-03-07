@@ -1,0 +1,26 @@
+{"id": "69a4c5ae6a944a3b2d60efcf", "categoria": "estados_pedido", "valor": "Diseño", "orden": 1, "fecha_creacion": "2026-03-02T00:03:10.501570"}
+{"id": "69a4c5ae6a944a3b2d60efd0", "categoria": "estados_pedido", "valor": "Pendiente de Aprobación", "orden": 2, "fecha_creacion": "2026-03-02T00:03:10.519169"}
+{"id": "69a4c5ae6a944a3b2d60efd1", "categoria": "estados_pedido", "valor": "Pendiente de Cliché", "orden": 3, "fecha_creacion": "2026-03-02T00:03:10.519918"}
+{"id": "69a4c5ae6a944a3b2d60efd2", "categoria": "estados_pedido", "valor": "Pendiente de Impresión", "orden": 4, "fecha_creacion": "2026-03-02T00:03:10.520389"}
+{"id": "69a4c5ae6a944a3b2d60efd3", "categoria": "estados_pedido", "valor": "Pendiente Post-Impresión", "orden": 5, "fecha_creacion": "2026-03-02T00:03:10.520937"}
+{"id": "69a4c5ae6a944a3b2d60efd4", "categoria": "estados_pedido", "valor": "Finalizado", "orden": 6, "fecha_creacion": "2026-03-02T00:03:10.521549"}
+{"id": "69a4c5ae6a944a3b2d60efd5", "categoria": "estados_pedido", "valor": "Parado", "orden": 7, "fecha_creacion": "2026-03-02T00:03:10.522055"}
+{"id": "69a4c5ae6a944a3b2d60efd6", "categoria": "estados_pedido", "valor": "Cancelado", "orden": 8, "fecha_creacion": "2026-03-02T00:03:10.522417"}
+{"id": "69a4c9b4f8711f17a9250b46", "categoria": "roles", "valor": "Operario", "orden": 1, "fecha_creacion": "2026-03-02T00:20:20.574975"}
+{"id": "69a4c9b4f8711f17a9250b47", "categoria": "roles", "valor": "Administrador", "orden": 2, "fecha_creacion": "2026-03-02T00:20:20.575590"}
+{"id": "69a4c9b4f8711f17a9250b48", "categoria": "roles", "valor": "Root", "orden": 3, "fecha_creacion": "2026-03-02T00:20:20.576036"}
+{"id": "69a4c9b4f8711f17a9250b49", "categoria": "roles", "valor": "Comercial", "orden": 4, "fecha_creacion": "2026-03-02T00:20:20.576473"}
+{"id": "69a4c9b4f8711f17a9250b4a", "categoria": "materiales", "valor": "Polipropileno", "orden": 1, "fecha_creacion": "2026-03-02T00:20:20.577506"}
+{"id": "69a4c9b4f8711f17a9250b4b", "categoria": "materiales", "valor": "Papel", "orden": 2, "fecha_creacion": "2026-03-02T00:20:20.577936"}
+{"id": "69a4c9b4f8711f17a9250b4c", "categoria": "materiales", "valor": "PVC", "orden": 3, "fecha_creacion": "2026-03-02T00:20:20.578380"}
+{"id": "69a4c9b4f8711f17a9250b4d", "categoria": "materiales", "valor": "PE", "orden": 4, "fecha_creacion": "2026-03-02T00:20:20.578826"}
+{"id": "69a4c9b4f8711f17a9250b4e", "categoria": "materiales", "valor": "PET", "orden": 5, "fecha_creacion": "2026-03-02T00:20:20.579250"}
+{"id": "69a4c9b4f8711f17a9250b4f", "categoria": "acabados", "valor": "Barniz", "orden": 1, "fecha_creacion": "2026-03-02T00:20:20.580242"}
+{"id": "69a4c9b4f8711f17a9250b50", "categoria": "acabados", "valor": "Stamping", "orden": 2, "fecha_creacion": "2026-03-02T00:20:20.580670"}
+{"id": "69a4c9b4f8711f17a9250b51", "categoria": "acabados", "valor": "Laminado", "orden": 3, "fecha_creacion": "2026-03-02T00:20:20.581079"}
+{"id": "69a4c9b4f8711f17a9250b52", "categoria": "acabados", "valor": "Sin acabado", "orden": 4, "fecha_creacion": "2026-03-02T00:20:20.581481"}
+{"id": "69a4c9b4f8711f17a9250b53", "categoria": "tintas_especiales", "valor": "P1", "orden": 1, "fecha_creacion": "2026-03-02T00:20:20.582431"}
+{"id": "69a4c9b4f8711f17a9250b54", "categoria": "tintas_especiales", "valor": "P2", "orden": 2, "fecha_creacion": "2026-03-02T00:20:20.582905"}
+{"id": "69a4c9b4f8711f17a9250b55", "categoria": "tintas_especiales", "valor": "P3", "orden": 3, "fecha_creacion": "2026-03-02T00:20:20.583343"}
+{"id": "69a4c9b4f8711f17a9250b56", "categoria": "tintas_especiales", "valor": "P4", "orden": 4, "fecha_creacion": "2026-03-02T00:20:20.583775"}
+{"id": "69a4c9b4f8711f17a9250b57", "categoria": "tintas_especiales", "valor": "P5", "orden": 5, "fecha_creacion": "2026-03-02T00:20:20.584213"}

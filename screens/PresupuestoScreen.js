@@ -3,34 +3,35 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal,
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 import { PedidosContext } from '../PedidosContext';
+import { usePermission } from './usePermission';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -39,36 +40,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
   btn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
   },
   btnNewText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
   },
   btnText: {
-    color: '#fff',
+    color: '#374151',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -84,10 +84,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnPlusDisabled: {
-    backgroundColor: '#BDBDBD',
+    backgroundColor: '#94A3B8',
   },
   btnPlusText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 28,
     lineHeight: 28,
@@ -97,8 +97,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 44,
     top: 8,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     marginHorizontal: 10,
     marginTop: 10,
     padding: 12,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   chartsTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 10,
   },
   chartTrack: {
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   chartLegendText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#232323',
+    color: '#0F172A',
   },
   chartLegendItemActive: {
     backgroundColor: '#F2F4F7',
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   chartSegmentActiveShadow: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -194,15 +194,15 @@ const styles = StyleSheet.create({
   filterClearBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFF',
   },
   filterClearText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#344054',
+    color: '#0F172A',
   },
   tableContainer: {
     flex: 1,
@@ -211,9 +211,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 8,
@@ -223,13 +223,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7EC',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 6,
+    borderRadius: 10,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -240,12 +240,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   colNumero: {
     flex: 0.17,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#94A3B8',
     textAlign: 'center',
     marginTop: 32,
   },
@@ -290,21 +290,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
   },
   paginationBtnText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#344054',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1FADF',
   },
   numeroPresupuestoLink: {
-    color: '#4B5563',
+    color: '#475569',
     fontWeight: '700',
   },
   detailOverlay: {
@@ -347,14 +347,14 @@ const styles = StyleSheet.create({
     maxWidth: 760,
     maxHeight: '85%',
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 18,
     overflow: 'hidden',
   },
   detailHeader: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
+    borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -362,12 +362,13 @@ const styles = StyleSheet.create({
   detailTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
   },
   detailClose: {
-    color: '#666',
-    fontWeight: '700',
-    fontSize: 13,
+    color: '#475569',
+    fontWeight: '900',
+    fontSize: 20,
+    padding: 4,
   },
   detailBody: {
     padding: 16,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   detailSectionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 8,
   },
   detailGrid: {
@@ -392,9 +393,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    borderRadius: 8,
-    backgroundColor: '#FAFAFA',
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
   },
   detailRowFull: {
     width: '100%',
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   detailRowWide: {
     width: '100%',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F3F3',
+    borderBottomColor: '#E2E8F0',
     borderWidth: 0,
     borderRadius: 0,
     paddingHorizontal: 0,
@@ -412,17 +413,17 @@ const styles = StyleSheet.create({
   detailKey: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#777',
+    color: '#475569',
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 13,
-    color: '#232323',
+    color: '#0F172A',
     fontWeight: '500',
   },
 });
 
-export default function PresupuestoScreen() {
+export default function PresupuestoScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
@@ -433,10 +434,12 @@ export default function PresupuestoScreen() {
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingInitialValues, setEditingInitialValues] = useState(null);
   const [detalleVisible, setDetalleVisible] = useState(false);
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [modoCreacion, setModoCreacion] = useState('manual');
+  const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
   const { notificarNuevoPedido } = React.useContext(PedidosContext);
 
   const cargarModoCreacion = () => {
@@ -453,7 +456,18 @@ export default function PresupuestoScreen() {
   // Cargar presupuestos desde backend
   const cargarPresupuestos = () => {
     setCargando(true);
-    fetch('http://localhost:8080/api/presupuestos')
+    
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+    
+    fetch('http://localhost:8080/api/presupuestos', {
+      headers: authHeaders
+    })
       .then((res) => res.json())
       .then((data) => {
         console.log('Presupuestos recibidos:', data);
@@ -477,6 +491,7 @@ export default function PresupuestoScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      cargarPresupuestos();
       cargarModoCreacion();
     }, [])
   );
@@ -550,14 +565,29 @@ export default function PresupuestoScreen() {
       fecha_entrega: presupuesto.fecha || new Date().toISOString().split('T')[0]
     };
     
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+    
+    console.log('Iniciando guardado de presupuesto...', presupuesto);
+    console.log('Headers:', authHeaders);
+    
     // Primero crear el trabajo
     fetch('http://localhost:8080/api/trabajos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify(trabajo)
     })
-      .then((res) => res.json())
+      .then((res) => {
+        console.log('Respuesta de crear trabajo:', res.status, res.statusText);
+        return res.json();
+      })
       .then((data) => {
+        console.log('Datos de trabajo creado:', data);
         if (data.trabajo_id) {
           // Ahora guardar el presupuesto con todos los datos
           const presupuestoCompleto = {
@@ -588,19 +618,44 @@ export default function PresupuestoScreen() {
             observaciones: presupuesto.observaciones
           };
           
+          console.log('Enviando presupuesto completo:', presupuestoCompleto);
+          
           fetch('http://localhost:8080/api/presupuestos', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(presupuestoCompleto)
           })
-            .then(() => cargarPresupuestos())
-            .catch((err) => console.error('Error guardando presupuesto:', err));
+            .then((res) => {
+              console.log('Respuesta de guardar presupuesto:', res.status, res.statusText);
+              return res.json();
+            })
+            .then((respData) => {
+              console.log('Datos de respuesta:', respData);
+              if (respData.error) {
+                console.error('Error guardando presupuesto:', respData.error);
+                alert(`❌ Error al guardar presupuesto:\n${respData.error}`);
+              } else {
+                console.log('✅ Presupuesto guardado exitosamente');
+                alert('✅ ¡Presupuesto guardado exitosamente!');
+                cargarPresupuestos();
+              }
+            })
+            .catch((err) => {
+              console.error('Error en fetch de presupuesto:', err);
+              alert(`❌ Error en la solicitud:\n${err.message}`);
+            });
+        } else {
+          console.error('Error creando trabajo:', data);
+          alert(`❌ Error al crear trabajo:\n${data.error || 'desconocido'}`);
         }
       })
-      .catch((err) => console.error('Error creando trabajo:', err));
+      .catch((err) => {
+        console.error('Error en fetch de trabajo:', err);
+        alert(`❌ Error en la solicitud de trabajo:\n${err.message}`);
+      });
   };
 
-  const handleAceptarPresupuesto = (presupuesto) => {
+  const handleAceptarPresupuesto = async (presupuesto) => {
     // Enviar todos los datos del presupuesto al crear el pedido
     const datosPresupuesto = {
       numero_presupuesto: presupuesto.numero_presupuesto,
@@ -611,29 +666,136 @@ export default function PresupuestoScreen() {
       fecha_entrega: presupuesto.fecha_entrega,
       ...presupuesto // Incluir todos los datos adicionales
     };
-    
-    fetch(`http://localhost:8080/api/presupuestos/aceptar/${presupuesto.trabajo_id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datosPresupuesto)
-    })
-      .then((res) => res.json())
-      .then(() => {
-        // Actualizar presupuesto localmente
-        const updated = presupuestos.map((p) =>
-          p.id === presupuesto.id ? { ...p, aprobado: true } : p
-        );
-        setPresupuestos(updated);
-        // Notificar al contexto que hay un nuevo pedido
-        notificarNuevoPedido();
-        navigation.navigate('Pedidos');
-      })
-      .catch((err) => console.error('Error aceptando presupuesto:', err));
+
+    const targetId = presupuesto.trabajo_id || presupuesto.id || presupuesto._id;
+    if (!targetId) {
+      console.error('No se encuentra trabajo_id en presupuesto:', presupuesto);
+      alert('No es posible aceptar este presupuesto: falta identificador de trabajo.');
+      return;
+    }
+
+    // Headers de autenticación
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-Empresa-Id': currentUser?.empresa_id || '1',
+      'X-User-Id': currentUser?.id || 'admin',
+      'X-Role': currentUser?.role || 'administrador'
+    };
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/presupuestos/aceptar/${targetId}`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(datosPresupuesto)
+      });
+      const data = await res.json();
+
+      // Actualizar presupuesto localmente
+      const updated = presupuestos.map((p) =>
+        p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data?.pedido ? data.pedido.fecha_pedido : p.fecha_aprobacion } : p
+      );
+      setPresupuestos(updated);
+
+      if (data && data.pedido) {
+        // Comprobar si hay stock disponible para el material del presupuesto
+        const materialNombre = presupuesto.material || presupuesto.datos_presupuesto?.material || '';
+        if (materialNombre) {
+          try {
+            const stockRes = await fetch(
+              `http://localhost:8080/api/materiales/stock?material_nombre=${encodeURIComponent(materialNombre)}&activo=true`,
+              { headers: authHeaders }
+            );
+            const stockData = await stockRes.json();
+            const tirada = parseFloat(presupuesto.tirada || 0);
+            const fl = parseFloat(presupuesto.formatoLargo || 0);
+            const fa = parseFloat(presupuesto.formatoAncho || 0);
+            const metrosEst = tirada > 0 && fl > 0 ? tirada * fl / 1000 : 0;
+            const entries = (stockData.stock || []).filter((e) =>
+              e.es_retal &&
+              e.metros_disponibles > 0 &&
+              (fa <= 0 || e.ancho_cm >= fa / 10) &&
+              (metrosEst <= 0 || e.metros_disponibles >= metrosEst)
+            );
+            if (entries.length > 0) {
+              setStockModal({
+                visible: true,
+                pedido: data.pedido,
+                authHeaders,
+                stockEntries: entries,
+                selectedStockId: entries[0].id,
+                metros: metrosEst > 0 ? metrosEst.toFixed(2) : '',
+                formatoAncho: fa,
+              });
+              return; // esperar acción del usuario en el modal
+            }
+          } catch (e) {
+            console.warn('Error comprobando stock de material:', e);
+          }
+        }
+
+        // Sin stock disponible o sin material → navegar directamente
+        try {
+          notificarNuevoPedido();
+          navigation.navigate('Pedidos', { newPedido: data.pedido });
+        } catch (e) {
+          console.warn('Navigation error al enviar newPedido:', e);
+          notificarNuevoPedido();
+          navigation.navigate('Pedidos');
+        }
+        return;
+      }
+
+      // Fallback: notificar y navegar para que la pantalla recargue
+      notificarNuevoPedido();
+      navigation.navigate('Pedidos');
+    } catch (err) {
+      console.error('Error aceptando presupuesto:', err);
+    }
+  };
+
+  const handleConfirmarConsumo = async () => {
+    const { pedido, authHeaders: hdrs, selectedStockId, metros } = stockModal;
+    const metrosNum = parseFloat(metros);
+    if (!selectedStockId || isNaN(metrosNum) || metrosNum <= 0) {
+      alert('Selecciona un material e indica los metros a consumir.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:8080/api/materiales/consumos', {
+        method: 'POST',
+        headers: hdrs,
+        body: JSON.stringify({
+          stock_id: selectedStockId,
+          pedido_id: pedido._id || pedido.id,
+          numero_pedido: String(pedido.numero_pedido || ''),
+          metros_consumidos: metrosNum
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Error al registrar consumo de stock');
+        return;
+      }
+    } catch (e) {
+      console.warn('Error registrando consumo de stock:', e);
+    }
+    const pedidoRef = stockModal.pedido;
+    setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
+    notificarNuevoPedido();
+    try {
+      navigation.navigate('Pedidos', { newPedido: pedidoRef });
+    } catch (e) {
+      navigation.navigate('Pedidos');
+    }
   };
 
   const handleAbrirDetalle = (presupuesto) => {
+    // Open the presupuesto form for editing. If aprobado, open in read-only mode.
     setPresupuestoSeleccionado(presupuesto);
-    setDetalleVisible(true);
+    setEditingInitialValues && setEditingInitialValues(presupuesto);
+    setModalVisible(true);
+    // ensure detail view is closed
+    setDetalleVisible(false);
   };
 
   const formatearFecha = (valor) => {
@@ -766,6 +928,8 @@ export default function PresupuestoScreen() {
     };
   }, []);
 
+  const puedeCrear = usePermission('edit_presupuestos');
+
   const presupuestosBaseGrafica = presupuestos.filter((p) => coincideBusquedaPresupuesto(p));
   const totalPresupuestos = presupuestosBaseGrafica.length;
   const aprobadosCount = presupuestosBaseGrafica.filter((p) => !!p.aprobado).length;
@@ -777,11 +941,14 @@ export default function PresupuestoScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          {modoCreacion !== 'automatico' && (
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Presupuestos</Text>
+          {modoCreacion !== 'automatico' ? (
             <View style={styles.btnPlusWrap}>
               <Pressable
-                style={styles.btnPlus}
-                onPress={() => setModalVisible(true)}
+                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+                onPress={() => puedeCrear && setModalVisible(true)}
+                disabled={!puedeCrear}
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
@@ -789,19 +956,20 @@ export default function PresupuestoScreen() {
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>Nuevo presupuesto</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo presupuesto'}</Text>
                 </View>
               )}
             </View>
+          ) : (
+            <View style={{ width: 38 }} />
           )}
-          <Text style={styles.headerTitle}>Presupuestos</Text>
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -957,7 +1125,7 @@ export default function PresupuestoScreen() {
                 Presupuesto {presupuestoSeleccionado?.numero_presupuesto || ''}
               </Text>
               <TouchableOpacity onPress={() => setDetalleVisible(false)}>
-                <Text style={styles.detailClose}>Cerrar</Text>
+                <Text style={styles.detailClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.detailBody}>
@@ -985,10 +1153,130 @@ export default function PresupuestoScreen() {
         </View>
       </Modal>
 
+      {/* Modal deducción de stock de material */}
+      <Modal visible={stockModal.visible} transparent animationType="fade">
+        <View style={styles.detailOverlay}>
+          <View style={[styles.detailCard, { maxWidth: 520, maxHeight: '80%' }]}>
+            <View style={styles.detailHeader}>
+              <Text style={styles.detailTitle}>Deducir stock de material</Text>
+              <TouchableOpacity onPress={() => {
+                const pedidoRef = stockModal.pedido;
+                setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
+                notificarNuevoPedido();
+                try { navigation.navigate('Pedidos', { newPedido: pedidoRef }); }
+                catch (e) { navigation.navigate('Pedidos'); }
+              }}>
+                <Text style={styles.detailClose}>Omitir</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              {stockModal.stockEntries.length > 0 && (
+                <Text style={{ marginBottom: 12, color: '#555', fontSize: 13 }}>
+                  {'Retales de '}
+                  <Text style={{ fontWeight: '600' }}>{stockModal.stockEntries[0]?.material_nombre || ''}</Text>
+                  {stockModal.formatoAncho > 0 ? `  ·  Ancho mínimo: ${(stockModal.formatoAncho / 10).toFixed(1)} cm` : ''}
+                  {stockModal.metros ? `  ·  Metros necesarios: ${stockModal.metros} m` : ''}
+                </Text>
+              )}
+              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>Selecciona el material:</Text>
+              {stockModal.stockEntries.map((entry) => (
+                <TouchableOpacity
+                  key={entry.id}
+                  onPress={() => setStockModal((prev) => ({ ...prev, selectedStockId: entry.id }))}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 6,
+                    borderRadius: 6, borderWidth: 1,
+                    borderColor: stockModal.selectedStockId === entry.id ? '#1565C0' : '#D1D5DB',
+                    backgroundColor: stockModal.selectedStockId === entry.id ? '#EFF6FF' : '#fff'
+                  }}
+                >
+                  <View style={{
+                    width: 14, height: 14, borderRadius: 7, borderWidth: 2,
+                    borderColor: stockModal.selectedStockId === entry.id ? '#1565C0' : '#9CA3AF',
+                    backgroundColor: stockModal.selectedStockId === entry.id ? '#1565C0' : 'transparent',
+                    marginRight: 10
+                  }} />
+                  <Text style={{ flex: 1, fontSize: 13, color: '#374151' }}>
+                    {entry.fabricante} · {entry.ancho_cm} cm{entry.gramaje ? ` · ${entry.gramaje} g/m²` : ''} · Disponibles: {entry.metros_disponibles} m
+                    {entry.numero_lote ? ` · Lote: ${entry.numero_lote}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>Metros a consumir:</Text>
+              <TextInput
+                value={stockModal.metros}
+                onChangeText={(t) => setStockModal((prev) => ({ ...prev, metros: t }))}
+                keyboardType="numeric"
+                placeholder="Ej: 400"
+                style={{
+                  borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 6,
+                  padding: 8, fontSize: 14, marginBottom: 20, backgroundColor: '#fff'
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleConfirmarConsumo}
+                style={{
+                  backgroundColor: '#1565C0', borderRadius: 6,
+                  paddingVertical: 10, alignItems: 'center'
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Registrar y continuar</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <NuevoPresupuestoModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleNuevoPresupuesto}
+        onClose={() => { setModalVisible(false); setEditingInitialValues(null); }}
+        onSave={(p) => {
+          // Headers de autenticación
+          const authHeaders = {
+            'Content-Type': 'application/json',
+            'X-Empresa-Id': currentUser?.empresa_id || '1',
+            'X-User-Id': currentUser?.id || 'admin',
+            'X-Role': currentUser?.role || 'administrador'
+          };
+
+          // Si estamos editando un presupuesto existente, actualizarlo vía API
+          if (editingInitialValues && (editingInitialValues.id || editingInitialValues._id)) {
+            const presId = editingInitialValues.id || editingInitialValues._id;
+            fetch(`http://localhost:8080/api/presupuestos/${presId}`, {
+              method: 'PUT',
+              headers: authHeaders,
+              body: JSON.stringify({
+                numero_presupuesto: p.numero || editingInitialValues.numero_presupuesto,
+                referencia: p.referencia || editingInitialValues.referencia,
+                fecha_presupuesto: p.fecha || editingInitialValues.fecha_presupuesto,
+                aprobado: editingInitialValues.aprobado || false,
+                datos_json: p
+              })
+            })
+              .then((res) => res.json())
+              .then(() => {
+                setModalVisible(false);
+                setEditingInitialValues(null);
+                cargarPresupuestos();
+              })
+              .catch((err) => console.error('Error actualizando presupuesto:', err));
+          } else {
+            // Crear nuevo presupuesto
+            setModalVisible(false);
+            setEditingInitialValues(null);
+            handleNuevoPresupuesto(p);
+          }
+        }}
+        initialValues={editingInitialValues}
+        readOnly={!!(editingInitialValues && editingInitialValues.aprobado)}
+        modalTitle={editingInitialValues ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
+        submitLabel={editingInitialValues ? 'Guardar Cambios' : 'Guardar Presupuesto'}
+        fechaLabel="Fecha de creación"
+        showFechaEntrega={true}
+        fechaEntregaLabel="Fecha de entrega"
+        showMaquinaField={false}
+        currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
     </View>
   );

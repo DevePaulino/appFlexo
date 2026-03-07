@@ -1,34 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Platform, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { usePermission } from './usePermission';
+import NuevaMaquinaModal from './NuevaMaquinaModal';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -37,36 +39,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
   btn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
   },
   btnNewText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
   },
   btnText: {
-    color: '#fff',
+    color: '#374151',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnPlusText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 28,
     lineHeight: 28,
@@ -92,8 +93,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 44,
     top: 8,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -111,16 +112,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     marginHorizontal: 12,
     marginVertical: 12,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -130,13 +131,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7EC',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -147,12 +148,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   colNombre: {
     flex: 0.24,
@@ -181,13 +182,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   deleteBtn: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#DC2626',
+  },
+  actionBtnDisabled: {
+    backgroundColor: '#94A3B8',
+    opacity: 0.6,
   },
   actionBtnText: {
     fontSize: 11,
@@ -196,7 +201,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#94A3B8',
     textAlign: 'center',
     marginTop: 32,
   },
@@ -209,103 +214,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
   },
   paginationBtnText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#344054',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '96%',
-    maxWidth: 900,
-    maxHeight: '90%',
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#232323',
-  },
-  modalClose: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#666',
-  },
-  formBody: {
-    padding: 16,
-  },
-  formGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  fieldGroup: {
-    width: '48.5%',
-    marginBottom: 10,
-  },
-  fieldFull: {
-    width: '100%',
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#555',
-    marginBottom: 6,
-  },
-  fieldInput: {
-    backgroundColor: '#FBFBFD',
-    borderWidth: 1,
-    borderColor: '#CCC',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#232323',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#EAEAEA',
   },
   btnCancel: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
   },
   valueBlock: {
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     lineHeight: 17,
   },
   colaLink: {
@@ -318,24 +250,9 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function MachinasScreen() {
+export default function MachinasScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
-  const emptyForm = {
-    nombre: '',
-    anio_fabricacion: '',
-    tipo_maquina: '',
-    numero_colores: '',
-    ancho_max_material_mm: '',
-    ancho_max_impresion_mm: '',
-    repeticion_min_mm: '',
-    repeticion_max_mm: '',
-    velocidad_max_maquina_mmin: '',
-    velocidad_max_impresion_mmin: '',
-    espesor_planchas_mm: '',
-    sistemas_secado: '',
-    estado: 'Activa',
-  };
 
   const [maquinas, setMaquinas] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
@@ -344,9 +261,9 @@ export default function MachinasScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [maquinaEditandoId, setMaquinaEditandoId] = useState(null);
+  const [initialMaquina, setInitialMaquina] = useState(null);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
-  const [form, setForm] = useState(emptyForm);
 
   const cargarMaquinas = () => {
     fetch('http://localhost:8080/api/maquinas')
@@ -399,65 +316,21 @@ export default function MachinasScreen() {
     }
   }, [paginaMaquinas, totalPaginasMaquinas]);
 
-  const parseNum = (valor) => {
-    if (valor === '' || valor === null || valor === undefined) return null;
-    const numero = Number(valor);
-    return Number.isNaN(numero) ? null : numero;
-  };
-
-  const formatearInput = (valor) => (valor === null || valor === undefined ? '' : String(valor));
-
   const abrirNuevaMaquina = () => {
     setModoEdicion(false);
     setMaquinaEditandoId(null);
-    setForm({ ...emptyForm });
+    setInitialMaquina(null);
     setModalVisible(true);
   };
 
   const abrirDetalleEdicion = (maquina) => {
     setModoEdicion(true);
     setMaquinaEditandoId(maquina.id);
-    setForm({
-      nombre: formatearInput(maquina.nombre),
-      anio_fabricacion: formatearInput(maquina.anio_fabricacion),
-      tipo_maquina: formatearInput(maquina.tipo_maquina),
-      numero_colores: formatearInput(maquina.numero_colores),
-      ancho_max_material_mm: formatearInput(maquina.ancho_max_material_mm),
-      ancho_max_impresion_mm: formatearInput(maquina.ancho_max_impresion_mm),
-      repeticion_min_mm: formatearInput(maquina.repeticion_min_mm),
-      repeticion_max_mm: formatearInput(maquina.repeticion_max_mm),
-      velocidad_max_maquina_mmin: formatearInput(maquina.velocidad_max_maquina_mmin || maquina.velocidad_max_impresion_mmin),
-      velocidad_max_impresion_mmin: formatearInput(maquina.velocidad_max_impresion_mmin || maquina.velocidad_max_maquina_mmin),
-      espesor_planchas_mm: formatearInput(maquina.espesor_planchas_mm),
-      sistemas_secado: formatearInput(maquina.sistemas_secado),
-      estado: formatearInput(maquina.estado || 'Activa'),
-    });
+    setInitialMaquina(maquina);
     setModalVisible(true);
   };
 
-  const handleGuardarMaquina = () => {
-    if (!form.nombre.trim()) {
-      alert('Marca y modelo es obligatorio');
-      return;
-    }
-
-    const payload = {
-      ...form,
-      nombre: form.nombre.trim(),
-      anio_fabricacion: form.anio_fabricacion.trim(),
-      tipo_maquina: form.tipo_maquina.trim(),
-      numero_colores: parseNum(form.numero_colores),
-      ancho_max_material_mm: parseNum(form.ancho_max_material_mm),
-      ancho_max_impresion_mm: parseNum(form.ancho_max_impresion_mm),
-      repeticion_min_mm: parseNum(form.repeticion_min_mm),
-      repeticion_max_mm: parseNum(form.repeticion_max_mm),
-      velocidad_max_maquina_mmin: parseNum(form.velocidad_max_maquina_mmin),
-      velocidad_max_impresion_mmin: parseNum(form.velocidad_max_maquina_mmin),
-      espesor_planchas_mm: parseNum(form.espesor_planchas_mm),
-      sistemas_secado: form.sistemas_secado.trim(),
-      estado: form.estado.trim() || 'Activa',
-    };
-
+  const handleGuardarMaquina = (data) => {
     const url = modoEdicion && maquinaEditandoId
       ? `http://localhost:8080/api/maquinas/${maquinaEditandoId}`
       : 'http://localhost:8080/api/maquinas';
@@ -465,18 +338,11 @@ export default function MachinasScreen() {
     fetch(url, {
       method: modoEdicion ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(data),
     })
-      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) {
-          alert(data?.error || 'No se pudo guardar la máquina');
-          return;
-        }
-        setModalVisible(false);
-        setModoEdicion(false);
-        setMaquinaEditandoId(null);
-        setForm({ ...emptyForm });
+      .then((res) => res.json().then((d) => ({ ok: res.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) { alert(d?.error || 'No se pudo guardar la máquina'); return; }
         cargarMaquinas();
       })
       .catch(() => alert('No se pudo guardar la máquina'));
@@ -529,14 +395,19 @@ export default function MachinasScreen() {
     };
   }, []);
 
+  const puedeCrear = usePermission('edit_maquinas');
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Máquinas</Text>
           <View style={styles.btnPlusWrap}>
             <Pressable
-              style={styles.btnPlus}
-              onPress={abrirNuevaMaquina}
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && abrirNuevaMaquina()}
+              disabled={!puedeCrear}
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
@@ -544,18 +415,17 @@ export default function MachinasScreen() {
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>Nueva máquina</Text>
+                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nueva máquina'}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.headerTitle}>Máquinas</Text>
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -633,7 +503,11 @@ export default function MachinasScreen() {
                 <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(maquina)}>
                   <Text style={styles.actionBtnText}>Ver</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleEliminarMaquina(maquina)}>
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.deleteBtn, maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled]} 
+                  disabled={maquina.trabajos_en_cola > 0}
+                  onPress={() => handleEliminarMaquina(maquina)}
+                >
                   <Text style={styles.actionBtnText}>Eliminar</Text>
                 </TouchableOpacity>
               </View>
@@ -662,125 +536,14 @@ export default function MachinasScreen() {
         )}
       </View>
 
-      <Modal
+      <NuevaMaquinaModal
         visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{modoEdicion ? 'Ficha de máquina' : 'Nueva máquina'}</Text>
-              <TouchableOpacity onPress={() => {
-                setModalVisible(false);
-                setModoEdicion(false);
-                setMaquinaEditandoId(null);
-                setForm({ ...emptyForm });
-              }}>
-                <Text style={styles.modalClose}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.formBody}>
-              <View style={styles.formGrid}>
-                <View style={[styles.fieldGroup, styles.fieldFull]}>
-                  <Text style={styles.fieldLabel}>Marca y modelo *</Text>
-                  <TextInput style={styles.fieldInput} value={form.nombre} onChangeText={(v) => setForm({ ...form, nombre: v })} />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Año fabricación / versión</Text>
-                  <TextInput style={styles.fieldInput} value={form.anio_fabricacion} onChangeText={(v) => setForm({ ...form, anio_fabricacion: v })} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Tipo de máquina</Text>
-                  <TextInput style={styles.fieldInput} value={form.tipo_maquina} onChangeText={(v) => setForm({ ...form, tipo_maquina: v })} />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Número de colores</Text>
-                  <TextInput style={styles.fieldInput} keyboardType="numeric" value={form.numero_colores} onChangeText={(v) => setForm({ ...form, numero_colores: v })} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Estado</Text>
-                  {Platform.OS === 'web' ? (
-                    <View style={[styles.fieldInput, { paddingVertical: 0, paddingHorizontal: 0, overflow: 'hidden' }]}>
-                      <select
-                        value={form.estado || 'Activa'}
-                        onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          padding: '10px',
-                          fontSize: '14px',
-                          color: '#232323',
-                        }}
-                      >
-                        <option value="Activa">Activa</option>
-                        <option value="Inactiva">Inactiva</option>
-                      </select>
-                    </View>
-                  ) : (
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <TouchableOpacity
-                        style={[styles.btn, form.estado === 'Activa' && styles.btnNew]}
-                        onPress={() => setForm({ ...form, estado: 'Activa' })}
-                      >
-                        <Text style={styles.btnText}>Activa</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.btn, form.estado === 'Inactiva' && styles.btnNew]}
-                        onPress={() => setForm({ ...form, estado: 'Inactiva' })}
-                      >
-                        <Text style={styles.btnText}>Inactiva</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Ancho máx. material (mm)</Text>
-                  <TextInput style={styles.fieldInput} keyboardType="numeric" value={form.ancho_max_material_mm} onChangeText={(v) => setForm({ ...form, ancho_max_material_mm: v })} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Ancho máx. impresión (mm)</Text>
-                  <TextInput style={styles.fieldInput} keyboardType="numeric" value={form.ancho_max_impresion_mm} onChangeText={(v) => setForm({ ...form, ancho_max_impresion_mm: v })} />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Velocidad Maxima (m/min)</Text>
-                  <TextInput style={styles.fieldInput} keyboardType="numeric" value={form.velocidad_max_maquina_mmin} onChangeText={(v) => setForm({ ...form, velocidad_max_maquina_mmin: v })} />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Espesor planchas flexográficas (mm)</Text>
-                  <TextInput style={styles.fieldInput} keyboardType="numeric" value={form.espesor_planchas_mm} onChangeText={(v) => setForm({ ...form, espesor_planchas_mm: v })} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Sistemas de secado</Text>
-                  <TextInput style={styles.fieldInput} value={form.sistemas_secado} onChangeText={(v) => setForm({ ...form, sistemas_secado: v })} />
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => {
-                setModalVisible(false);
-                setModoEdicion(false);
-                setMaquinaEditandoId(null);
-                setForm({ ...emptyForm });
-              }}>
-                <Text style={styles.btnText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.btnNew]} onPress={handleGuardarMaquina}>
-                <Text style={styles.btnText}>{modoEdicion ? 'Guardar cambios' : 'Guardar'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => { setModalVisible(false); setModoEdicion(false); setMaquinaEditandoId(null); setInitialMaquina(null); }}
+        modoEdicion={modoEdicion}
+        initialMaquina={initialMaquina}
+        onSave={handleGuardarMaquina}
+        puedeCrear={puedeCrear}
+      />
     </View>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import NuevoTroquelModal from './NuevoTroquelModal';
+import { usePermission } from './usePermission';
 
 function calcularSiguienteNumeroTroquel(lista) {
   let maxNumero = 0;
@@ -115,37 +116,35 @@ function construirTroquelDesdeFila(row, fallbackNumero) {
   };
 }
 
+const API_TROQUELES = 'http://localhost:8080/api/troqueles';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     minHeight: 38,
     marginBottom: 6,
   },
-  headerTopLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -154,36 +153,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
   btn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
   },
   btnNewText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
   },
   btnImport: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
   },
   btnImportTop: {
     paddingHorizontal: 10,
@@ -193,12 +191,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnImportTopText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   btnText: {
-    color: '#fff',
+    color: '#374151',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -206,7 +204,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -214,7 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnPlusText: {
-    color: '#F3F4F6',
+    color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 28,
     lineHeight: 28,
@@ -224,8 +222,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 44,
     top: 8,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -243,7 +241,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     marginHorizontal: 12,
     marginVertical: 12,
@@ -254,9 +252,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -266,13 +264,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7EC',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -283,12 +281,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   colNumero: {
     minWidth: 110,
@@ -345,13 +343,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   deleteBtn: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#DC2626',
   },
   actionBtnText: {
     fontSize: 11,
@@ -365,7 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3AB274',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 6,
     textAlign: 'center',
   },
   content: {
@@ -373,12 +371,14 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 7,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -388,17 +388,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#232323',
+    fontWeight: '800',
+    color: '#0F172A',
   },
   cardText: {
     fontSize: 13,
-    color: '#666',
+    color: '#475569',
     marginBottom: 6,
   },
   cardDetails: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
     padding: 10,
     marginTop: 10,
   },
@@ -409,17 +409,17 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#999',
+    color: '#94A3B8',
     fontWeight: '600',
   },
   detailValue: {
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     fontWeight: '700',
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#94A3B8',
     textAlign: 'center',
     marginTop: 32,
   },
@@ -432,21 +432,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#4B5563',
+    backgroundColor: '#475569',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
   },
   paginationBtnText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#344054',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -458,16 +458,27 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     padding: 16,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  modalCloseX: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#475569',
+    padding: 4,
   },
   modalActions: {
     flexDirection: 'row',
@@ -476,7 +487,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   btnCancel: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#F1F5F9',
   },
   detailHeadRow: {
     flexDirection: 'row',
@@ -485,18 +496,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#232323',
+    color: '#0F172A',
   },
 });
 
-export default function TroquelessScreen() {
+export default function TroquelessScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
-  const [troqueles, setTroqueles] = useState([
-    { id: 1, numero: 'TR-001', estado: 'Disponible', forma: 'Rectangular', tipo: 'regular', anchoMotivo: '100', altoMotivo: '150' },
-    { id: 2, numero: 'TR-002', estado: 'En uso', forma: 'Irregular', tipo: 'irregular', valorZ: '110' },
-  ]);
+  const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
   const [paginaTroqueles, setPaginaTroqueles] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -567,26 +575,43 @@ export default function TroquelessScreen() {
 
   const cargarRolActivo = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings/active-role');
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) return activeRole;
-      const roleNormalizado = normalizarRolActivo(data.active_role || 'root');
+      const respAll = await fetch('http://localhost:8080/api/settings');
+      if (!respAll.ok) {
+        setActiveRole('root');
+        return 'root';
+      }
+      const all = await respAll.json().catch(() => ({}));
+      const roleNormalizado = normalizarRolActivo((all.settings && (all.settings.active_role || all.settings.activeRole || all.settings.active)) || 'root');
       setActiveRole(roleNormalizado);
       return roleNormalizado;
-    } catch {
+    } catch (e) {
       setActiveRole('root');
       return 'root';
+    }
+  };
+
+  const cargarTroqueles = async () => {
+    try {
+      const resp = await fetch(API_TROQUELES);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const lista = (data.troqueles || data || []).map((t) => ({ ...t, id: t._id || t.id }));
+      setTroqueles(lista);
+    } catch (e) {
+      // silently fail
     }
   };
 
   useFocusEffect(
     React.useCallback(() => {
       cargarRolActivo();
+      cargarTroqueles();
     }, [])
   );
 
   useEffect(() => {
     cargarRolActivo();
+    cargarTroqueles();
   }, []);
 
   const mostrarPermisoDenegado = () => {
@@ -625,16 +650,18 @@ export default function TroquelessScreen() {
     setTroquelEditando(null);
   };
 
-  const handleGuardarTroquel = (troquel) => {
+  const handleGuardarTroquel = async (troquel) => {
     if (modoEdicionTroquel) {
       if (!puedeEditarTroqueles) {
         mostrarPermisoDenegado();
         return;
       }
 
+      const troquelId = troquelEditando?._id || troquelEditando?.id;
       const numeroEditado = String(troquel?.numero || troquel?.referencia || '').trim().toLowerCase();
       const existeDuplicadoEdicion = troqueles.some((item) => {
-        if (item.id === troquel.id) return false;
+        const itemId = item._id || item.id;
+        if (itemId === troquelId) return false;
         const numero = String(item?.numero || item?.referencia || '').trim().toLowerCase();
         return numero && numero === numeroEditado;
       });
@@ -650,16 +677,24 @@ export default function TroquelessScreen() {
         return;
       }
 
-      setTroqueles((prev) => prev.map((item) => (
-        item.id === troquel.id
-          ? { ...item, ...troquel, id: item.id, estado: troquel.estado || item.estado }
-          : item
-      )));
-      setTroquelSeleccionado((prev) => (
-        prev?.id === troquel.id
-          ? { ...prev, ...troquel, id: prev.id, estado: troquel.estado || prev.estado }
-          : prev
-      ));
+      try {
+        const resp = await fetch(`${API_TROQUELES}/${troquelId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(troquel),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err.error || err.message || 'Error al guardar';
+          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+          return;
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') { window.alert('Error de red al guardar'); } else { Alert.alert('Error', 'Error de red'); }
+        return;
+      }
+
+      await cargarTroqueles();
       return;
     }
 
@@ -680,10 +715,27 @@ export default function TroquelessScreen() {
       return;
     }
 
-    setTroqueles([...troqueles, troquel]);
+    try {
+      const resp = await fetch(API_TROQUELES, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(troquel),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        const msg = err.error || err.message || 'Error al crear';
+        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+        return;
+      }
+    } catch (e) {
+      if (Platform.OS === 'web') { window.alert('Error de red al crear'); } else { Alert.alert('Error', 'Error de red'); }
+      return;
+    }
+
+    await cargarTroqueles();
   };
 
-  const importarTroquelesDesdeCsv = (csvText) => {
+  const importarTroquelesDesdeCsv = async (csvText) => {
     const lineas = String(csvText || '')
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -724,16 +776,36 @@ export default function TroquelessScreen() {
       importados.push(troquel);
     }
 
+    let importadosOk = 0;
+    const erroresApi = [];
+
     if (importados.length > 0) {
-      setTroqueles((prev) => [...prev, ...importados]);
+      for (const t of importados) {
+        try {
+          const resp = await fetch(API_TROQUELES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(t),
+          });
+          if (resp.ok) {
+            importadosOk += 1;
+          } else {
+            erroresApi.push(t.numero);
+          }
+        } catch (e) {
+          erroresApi.push(t.numero);
+        }
+      }
+      await cargarTroqueles();
     }
 
-    const resumenErrores = errores.length > 0 ? `\nErrores: ${errores.length}` : '';
+    const resumenErrores = errores.length > 0 ? `\nErrores de formato: ${errores.length}` : '';
+    const resumenApi = erroresApi.length > 0 ? `\nErrores al guardar: ${erroresApi.length}` : '';
     const previewErrores = errores.slice(0, 3).join('\n');
     const detalleErrores = previewErrores ? `\n\n${previewErrores}${errores.length > 3 ? '\n...' : ''}` : '';
     Alert.alert(
       'Importación finalizada',
-      `Importados: ${importados.length}${resumenErrores}${detalleErrores}`
+      `Importados: ${importadosOk}${resumenErrores}${resumenApi}${detalleErrores}`
     );
   };
 
@@ -761,7 +833,7 @@ export default function TroquelessScreen() {
         const file = event?.target?.files?.[0];
         if (!file) return;
         const text = await file.text();
-        importarTroquelesDesdeCsv(text);
+        await importarTroquelesDesdeCsv(text);
       } catch (e) {
         Alert.alert('Importación CSV', `No se pudo importar el archivo: ${e.message}`);
       }
@@ -780,11 +852,24 @@ export default function TroquelessScreen() {
   };
 
   const confirmarEliminarTroquel = (troquel) => {
-    const ejecutar = () => {
-      setTroqueles((prev) => prev.filter((item) => item.id !== troquel.id));
+    const ejecutar = async () => {
+      const troquelId = troquel._id || troquel.id;
+      try {
+        const resp = await fetch(`${API_TROQUELES}/${troquelId}`, { method: 'DELETE' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err.error || 'Error al eliminar';
+          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
+          return;
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') { window.alert('Error de red al eliminar'); } else { Alert.alert('Error', 'Error de red'); }
+        return;
+      }
       if (troquelSeleccionado?.id === troquel.id) {
         cerrarDetalle();
       }
+      await cargarTroqueles();
     };
 
     if (Platform.OS === 'web') {
@@ -864,15 +949,28 @@ export default function TroquelessScreen() {
     };
   }, []);
 
+  const puedeCrear = usePermission('manage_app_settings');
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <View style={styles.headerTopLeft}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Troqueles</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {puedeImportarTroqueles && (
+              <TouchableOpacity
+                style={[styles.btn, styles.btnImport, styles.btnImportTop]}
+                onPress={handleImportarCsv}
+              >
+                <Text style={styles.btnImportTopText}>Importar</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.btnPlusWrap}>
               <Pressable
-                style={styles.btnPlus}
-                onPress={abrirNuevoTroquel}
+                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+                onPress={() => puedeCrear && abrirNuevoTroquel()}
+                disabled={!puedeCrear}
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
@@ -880,27 +978,18 @@ export default function TroquelessScreen() {
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>Nuevo troquel</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo troquel'}</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.headerTitle}>Troqueles</Text>
           </View>
-          {puedeImportarTroqueles && (
-            <TouchableOpacity
-              style={[styles.btn, styles.btnImport, styles.btnImportTop]}
-              onPress={handleImportarCsv}
-            >
-              <Text style={styles.btnImportTopText}>Importar</Text>
-            </TouchableOpacity>
-          )}
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar por cualquier campo..."
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -1024,12 +1113,19 @@ export default function TroquelessScreen() {
         existingNumeros={modoEdicionTroquel ? numerosExistentesEdicionTroquel : numerosExistentesTroquel}
         initialTroquel={troquelEditando}
         modoEdicion={modoEdicionTroquel}
+        currentUser={currentUser}
+        puedeCrear={puedeCrear}
       />
 
       <Modal visible={modalDetalleVisible} transparent animationType="fade" onRequestClose={cerrarDetalle}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Detalle de troquel</Text>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Detalle de troquel</Text>
+              <TouchableOpacity onPress={cerrarDetalle}>
+                <Text style={styles.modalCloseX}>✕</Text>
+              </TouchableOpacity>
+            </View>
             {troquelSeleccionado && (
               <>
                 <View style={styles.detailHeadRow}>
@@ -1044,9 +1140,6 @@ export default function TroquelessScreen() {
             )}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={cerrarDetalle}>
-                <Text style={styles.btnText}>Cerrar</Text>
-              </TouchableOpacity>
               {troquelSeleccionado && puedeEditarTroqueles && (
                 <TouchableOpacity style={[styles.btn, styles.btnNew]} onPress={() => abrirEdicionTroquel(troquelSeleccionado)}>
                   <Text style={[styles.btnText, styles.btnNewText]}>Editar</Text>

@@ -1,0 +1,322 @@
+[
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb5f"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5b"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-27T23:02:51.064165",
+    "aprobado": false,
+    "referencia": "PRES-2571-0",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5b",
+      "vendedor": "Jorge D\u00edaz",
+      "formato": "100x100mm",
+      "maquina": "Digital X200",
+      "material": "Papel couch\u00e9 250g",
+      "acabado": "Mate",
+      "tirada": 500,
+      "tintas": 1,
+      "troquel": "S\u00ed",
+      "observaciones": "Presupuesto demo 0",
+      "precio_cents": 12000,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb60"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5c"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-28T23:02:51.072826",
+    "aprobado": false,
+    "referencia": "PRES-2571-1",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5c",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "210x297mm",
+      "maquina": "Digital X200",
+      "material": "Polipropileno 80\u00b5",
+      "acabado": "Soft-touch",
+      "tirada": 1000,
+      "tintas": 1,
+      "troquel": "S\u00ed",
+      "observaciones": "Presupuesto demo 1",
+      "precio_cents": 12000,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb61"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5d"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-20T23:02:51.073452",
+    "aprobado": true,
+    "referencia": "PRES-2571-2",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5d",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "210x297mm",
+      "maquina": "Flexo 800",
+      "material": "Papel couch\u00e9 250g",
+      "acabado": "Brillo",
+      "tirada": 2500,
+      "tintas": 2,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 2",
+      "precio_cents": 12000,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb62"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5c"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-20T23:02:51.073821",
+    "aprobado": false,
+    "referencia": "PRES-2571-3",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5c",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "100x100mm",
+      "maquina": "Digital X200",
+      "material": "Polipropileno 80\u00b5",
+      "acabado": "Mate",
+      "tirada": 5000,
+      "tintas": 2,
+      "troquel": "S\u00ed",
+      "observaciones": "Presupuesto demo 3",
+      "precio_cents": 4800,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb63"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5a"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-15T23:02:51.074137",
+    "aprobado": true,
+    "referencia": "PRES-2571-4",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5a",
+      "vendedor": "Jorge D\u00edaz",
+      "formato": "100x100mm",
+      "maquina": "Digital X200",
+      "material": "Polipropileno 80\u00b5",
+      "acabado": "Soft-touch",
+      "tirada": 1000,
+      "tintas": 3,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 4",
+      "precio_cents": 7200,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb64"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5d"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-12T23:02:51.074457",
+    "aprobado": false,
+    "referencia": "PRES-2571-5",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5d",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "148x210mm",
+      "maquina": "Digital X200",
+      "material": "Cart\u00f3n 300g",
+      "acabado": "Soft-touch",
+      "tirada": 2500,
+      "tintas": 3,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 5",
+      "precio_cents": 4800,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb65"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5e"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-25T23:02:51.074803",
+    "aprobado": true,
+    "referencia": "PRES-2571-6",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5e",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "100x100mm",
+      "maquina": "Digital X200",
+      "material": "Papel couch\u00e9 250g",
+      "acabado": "Mate",
+      "tirada": 500,
+      "tintas": 3,
+      "troquel": "S\u00ed",
+      "observaciones": "Presupuesto demo 6",
+      "precio_cents": 25000,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb66"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5e"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-17T23:02:51.075360",
+    "aprobado": false,
+    "referencia": "PRES-2571-7",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5e",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "148x210mm",
+      "maquina": "Nilpeter FA",
+      "material": "Cart\u00f3n 300g",
+      "acabado": "Brillo",
+      "tirada": 1000,
+      "tintas": 3,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 7",
+      "precio_cents": 7200,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb67"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5c"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-09T23:02:51.075820",
+    "aprobado": true,
+    "referencia": "PRES-2571-8",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5c",
+      "vendedor": "Mar\u00eda Ruiz",
+      "formato": "148x210mm",
+      "maquina": "Digital X200",
+      "material": "Papel couch\u00e9 250g",
+      "acabado": "Soft-touch",
+      "tirada": 1000,
+      "tintas": 2,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 8",
+      "precio_cents": 7200,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69a4c59b126034cd462eeb68"
+    },
+    "cliente_id": {
+      "$oid": "69a4c59b126034cd462eeb5e"
+    },
+    "empresa_id": 1,
+    "fecha_presupuesto": "2026-02-26T23:02:51.076183",
+    "aprobado": true,
+    "referencia": "PRES-2571-9",
+    "datos_presupuesto": {
+      "cliente": "69a4c59b126034cd462eeb5e",
+      "vendedor": "Oscar S\u00e1nchez",
+      "formato": "210x297mm",
+      "maquina": "Nilpeter FA",
+      "material": "Cart\u00f3n 300g",
+      "acabado": "Mate",
+      "tirada": 2500,
+      "tintas": 3,
+      "troquel": "No",
+      "observaciones": "Presupuesto demo 9",
+      "precio_cents": 7200,
+      "moneda": "EUR"
+    },
+    "acciones": {
+      "puede_enviar_email": true,
+      "puede_aprobar": true,
+      "puede_generar_pedido": true,
+      "puede_imprimir_pdf": true
+    }
+  }
+]

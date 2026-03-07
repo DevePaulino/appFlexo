@@ -8,30 +8,30 @@ import ProductionBoard from '../components/ProductionBoard';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F1F5F9',
   },
   header: {
-    backgroundColor: '#344054',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     minHeight: 96,
     borderBottomWidth: 1,
-    borderBottomColor: '#243447',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -40,18 +40,17 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#98A2B3',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
     width: '62%',
     alignSelf: 'center',
   },
@@ -60,23 +59,23 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#232323',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 10,
   },
   chartsContainer: {
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     padding: 12,
     marginHorizontal: 10,
     marginTop: 10,
@@ -85,7 +84,7 @@ const styles = StyleSheet.create({
   chartsTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#232323',
+    color: '#0F172A',
     marginBottom: 10,
   },
   verticalChartWrap: {
@@ -105,7 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   verticalBarItemActive: {
-    backgroundColor: '#EEF2F6',
+    backgroundColor: '#F1F5F9',
   },
   verticalBarValue: {
     fontSize: 12,
@@ -115,20 +114,20 @@ const styles = StyleSheet.create({
   verticalBarTrack: {
     width: 32,
     height: 56,
-    backgroundColor: '#ECEFF1',
-    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
   verticalBarFill: {
     width: '100%',
-    borderRadius: 8,
+    borderRadius: 6,
   },
   verticalBarLabel: {
     marginTop: 4,
     fontSize: 9,
     fontWeight: '700',
-    color: '#232323',
+    color: '#0F172A',
     textAlign: 'center',
     width: '100%',
   },
@@ -143,7 +142,7 @@ const styles = StyleSheet.create({
   },
   chartEmpty: {
     fontSize: 12,
-    color: '#777',
+    color: '#475569',
   },
   filterRow: {
     marginTop: 10,
@@ -154,27 +153,27 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 12,
-    color: '#3B3B3B',
+    color: '#0F172A',
     flex: 1,
   },
   filterClearBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D0D5DD',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFF',
   },
   filterClearText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#344054',
+    color: '#0F172A',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#344054',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: '#243447',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -187,9 +186,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   headerText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#475569',
   },
   colPos: {
     width: '5%',
@@ -256,42 +255,42 @@ const styles = StyleSheet.create({
   selectButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 4,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   selectButtonText: {
     fontSize: 12,
-    color: '#232323',
+    color: '#0F172A',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
-    backgroundColor: '#F8F9FA',
-    marginBottom: 2,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 1,
     alignItems: 'center',
   },
   rowAlternate: {
-    backgroundColor: '#EEF1F4',
+    backgroundColor: '#F1F5F9',
   },
   tableCell: {
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
   cellText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#232323',
+    color: '#0F172A',
   },
   statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 3,
-    borderRadius: 3,
+    borderRadius: 6,
   },
   statusText: {
     fontSize: 10,
@@ -312,7 +311,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#FFF',
-    borderRadius: 8,
+    borderRadius: 18,
     padding: 20,
     width: '80%',
     maxHeight: '80%',
@@ -321,29 +320,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#232323',
+    color: '#0F172A',
   },
   maquinaOption: {
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
   },
   maquinaOptionText: {
     fontSize: 14,
-    color: '#232323',
+    color: '#0F172A',
   },
   closeButton: {
     marginTop: 16,
     paddingVertical: 10,
-    backgroundColor: '#EEE',
-    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
     alignItems: 'center',
   },
   closeButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#232323',
+    color: '#0F172A',
   },
   // Estados de color
   statusDiseno: {
@@ -389,10 +388,10 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
   statusCancelado: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   statusCanceladoText: {
-    color: '#616161',
+    color: '#94A3B8',
   },
   // Semáforo para retraso
   retrasoContainer: {
@@ -471,16 +470,19 @@ export default function ProduccionScreen() {
   const navigation = useNavigation();
   const [maquinas, setMaquinas] = useState([]);
   const [trabajosPorMaquina, setTrabajosPorMaquina] = useState({});
+  const [trabajosPages, setTrabajosPages] = useState({});
+  const [trabajosTotals, setTrabajosTotals] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
   const [maquinasFiltroIds, setMaquinasFiltroIds] = useState([]);
   const maquinaInicial = route?.params?.maquinaId || null;
+  const LOCALSTORAGE_KEY = 'pfp_maquinasFiltro';
 
   const getCargaPorMaquina = () => {
     const cargas = maquinas.map((maq) => {
       const cantidad = (trabajosPorMaquina[maq.id] || []).length;
-      return { id: maq.id, nombre: maq.nombre, cantidad };
+      return { id: String(maq.id), nombre: maq.nombre, cantidad };
     });
     return { cargas };
   };
@@ -491,9 +493,39 @@ export default function ProduccionScreen() {
     return palette[index];
   };
 
+  const slugifyEstado = (texto) => {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const generateColorFromHash = (text) => {
+    // Normalizar el texto antes de hacer hash para consistencia
+    const normalized = slugifyEstado(text);
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const vibrantes = [
+      '#E91E63', '#2196F3', '#00BCD4', '#4CAF50', '#FFC107',
+      '#FF5722', '#9C27B0', '#3F51B5', '#009688', '#FF6F00',
+    ];
+    const index = Math.abs(hash) % vibrantes.length;
+    return vibrantes[index];
+  };
+
   const getStatusColor = (estado) => {
-    switch (estado) {
-      case 'diseno':
+    const slug = slugifyEstado(estado);
+    const color = generateColorFromHash(slug);
+    switch (slug) {
+      case 'en-diseno':
+      case 'diseno': // compat con pedidos antiguos
         return [styles.statusDiseno, styles.statusDisenoText];
       case 'pendiente-de-aprobacion':
         return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];
@@ -510,7 +542,13 @@ export default function ProduccionScreen() {
       case 'cancelado':
         return [styles.statusCancelado, styles.statusCanceladoText];
       default:
-        return [styles.statusDiseno, styles.statusDisenoText];
+        // Para estados nuevos
+        const backgroundColor = color + '20';
+        const textColor = color;
+        return [
+          { ...styles.statusBadge, backgroundColor },
+          { ...styles.statusText, color: textColor }
+        ];
     }
   };
 
@@ -542,22 +580,65 @@ export default function ProduccionScreen() {
 
       // Cargar trabajos para cada máquina (colas de producción: excluir parado, cancelado y finalizado)
       const trabajosObj = {};
+      const totalsObj = {};
       for (const maq of maquinasData.maquinas || []) {
         const maquinaNombreEncoded = encodeURIComponent(maq.nombre);
-        const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}`);
+        // Request first page for each machine to avoid loading huge lists at once
+        const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}&page=1&page_size=100`);
         const trabajosData = await trabajosRes.json();
-        
-        // Filtrar trabajos: excluir parado, cancelado y finalizado
+
+        // Filtrar trabajos: excluir trabajos que NO están en producción (diseño, aprobación, etc.)
         const trabajosMaqFiltrados = (trabajosData.trabajos || []).filter(trabajo => {
-          if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado') {
+          // Mostrar solo trabajos con en_produccion: true o estados de producción
+          // Excluir: parado, cancelado, finalizado, y estados de etapas previas (Diseño, Pendiente de Aprobación, etc.)
+          const estadoLower = (trabajo.estado || '').toLowerCase();
+          
+          // Excluir estos estados específicamente
+          if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado' ||
+              trabajo.estado === 'Finalizado' || trabajo.estado === 'Parado' || trabajo.estado === 'Cancelado') {
             return false;
           }
+          
+          // Excluir estados de diseño/aprobación
+          if (estadoLower.includes('diseño') || estadoLower.includes('diseno') || 
+              estadoLower.includes('aprobación') || estadoLower.includes('aprobacion') ||
+              estadoLower.includes('cliché') || estadoLower.includes('cliche')) {
+            return false;
+          }
+          
+          // Incluir todos los demás (pendiente-de-impresion, en-proceso, etc.)
           return true;
         });
-        
+
         trabajosObj[maq.id] = trabajosMaqFiltrados;
+        // marca que ya cargamos la página 1 para esta máquina
+        setTrabajosPages((p) => ({ ...p, [String(maq.id)]: 1 }));
+        // Registrar total devuelto por la API (si está disponible) para paginación
+        if (trabajosData && typeof trabajosData.total !== 'undefined') {
+          totalsObj[maq.id] = trabajosData.total;
+        } else {
+          totalsObj[maq.id] = trabajosMaqFiltrados.length;
+        }
+
+        // DEBUG: log per-machine counts to help reconcile frontend vs backend
+        try {
+          console.log(`PROD_DEBUG machine id=${maq.id} name=${maq.nombre} filtered_len=${trabajosMaqFiltrados.length} api_total=${trabajosData && typeof trabajosData.total !== 'undefined' ? trabajosData.total : 'NA'} maquina_trabajos_en_cola=${typeof maq.trabajos_en_cola !== 'undefined' ? maq.trabajos_en_cola : 'NA'}`);
+        } catch (e) {
+          console.log('PROD_DEBUG logging failed', e);
+        }
       }
       setTrabajosPorMaquina(trabajosObj);
+      setTrabajosTotals(totalsObj);
+
+      // DEBUG: small summary to help debugging mismatched counts
+      try {
+        const resumen = Object.fromEntries(Object.entries(trabajosObj).map(([k, v]) => [k, v.length]));
+        console.log('PROD_DEBUG summary counts per maquina (filtered lengths):', resumen);
+        console.log('PROD_DEBUG totalsObj (API reported totals):', totalsObj);
+        console.log('PROD_DEBUG maquinas list (id,nombre,trabajos_en_cola):', (maquinasData.maquinas || []).map(m => ({ id: m.id, nombre: m.nombre, trabajos_en_cola: m.trabajos_en_cola })));
+      } catch (e) {
+        console.log('PROD_DEBUG summary logging failed', e);
+      }
     } catch (e) {
       console.error('Error cargando datos:', e);
       setError(e.message);
@@ -567,9 +648,123 @@ export default function ProduccionScreen() {
     }
   };
 
+  // Fetch a specific page for a machine and append unique items
+  const fetchPageForMachine = async (maquinaId, page) => {
+    try {
+      // if page not provided, use next page after last loaded
+      const last = trabajosPages[String(maquinaId)] || 1;
+      const targetPage = page || (last + 1);
+      const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maquinaId}&page=${targetPage}&page_size=100`);
+      if (!trabajosRes.ok) return false;
+      const trabajosData = await trabajosRes.json();
+      const paginaTrabajos = (trabajosData.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+
+      setTrabajosPorMaquina((prev) => {
+        const existente = Array.isArray(prev[maquinaId]) ? prev[maquinaId].slice() : [];
+        const ids = new Set(existente.map(t => String(t.id || t.trabajo_id || '')));
+        let added = 0;
+        for (const t of paginaTrabajos) {
+          const key = String(t.id || t.trabajo_id || '');
+          if (!ids.has(key)) {
+            existente.push(t);
+            ids.add(key);
+            added++;
+          }
+        }
+        const nuevo = { ...prev, [maquinaId]: existente };
+        // actualizar la página cargada
+        setTrabajosPages((p) => ({ ...p, [String(maquinaId)]: targetPage }));
+        return nuevo;
+      });
+
+      if (trabajosData && typeof trabajosData.total !== 'undefined') {
+        setTrabajosTotals((prev) => ({ ...prev, [maquinaId]: trabajosData.total }));
+      }
+      return true;
+    } catch (e) {
+      console.error('Error fetchPageForMachine', e);
+      return false;
+    }
+  };
+
+  // Fetch a page for global search (no maquina param) and either replace (page=1) or append (page>1)
+  const fetchSearchPage = async (page = 1) => {
+    if (!busquedaProduccion || busquedaProduccion.trim() === '') return false;
+    try {
+      const q = encodeURIComponent(busquedaProduccion.trim());
+      const res = await fetch(`http://localhost:8080/api/produccion?search=${q}&page=${page}&page_size=100`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      const paginaTrabajos = (data.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+
+      // Group by maquina and either replace (page=1) or append
+      const agrupado = {};
+      for (const t of paginaTrabajos) {
+        const maqId = String(t.maquina_id || t._maquina_id || t.maquina || 'sin_maquina');
+        agrupado[maqId] = agrupado[maqId] || [];
+        agrupado[maqId].push(t);
+      }
+
+      setTrabajosPorMaquina((prev) => {
+        const nuevo = { ...prev };
+        for (const [mid, lista] of Object.entries(agrupado)) {
+          if (page === 1) {
+            nuevo[mid] = lista;
+          } else {
+            const existente = Array.isArray(nuevo[mid]) ? nuevo[mid].slice() : [];
+            const ids = new Set(existente.map(t => String(t.id || t.trabajo_id || '')));
+            for (const t of lista) {
+              const key = String(t.id || t.trabajo_id || '');
+              if (!ids.has(key)) {
+                existente.push(t);
+                ids.add(key);
+              }
+            }
+            nuevo[mid] = existente;
+          }
+        }
+        return nuevo;
+      });
+
+      // update totals if provided
+      if (data && typeof data.total !== 'undefined') {
+        // when searching globally, store total under special key 'search' so ProductionBoard can still read it per-machine if desired
+        setTrabajosTotals((prev) => ({ ...prev, search_total: data.total }));
+        // record last loaded search page
+        setTrabajosPages((p) => ({ ...p, search: page }));
+      }
+      return true;
+    } catch (e) {
+      console.error('Error fetchSearchPage', e);
+      return false;
+    }
+  };
+
+  // handler passed to ProductionBoard to request a page load
+  const handleRequestPage = async (maquinaId, page) => {
+    if (busquedaProduccion && busquedaProduccion.trim() !== '') {
+      return await fetchSearchPage(page);
+    }
+    return await fetchPageForMachine(maquinaId, page);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // When the search term changes, perform server-side search across all records (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      (async () => {
+        if (busquedaProduccion && busquedaProduccion.trim() !== '') {
+          await fetchSearchPage(1);
+        } else {
+          await fetchData({ silent: true });
+        }
+      })();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [busquedaProduccion]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -587,26 +782,50 @@ export default function ProduccionScreen() {
     if (!maquinas || maquinas.length === 0) return;
 
     if (maquinasFiltroIds.length > 0) {
-      const idsValidos = maquinasFiltroIds.filter((id) => maquinas.some((m) => Number(m.id) === Number(id)));
-      const idsNormalizados = idsValidos.length > 1 ? [idsValidos[0]] : idsValidos;
+      const idsValidos = maquinasFiltroIds.filter((id) => maquinas.some((m) => String(m.id) === String(id)));
+      const idsNormalizados = idsValidos.length > 1 ? [String(idsValidos[0])] : idsValidos.map(String);
       if (idsNormalizados.length !== maquinasFiltroIds.length || idsNormalizados[0] !== maquinasFiltroIds[0]) {
         setMaquinasFiltroIds(idsNormalizados);
       }
       return;
     }
 
-    if (maquinaInicial && maquinas.some((m) => Number(m.id) === Number(maquinaInicial))) {
-      setMaquinasFiltroIds([Number(maquinaInicial)]);
+    if (maquinaInicial && maquinas.some((m) => String(m.id) === String(maquinaInicial))) {
+      setMaquinasFiltroIds([String(maquinaInicial)]);
     }
   }, [maquinas, maquinasFiltroIds, maquinaInicial]);
 
+  // Cargar filtro persistente desde localStorage al montar
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMaquinasFiltroIds(parsed.map(String));
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo leer filtro persistente:', e);
+    }
+  }, []);
+
+  // Persistir filtro en localStorage cuando cambie
+  useEffect(() => {
+    try {
+      if (maquinasFiltroIds && maquinasFiltroIds.length > 0) {
+        localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(maquinasFiltroIds.map(String)));
+      } else {
+        localStorage.removeItem(LOCALSTORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn('No se pudo guardar filtro persistente:', e);
+    }
+  }, [maquinasFiltroIds]);
+
   const toggleMaquinaFiltro = (maquinaId) => {
-    const maquinaIdNum = Number(maquinaId);
-    setMaquinasFiltroIds((prev) =>
-      prev.includes(maquinaIdNum)
-        ? []
-        : [maquinaIdNum]
-    );
+    const maquinaIdStr = String(maquinaId);
+    setMaquinasFiltroIds((prev) => (prev.includes(maquinaIdStr) ? [] : [maquinaIdStr]));
   };
 
   if (loading) {
@@ -641,14 +860,16 @@ export default function ProduccionScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
           <Text style={styles.headerTitle}>Producción</Text>
+          <View style={{ width: 38 }} />
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar en producción por cualquier campo..."
           value={busquedaProduccion}
           onChangeText={setBusquedaProduccion}
-          placeholderTextColor="#999"
+          placeholderTextColor="#94A3B8"
         />
       </View>
       <ScrollView style={styles.content}>
@@ -668,7 +889,7 @@ export default function ProduccionScreen() {
                   {cargas.map((carga) => {
                     const heightPct = Math.max(6, (carga.cantidad / maxCarga) * 100);
                     const tone = getMachineTone(carga.id);
-                    const activa = maquinasFiltroIds.includes(Number(carga.id));
+                    const activa = maquinasFiltroIds.includes(String(carga.id));
                     const hayFiltroActivo = maquinasFiltroIds.length > 0;
                     return (
                       <TouchableOpacity
@@ -676,6 +897,7 @@ export default function ProduccionScreen() {
                         style={[
                           styles.verticalBarItem,
                           activa && styles.verticalBarItemActive,
+                          activa ? { borderWidth: 2, borderColor: getMachineTone(carga.id) } : null,
                           hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
                         ]}
                         onPress={() => toggleMaquinaFiltro(carga.id)}
@@ -694,9 +916,9 @@ export default function ProduccionScreen() {
           })()}
           {maquinasFiltroIds.length > 0 && (
             <View style={styles.filterRow}>
-              <Text style={styles.filterText}>
+                <Text style={styles.filterText}>
                 Filtro activo: {maquinas
-                  .filter((m) => maquinasFiltroIds.includes(Number(m.id)))
+                  .filter((m) => maquinasFiltroIds.includes(String(m.id)))
                   .map((m) => m.nombre)
                   .join('')}
               </Text>
@@ -711,10 +933,12 @@ export default function ProduccionScreen() {
         <ProductionBoard 
           maquinas={maquinas} 
           trabajosPorMaquina={trabajosPorMaquina}
+          trabajosTotals={trabajosTotals}
           searchText={busquedaProduccion}
           initialMaquinaId={maquinaInicial}
           maquinaActivaIds={maquinasFiltroIds}
           onRefresh={() => fetchData({ silent: true })}
+          onRequestPage={handleRequestPage}
         />
       </ScrollView>
     </View>

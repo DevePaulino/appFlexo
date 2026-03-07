@@ -17,17 +17,23 @@ import smtplib
 import numpy as np
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
+from pymongo import ReturnDocument
 import pymongo
+from pymongo import UpdateMany, InsertOne
 import json
 import time
 import hashlib
 import secrets
 import re
+import base64
+import hmac
 from urllib import request as urllib_request, parse as urllib_parse, error as urllib_error
 from collections import defaultdict
 from email.message import EmailMessage
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_file
+from flask import make_response
 from werkzeug.exceptions import HTTPException
+from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from PIL import Image, ImageCms
 from PyPDF2 import PdfReader
@@ -61,6 +67,8 @@ CORS(app)
 app.debug = True
 
 import traceback as _traceback
+import uuid
+import xml.etree.ElementTree as ET
 @app.errorhandler(Exception)
 def _handle_uncaught_exception(e):
     # Let HTTP exceptions (404, 400, etc.) be handled by Flask/werkzeug normally
@@ -70,14 +78,157 @@ def _handle_uncaught_exception(e):
     print('UNCAUGHT EXCEPTION:\n', tb)
     return jsonify({'error': str(e), 'trace': tb}), 500
 
+@app.errorhandler(413)
+def request_entity_too_large(_):
+    return jsonify({'error': 'El archivo supera el límite de tamaño permitido (máx 200 MB)'}), 413
+
 # Configuración MongoDB (puedes cambiar la URI a tu MongoDB Atlas si quieres)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/printforgepro"
 mongo = PyMongo(app)
 
+# ─── File Upload Configuration ────────────────────────────────────────────────
+UPLOAD_BASE_DIR = os.environ.get('UPLOAD_BASE_DIR', os.path.join(BASE_DIR, 'uploads'))
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_UPLOAD_MB', '200')) * 1024 * 1024
+ALLOWED_EXTENSIONS_ARTES    = {'pdf', 'ai', 'eps', 'jpg', 'jpeg', 'png'}
+ALLOWED_EXTENSIONS_UNITARIO = {'pdf'}
+
+# Simple JWT helpers (lightweight, enabled via ENABLE_JWT=1)
+JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-jwt-secret')
+JWT_TTL_SECONDS = int(os.environ.get('JWT_TTL_SECONDS', '3600') or 3600)
+ENABLE_JWT = str(os.environ.get('ENABLE_JWT', '0')).strip().lower() in {'1', 'true', 'yes'}
+
+def _b64url_encode(data_bytes):
+    return base64.urlsafe_b64encode(data_bytes).rstrip(b"=").decode('ascii')
+
+def _b64url_decode(s):
+    s = s.encode('ascii')
+    padding = b'=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + padding)
+
+def create_jwt(payload, ttl_seconds=None):
+    ttl = int(ttl_seconds or JWT_TTL_SECONDS)
+    now = int(time.time())
+    payload = dict(payload)
+    payload.setdefault('iat', now)
+    payload.setdefault('exp', now + ttl)
+    header = {'alg': 'HS256', 'typ': 'JWT'}
+    header_b = _b64url_encode(json.dumps(header, separators=(',', ':')).encode('utf-8'))
+    payload_b = _b64url_encode(json.dumps(payload, separators=(',', ':')).encode('utf-8'))
+    signing_input = f"{header_b}.{payload_b}".encode('utf-8')
+    sig = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+    sig_b = _b64url_encode(sig)
+    return f"{header_b}.{payload_b}.{sig_b}"
+
+def verify_jwt(token):
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        signing_input = (parts[0] + '.' + parts[1]).encode('utf-8')
+        sig = _b64url_decode(parts[2])
+        expected = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+        if not hmac.compare_digest(expected, sig):
+            return None
+        payload = json.loads(_b64url_decode(parts[1]).decode('utf-8'))
+        if 'exp' in payload and int(time.time()) > int(payload.get('exp', 0)):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def ensure_default_users():
+    """Ensure there is always at least one `root` and one `administrador` user.
+    Uses environment variables if present to seed emails/passwords; otherwise generates random passwords.
+    Prints created credentials to stdout so they appear in `backend.log`.
+    """
+    try:
+        col = get_empresa_collection('usuarios', None)
+        root_exists = col.find_one({'rol': 'root'}) is not None
+        admin_exists = col.find_one({'rol': 'administrador'}) is not None
+
+        created = []
+        if not root_exists:
+            root_email = os.environ.get('DEFAULT_ROOT_EMAIL', 'root@localhost')
+            root_pwd = os.environ.get('DEFAULT_ROOT_PASSWORD') or secrets.token_hex(8)
+            doc = {
+                'nombre': 'Root',
+                'email': root_email,
+                'rol': 'root',
+                'password_hash': hash_password(root_pwd),
+                'empresa_id': '0',
+                'empresa_nombre': 'System',
+                'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
+            }
+            col.insert_one(doc)
+            created.append({'rol': 'root', 'email': root_email, 'password': root_pwd})
+
+        if not admin_exists:
+            admin_email = os.environ.get('DEFAULT_ADMIN_EMAIL', 'admin@example.com')
+            admin_pwd = os.environ.get('DEFAULT_ADMIN_PASSWORD') or secrets.token_hex(8)
+            doc = {
+                'nombre': 'Administrador',
+                'email': admin_email,
+                'rol': 'administrador',
+                'password_hash': hash_password(admin_pwd),
+                'empresa_id': str(os.environ.get('DEFAULT_ADMIN_EMPRESA_ID') or '1'),
+                'empresa_nombre': os.environ.get('DEFAULT_ADMIN_EMPRESA_NOMBRE') or 'Empresa 1',
+                'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
+            }
+            col.insert_one(doc)
+            created.append({'rol': 'administrador', 'email': admin_email, 'password': admin_pwd})
+
+        if created:
+            print('DEFAULT_USERS_CREATED:', json.dumps(created))
+        else:
+            print('DEFAULT_USERS_PRESENT')
+    except Exception as e:
+        print('ERROR ensuring default users:', str(e))
+
+
+
+
 # Helper para obtener la colección de una empresa
 def get_empresa_collection(nombre, empresa_id):
-    # Todas las colecciones llevan el nombre base, pero filtramos por empresa_id
-    return mongo.db[nombre]
+    # Mapear nombres legacy a la colección canónica `pedidos` cuando corresponde
+    # Esto permite unificar el término 'trabajo' -> 'pedido' sin cambiar todas las rutas a la vez.
+    name = str(nombre or '')
+    if name in ('trabajos', 'trabajo'):
+        name = 'pedidos'
+    if name in ('trabajo_orden', 'trabajo-orden', 'trabajos_orden'):
+        name = 'pedido_orden'
+    return mongo.db[name]
+
+
+def normalize_empresa_id(empresa_id):
+    """Normaliza empresa_id a string consistente. NUNCA hace int().
+    '0' = sistema/global (root), '1' = admin por defecto, '<ObjectId>' = empresa registrada.
+    Las empresas registradas vía /api/auth/register usan str(user._id) como empresa_id.
+    """
+    if empresa_id is None:
+        return '0'
+    s = str(empresa_id).strip()
+    return s if s and s not in ('None', 'none', 'null', '') else '0'
+
+
+def log_audit(action, request_user=None, details=None):
+    try:
+        col = get_empresa_collection('audit_logs', 0)
+        doc = {
+            'action': str(action or ''),
+            'user': {
+                'id': str(request_user.get('id')) if request_user and request_user.get('id') else None,
+                'email': request_user.get('email') if request_user else None,
+                'rol': request_user.get('rol') if request_user else None,
+            },
+            'details': details or {},
+            'ip': request.remote_addr if request else None,
+            'ts': datetime.now().isoformat(),
+        }
+        col.insert_one(doc)
+    except Exception:
+        # No permitir que fallos de logging interrumpan la operación principal
+        pass
 
 # Helper para convertir ObjectId a string en respuestas JSON
 def fix_id(doc):
@@ -89,61 +240,170 @@ def fix_id(doc):
         del doc['_id']
     return doc
 
+
+def _allowed_file(filename, allowed_set):
+    """Return True if filename has an extension in allowed_set."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_set
+
+
+def _get_upload_dir(empresa_id, pedido_id, subdir):
+    """
+    Build and create (if needed) the directory for a pedido's files.
+    subdir: 'artes' | 'unitario'
+    Returns the absolute directory path.
+    """
+    path = os.path.join(UPLOAD_BASE_DIR, str(empresa_id), str(pedido_id), subdir)
+    os.makedirs(path, exist_ok=True)
+    return path
+
 ROLE_LABELS = {
     'operario': 'Operario',
     'administrador': 'Administrador',
     'comercial': 'Comercial',
     'root': 'Root',
+    'diseno': 'Diseño',
+    'impresion': 'Impresión',
+    'post-impresion': 'Post-Impresión',
 }
-PROTECTED_ROLE_ORDER = ['operario', 'administrador', 'root']
-PROTECTED_ROLE_KEYS = {'operario', 'administrador', 'root'}
+PROTECTED_ROLE_ORDER = ['administrador']
+PROTECTED_ROLE_KEYS = {'administrador'}
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
-    'diseno',
-    'pendiente-de-aprobacion',
-    'pendiente-de-cliche',
-    'pendiente-de-impresion',
-    'pendiente-post-impresion',
-    'finalizado',
-    'parado',
-    'cancelado',
+    'en-diseno',
 }
+
+# Ensure minimum users exist at startup (call after helpers are defined)
+try:
+    ensure_default_users()
+except Exception:
+    pass
 PERMISSION_KEYS = [
     'manage_app_settings',
     'manage_roles_permissions',
+    'manage_estados_pedido',
     'edit_clientes',
     'edit_maquinas',
     'edit_pedidos',
     'edit_presupuestos',
     'edit_produccion',
+    'eliminar_archivos',
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': False,
         'edit_presupuestos': False,
         'edit_produccion': True,
+        'eliminar_archivos': False,
     },
     'administrador': {
         'manage_app_settings': True,
-        'manage_roles_permissions': False,
+        'manage_roles_permissions': True,
+        'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': True,
+        'eliminar_archivos': True,
     },
     'root': {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
+        'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
         'edit_presupuestos': True,
         'edit_produccion': True,
+        'eliminar_archivos': True,
     },
+    # Department roles
+    'comercial': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
+        'edit_clientes': True,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+        'eliminar_archivos': True,
+    },
+    'diseno': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
+        'edit_clientes': False,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+        'eliminar_archivos': True,
+    },
+    'impresion': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
+        'edit_clientes': False,
+        'edit_maquinas': True,
+        'edit_pedidos': False,
+        'edit_presupuestos': False,
+        'edit_produccion': True,
+        'eliminar_archivos': False,
+    },
+    'post-impresion': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': False,
+        'edit_clientes': False,
+        'edit_maquinas': False,
+        'edit_pedidos': False,
+        'edit_presupuestos': False,
+        'edit_produccion': True,
+        'eliminar_archivos': False,
+    },
+    'oficina': {
+        'manage_app_settings': False,
+        'manage_roles_permissions': False,
+        'manage_estados_pedido': True,
+        'edit_clientes': True,
+        'edit_maquinas': False,
+        'edit_pedidos': True,
+        'edit_presupuestos': True,
+        'edit_produccion': False,
+        'eliminar_archivos': False,
+    },
+}
+
+# Defaults for pedido states and rules used when DB has no config
+ESTADOS_PEDIDO_DEFAULT = [
+    {'valor': 'En Diseño', 'label': 'En Diseño', 'color': '#1976D2'},
+]
+
+# Default colors for standard states (kept in sync with frontend ESTADO_COLOR_MAP)
+DEFAULT_ESTADO_COLORS = {
+    'en-diseno': '#1976D2',
+    'diseno': '#1976D2',
+    'pendiente-de-aprobacion': '#F57C00',
+    'pendiente-de-cliche': '#C2185B',
+    'pendiente-de-impresion': '#7B1FA2',
+    'pendiente-post-impresion': '#00796B',
+    'finalizado': '#388E3C',
+    'parado': '#D32F2F',
+    'cancelado': '#616161',
+}
+
+ESTADOS_RULES_DEFAULT = {
+    'bloqueados_produccion': [],
+    'en_cola_produccion': [],
+    'preimpresion': ['en-diseno'],
+    'estados_finalizados': [],
+    'ocultar_timeline': [],
+    'ocultar_grafica': [],
 }
 
 FREE_SIGNUP_CREDITS = 50
@@ -182,6 +442,7 @@ AUTH_PUBLIC_PATHS = (
     '/api/auth/mfa/verify',
     '/api/auth/refresh',
     '/api/auth/logout',
+    '/api/auth/verify-role-permission',
     '/api/billing/config'
 )
 AUTH_ATTEMPTS = defaultdict(list)
@@ -251,10 +512,10 @@ def is_valid_cif(value):
 
 
 def get_empresa_billing(empresa_id):
-    empresa_id = int(empresa_id or 0)
-    if empresa_id <= 0:
+    empresa_id = normalize_empresa_id(empresa_id)
+    if empresa_id == '0':
         return {
-            'empresa_id': 0,
+            'empresa_id': '0',
             'billing_model': 'creditos',
             'payment_method': None,
             'subscription_active': False,
@@ -380,17 +641,182 @@ def get_bearer_token_from_request():
 
 
 def get_request_user():
-    # BYPASS AUTH PARA DESARROLLO (siempre usuario root)
-    user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}
+    # If JWT auth not enabled, keep dev bypass for now
+    if not ENABLE_JWT:
+        # Allow tests to simulate users via header
+        header = request.headers.get('X-Test-User')
+        if header:
+            try:
+                data = json.loads(header)
+                user = {
+                    'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
+                    'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
+                    'rol': data.get('rol') or data.get('role') or 'operario',
+                    'empresa_id': normalize_empresa_id(data.get('empresa_id') or data.get('empresa') or '1')
+                }
+                # Check for X-Role header override (for role switching without logout)
+                x_role = request.headers.get('X-Role')
+                if x_role:
+                    x_role = str(x_role or '').strip().lower()
+                    if x_role:  # Only override if header has a non-empty value
+                        user['rol'] = x_role
+                g._request_user = user
+                return user
+            except Exception:
+                pass
+        user = {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': '1'}
+        # Check for X-Role header override even in dev mode
+        x_role = request.headers.get('X-Role')
+        if x_role:
+            x_role = str(x_role or '').strip().lower()
+            if x_role:  # Only override if header has a non-empty value
+                user['rol'] = x_role
+        g._request_user = user
+        return user
+
+    token = get_bearer_token_from_request()
+    if not token:
+        return None
+    payload = verify_jwt(token)
+    if not payload:
+        return None
+
+    # Try to resolve user by id or email from token payload
+    col = get_empresa_collection('usuarios', None)
+    uid = payload.get('usuario_id') or payload.get('id') or payload.get('email') or payload.get('usuario')
+    user_doc = None
+    if not uid:
+        return None
+    try:
+        if isinstance(uid, str) and '@' in uid:
+            user_doc = col.find_one({'email': uid})
+        else:
+            try:
+                user_doc = col.find_one({'_id': ObjectId(uid)})
+            except Exception:
+                user_doc = col.find_one({'_id': uid})
+    except Exception:
+        return None
+
+    if not user_doc:
+        return None
+    user = fix_id(user_doc)
+    
+    # Check for X-Role header override (for role switching without logout)
+    x_role = request.headers.get('X-Role')
+    if x_role:
+        x_role = str(x_role or '').strip().lower()
+        if x_role:  # Only override if header has a non-empty value
+            user['rol'] = x_role
+    
     g._request_user = user
     return user
 
 
-def can_role_permission(role_key, permission_key):
-    # role = normalize_role(role_key)  # Legacy, no usado con MongoDB
-    # permissions = get_role_permissions()
-    # return bool(permissions.get(role, {}).get(permission_key, False))
-    return False
+def can_role_permission(role_key, permission_key, empresa_id=None):
+    try:
+        if not role_key or not permission_key:
+            return False
+        # root siempre tiene todos los permisos
+        if str(role_key).strip() == 'root':
+            return True
+
+        # Resolver empresa_id desde el contexto de la request si no se pasa explícitamente
+        if empresa_id is None:
+            try:
+                req_user = getattr(g, '_request_user', None)
+                if req_user:
+                    empresa_id = req_user.get('empresa_id')
+            except Exception:
+                pass
+
+        permissions = get_role_permissions(empresa_id)
+        role = str(role_key).strip()
+        # Buscar primero con el nombre original, luego slugificado
+        role_perms = permissions.get(role)
+        if role_perms is None:
+            role_perms = permissions.get(slugify_estado(role))
+        # Si no está en la matriz de DB, buscar en los defaults
+        if role_perms is None:
+            role_perms = ROLE_PERMISSIONS_DEFAULT.get(role) or ROLE_PERMISSIONS_DEFAULT.get(slugify_estado(role))
+        if isinstance(role_perms, dict):
+            # Si la clave existe en la BD úsala; si no (permiso nuevo no guardado aún) cae al default
+            if permission_key in role_perms:
+                return bool(role_perms[permission_key])
+            default_perms = (
+                ROLE_PERMISSIONS_DEFAULT.get(role)
+                or ROLE_PERMISSIONS_DEFAULT.get(slugify_estado(role))
+                or {}
+            )
+            return bool(default_perms.get(permission_key, False))
+        return False
+    except Exception:
+        return False
+
+
+def get_role_permissions(empresa_id=None):
+    """Leer la matriz de permisos desde `config_general` filtrado por empresa.
+    Devuelve un dict { role_key: {permission_key: bool, ...}, ... }. Si no existe,
+    devuelve `ROLE_PERMISSIONS_DEFAULT`.
+    """
+    empresa_id = normalize_empresa_id(empresa_id)
+    col_general = get_empresa_collection('config_general', empresa_id)
+    doc = col_general.find_one({'clave': 'role_permissions', 'empresa_id': empresa_id})
+    parsed = None
+    if doc and doc.get('valor'):
+        try:
+            parsed = json.loads(doc.get('valor'))
+        except Exception:
+            parsed = None
+    if not isinstance(parsed, dict):
+        # Retornar una copia para evitar mutaciones accidentales
+        return dict(ROLE_PERMISSIONS_DEFAULT)
+    return parsed
+
+
+def get_required_permission_for_request(path, method_upper):
+    """Resolver (si aplica) la permission key requerida para una ruta y método.
+    Devuelve None si no hay permiso asociado (ruta pública o lectura).
+    """
+    if not path:
+        return None
+    mutating = {'POST', 'PUT', 'PATCH', 'DELETE'}
+    p = str(path or '').lower()
+
+    # Gestión específica de permisos para roles/ajustes
+    if p.startswith('/api/settings/roles-permissions'):
+        # Sólo para cambios efectivos
+        return 'manage_roles_permissions' if method_upper in mutating else None
+
+    # Cambios en la configuración general requieren manage_app_settings
+    if p.startswith('/api/settings') and method_upper in mutating:
+        return 'manage_app_settings'
+
+    # Clientes
+    if p.startswith('/api/clientes') and method_upper in mutating:
+        return 'edit_clientes'
+
+    # Máquinas
+    if p.startswith('/api/maquinas') and method_upper in mutating:
+        return 'edit_maquinas'
+
+    # Pedidos / trabajos
+    if (p.startswith('/api/pedidos') or p.startswith('/api/trabajos') or p.startswith('/api/trabajo')) and method_upper in mutating:
+        return 'edit_pedidos'
+
+    # Presupuestos
+    if p.startswith('/api/presupuestos') and method_upper in mutating:
+        return 'edit_presupuestos'
+
+    # Producción
+    if p.startswith('/api/produccion') and method_upper in mutating:
+        return 'edit_produccion'
+
+    # Materiales (catálogo, stock, consumos)
+    if p.startswith('/api/materiales') and method_upper in mutating:
+        return 'manage_app_settings'
+
+    return None
 
 
 def get_session_timeout_minutes():
@@ -412,17 +838,52 @@ def can_edit_session_timeout(user):
 
 
 def require_request_user():
-    # BYPASS AUTH PARA DESARROLLO (siempre usuario root)
-    return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': 1}, None
+    # Allow a test header `X-Test-User` in development to simulate users.
+    # If JWT is disabled, prefer the header; otherwise fall back to dev root.
+    if not ENABLE_JWT:
+        header = request.headers.get('X-Test-User')
+        if header:
+            try:
+                data = json.loads(header)
+                user = {
+                    'id': data.get('id') or data.get('usuario_id') or data.get('email') or 1,
+                    'nombre': data.get('nombre') or data.get('nombre') or 'TestUser',
+                    'rol': data.get('rol') or data.get('role') or 'operario',
+                    'empresa_id': normalize_empresa_id(data.get('empresa_id') or data.get('empresa') or '1')
+                }
+                g._request_user = user
+                return user, None
+            except Exception:
+                pass
+        # default dev bypass
+        return {'id': 1, 'nombre': 'DevUser', 'rol': 'root', 'empresa_id': '1'}, None
+
+    # When JWT enabled, resolve via token
+    user = get_request_user()
+    if not user:
+        return None, (jsonify({'error': 'Autenticación requerida'}), 401)
+    return user, None
 
 
 @app.after_request
 def apply_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'no-referrer'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8080;"
+    # Allow PDF inline preview to be embedded in iframe from same origin
+    if request.endpoint == 'preview_archivo_inline':
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self' http://localhost:8080; "
+            "frame-ancestors 'self' http://localhost:8081 http://localhost:8080;"
+        )
+    else:
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; img-src 'self' data: blob:; "
+            "script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' http://localhost:8080;"
+        )
     return response
 
 
@@ -440,14 +901,17 @@ def enforce_role_permissions():
             if incoming_key == INTEGRATION_API_KEY:
                 return None
 
-    # permission = get_required_permission_for_request(path, method_upper)
-    permission = None
-    if not permission:
-        return None
+    # Determinar permiso requerido para esta ruta/método
+    permission = get_required_permission_for_request(path, method_upper)
 
+    # Rutas públicas no requieren autenticación/permiso
     for public_prefix in AUTH_PUBLIC_PATHS:
         if path.startswith(public_prefix):
             return None
+
+    # Si no hay permiso requerido para esta ruta, permitirla
+    if not permission:
+        return None
 
     request_user = get_request_user()
     if not request_user:
@@ -456,7 +920,11 @@ def enforce_role_permissions():
             'required_permission': permission,
         }), 401
 
-    if can_role_permission(request_user.get('rol'), permission):
+    try:
+        allowed = can_role_permission(request_user.get('rol'), permission)
+    except Exception:
+        allowed = False
+    if allowed:
         return None
 
     return jsonify({
@@ -497,89 +965,165 @@ def enforce_rate_limit_auth():
 
 # Inicializar base de datos
 def init_db():
-    # En desarrollo, usar empresa_id=1 por defecto
-    empresa_id = 1
-    # MongoDB: No es necesario crear tablas ni índices, solo asegurar la máquina de ejemplo
-    ensure_maquina_ejemplo_presente(empresa_id)
+    """Initialize default configuration entries in database"""
+    from pymongo import MongoClient
+    from os import environ
 
-    # Inicialización MongoDB catálogo/configuración por defecto
-    col_opciones = get_empresa_collection('config_opciones', 0)
-    col_general = get_empresa_collection('config_general', 0)
-    defaults_catalogo = {
-        'roles': ['Operario', 'Administrador', 'Root', 'Comercial'],
-        'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
-        'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
-        'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
-        'estados_pedido': [
-            'Diseño',
-            'Pendiente de Aprobación',
-            'Pendiente de Cliché',
-            'Pendiente de Impresión',
-            'Pendiente Post-Impresión',
-            'Finalizado',
-            'Parado',
-            'Cancelado'
-        ]
+    # Connect directly to MongoDB (bypass PyMongo which may not be ready)
+    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforgepro')
+    try:
+        client = MongoClient(mongo_uri)
+        db = client['printforgepro']
+        col_opciones = db['config_opciones']
+    except Exception as e:
+        print(f"Error connecting to MongoDB in init_db(): {e}")
+        return
+
+    # Mapeo de slugs a (label, color) para estados
+    states_slug_to_label = {
+        'en-diseno': ('En Diseño', DEFAULT_ESTADO_COLORS['en-diseno']),
+        'pendiente-de-aprobacion': ('Pendiente de Aprobación', DEFAULT_ESTADO_COLORS['pendiente-de-aprobacion']),
+        'pendiente-de-cliche': ('Pendiente de Cliché', DEFAULT_ESTADO_COLORS['pendiente-de-cliche']),
+        'pendiente-de-impresion': ('Pendiente de Impresión', DEFAULT_ESTADO_COLORS['pendiente-de-impresion']),
+        'pendiente-post-impresion': ('Pendiente Post-Impresión', DEFAULT_ESTADO_COLORS['pendiente-post-impresion']),
+        'finalizado': ('Finalizado', DEFAULT_ESTADO_COLORS['finalizado']),
+        'parado': ('Parado', DEFAULT_ESTADO_COLORS['parado']),
+        'cancelado': ('Cancelado', DEFAULT_ESTADO_COLORS['cancelado']),
     }
-    for categoria, valores in defaults_catalogo.items():
-        if col_opciones.count_documents({'categoria': categoria}) == 0:
+
+    # Only seed truly protected system data on startup.
+    # User-editable catalogs (tintas_especiales, acabados, materiales, extra roles)
+    # must NOT be re-seeded here or deleted items reappear on every restart.
+    defaults_catalogo = {
+        'roles': ['Administrador'],
+        'estados_pedido': list(states_slug_to_label.keys())
+    }
+
+    try:
+        for categoria, valores in defaults_catalogo.items():
             for idx, valor in enumerate(valores, start=1):
-                col_opciones.insert_one({
-                    'categoria': categoria,
-                    'valor': valor,
-                    'orden': idx,
-                    'fecha_creacion': datetime.now().isoformat()
+                # Use new schema: 'valor' and 'orden' (no legacy 'value'/'order')
+                if categoria == 'estados_pedido':
+                    # For estados: valor is the slug (key), label+color from map
+                    label, color = states_slug_to_label.get(valor, (valor, None))
+                    # Check if exists by human-readable label for this empresa
+                    exists = col_opciones.count_documents({
+                        'categoria': categoria,
+                        'valor': label,
+                        'empresa_id': '1'
+                    }) > 0
+                    if not exists:
+                        col_opciones.insert_one({
+                            'categoria': categoria,
+                            'valor': label,
+                            'label': label,
+                            'color': color,
+                            'orden': idx,
+                            'empresa_id': '1',
+                            'fecha_creacion': datetime.now().isoformat()
+                        })
+                    else:
+                        # Update color if missing
+                        if color:
+                            col_opciones.update_one(
+                                {'categoria': categoria, 'valor': label, 'empresa_id': '1', 'color': None},
+                                {'$set': {'color': color}}
+                            )
+                else:
+                    # For other categories, check if value exists for empresa='1'
+                    if col_opciones.count_documents({'categoria': categoria, 'valor': valor, 'empresa_id': '1'}) == 0:
+                        col_opciones.insert_one({
+                            'categoria': categoria,
+                            'valor': valor,
+                            'label': valor,
+                            'orden': idx,
+                            'empresa_id': '1',
+                            'fecha_creacion': datetime.now().isoformat()
+                        })
+    except Exception as e:
+        import traceback
+        print(f'Error initializing catalogo: {e}')
+        traceback.print_exc()
+        pass
+
+    # Migrar materiales legacy → catalogo_materiales para empresa '1'
+    try:
+        col_catalogo = db['catalogo_materiales']
+        legacy_mats = list(db['config_opciones'].find({'categoria': 'materiales', 'empresa_id': '1'}).sort('orden', 1))
+        for idx_m, mat_doc in enumerate(legacy_mats, start=1):
+            nombre = (mat_doc.get('label') or mat_doc.get('valor') or '').strip()
+            if not nombre:
+                continue
+            if not col_catalogo.find_one({'nombre': nombre, 'empresa_id': '1'}):
+                col_catalogo.insert_one({
+                    'empresa_id': '1',
+                    'nombre': nombre,
+                    'fabricantes': [],
+                    'orden': mat_doc.get('orden', idx_m),
+                    'fecha_creacion': mat_doc.get('fecha_creacion', datetime.now().isoformat()),
+                    'activo': True,
                 })
-    # Normalizar orden para todas las categorías
-    categorias_existentes = col_opciones.distinct('categoria')
-    for categoria in categorias_existentes:
-        docs = list(col_opciones.find({'categoria': categoria}).sort([('orden', 1), ('_id', 1)]))
-        for idx, doc in enumerate(docs, start=1):
-            col_opciones.update_one({'_id': doc['_id']}, {'$set': {'orden': idx}})
-    # Configuración general por defecto
-    if not col_general.find_one({'clave': 'modo_creacion'}):
-        col_general.insert_one({'clave': 'modo_creacion', 'valor': 'manual', 'fecha_actualizacion': datetime.now().isoformat()})
-    if not col_general.find_one({'clave': 'active_role'}):
-        col_general.insert_one({'clave': 'active_role', 'valor': 'root', 'fecha_actualizacion': datetime.now().isoformat()})
-    if not col_general.find_one({'clave': 'role_permissions'}):
-        col_general.insert_one({'clave': 'role_permissions', 'valor': json.dumps(ROLE_PERMISSIONS_DEFAULT), 'fecha_actualizacion': datetime.now().isoformat()})
-    # Código SQL y referencias a c, conn, seed_meta, seed_creditos eliminados por migración a MongoDB
+    except Exception as e:
+        print(f'Error migrando materiales legacy en init_db: {e}')
 
 
-def get_modo_creacion():
-    """Obtiene el modo de creación actual: manual | automatico"""
-    col = get_empresa_collection('config_general', 0)
-    doc = col.find_one({'clave': 'modo_creacion'})
-    valor = (doc.get('valor') if doc and doc.get('valor') else 'manual').strip().lower()
-    if valor not in ['manual', 'automatico']:
-        return 'manual'
-    return valor
+def _migrar_materiales_legacy(empresa_id):
+    """Copia entradas de config_opciones categoria:materiales → catalogo_materiales.
+    Idempotente: no inserta si ya existe el nombre."""
+    try:
+        empresa_id = normalize_empresa_id(empresa_id)
+        col_opciones = get_empresa_collection('config_opciones', empresa_id)
+        col_catalogo = get_empresa_collection('catalogo_materiales', empresa_id)
+        legacy = list(col_opciones.find({'categoria': 'materiales', 'empresa_id': empresa_id}).sort('orden', 1))
+        migrated = 0
+        for m in legacy:
+            nombre = (m.get('label') or m.get('valor') or '').strip()
+            if not nombre:
+                continue
+            if col_catalogo.find_one({'nombre': nombre, 'empresa_id': empresa_id}):
+                continue
+            col_catalogo.insert_one({
+                'empresa_id': empresa_id,
+                'nombre': nombre,
+                'fabricantes': [],
+                'orden': m.get('orden', 0),
+                'fecha_creacion': m.get('fecha_creacion', datetime.now().isoformat()),
+                'activo': True,
+            })
+            migrated += 1
+        return migrated
+    except Exception as e:
+        print(f'Error migrando materiales legacy: {e}')
+        return 0
 
 
-def modo_automatico_activo():
-    return get_modo_creacion() == 'automatico'
-
-
-ESTADOS_PEDIDO_DEFAULT = [
-    {'value': 'diseno', 'label': 'Diseño'},
-    {'value': 'pendiente-de-aprobacion', 'label': 'Pendiente de Aprobación'},
-    {'value': 'pendiente-de-cliche', 'label': 'Pendiente de Cliché'},
-    {'value': 'pendiente-de-impresion', 'label': 'Pendiente de Impresión'},
-    {'value': 'pendiente-post-impresion', 'label': 'Pendiente Post-Impresión'},
-    {'value': 'finalizado', 'label': 'Finalizado'},
-    {'value': 'parado', 'label': 'Parado'},
-    {'value': 'cancelado', 'label': 'Cancelado'},
-]
-
-
-ESTADOS_RULES_DEFAULT = {
-    'bloqueados_produccion': ['cancelado', 'parado', 'finalizado'],
-    'en_cola_produccion': ['pendiente-de-impresion', 'pendiente-post-impresion'],
-    'preimpresion': ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'],
-    'estados_finalizados': ['finalizado'],
-    'ocultar_timeline': ['parado', 'cancelado'],
-    'ocultar_grafica': ['parado', 'cancelado', 'finalizado'],
-}
+def _seed_catalogo_materiales_defaults(empresa_id):
+    """Siembra catálogo de materiales por defecto para empresa nueva."""
+    empresa_id = normalize_empresa_id(empresa_id)
+    col_catalogo = get_empresa_collection('catalogo_materiales', empresa_id)
+    defaults = [
+        {
+            'nombre': 'Polipropileno',
+            'fabricantes': [
+                {'id': str(uuid.uuid4()), 'nombre': 'Avery', 'anchos_cm': [33.0, 40.0]},
+                {'id': str(uuid.uuid4()), 'nombre': 'Ritrama', 'anchos_cm': [32.0, 38.0]},
+            ],
+        },
+        {'nombre': 'Papel', 'fabricantes': []},
+        {'nombre': 'PVC', 'fabricantes': []},
+        {'nombre': 'PE', 'fabricantes': []},
+        {'nombre': 'PET', 'fabricantes': []},
+    ]
+    for idx, mat in enumerate(defaults, start=1):
+        if not col_catalogo.find_one({'nombre': mat['nombre'], 'empresa_id': empresa_id}):
+            col_catalogo.insert_one({
+                'empresa_id': empresa_id,
+                'nombre': mat['nombre'],
+                'fabricantes': mat['fabricantes'],
+                'orden': idx,
+                'fecha_creacion': datetime.now().isoformat(),
+                'activo': True,
+            })
 
 
 def slugify_estado(texto):
@@ -608,6 +1152,16 @@ def slugify_estado(texto):
                 prev_dash = True
     result = ''.join(out).strip('-')
     return result
+
+
+def capitalize_first(texto):
+    try:
+        s = str(texto or '').strip()
+        if not s:
+            return s
+        return s[0].upper() + s[1:]
+    except Exception:
+        return texto
 
 
 def normalize_text_list(value):
@@ -684,68 +1238,76 @@ def normalize_legacy_json_storage(apply_changes=False):
     return {'apply': bool(apply_changes), 'presupuestos': {}, 'pedidos': {}}
 
 
-def get_estados_pedido_disponibles():
-    col = get_empresa_collection('config_opciones', 0)
-    rows = list(col.find({'categoria': 'estados_pedido'}).sort([('orden', 1), ('_id', 1)]))
+def get_estados_pedido_disponibles(empresa_id=None):
+    empresa_id = normalize_empresa_id(empresa_id)
+    col = get_empresa_collection('config_opciones', empresa_id)
+    rows = list(col.find({'categoria': 'estados_pedido', 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
     if not rows:
         return ESTADOS_PEDIDO_DEFAULT
     parsed = []
     used = set()
     for row in rows:
         label = (row.get('valor') or '').strip()
-        value = slugify_estado(label)
-        if not label or not value or value in used:
+        valor_slug = slugify_estado(label)
+        if not label or not valor_slug or valor_slug in used:
             continue
-        used.add(value)
-        parsed.append({'value': value, 'label': label})
+        used.add(valor_slug)
+        # Use stored color if available, else fall back to default map
+        color = row.get('color') or DEFAULT_ESTADO_COLORS.get(valor_slug)
+        item = {'valor': label, 'label': label}
+        if color:
+            item['color'] = color
+        parsed.append(item)
     return parsed if parsed else ESTADOS_PEDIDO_DEFAULT
 
 
 def infer_estados_rules(available_states):
-    values = {item['value'] for item in available_states}
-    labels = {item['value']: (item.get('label') or '').lower() for item in available_states}
+    # Work exclusively with slugs so that rules are consistent with the frontend
+    slug_set = {slugify_estado(item['valor']) for item in available_states}
+    # Map slug → lowercased label for keyword matching
+    slug_labels = {slugify_estado(item['valor']): (item.get('label') or item.get('valor') or '').lower()
+                   for item in available_states}
 
     def find_by_keywords(words):
-        matches = []
-        for value, label in labels.items():
-            if any(word in label for word in words):
-                matches.append(value)
-        return matches
+        return [slug for slug, label in slug_labels.items()
+                if any(word in label for word in words)]
 
     inferred = {
         'bloqueados_produccion': list(dict.fromkeys(
-            [v for v in ['cancelado', 'parado', 'finalizado'] if v in values] +
+            [v for v in ['cancelado', 'parado', 'finalizado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad'])
         )),
         'en_cola_produccion': list(dict.fromkeys(
-            [v for v in ['pendiente-de-impresion', 'pendiente-post-impresion'] if v in values] +
+            [v for v in ['pendiente-de-impresion', 'pendiente-post-impresion'] if v in slug_set] +
             find_by_keywords(['impresion', 'impresión'])
         )),
         'preimpresion': list(dict.fromkeys(
-            [v for v in ['diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'] if v in values] +
+            [v for v in ['en-diseno', 'pendiente-de-aprobacion', 'pendiente-de-cliche'] if v in slug_set] +
             find_by_keywords(['diseno', 'diseño', 'aprob', 'cliche', 'clich'])
         )),
         'estados_finalizados': list(dict.fromkeys(
-            [v for v in ['finalizado'] if v in values] +
+            [v for v in ['finalizado'] if v in slug_set] +
             find_by_keywords(['final'])
         )),
         'ocultar_timeline': list(dict.fromkeys(
-            [v for v in ['parado', 'cancelado'] if v in values] +
+            [v for v in ['parado', 'cancelado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad'])
         )),
         'ocultar_grafica': list(dict.fromkeys(
-            [v for v in ['parado', 'cancelado', 'finalizado'] if v in values] +
+            [v for v in ['parado', 'cancelado', 'finalizado'] if v in slug_set] +
             find_by_keywords(['cancel', 'parad', 'final'])
         )),
     }
     return inferred
 
 
-def get_estados_pedido_rules():
-    available_states = get_estados_pedido_disponibles()
-    allowed_values = {item['value'] for item in available_states}
-    col = get_empresa_collection('config_general', 0)
-    doc = col.find_one({'clave': 'estados_pedido_rules'})
+def get_estados_pedido_rules(empresa_id=None):
+    available_states = get_estados_pedido_disponibles(empresa_id)
+    # Use slugs as the canonical identifier (consistent with frontend)
+    allowed_slugs = {slugify_estado(item['valor']) for item in available_states}
+    empresa_id = normalize_empresa_id(empresa_id)
+    col = get_empresa_collection('config_general', empresa_id)
+    doc = col.find_one({'clave': 'estados_pedido_rules', 'empresa_id': empresa_id})
     stored = {}
     if doc and doc.get('valor'):
         try:
@@ -761,12 +1323,12 @@ def get_estados_pedido_rules():
         normalized = []
         for val in candidate:
             slug = slugify_estado(str(val))
-            if slug and slug in allowed_values and slug not in normalized:
+            if slug and slug in allowed_slugs and slug not in normalized:
                 normalized.append(slug)
         if not normalized:
-            normalized = [v for v in inferred.get(key, []) if v in allowed_values]
+            normalized = [v for v in inferred.get(key, []) if v in allowed_slugs]
         if not normalized:
-            normalized = [v for v in default_vals if v in allowed_values]
+            normalized = [v for v in default_vals if v in allowed_slugs]
         resolved[key] = normalized
     return {'rules': resolved, 'available_states': available_states}
 
@@ -794,13 +1356,91 @@ def get_maquinas():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('maquinas', empresa_id)
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        
         maquinas = list(col.find({'empresa_id': empresa_id}))
+        
+        # Estados a excluir de la cuenta de trabajos_en_cola
+        # (solo contar trabajos que están realmente en producción)
+        estados_excluir = {
+            'parado', 'cancelado', 'finalizado',  # lowercase
+            'Parado', 'Cancelado', 'Finalizado',  # uppercase
+            'Diseño', 'diseno', 'diseño',  # design phase
+            'Pendiente de Aprobación', 'pendiente de aprobación',  # approval phase
+            'Pendiente de Cliché', 'pendiente de cliché',  # cliche phase
+        }
+        
+        # Agregar trabajos_en_cola para cada máquina
+        for m in maquinas:
+            maquina_id_field = m.get('id')
+            maquina_oid = m.get('_id')
+            
+            # Build query to match by either id field or _id
+            query_terms = []
+            if maquina_id_field is not None:
+                query_terms.append({'maquina_id': maquina_id_field, 'empresa_id': empresa_id})
+            if maquina_oid is not None:
+                query_terms.append({'maquina_id': maquina_oid, 'empresa_id': empresa_id})
+                query_terms.append({'maquina_id': str(maquina_oid), 'empresa_id': empresa_id})
+            
+            if query_terms:
+                query = {'$or': query_terms} if len(query_terms) > 1 else query_terms[0]
+            else:
+                query = {'maquina_id': maquina_id_field, 'empresa_id': empresa_id}
+            
+            # Get all trabajo_orden for this machine
+            ordenes = list(orden_col.find(query))
+            
+            # Count only those whose pedido is in a production state
+            trabajos_en_cola = 0
+            for orden in ordenes:
+                trabajo_id = orden.get('trabajo_id')
+                if not trabajo_id:
+                    continue
+                # Get the corresponding pedido
+                pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+                if not pedido:
+                    continue
+                # Check if estado is in production (not in exclusion list)
+                estado = pedido.get('estado')
+                if estado not in estados_excluir:
+                    trabajos_en_cola += 1
+            
+            m['trabajos_en_cola'] = trabajos_en_cola
         maquinas = [fix_id(m) for m in maquinas]
         return jsonify({'maquinas': maquinas}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        print('ERROR in get_maquinas:\n', tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
+
+
+@app.route('/api/maquinas', methods=['POST'])
+def create_maquina():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        data = request.get_json()
+        nombre = data.get('nombre')
+        if not nombre:
+            return jsonify({'error': 'Nombre requerido'}), 400
+
+        anio_fabricacion = data.get('anio_fabricacion')
+        tipo_maquina = data.get('tipo_maquina')
+        numero_colores = data.get('numero_colores')
+        ancho_max_material_mm = data.get('ancho_max_material_mm')
+        ancho_max_impresion_mm = data.get('ancho_max_impresion_mm')
+        repeticion_min_mm = data.get('repeticion_min_mm')
+        repeticion_max_mm = data.get('repeticion_max_mm')
+        velocidad_max_maquina_mmin = data.get('velocidad_max_maquina_mmin')
+        velocidad_max_impresion_mmin = data.get('velocidad_max_impresion_mmin')
+        espesor_planchas_mm = data.get('espesor_planchas_mm')
         sistemas_secado = data.get('sistemas_secado')
         estado = data.get('estado') or 'Activa'
         col = get_empresa_collection('maquinas', empresa_id)
@@ -830,15 +1470,16 @@ def get_maquinas():
         col.insert_one(doc)
         return jsonify({'success': True}), 200
     except Exception as e:
+        print('CREATE MAQUINA ERROR:\n', _traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/maquinas/<int:maquina_id>', methods=['PUT'])
+@app.route('/api/maquinas/<maquina_id>', methods=['PUT'])
 def update_maquina(maquina_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         nombre = data.get('nombre')
@@ -859,50 +1500,100 @@ def update_maquina(maquina_id):
         estado = data.get('estado') or 'Activa'
 
         col = get_empresa_collection('maquinas', empresa_id)
-        result = col.update_one({'id': maquina_id, 'empresa_id': empresa_id}, {'$set': {
-            'nombre': nombre,
-            'anio_fabricacion': anio_fabricacion,
-            'tipo_maquina': tipo_maquina,
-            'numero_colores': numero_colores,
-            'ancho_max_material_mm': ancho_max_material_mm,
-            'ancho_max_impresion_mm': ancho_max_impresion_mm,
-            'repeticion_min_mm': repeticion_min_mm,
-            'repeticion_max_mm': repeticion_max_mm,
-            'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
-            'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
-            'espesor_planchas_mm': espesor_planchas_mm,
-            'sistemas_secado': sistemas_secado,
-            'estado': estado
-        }})
+        
+        # Try to find and update by _id (ObjectId) first (since GET endpoint returns _id as id)
+        result = None
+        try:
+            if len(maquina_id) == 24:  # Valid ObjectId hex string
+                result = col.update_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id}, {'$set': {
+                    'nombre': nombre,
+                    'anio_fabricacion': anio_fabricacion,
+                    'tipo_maquina': tipo_maquina,
+                    'numero_colores': numero_colores,
+                    'ancho_max_material_mm': ancho_max_material_mm,
+                    'ancho_max_impresion_mm': ancho_max_impresion_mm,
+                    'repeticion_min_mm': repeticion_min_mm,
+                    'repeticion_max_mm': repeticion_max_mm,
+                    'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
+                    'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
+                    'espesor_planchas_mm': espesor_planchas_mm,
+                    'sistemas_secado': sistemas_secado,
+                    'estado': estado
+                }})
+        except Exception:
+            pass
+        
+        # Fall back to updating by 'id' field if no match by _id
+        if not result or result.matched_count == 0:
+            result = col.update_one({'id': maquina_id, 'empresa_id': empresa_id}, {'$set': {
+                'nombre': nombre,
+                'anio_fabricacion': anio_fabricacion,
+                'tipo_maquina': tipo_maquina,
+                'numero_colores': numero_colores,
+                'ancho_max_material_mm': ancho_max_material_mm,
+                'ancho_max_impresion_mm': ancho_max_impresion_mm,
+                'repeticion_min_mm': repeticion_min_mm,
+                'repeticion_max_mm': repeticion_max_mm,
+                'velocidad_max_maquina_mmin': velocidad_max_maquina_mmin,
+                'velocidad_max_impresion_mmin': velocidad_max_impresion_mmin,
+                'espesor_planchas_mm': espesor_planchas_mm,
+                'sistemas_secado': sistemas_secado,
+                'estado': estado
+            }})
+        
         if result.matched_count == 0:
             return jsonify({'error': 'Máquina no encontrada'}), 404
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        print('REORDER EXCEPTION:\n', tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 
-@app.route('/api/maquinas/<int:maquina_id>', methods=['DELETE'])
+@app.route('/api/maquinas/<maquina_id>', methods=['DELETE'])
 def delete_maquina(maquina_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('maquinas', empresa_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
         total = col.count_documents({'empresa_id': empresa_id})
-        maquina = col.find_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Try to find by _id (ObjectId) first (since GET endpoint returns _id as id)
+        maquina = None
+        try:
+            if len(maquina_id) == 24:  # Valid ObjectId hex string
+                maquina = col.find_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        
+        # Fall back to searching by the 'id' field
+        if not maquina:
+            maquina = col.find_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
         if total == 1 and maquina and maquina.get('nombre') == PROTECTED_MAQUINA_NOMBRE:
             return jsonify({'error': 'No puedes eliminar la máquina de ejemplo si no hay otras creadas'}), 409
         if not maquina:
             return jsonify({'error': 'Máquina no encontrada'}), 404
-        trabajos_en_cola = orden_col.count_documents({'maquina_id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Get the maquina_id from the document (could be the 'id' field or numeric value)
+        actual_maquina_id = maquina.get('id', maquina_id)
+        trabajos_en_cola = orden_col.count_documents({'maquina_id': actual_maquina_id, 'empresa_id': empresa_id})
         if trabajos_en_cola > 0:
             return jsonify({'error': 'No se puede eliminar: la máquina tiene trabajos en cola'}), 400
-        col.delete_one({'id': maquina_id, 'empresa_id': empresa_id})
+        
+        # Delete by _id if that's what matched
+        if '_id' in maquina:
+            col.delete_one({'_id': maquina['_id'], 'empresa_id': empresa_id})
+        else:
+            col.delete_one({'id': actual_maquina_id, 'empresa_id': empresa_id})
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = _traceback.format_exc()
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 # Endpoints para clientes
 @app.route('/api/clientes', methods=['GET'])
@@ -911,11 +1602,50 @@ def get_clientes():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         clientes = list(col.find({'empresa_id': empresa_id}))
         clientes = [fix_id(c) for c in clientes]
         return jsonify({'clientes': clientes}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/token-info', methods=['GET'])
+def auth_token_info():
+    token = get_bearer_token_from_request()
+    if not token:
+        return jsonify({'error': 'No token provided'}), 401
+    payload = verify_jwt(token)
+    if not payload:
+        return jsonify({'error': 'Token inválido o expirado'}), 401
+    return jsonify({'payload': payload}), 200
+
+
+@app.route('/api/auth/verify-role-permission', methods=['POST'])
+def verify_role_permission():
+    """Verifica si un rol específico tiene un permiso sin requerir autenticación"""
+    try:
+        data = request.get_json() or {}
+        role = str(data.get('role') or '').strip()
+        permission = str(data.get('permission') or '').strip()
+
+        if not role or not permission:
+            return jsonify({'error': 'role y permission requeridos'}), 400
+
+        # Resolver empresa_id para leer las reglas personalizadas del tenant correcto.
+        # Se acepta en el body o se infiere del usuario autenticado (token/dev-bypass).
+        empresa_id = str(data.get('empresa_id') or '').strip() or None
+        if not empresa_id:
+            try:
+                req_user = get_request_user()
+                if req_user:
+                    empresa_id = req_user.get('empresa_id')
+            except Exception:
+                pass
+
+        has_permission = can_role_permission(role, permission, empresa_id=empresa_id)
+        return jsonify({'role': role, 'permission': permission, 'allowed': has_permission}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -926,7 +1656,7 @@ def create_cliente():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         data = request.get_json() or {}
 
@@ -957,7 +1687,7 @@ def update_cliente(cliente_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         try:
             oid = ObjectId(cliente_id)
@@ -991,7 +1721,7 @@ def delete_cliente(cliente_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('clientes', empresa_id)
         # cliente_id viene como string (id), convertir a ObjectId si es posible
         try:
@@ -1026,8 +1756,66 @@ def debug_clientes_html():
 ALLOWED_SETTINGS_CATEGORIES = {'roles', 'materiales', 'acabados', 'tintas_especiales', 'estados_pedido'}
 
 
-        
-        
+def seed_empresa_defaults(empresa_id):
+    """Siembra todos los datos por defecto para una nueva empresa.
+    Es seguro llamarla varias veces (nunca inserta duplicados).
+    """
+    empresa_id = normalize_empresa_id(empresa_id)
+    col_op = get_empresa_collection('config_opciones', empresa_id)
+    col_gen = get_empresa_collection('config_general', empresa_id)
+
+    defaults_opciones = {
+        'roles': ['Administrador', 'Comercial', 'Diseño', 'Impresión', 'Post-Impresión'],
+        'estados_pedido': [
+            'En Diseño', 'Pendiente de Aprobación', 'Pendiente de Cliché',
+            'Pendiente de Impresión', 'Pendiente Post-Impresión',
+            'Finalizado', 'Parado', 'Cancelado',
+        ],
+        'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
+        'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
+        'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
+    }
+    for cat, valores in defaults_opciones.items():
+        for idx, valor in enumerate(valores, start=1):
+            if not col_op.find_one({'categoria': cat, 'valor': valor, 'empresa_id': empresa_id}):
+                doc = {
+                    'categoria': cat, 'valor': valor, 'label': valor,
+                    'orden': idx, 'empresa_id': empresa_id,
+                    'fecha_creacion': datetime.now().isoformat(),
+                }
+                if cat == 'estados_pedido':
+                    slug = slugify_estado(valor)
+                    color = DEFAULT_ESTADO_COLORS.get(slug)
+                    if color:
+                        doc['color'] = color
+                col_op.insert_one(doc)
+            elif cat == 'estados_pedido':
+                # Backfill color if missing
+                slug = slugify_estado(valor)
+                color = DEFAULT_ESTADO_COLORS.get(slug)
+                if color:
+                    col_op.update_one(
+                        {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
+                        {'$set': {'color': color}}
+                    )
+
+    config_gen_defaults = [
+        ('role_permissions', json.dumps(ROLE_PERMISSIONS_DEFAULT)),
+        ('modo_creacion', 'manual'),
+        ('session_timeout_minutes', str(SESSION_TIMEOUT_MINUTES_DEFAULT)),
+    ]
+    for clave, valor_cfg in config_gen_defaults:
+        if not col_gen.find_one({'clave': clave, 'empresa_id': empresa_id}):
+            col_gen.insert_one({
+                'clave': clave, 'valor': valor_cfg,
+                'empresa_id': empresa_id,
+                'fecha_creacion': datetime.now().isoformat(),
+            })
+
+    # Seed catálogo de materiales enriquecido
+    _seed_catalogo_materiales_defaults(empresa_id)
+
+
 @app.route('/api/auth/register', methods=['POST'])
 def register_public_user():
     try:
@@ -1075,13 +1863,44 @@ def register_public_user():
         }
         result = col.insert_one(doc)
         usuario_id = str(result.inserted_id)
-        # Simular empresa_id como el id del usuario creado
-        empresa_id = usuario_id
+        empresa_id = usuario_id  # empresa_id = ObjectId del usuario fundador
+
+        # Persistir empresa_id en el documento del usuario
+        col.update_one({'_id': result.inserted_id}, {'$set': {'empresa_id': empresa_id}})
+
+        # Crear registro de empresa
+        try:
+            mongo.db['empresas'].update_one(
+                {'empresa_id': empresa_id},
+                {'$setOnInsert': {
+                    'empresa_id': empresa_id,
+                    'nombre': empresa_nombre,
+                    'cif': empresa_cif,
+                    'admin_user_id': empresa_id,
+                    'activa': True,
+                    'plan': billing_model,
+                    'fecha_creacion': datetime.now().isoformat(),
+                }},
+                upsert=True,
+            )
+        except Exception:
+            pass
+
+        # Sembrar todos los datos por defecto para la nueva empresa
+        try:
+            seed_empresa_defaults(empresa_id)
+        except Exception:
+            pass
+
+        # Issue token if JWT enabled
+        token = create_jwt({'usuario_id': usuario_id, 'email': email}) if ENABLE_JWT else None
+
         return jsonify({
             'success': True,
             'id': usuario_id,
             'creditos': FREE_SIGNUP_CREDITS,
             'billing_model': billing_model,
+            'token': token,
             'usuario': {
                 'id': usuario_id,
                 'nombre': nombre,
@@ -1107,9 +1926,12 @@ def api_usuarios():
             request_user, auth_error = require_request_user()
             if auth_error:
                 return auth_error
-            empresa_id = int(request_user.get('empresa_id') or 0)
-            col = get_empresa_collection('usuarios', None)
-            usuarios = list(col.find({}))
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+            col = get_empresa_collection('usuarios', empresa_id)
+            if str(request_user.get('rol')).lower() == 'root':
+                usuarios = list(col.find({}))
+            else:
+                usuarios = list(col.find({'empresa_id': empresa_id}))
             usuarios_out = [fix_id(u) for u in usuarios]
             return jsonify({'usuarios': usuarios_out}), 200
 
@@ -1117,6 +1939,13 @@ def api_usuarios():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
+
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        # Sólo usuarios con rol 'administrador' o 'root' pueden crear otros usuarios
+        requester_role = str(request_user.get('rol') or '').strip().lower()
+        if requester_role not in ('administrador', 'root'):
+            return jsonify({'error': 'Permiso denegado: se requiere rol administrador'}), 403
         data = request.get_json() or {}
         nombre = str(data.get('nombre') or '').strip()
         email = str(data.get('email') or '').strip().lower()
@@ -1129,7 +1958,7 @@ def api_usuarios():
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify({'error': 'Email no válido'}), 400
 
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         if col.find_one({'email': email}):
             return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
 
@@ -1140,13 +1969,18 @@ def api_usuarios():
             'email': email,
             'rol': rol,
             'password_hash': hash_password(temp_pwd),
-            'empresa_id': int(request_user.get('empresa_id') or 0),
+            'empresa_id': empresa_id,
             'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
         }
         result = col.insert_one(doc)
         usuario = col.find_one({'_id': result.inserted_id})
         out = fix_id(usuario)
         out['_temp_password'] = temp_pwd
+        # Audit log
+        try:
+            log_audit('create_user', request_user, {'created_user_id': out.get('id'), 'created_user_email': out.get('email')})
+        except Exception:
+            pass
         return jsonify(out), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1169,6 +2003,72 @@ def verify_public_user_mfa():
         now = int(time.time())
         # TODO: Implementar verificación MFA con MongoDB
         return jsonify({'error': 'No implementado: migrar verificación MFA a MongoDB'}), 501
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/service-account', methods=['POST'])
+def create_service_account():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        requester_role = str(request_user.get('rol') or '').strip().lower()
+        if requester_role not in ('administrador', 'root'):
+            return jsonify({'error': 'Permiso denegado: se requiere rol administrador'}), 403
+
+        data = request.get_json() or {}
+        name = str(data.get('name') or data.get('nombre') or '').strip() or 'service-account'
+        roles = data.get('roles') if isinstance(data.get('roles'), list) else []
+
+        client_id = secrets.token_hex(12)
+        secret = secrets.token_urlsafe(24)
+        secret_hash = hash_password(secret)
+
+        col = get_empresa_collection('service_accounts', 0)
+        doc = {
+            'client_id': client_id,
+            'secret_hash': secret_hash,
+            'name': name,
+            'roles': roles,
+            'created_by': {'id': request_user.get('id'), 'email': request_user.get('email')},
+            'created_at': datetime.now().isoformat(),
+        }
+        col.insert_one(doc)
+        try:
+            log_audit('create_service_account', request_user, {'client_id': client_id, 'name': name, 'roles': roles})
+        except Exception:
+            pass
+        return jsonify({'client_id': client_id, 'secret': secret}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/service-account/token', methods=['POST'])
+def service_account_token():
+    try:
+        data = request.get_json() or {}
+        client_id = str(data.get('client_id') or '').strip()
+        secret = str(data.get('secret') or '').strip()
+        if not client_id or not secret:
+            return jsonify({'error': 'client_id y secret requeridos'}), 400
+
+        col = get_empresa_collection('service_accounts', 0)
+        acct = col.find_one({'client_id': client_id})
+        if not acct:
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+        secret_hash = acct.get('secret_hash')
+        if not verify_password(secret, secret_hash):
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+
+        payload = {'type': 'service_account', 'client_id': client_id, 'roles': acct.get('roles', [])}
+        token = create_jwt(payload)
+        try:
+            log_audit('issue_service_account_token', None, {'client_id': client_id})
+        except Exception:
+            pass
+        return jsonify({'token': token}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1204,14 +2104,14 @@ def logout_public_user_session():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/usuarios/<int:usuario_id>', methods=['PUT'])
+@app.route('/api/usuarios/<usuario_id>', methods=['PUT'])
 def actualizar_usuario(usuario_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
         # ...existing code...
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # Permisos de edición de usuario adaptados a MongoDB pendiente de implementar si es necesario
 
@@ -1239,7 +2139,7 @@ def actualizar_usuario(usuario_id):
 
 
         # Actualizar usuario en MongoDB
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         try:
             oid = ObjectId(usuario_id)
         except Exception:
@@ -1257,10 +2157,14 @@ def actualizar_usuario(usuario_id):
         if not update_doc:
             return jsonify({'error': 'Nada que actualizar'}), 400
 
-        result = col.update_one({'_id': oid}, {'$set': update_doc})
+        result = col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': update_doc})
         if result.matched_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
-        usuario = col.find_one({'_id': oid})
+        usuario = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        try:
+            log_audit('update_user', request_user, {'updated_user_id': str(usuario.get('_id')), 'updated_fields': list(update_doc.keys())})
+        except Exception:
+            pass
         return jsonify(fix_id(usuario)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1296,7 +2200,7 @@ def create_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
 
         usuario_id = int(data.get('usuario_id') or request_user.get('id') or 0)
@@ -1360,7 +2264,7 @@ def confirm_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         session_id = str(data.get('checkout_session_id') or data.get('session_id') or '').strip()
         if not session_id:
@@ -1382,7 +2286,7 @@ def get_creditos_usuario(usuario_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Implementar consulta de créditos con MongoDB
         return jsonify({'error': 'No implementado: migrar consulta de créditos a MongoDB'}), 501
@@ -1396,7 +2300,7 @@ def cargar_creditos_usuario(usuario_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         creditos = int(data.get('creditos') or 0)
@@ -1419,7 +2323,7 @@ def consumir_creditos_billing():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         usuario_id = int(data.get('usuario_id') or 0)
@@ -1445,23 +2349,27 @@ def consumir_creditos_billing():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/usuarios/<int:usuario_id>', methods=['DELETE'])
+@app.route('/api/usuarios/<usuario_id>', methods=['DELETE'])
 def eliminar_usuario(usuario_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
         # request_role = normalize_role(request_user.get('rol'))  # Legacy, no usado con MongoDB
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
-        col = get_empresa_collection('usuarios', None)
+        col = get_empresa_collection('usuarios', empresa_id)
         try:
             oid = ObjectId(usuario_id)
         except Exception:
             oid = usuario_id
-        result = col.delete_one({'_id': oid})
+        result = col.delete_one({'_id': oid, 'empresa_id': empresa_id})
         if result.deleted_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
+        try:
+            log_audit('delete_user', request_user, {'deleted_user_id': str(usuario_id)})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1470,51 +2378,83 @@ def eliminar_usuario(usuario_id):
 @app.route('/api/settings', methods=['GET'])
 def get_settings_catalogo():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         categoria = (request.args.get('categoria') or '').strip().lower()
-        empresa_id = 0
         col = get_empresa_collection('config_opciones', empresa_id)
-        # Asegura que los estados protegidos estén presentes (solo para 'estados_pedido')
-        def ensure_estados_protegidos_presentes():
-            defaults_estados = [
-                'Diseño',
-                'Pendiente de Aprobación',
-                'Pendiente de Cliché',
-                'Pendiente de Impresión',
-                'Pendiente Post-Impresión',
-                'Finalizado',
-                'Parado',
-                'Cancelado',
-            ]
-            existentes = {slugify_estado(row.get('valor')) for row in col.find({'categoria': 'estados_pedido'}) if row.get('valor')}
-            faltantes = [valor for valor in defaults_estados if slugify_estado(valor) not in existentes]
-            if not faltantes:
-                return
-            orden_base = (col.find({'categoria': 'estados_pedido'}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': 'estados_pedido'}) else 0) + 1
-            for idx, valor_default in enumerate(faltantes, start=0):
-                col.insert_one({
-                    'categoria': 'estados_pedido',
-                    'valor': valor_default,
-                    'orden': orden_base + idx,
-                    'fecha_creacion': datetime.now().isoformat()
-                })
+
+        # Ensure all protected categories have their default values
+        def ensure_protected_categories():
+            """
+            Safely ensure all protected config categories exist with default values.
+            Only inserts documents that are completely missing, never creates duplicates.
+            """
+            # Define only truly protected defaults (roles and estados_pedido).
+            # Materiales, acabados and tintas_especiales are user-editable catalogs:
+            # they must NOT be auto-recreated or users can never delete them.
+            defaults_catalogo = {
+                'roles': ['Administrador'],
+                'estados_pedido': [
+                    'En Diseño'
+                ]
+            }
+
+            for cat, valores in defaults_catalogo.items():
+                for idx, valor in enumerate(valores, start=1):
+                    # Check if this value already exists in this category for this empresa
+                    exists = col.count_documents({
+                        'categoria': cat,
+                        'valor': valor,
+                        'empresa_id': empresa_id
+                    }) > 0
+
+                    if not exists:
+                        # Insert only if doesn't exist
+                        doc = {
+                            'categoria': cat,
+                            'valor': valor,
+                            'label': valor,
+                            'orden': idx,
+                            'empresa_id': empresa_id,
+                            'fecha_creacion': datetime.now().isoformat()
+                        }
+                        if cat == 'estados_pedido':
+                            slug = slugify_estado(valor)
+                            color = DEFAULT_ESTADO_COLORS.get(slug)
+                            if color:
+                                doc['color'] = color
+                        col.insert_one(doc)
+                    elif cat == 'estados_pedido':
+                        # Backfill color if missing
+                        slug = slugify_estado(valor)
+                        color = DEFAULT_ESTADO_COLORS.get(slug)
+                        if color:
+                            col.update_one(
+                                {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
+                                {'$set': {'color': color}}
+                            )
 
         if categoria:
             if categoria not in ALLOWED_SETTINGS_CATEGORIES:
                 return jsonify({'error': 'Categoría no válida'}), 400
-            if categoria == 'estados_pedido':
-                ensure_estados_protegidos_presentes()
-            rows = list(col.find({'categoria': categoria}).sort([('orden', 1), ('_id', 1)]))
+            # Ensure category has default values before querying
+            ensure_protected_categories()
+            rows = list(col.find({'categoria': categoria, 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
             items = [{
                 'id': str(row.get('_id')),
                 'categoria': row.get('categoria'),
                 'valor': row.get('valor'),
+                'color': row.get('color'),
                 'orden': row.get('orden', 0),
                 'fecha_creacion': row.get('fecha_creacion')
             } for row in rows]
             return jsonify({'categoria': categoria, 'items': items}), 200
+
         # Si no hay categoría, devolver todas
-        ensure_estados_protegidos_presentes()
-        rows = list(col.find({}).sort([('categoria', 1), ('orden', 1), ('_id', 1)]))
+        ensure_protected_categories()
+        rows = list(col.find({'empresa_id': empresa_id}).sort([('categoria', 1), ('orden', 1), ('_id', 1)]))
         settings = {key: [] for key in ALLOWED_SETTINGS_CATEGORIES}
         for row in rows:
             categoria_row = row.get('categoria')
@@ -1524,6 +2464,7 @@ def get_settings_catalogo():
                 'id': str(row.get('_id')),
                 'categoria': categoria_row,
                 'valor': row.get('valor'),
+                'color': row.get('color'),
                 'orden': row.get('orden', 0),
                 'fecha_creacion': row.get('fecha_creacion')
             })
@@ -1536,16 +2477,17 @@ def get_settings_catalogo():
 @app.route('/api/settings/estados-pedido-rules', methods=['GET', 'PUT'])
 def api_estados_pedido_rules():
     try:
-        if request.method == 'GET':
-            # Devuelve las reglas inferidas/almacenadas y los estados disponibles
-            payload = get_estados_pedido_rules()
-            return jsonify(payload), 200
-
-        # PUT -> Guardar reglas
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = 0
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        if request.method == 'GET':
+            # Devuelve las reglas inferidas/almacenadas y los estados disponibles
+            payload = get_estados_pedido_rules(empresa_id)
+            return jsonify(payload), 200
+
+        # PUT -> Guardar reglas
         data = request.get_json() or {}
         rules = data.get('rules')
         if not isinstance(rules, dict):
@@ -1553,109 +2495,127 @@ def api_estados_pedido_rules():
 
         col = get_empresa_collection('config_general', empresa_id)
         # Guardar como JSON string
-        col.update_one({'clave': 'estados_pedido_rules'}, {'$set': {'valor': json.dumps(rules), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col.update_one(
+            {'clave': 'estados_pedido_rules', 'empresa_id': empresa_id},
+            {'$set': {'valor': json.dumps(rules), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
+        try:
+            log_audit('update_estados_pedido_rules', request_user, {'rules_keys': list(rules.keys())})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/roles-permissions', methods=['GET'])
+@app.route('/api/settings/roles-permissions', methods=['GET', 'PUT'])
 def api_roles_permissions():
-    """Devuelve la matriz de permisos por rol y la lista de permisos disponibles."""
+    """Devuelve o guarda la matriz de permisos por rol y la lista de permisos disponibles.
+    GET -> devuelve current permissions
+    PUT -> guarda el objeto JSON `permissions` en `config_general` bajo la clave `role_permissions`.
+    """
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        col_general = get_empresa_collection('config_general', 0)
-        doc = col_general.find_one({'clave': 'role_permissions'})
-        parsed = None
-        if doc and doc.get('valor'):
-            try:
-                parsed = json.loads(doc.get('valor'))
-            except Exception:
-                parsed = None
-        if not isinstance(parsed, dict):
-            parsed = ROLE_PERMISSIONS_DEFAULT
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
-        # Also return the list of known permissions and available roles
-        col_roles = get_empresa_collection('config_opciones', 0)
-        rows = list(col_roles.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
-        roles = []
-        for r in rows:
-            label = (r.get('valor') or '').strip()
-            key = slugify_estado(label)
-            if label and key:
-                roles.append({'key': key, 'label': label})
-
-        return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/settings/active-role', methods=['GET', 'PUT'])
-def api_active_role():
-    try:
+        # GET: devolver
         if request.method == 'GET':
-            col_opciones = get_empresa_collection('config_opciones', 0)
-            rows = list(col_opciones.find({'categoria': 'roles'}).sort([('orden', 1), ('_id', 1)]))
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'role_permissions', 'empresa_id': empresa_id})
+            parsed = None
+            if doc and doc.get('valor'):
+                try:
+                    parsed = json.loads(doc.get('valor'))
+                except Exception:
+                    parsed = None
+            if not isinstance(parsed, dict):
+                parsed = ROLE_PERMISSIONS_DEFAULT
+
+            # Also return the list of known permissions and available roles
+            col_roles = get_empresa_collection('config_opciones', empresa_id)
+            rows = list(col_roles.find({'categoria': 'roles', 'empresa_id': empresa_id}).sort([('orden', 1), ('_id', 1)]))
             roles = []
             for r in rows:
                 label = (r.get('valor') or '').strip()
                 key = slugify_estado(label)
-                if not label or not key:
-                    continue
-                roles.append({'key': key, 'label': label})
+                if label and key:
+                    roles.append({'key': key, 'label': label})
 
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'active_role'})
-            active = (doc.get('valor') if doc and doc.get('valor') else 'root')
-            # ensure active is a key (slug)
-            active_key = slugify_estado(str(active)) or 'root'
-            active_label = next((r['label'] for r in roles if r['key'] == active_key), active_key)
-            return jsonify({'active_role': active_key, 'active_role_label': active_label, 'roles': roles}), 200
+            return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
 
-        # PUT - update active role
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
+        # PUT: guardar
         data = request.get_json() or {}
-        next_role = str(data.get('active_role') or '').strip()
-        if not next_role:
-            return jsonify({'error': 'active_role requerido'}), 400
+        permissions = data.get('permissions') or data.get('roles_permissions') or data.get('rolesPermissions')
+        if not isinstance(permissions, dict):
+            return jsonify({'error': 'permissions debe ser un objeto JSON'}), 400
 
-        col_opciones = get_empresa_collection('config_opciones', 0)
-        rows = list(col_opciones.find({'categoria': 'roles'}))
-        valid_keys = {slugify_estado((r.get('valor') or '').strip()): (r.get('valor') or '').strip() for r in rows}
-        if next_role not in valid_keys:
-            return jsonify({'error': 'Rol no válido'}), 400
+        # Verificar que el usuario tiene permisos para editar
+        can_manage = can_role_permission(request_user.get('rol'), 'manage_roles_permissions')
+        if not can_manage:
+            return jsonify({'error': 'No tienes permisos para editar las reglas de permisos'}), 403
 
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'active_role'}, {'$set': {'valor': next_role, 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
-        return jsonify({'success': True, 'active_role': next_role, 'active_role_label': valid_keys.get(next_role)}), 200
+        # Proteger el rol 'administrador': nunca puede perder permisos
+        for role_key, perms in permissions.items():
+            if role_key == 'administrador':
+                # El rol administrador debe mantener todos sus permisos
+                admin_perms = permissions.get('administrador', {})
+                for perm_key in PERMISSION_KEYS:
+                    if admin_perms.get(perm_key) is False:
+                        return jsonify({'error': 'El rol administrador no puede perder permisos. Imposible desactivar permisos para administrador'}), 400
+
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'role_permissions', 'empresa_id': empresa_id},
+            {'$set': {'valor': json.dumps(permissions), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
+        try:
+            log_audit('update_role_permissions', request_user, {'roles': list(permissions.keys())})
+        except Exception:
+            pass
+        return jsonify({'success': True, 'permissions': permissions}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# NOTE: `active-role` API removed. Any logic that relied on the
+# `active_role` configuration should instead rely on explicit user roles
+# (e.g. 'root' or 'administrador').
 
 
 @app.route('/api/settings/modo-creacion', methods=['GET', 'PUT'])
 def api_modo_creacion():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         if request.method == 'GET':
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'modo_creacion'})
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
             valor = (doc.get('valor') if doc and doc.get('valor') else 'manual')
             valor = valor if valor in ['manual', 'automatico'] else 'manual'
             return jsonify({'modo_creacion': valor}), 200
 
         # PUT
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
         data = request.get_json() or {}
         modo = str(data.get('modo_creacion') or data.get('modo') or '').strip().lower()
         if modo not in ['manual', 'automatico']:
             return jsonify({'error': 'modo_creacion no válido (manual|automatico)'}), 400
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'modo_creacion'}, {'$set': {'valor': modo, 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'modo_creacion', 'empresa_id': empresa_id},
+            {'$set': {'valor': modo, 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
+        try:
+            log_audit('update_modo_creacion', request_user, {'modo': modo})
+        except Exception:
+            pass
         return jsonify({'success': True, 'modo_creacion': modo}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1664,16 +2624,18 @@ def api_modo_creacion():
 @app.route('/api/settings/session-timeout', methods=['GET', 'PUT'])
 def api_session_timeout():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         if request.method == 'GET':
-            col_general = get_empresa_collection('config_general', 0)
-            doc = col_general.find_one({'clave': 'session_timeout_minutes'})
+            col_general = get_empresa_collection('config_general', empresa_id)
+            doc = col_general.find_one({'clave': 'session_timeout_minutes', 'empresa_id': empresa_id})
             value = int(doc.get('valor')) if doc and doc.get('valor') and str(doc.get('valor')).isdigit() else SESSION_TIMEOUT_MINUTES_DEFAULT
             return jsonify({'session_timeout_minutes': int(value), 'min': SESSION_TIMEOUT_MINUTES_MIN, 'max': SESSION_TIMEOUT_MINUTES_MAX}), 200
 
         # PUT
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
         data = request.get_json() or {}
         try:
             minutes = int(data.get('session_timeout_minutes'))
@@ -1681,27 +2643,63 @@ def api_session_timeout():
             return jsonify({'error': 'session_timeout_minutes debe ser un entero'}), 400
         if minutes < SESSION_TIMEOUT_MINUTES_MIN or minutes > SESSION_TIMEOUT_MINUTES_MAX:
             return jsonify({'error': f'session_timeout_minutes fuera de rango ({SESSION_TIMEOUT_MINUTES_MIN}-{SESSION_TIMEOUT_MINUTES_MAX})'}), 400
-        col_general = get_empresa_collection('config_general', 0)
-        col_general.update_one({'clave': 'session_timeout_minutes'}, {'$set': {'valor': str(minutes), 'fecha_actualizacion': datetime.now().isoformat()}}, upsert=True)
+        col_general = get_empresa_collection('config_general', empresa_id)
+        col_general.update_one(
+            {'clave': 'session_timeout_minutes', 'empresa_id': empresa_id},
+            {'$set': {'valor': str(minutes), 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
+        try:
+            log_audit('update_session_timeout', request_user, {'minutes': minutes})
+        except Exception:
+            pass
         return jsonify({'success': True, 'session_timeout_minutes': minutes}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/presupuestos', methods=['GET'])
+@app.route('/api/settings/opcion', methods=['GET', 'POST'])
 def crear_config_opcion():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         categoria = request.args.get('categoria', '').strip().lower()
         valor = request.args.get('valor', '').strip()
-        col = get_empresa_collection('config_opciones', 0)
-        siguiente_orden = (col.find({'categoria': categoria}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria}) else 0) + 1
+        color = request.args.get('color', '').strip()  # Color para estados_pedido
+
+        # Validar que no se creen opciones vacías
+        if not categoria or not valor:
+            return jsonify({'error': 'categoria y valor son requeridos y no pueden estar vacíos'}), 400
+
+        # Normalize role labels: capitalize first letter
+        if categoria == 'roles' and valor:
+            valor = capitalize_first(valor)
+
+        # Validar que el valor no sea literalmente 'None' o similar
+        if valor.lower() in ['none', 'null', 'undefined']:
+            return jsonify({'error': f'Valor inválido: "{valor}" está reservado'}), 400
+
+        col = get_empresa_collection('config_opciones', empresa_id)
+        siguiente_orden = (col.find({'categoria': categoria, 'empresa_id': empresa_id}).sort('orden', -1).limit(1)[0].get('orden', 0) if col.count_documents({'categoria': categoria, 'empresa_id': empresa_id}) else 0) + 1
         doc = {
             'categoria': categoria,
             'valor': valor,
+            'label': valor,  # Include label field for roles and estados_pedido
             'orden': siguiente_orden,
+            'empresa_id': empresa_id,
             'fecha_creacion': datetime.now().isoformat()
         }
+        # Guardar color si es un estado de pedido
+        if categoria == 'estados_pedido' and color:
+            doc['color'] = color
         result = col.insert_one(doc)
+        try:
+            log_audit('create_setting_item', request_user, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})
+        except Exception:
+            pass
         return jsonify({'success': True, 'id': str(result.inserted_id)}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1710,6 +2708,11 @@ def crear_config_opcion():
 @app.route('/api/settings/reorder', methods=['POST'])
 def reorder_settings_catalogo_items():
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
         data = request.get_json() or {}
         categoria = (data.get('categoria') or '').strip().lower()
         ordered_ids = data.get('ordered_ids') or []
@@ -1721,14 +2724,14 @@ def reorder_settings_catalogo_items():
 
         # MongoDB: IDs son strings (ObjectId)
         ordered_ids = [str(item_id) for item_id in ordered_ids]
-        col = get_empresa_collection('config_opciones', 0)
-        ids_categoria = [str(row['_id']) for row in col.find({'categoria': categoria})]
+        col = get_empresa_collection('config_opciones', empresa_id)
+        ids_categoria = [str(row['_id']) for row in col.find({'categoria': categoria, 'empresa_id': empresa_id})]
         if set(ids_categoria) != set(ordered_ids):
             return jsonify({'error': 'ordered_ids no coincide con los elementos de la categoría'}), 400
 
         # Proteger orden de roles base
         if categoria == 'roles':
-            rows_roles = list(col.find({'categoria': 'roles'}))
+            rows_roles = list(col.find({'categoria': 'roles', 'empresa_id': empresa_id}))
             id_by_role_key = {}
             for row in rows_roles:
                 role_id = str(row['_id'])
@@ -1738,29 +2741,133 @@ def reorder_settings_catalogo_items():
                     id_by_role_key[role_key] = role_id
             expected_prefix = [id_by_role_key[key] for key in PROTECTED_ROLE_ORDER if key in id_by_role_key]
             if ordered_ids[:len(expected_prefix)] != expected_prefix:
-                return jsonify({'error': 'Los roles base deben permanecer fijos al inicio en orden Operario, Administrador, Root'}), 409
+                return jsonify({'error': 'Los roles base deben permanecer fijos al inicio en orden Administrador, Root'}), 409
 
         # Actualizar orden
         for idx, item_id in enumerate(ordered_ids, start=1):
-            col.update_one({'_id': ObjectId(item_id), 'categoria': categoria}, {'$set': {'orden': idx}})
-
+            col.update_one({'_id': ObjectId(item_id), 'categoria': categoria, 'empresa_id': empresa_id}, {'$set': {'orden': idx}})
+        try:
+            log_audit('reorder_settings', request_user, {'categoria': categoria, 'ordered_ids': ordered_ids})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/<int:item_id>', methods=['PUT'])
+@app.route('/api/settings/estado-usage', methods=['GET'])
+def check_estado_usage():
+    """Valida si un estado está siendo usado en algún pedido/trabajo"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        estado_id = request.args.get('estado_id', '').strip()
+        if not estado_id:
+            return jsonify({'error': 'estado_id requerido'}), 400
+
+        try:
+            estado_id_obj = ObjectId(estado_id)
+        except Exception:
+            return jsonify({'error': 'estado_id inválido'}), 400
+
+        # Obtener el estado de config para saber su valor
+        col_config = get_empresa_collection('config_opciones', empresa_id)
+        estado_config = col_config.find_one({'_id': estado_id_obj, 'categoria': 'estados_pedido', 'empresa_id': empresa_id})
+
+        if not estado_config:
+            return jsonify({'error': 'Estado no encontrado'}), 404
+
+        estado_valor_original = estado_config.get('valor', '')
+        # Normalizar el valor para comparación
+        estado_valor_slugified = slugify_estado(estado_valor_original)
+
+        # Contar cuántos trabajos tienen este estado
+        col_trabajos = get_empresa_collection('trabajos', empresa_id)
+        count = col_trabajos.count_documents({'estado': estado_valor_slugified, 'empresa_id': empresa_id})
+
+        in_use = count > 0
+
+        return jsonify({
+            'estado_id': estado_id,
+            'estado_valor': estado_valor_original,
+            'in_use': in_use,
+            'count': count
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/rol-usage', methods=['GET'])
+def check_rol_usage():
+    """Valida si un rol está siendo usado por algún usuario"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        rol_id = request.args.get('rol_id', '').strip()
+        if not rol_id:
+            return jsonify({'error': 'rol_id requerido'}), 400
+
+        try:
+            rol_id_obj = ObjectId(rol_id)
+        except Exception:
+            return jsonify({'error': 'rol_id inválido'}), 400
+
+        # Obtener el rol de config para saber su valor
+        col_config = get_empresa_collection('config_opciones', empresa_id)
+        rol_config = col_config.find_one({'_id': rol_id_obj, 'categoria': 'roles', 'empresa_id': empresa_id})
+
+        if not rol_config:
+            return jsonify({'rol_id': rol_id, 'in_use': False, 'count': 0, 'not_found': True}), 200
+
+        rol_valor_original = rol_config.get('valor', '')
+        # Normalizar el valor para comparación
+        rol_valor_slugified = slugify_estado(rol_valor_original)
+
+        # Contar cuántos usuarios tienen este rol
+        col_usuarios = get_empresa_collection('usuarios', empresa_id)
+        count = col_usuarios.count_documents({'rol': rol_valor_slugified, 'empresa_id': empresa_id})
+
+        in_use = count > 0
+
+        return jsonify({
+            'rol_id': rol_id,
+            'rol_valor': rol_valor_original,
+            'in_use': in_use,
+            'count': count
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/<item_id>', methods=['PUT'])
 def update_settings_catalogo_item(item_id):
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
         data = request.get_json() or {}
         nuevo_valor = (data.get('valor') or '').strip()
+        nuevo_label = (data.get('label') or nuevo_valor).strip()  # Use label from request or fallback to valor
+        # Normalize role labels on update as well
+        if nuevo_valor and 'roles' in (data.get('categoria') or ''):
+            # when caller supplies categoria, honor it; otherwise we'll detect below from doc
+            nuevo_valor = capitalize_first(nuevo_valor)
         if not nuevo_valor:
             return jsonify({'error': 'Valor requerido'}), 400
-        col = get_empresa_collection('config_opciones', 0)
+
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('config_opciones', empresa_id)
         # Buscar el documento por _id
         from bson import ObjectId
         try:
-            doc = col.find_one({'_id': ObjectId(item_id)})
+            doc = col.find_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         except Exception:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         if not doc:
@@ -1769,7 +2876,15 @@ def update_settings_catalogo_item(item_id):
         valor_actual = (doc.get('valor') or '').strip()
         if categoria not in ALLOWED_SETTINGS_CATEGORIES:
             return jsonify({'error': 'Categoría no válida'}), 400
+        # If this is roles category, ensure normalized label
+        if categoria == 'roles' and nuevo_valor:
+            nuevo_valor = capitalize_first(nuevo_valor)
         if valor_actual.strip().lower() == nuevo_valor.strip().lower():
+            # Name unchanged — but color might still need updating
+            nuevo_color_check = (data.get('color') or '').strip()
+            if categoria == 'estados_pedido' and nuevo_color_check:
+                col.update_one({'_id': ObjectId(item_id)}, {'$set': {'color': nuevo_color_check}})
+                return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': True}), 200
             return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': False}), 200
         slug_actual = slugify_estado(valor_actual)
         slug_nuevo = slugify_estado(nuevo_valor)
@@ -1785,28 +2900,49 @@ def update_settings_catalogo_item(item_id):
         if categoria == 'estados_pedido' and slug_nuevo in PROTECTED_ESTADOS_PEDIDO_KEYS and slug_nuevo != slug_actual:
             return jsonify({'error': 'Los estados fijos no admiten variantes de nombre'}), 409
         # Verificar duplicados
-        if col.find_one({'categoria': categoria, 'valor': {'$regex': f'^{nuevo_valor}$', '$options': 'i'}, '_id': {'$ne': ObjectId(item_id)}}):
+        if col.find_one({'categoria': categoria, 'valor': {'$regex': f'^{nuevo_valor}$', '$options': 'i'}, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
             return jsonify({'error': 'Ese valor ya existe en la categoría'}), 409
         # Verificar conflicto de slug
         if categoria in ['roles', 'estados_pedido']:
-            for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}}):
+            for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
                 if slugify_estado(row.get('valor')) == slug_nuevo:
                     return jsonify({'error': 'Ya existe un valor equivalente en esa categoría'}), 409
-        # Actualizar valor
-        col.update_one({'_id': ObjectId(item_id)}, {'$set': {'valor': nuevo_valor}})
+        # Actualizar valor, label y color (si se provee y es un estado de pedido)
+        update_fields = {'valor': nuevo_valor, 'label': nuevo_label}
+        nuevo_color = (data.get('color') or '').strip()
+        if categoria == 'estados_pedido' and nuevo_color:
+            update_fields['color'] = nuevo_color
+        col.update_one({'_id': ObjectId(item_id)}, {'$set': update_fields})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
+        try:
+            log_audit('update_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'old_valor': valor_actual, 'new_valor': nuevo_valor, 'empresa_id': empresa_id})
+        except Exception:
+            pass
         return jsonify({'success': True, 'id': item_id, 'valor': nuevo_valor, 'changed': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/settings/<int:item_id>', methods=['DELETE'])
+@app.route('/api/settings/<item_id>', methods=['OPTIONS'])
+def settings_item_options(item_id):
+    # Explicitly handle CORS preflight for item-specific settings routes
+    resp = make_response('')
+    resp.status_code = 200
+    return resp
+
+
+@app.route('/api/settings/<item_id>', methods=['DELETE'])
 def delete_settings_catalogo_item(item_id):
     try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
         from bson import ObjectId
-        col = get_empresa_collection('config_opciones', 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('config_opciones', empresa_id)
         try:
-            doc = col.find_one({'_id': ObjectId(item_id)})
+            doc = col.find_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         except Exception:
             return jsonify({'error': 'Ítem no encontrado'}), 404
         if not doc:
@@ -1817,9 +2953,13 @@ def delete_settings_catalogo_item(item_id):
             return jsonify({'error': f'No se puede eliminar el rol base "{valor}"'}), 409
         if categoria == 'estados_pedido' and slugify_estado(valor) in PROTECTED_ESTADOS_PEDIDO_KEYS:
             return jsonify({'error': f'No se puede eliminar el estado fijo "{valor}"'}), 409
-        result = col.delete_one({'_id': ObjectId(item_id)})
+        result = col.delete_one({'_id': ObjectId(item_id), 'empresa_id': empresa_id})
         if result.deleted_count == 0:
             return jsonify({'error': 'Ítem no encontrado'}), 404
+        try:
+            log_audit('delete_setting_item', request_user if 'request_user' in locals() else None, {'id': str(item_id), 'categoria': categoria, 'valor': valor, 'empresa_id': empresa_id})
+        except Exception:
+            pass
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1832,7 +2972,7 @@ def get_pedidos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         pedidos = list(col.find({'empresa_id': empresa_id}))
         trabajos_col = get_empresa_collection('trabajos', empresa_id)
@@ -1859,7 +2999,7 @@ def get_pedido(pedido_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -1890,13 +3030,665 @@ def get_pedido(pedido_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════════
+# MATERIALES — Catálogo, Stock y Consumos
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/materiales/catalogo', methods=['OPTIONS'])
+def materiales_catalogo_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['OPTIONS'])
+def materiales_catalogo_item_options(material_id):
+    return make_response('', 200)
+
+@app.route('/api/materiales/stock', methods=['OPTIONS'])
+def materiales_stock_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['OPTIONS'])
+def materiales_stock_item_options(stock_id):
+    return make_response('', 200)
+
+@app.route('/api/materiales/consumos', methods=['OPTIONS'])
+def materiales_consumos_options():
+    return make_response('', 200)
+
+@app.route('/api/materiales/migracion', methods=['OPTIONS'])
+def materiales_migracion_options():
+    return make_response('', 200)
+
+
+@app.route('/api/materiales/catalogo', methods=['GET'])
+def get_catalogo_materiales():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        include_inactivos = request.args.get('include_inactivos', 'false').lower() == 'true'
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        query = {'empresa_id': empresa_id}
+        if not include_inactivos:
+            query['activo'] = True
+        docs = list(col.find(query).sort([('orden', 1), ('nombre', 1)]))
+        return jsonify({'catalogo': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['GET'])
+def get_catalogo_material_single(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Material no encontrado'}), 404
+        return jsonify({'material': fix_id(doc)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo', methods=['POST'])
+def create_catalogo_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre del material es requerido'}), 400
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        if col.find_one({'nombre': nombre, 'empresa_id': empresa_id, 'activo': True}):
+            return jsonify({'error': f'Ya existe un material con el nombre "{nombre}"'}), 409
+        fabricantes = data.get('fabricantes') or []
+        for f in fabricantes:
+            if not f.get('id'):
+                f['id'] = str(uuid.uuid4())
+        max_doc = col.find_one({'empresa_id': empresa_id, 'activo': True}, sort=[('orden', -1)])
+        siguiente_orden = (max_doc.get('orden', 0) + 1) if max_doc else 1
+        doc = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'fabricantes': fabricantes,
+            'orden': int(data.get('orden') or siguiente_orden),
+            'fecha_creacion': datetime.now().isoformat(),
+            'activo': True,
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'success': True, 'material': fix_id(doc)}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['PUT'])
+def update_catalogo_material(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Material no encontrado'}), 404
+        data = request.get_json() or {}
+        update = {}
+        if 'nombre' in data and data.get('nombre'):
+            update['nombre'] = str(data['nombre']).strip()
+        if 'fabricantes' in data:
+            fabricantes = data['fabricantes'] or []
+            for f in fabricantes:
+                if not f.get('id'):
+                    f['id'] = str(uuid.uuid4())
+            update['fabricantes'] = fabricantes
+        if 'orden' in data:
+            update['orden'] = int(data['orden'])
+        if 'activo' in data:
+            update['activo'] = bool(data['activo'])
+        if update:
+            col.update_one({'_id': oid}, {'$set': update})
+        updated = col.find_one({'_id': oid})
+        return jsonify({'success': True, 'material': fix_id(updated)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/catalogo/<material_id>', methods=['DELETE'])
+def delete_catalogo_material(material_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('catalogo_materiales', empresa_id)
+        try:
+            oid = ObjectId(material_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Material no encontrado'}), 404
+        col.update_one({'_id': oid}, {'$set': {'activo': False}})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock', methods=['GET'])
+def get_stock_materiales():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        query = {'empresa_id': empresa_id}
+        activo_param = request.args.get('activo', 'true').lower()
+        if activo_param == 'true':
+            query['activo'] = True
+        elif activo_param == 'false':
+            query['activo'] = False
+        mat = request.args.get('material_nombre', '').strip()
+        if mat:
+            query['material_nombre'] = mat
+        fab = request.args.get('fabricante', '').strip()
+        if fab:
+            query['fabricante'] = fab
+        docs = list(col.find(query).sort([('material_nombre', 1), ('fabricante', 1), ('ancho_cm', 1)]))
+        return jsonify({'stock': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock', methods=['POST'])
+def add_stock_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        material_nombre = (data.get('material_nombre') or '').strip()
+        if not material_nombre:
+            return jsonify({'error': 'material_nombre es requerido'}), 400
+        try:
+            ancho_cm = float(data.get('ancho_cm') or 0)
+            metros_total = float(data.get('metros_total') or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'ancho_cm y metros_total deben ser números'}), 400
+        if metros_total <= 0:
+            return jsonify({'error': 'metros_total debe ser mayor que 0'}), 400
+        now = datetime.now().isoformat()
+        doc = {
+            'empresa_id': empresa_id,
+            'material_nombre': material_nombre,
+            'fabricante': (data.get('fabricante') or '').strip(),
+            'ancho_cm': ancho_cm,
+            'gramaje': float(data.get('gramaje') or 0),
+            'metros_total': metros_total,
+            'metros_disponibles': metros_total,
+            'numero_lote': (data.get('numero_lote') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_entrada': now,
+            'fecha_actualizacion': now,
+            'activo': True,
+            'es_retal': bool(data.get('es_retal', False)),
+            'retal_origen_pedido': (data.get('retal_origen_pedido') or '').strip(),
+        }
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'success': True, 'stock_entry': fix_id(doc)}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['PUT'])
+def update_stock_material(stock_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Stock no encontrado'}), 404
+        data = request.get_json() or {}
+        update = {'fecha_actualizacion': datetime.now().isoformat()}
+        if 'material_nombre' in data and str(data['material_nombre'] or '').strip():
+            update['material_nombre'] = str(data['material_nombre']).strip()
+        if 'fabricante' in data:
+            update['fabricante'] = str(data['fabricante'] or '').strip()
+        if 'ancho_cm' in data:
+            try:
+                update['ancho_cm'] = float(data['ancho_cm'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'ancho_cm debe ser un número'}), 400
+        if 'gramaje' in data:
+            try:
+                update['gramaje'] = float(data['gramaje'] or 0)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'gramaje debe ser un número'}), 400
+        if 'metros_total' in data:
+            try:
+                update['metros_total'] = float(data['metros_total'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'metros_total debe ser un número'}), 400
+        if 'metros_disponibles' in data:
+            try:
+                update['metros_disponibles'] = float(data['metros_disponibles'])
+            except (TypeError, ValueError):
+                return jsonify({'error': 'metros_disponibles debe ser un número'}), 400
+        if 'numero_lote' in data:
+            update['numero_lote'] = str(data['numero_lote'] or '').strip()
+        if 'notas' in data:
+            update['notas'] = str(data['notas'] or '')
+        if 'activo' in data:
+            update['activo'] = bool(data['activo'])
+        col.update_one({'_id': oid}, {'$set': update})
+        updated = col.find_one({'_id': oid})
+        return jsonify({'success': True, 'stock_entry': fix_id(updated)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/stock/<stock_id>', methods=['DELETE'])
+def delete_stock_material(stock_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        if not col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Stock no encontrado'}), 404
+        col.update_one({'_id': oid}, {'$set': {'activo': False}})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/consumos', methods=['GET'])
+def get_consumos_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('consumos_material', empresa_id)
+        query = {'empresa_id': empresa_id}
+        pedido_id = request.args.get('pedido_id', '').strip()
+        if pedido_id:
+            query['pedido_id'] = pedido_id
+        mat = request.args.get('material_nombre', '').strip()
+        if mat:
+            query['material_nombre'] = mat
+        try:
+            page = max(1, int(request.args.get('page', 1)))
+            limit = min(100, max(1, int(request.args.get('limit', 50))))
+        except (ValueError, TypeError):
+            page, limit = 1, 50
+        skip = (page - 1) * limit
+        total = col.count_documents(query)
+        docs = list(col.find(query).sort([('fecha', -1)]).skip(skip).limit(limit))
+        return jsonify({'consumos': [fix_id(d) for d in docs], 'total': total, 'page': page, 'limit': limit}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/consumos', methods=['POST'])
+def registrar_consumo_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        pedido_id = str(data.get('pedido_id') or '').strip()
+        stock_id_str = str(data.get('stock_id') or '').strip()
+
+        # Accept largo_trabajo_m (new) or metros_consumidos (legacy)
+        try:
+            largo_trabajo_m = float(data.get('largo_trabajo_m') or data.get('metros_consumidos') or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'largo_trabajo_m debe ser un número'}), 400
+
+        try:
+            ancho_trabajo_cm = float(data.get('ancho_trabajo_cm') or 0)
+        except (TypeError, ValueError):
+            ancho_trabajo_cm = 0
+
+        metros_consumidos = largo_trabajo_m
+
+        if not pedido_id or not stock_id_str or metros_consumidos <= 0:
+            return jsonify({'error': 'pedido_id, stock_id y largo_trabajo_m > 0 son requeridos'}), 400
+
+        stock_col = get_empresa_collection('stock_materiales', empresa_id)
+        try:
+            oid = ObjectId(stock_id_str)
+        except Exception:
+            return jsonify({'error': 'stock_id inválido'}), 400
+
+        stock_entry = stock_col.find_one({'_id': oid, 'empresa_id': empresa_id, 'activo': True})
+        if not stock_entry:
+            return jsonify({'error': 'Stock no encontrado o inactivo'}), 404
+        if stock_entry['metros_disponibles'] < metros_consumidos:
+            return jsonify({'error': f'Stock insuficiente: disponible {stock_entry["metros_disponibles"]:.2f} m, solicitado {metros_consumidos:.2f} m'}), 400
+
+        ancho_rollo = stock_entry.get('ancho_cm', 0)
+        if ancho_trabajo_cm > 0 and ancho_rollo > 0:
+            aprovechamiento_pct = round((ancho_trabajo_cm / ancho_rollo) * 100, 1)
+            desperdicio_cm = round(ancho_rollo - ancho_trabajo_cm, 1)
+        else:
+            aprovechamiento_pct = 100.0
+            desperdicio_cm = 0.0
+
+        metros_restantes = round(stock_entry['metros_disponibles'] - metros_consumidos, 4)
+        now = datetime.now().isoformat()
+        stock_col.update_one({'_id': oid}, {'$set': {'metros_disponibles': metros_restantes, 'fecha_actualizacion': now}})
+
+        consumo_col = get_empresa_collection('consumos_material', empresa_id)
+        consumo = {
+            'empresa_id': empresa_id,
+            'pedido_id': pedido_id,
+            'numero_pedido': str(data.get('numero_pedido') or ''),
+            'stock_id': stock_id_str,
+            'material_nombre': stock_entry['material_nombre'],
+            'fabricante': stock_entry.get('fabricante', ''),
+            'ancho_cm': ancho_rollo,
+            'ancho_trabajo_cm': ancho_trabajo_cm if ancho_trabajo_cm > 0 else ancho_rollo,
+            'metros_consumidos': metros_consumidos,
+            'metros_sobrante': metros_restantes,
+            'aprovechamiento_pct': aprovechamiento_pct,
+            'desperdicio_cm': desperdicio_cm,
+            'fecha': now,
+            'usuario_id': str(data.get('usuario_id') or request_user.get('id') or ''),
+        }
+        result = consumo_col.insert_one(consumo)
+        consumo['_id'] = str(result.inserted_id)
+
+        # Auto-create retal if requested and there's leftover width
+        retal_entry = None
+        crear_retal = bool(data.get('crear_retal', False))
+        if crear_retal and desperdicio_cm > 0 and metros_consumidos > 0:
+            retal_doc = {
+                'empresa_id': empresa_id,
+                'material_nombre': stock_entry['material_nombre'],
+                'fabricante': stock_entry.get('fabricante', ''),
+                'ancho_cm': desperdicio_cm,
+                'metros_total': metros_consumidos,
+                'metros_disponibles': metros_consumidos,
+                'numero_lote': f"RETAL-{pedido_id[:8]}",
+                'notas': f"Retal del pedido {data.get('numero_pedido') or pedido_id}",
+                'es_retal': True,
+                'retal_origen_pedido': pedido_id,
+                'fecha_entrada': now,
+                'fecha_actualizacion': now,
+                'activo': True,
+            }
+            retal_result = stock_col.insert_one(retal_doc)
+            retal_doc['_id'] = str(retal_result.inserted_id)
+            retal_entry = fix_id(retal_doc)
+
+        updated_stock = stock_col.find_one({'_id': oid})
+        return jsonify({
+            'success': True,
+            'consumo': fix_id(consumo),
+            'stock_restante': fix_id(updated_stock),
+            'retal_creado': retal_entry,
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/migracion', methods=['POST'])
+def migrar_materiales_legacy_endpoint():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        migrated = _migrar_materiales_legacy(empresa_id)
+        return jsonify({'success': True, 'migrated': migrated}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores', methods=['OPTIONS'])
+def options_materiales_proveedores():
+    return make_response('', 200)
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['OPTIONS'])
+def options_materiales_proveedor(proveedor_id):
+    return make_response('', 200)
+
+
+@app.route('/api/materiales/proveedores', methods=['GET'])
+def get_proveedores_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        docs = list(col.find({'empresa_id': empresa_id}).sort('nombre', 1))
+        for doc in docs:
+            doc['_id'] = str(doc['_id'])
+        return jsonify({'proveedores': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores', methods=['POST'])
+def create_proveedor_material():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre del proveedor es obligatorio'}), 400
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        doc = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'contacto': (data.get('contacto') or '').strip(),
+            'telefono': (data.get('telefono') or '').strip(),
+            'email': (data.get('email') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_alta': datetime.utcnow().isoformat(),
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'proveedor': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['PUT'])
+def update_proveedor_material(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        update = {}
+        for field in ['nombre', 'contacto', 'telefono', 'email', 'notas']:
+            if field in data:
+                update[field] = (data[field] or '').strip()
+        if not update:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+        if 'nombre' in update and not update['nombre']:
+            return jsonify({'error': 'El nombre no puede estar vacío'}), 400
+        result = col.update_one(
+            {'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id},
+            {'$set': update}
+        )
+        if result.matched_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/proveedores/<proveedor_id>', methods=['DELETE'])
+def delete_proveedor_material(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_material', empresa_id)
+        result = col.delete_one({'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
+# TROQUELES
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/troqueles', methods=['OPTIONS'])
+def options_troqueles():
+    return make_response('', 200)
+
+@app.route('/api/troqueles/<troquel_id>', methods=['OPTIONS'])
+def options_troquel_id(troquel_id):
+    return make_response('', 200)
+
+@app.route('/api/troqueles', methods=['GET'])
+def get_troqueles():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('troqueles', empresa_id)
+        docs = list(col.find({'empresa_id': empresa_id}, {
+            '_id': 1, 'numero': 1, 'tipo': 1, 'forma': 1, 'estado': 1,
+            'anchoMotivo': 1, 'altoMotivo': 1, 'motivosAncho': 1,
+            'separacionAncho': 1, 'valorZ': 1, 'distanciaSesgado': 1,
+            'created_at': 1
+        }))
+        for d in docs:
+            d['_id'] = str(d['_id'])
+        return jsonify({'troqueles': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles', methods=['POST'])
+def create_troquel():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        numero = (data.get('numero') or data.get('referencia') or '').strip()
+        if not numero:
+            return jsonify({'error': 'El número del troquel es obligatorio'}), 400
+        doc = {
+            'empresa_id': empresa_id,
+            'numero': numero,
+            'tipo': data.get('tipo', 'regular'),
+            'forma': data.get('forma', 'Rectangular'),
+            'estado': data.get('estado', 'Disponible'),
+            'anchoMotivo': str(data.get('anchoMotivo') or ''),
+            'altoMotivo': str(data.get('altoMotivo') or ''),
+            'motivosAncho': str(data.get('motivosAncho') or ''),
+            'separacionAncho': str(data.get('separacionAncho') or ''),
+            'valorZ': str(data.get('valorZ') or ''),
+            'distanciaSesgado': str(data.get('distanciaSesgado') or ''),
+            'created_at': datetime.utcnow(),
+        }
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        doc['created_at'] = doc['created_at'].isoformat()
+        return jsonify({'troquel': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles/<troquel_id>', methods=['PUT'])
+def update_troquel(troquel_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        update = {}
+        if 'numero' in data or 'referencia' in data:
+            numero = (data.get('numero') or data.get('referencia') or '').strip()
+            if not numero:
+                return jsonify({'error': 'El número del troquel es obligatorio'}), 400
+            update['numero'] = numero
+        for field in ('tipo', 'forma', 'estado', 'anchoMotivo', 'altoMotivo',
+                      'motivosAncho', 'separacionAncho', 'valorZ', 'distanciaSesgado'):
+            if field in data:
+                update[field] = str(data[field] or '')
+        if not update:
+            return jsonify({'error': 'Nada que actualizar'}), 400
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.update_one({'_id': ObjectId(troquel_id), 'empresa_id': empresa_id}, {'$set': update})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Troquel no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/troqueles/<troquel_id>', methods=['DELETE'])
+def delete_troquel(troquel_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('troqueles', empresa_id)
+        result = col.delete_one({'_id': ObjectId(troquel_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Troquel no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/presupuestos/<int:trabajo_id>', methods=['GET'])
 def get_presupuesto(trabajo_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         # Lógica de consulta de presupuesto adaptada a MongoDB pendiente de implementar si es necesario
         return jsonify({'success': True, 'mensaje': 'Consulta de presupuesto pendiente de implementar'}), 200
     except Exception as e:
@@ -1905,36 +3697,345 @@ def get_presupuesto(trabajo_id):
 @app.route('/api/presupuestos', methods=['POST'])
 def save_presupuesto():
     try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
-
-        if modo_automatico_activo():
-            return jsonify({'error': 'Creación manual deshabilitada. Usa integración API REST.'}), 403
-
-        data = request.get_json()
-        # Lógica MongoDB pendiente si es necesario
-        
-        # Lógica de guardado de presupuesto adaptada a MongoDB pendiente de implementar si es necesario
-        return jsonify({'success': True}), 200
+        # Delegar en la implementación concreta de creación para evitar rutas duplicadas
+        # y garantizar que el presupuesto se inserta en la colección.
+        # Nota: la función `crear_presupuesto` está definida más abajo y hará la inserción.
+        return crear_presupuesto()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/presupuestos/aceptar/<int:trabajo_id>', methods=['POST'])
+@app.route('/api/presupuestos/aceptar/<trabajo_id>', methods=['POST'])
 def aceptar_presupuesto(trabajo_id):
     """Acepta un presupuesto y crea un pedido"""
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
 
-        # Lógica de aceptación de presupuesto y creación de pedido adaptada a MongoDB pendiente de implementar si es necesario
-        # Lógica MongoDB pendiente si es necesario
+        # Buscar presupuesto por trabajo_id
+        pres_col = get_empresa_collection('presupuestos', empresa_id)
+        pres = pres_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+        if not pres:
+            # Intentar buscar por id del presupuesto (fallback)
+            try:
+                pres = pres_col.find_one({'empresa_id': empresa_id, '_id': ObjectId(trabajo_id)})
+            except Exception:
+                pres = None
+
+        if not pres:
+            return jsonify({'error': 'Presupuesto no encontrado para el trabajo_id indicado'}), 404
+
+        # Crear pedido usando datos enviados o los datos del presupuesto
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            counters_col = mongo.db['counters']
+            seq_doc = counters_col.find_one_and_update(
+                {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
+            )
+            numero_pedido = str(seq_doc.get('seq', 0))
+        except Exception:
+            numero_pedido = f"PED-{int(time.time())}"
+
+        # Reconstruir/parsear los datos del presupuesto existentes
+        existing_dj = {}
+        try:
+            if pres.get('datos_json') and isinstance(pres.get('datos_json'), str):
+                existing_dj = json.loads(pres.get('datos_json'))
+            else:
+                existing_dj = pres.get('datos_json') or pres.get('datos_presupuesto') or {}
+        except Exception:
+            existing_dj = pres.get('datos_presupuesto') or {}
+
+        # Datos enviados en la petición (puede venir como datos_presupuesto/datosPresupuesto)
+        incoming_dj = data.get('datosPresupuesto') or data.get('datos_presupuesto') or {}
+
+        # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'troquelId', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        # Merge: start from existing, then top-level data, then incoming_dj
+        merged_dj = dict(existing_dj or {})
+        for k in extra_keys:
+            if k in data and (k not in merged_dj or merged_dj.get(k) is None):
+                merged_dj[k] = data.get(k)
+        if isinstance(incoming_dj, dict):
+            merged_dj.update(incoming_dj)
+        else:
+            # incoming_dj puede ser una lista (p.ej. selectedTintas) enviada por error desde el cliente.
+            # Manejarlo de forma tolerante: si es lista la interpretamos como `selectedTintas`.
+            if isinstance(incoming_dj, list):
+                merged_dj['selectedTintas'] = incoming_dj
+
+        # Persistir merge en el presupuesto para asegurar que selectedTintas quede guardado
+        try:
+            pres_col.update_one({'_id': pres.get('_id')}, {'$set': {'datos_json': merged_dj, 'datos_presupuesto': merged_dj}})
+        except Exception:
+            try:
+                pres_col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres.get('_id')}, {'id': pres.get('id')} ]}, {'$set': {'datos_json': merged_dj, 'datos_presupuesto': merged_dj}})
+            except Exception:
+                pass
+
+        datos_presupuesto = merged_dj or {}
+
+        # Verificar si ya existe un pedido para este trabajo_id
+        existing_pedido = pedidos_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
         
-        # Lógica MongoDB pendiente si es necesario
-        return jsonify({'success': True, 'mensaje': 'Presupuesto aceptado y pedido creado'}), 200
+        if existing_pedido:
+            # El pedido ya existe - actualizar campos vacíos
+            pedido_id = str(existing_pedido.get('_id'))
+            update_fields = {}
+            if not existing_pedido.get('numero_pedido'):
+                update_fields['numero_pedido'] = numero_pedido
+                update_fields['datos_presupuesto'] = datos_presupuesto
+            # Normalizar estado inválido/antiguo (ej: 'Pendiente' de datos viejos)
+            try:
+                available_states = get_estados_pedido_disponibles(empresa_id)
+                valid_slugs = {slugify_estado(item['valor']) for item in available_states}
+                existing_slug = slugify_estado(existing_pedido.get('estado') or '')
+                if not existing_slug or existing_slug not in valid_slugs:
+                    default_label = next((item['valor'] for item in available_states), 'En Diseño')
+                    update_fields['estado'] = default_label
+                    existing_pedido['estado'] = default_label
+            except Exception:
+                pass
+            if update_fields:
+                pedidos_col.update_one(
+                    {'_id': existing_pedido.get('_id')},
+                    {'$set': update_fields}
+                )
+            doc_pedido = existing_pedido
+            doc_pedido['_id'] = pedido_id
+        else:
+            # Crear nuevo pedido
+            doc_pedido = {
+                'empresa_id': empresa_id,
+                'trabajo_id': pres.get('trabajo_id'),
+                'numero_pedido': numero_pedido,
+                'referencia': pres.get('referencia') or datos_presupuesto.get('referencia'),
+                'fecha_pedido': datetime.now().isoformat(),
+                'datos_presupuesto': datos_presupuesto
+            }
+            try:
+                available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
+                default_label = next(iter(available.values()), 'En Diseño')
+            except Exception:
+                default_label = 'En Diseño'
+            doc_pedido['estado'] = default_label
+            doc_pedido['fecha_finalizacion'] = None
+            result = pedidos_col.insert_one(doc_pedido)
+            pedido_id = str(result.inserted_id)
+            # attach inserted id to returned doc for client convenience
+            doc_pedido['_id'] = pedido_id
+
+        # Actualizar presupuesto: aprobado, pedido_id, fecha_aprobacion
+        try:
+            pres_col.update_one({'_id': pres.get('_id')}, {'$set': {'aprobado': True, 'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'pedido': doc_pedido}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/crear-desde-erp', methods=['POST'])
+def crear_pedido_desde_erp():
+    """
+    Endpoint para que sistemas externos (ERP) creen pedidos automáticamente.
+    
+    Parámetros requeridos (JSON):
+    - trabajo_id: Identificador único del trabajo/pedido en el sistema externo
+    - cliente: Nombre del cliente
+    - referencia: Referencia del pedido
+    - nombre: Nombre del pedido (opcional)
+    - fecha_entrega: Fecha de entrega (opcional)
+    - datos_presupuesto: Objeto JSON con detalles del presupuesto (opcional)
+    - estado: Estado del pedido (opcional, por defecto "Diseño")
+    
+    Headers requeridos:
+    - X-Empresa-Id: ID de la empresa
+    - X-User-Id: ID del usuario (puede ser "erp" o token JWT)
+    - X-Role: Rol del usuario (puede ser "erp" o similar para sistemas)
+    
+    Retorna:
+    - success: true/false
+    - pedido: Objeto del pedido creado con su ID
+    - pedido_id: ID del pedido creado
+    - numero_pedido: Número secuencial del pedido
+    """
+    try:
+        # Permitir autenticación por headers para sistemas ERP
+        empresa_id = request.headers.get('X-Empresa-Id', '').strip()
+        user_id = request.headers.get('X-User-Id', '').strip()
+        role = request.headers.get('X-Role', '').strip()
+        
+        if not empresa_id or not user_id or not role:
+            # Fallback a require_request_user si no vienen los headers
+            request_user, auth_error = require_request_user()
+            if auth_error:
+                return auth_error
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+            user_id = request_user.get('id')
+            role = request_user.get('rol')
+        else:
+            empresa_id = normalize_empresa_id(empresa_id)
+
+        # Crear objeto request_user para logging
+        request_user = {
+            'id': user_id,
+            'empresa_id': empresa_id,
+            'role': role
+        }
+        data = request.get_json() or {}
+        
+        # Validar campos requeridos
+        trabajo_id = str(data.get('trabajo_id') or '').strip()
+        cliente = str(data.get('cliente') or '').strip()
+        referencia = str(data.get('referencia') or '').strip()
+        
+        if not trabajo_id:
+            return jsonify({'error': 'trabajo_id es requerido'}), 400
+        if not cliente:
+            return jsonify({'error': 'cliente es requerido'}), 400
+        
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        
+        # Verificar si ya existe un pedido para este trabajo_id
+        existing_pedido = pedidos_col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+        if existing_pedido:
+            return jsonify({
+                'success': True,
+                'message': 'Pedido ya existe para este trabajo_id',
+                'pedido': fix_id(existing_pedido),
+                'pedido_id': str(existing_pedido.get('_id'))
+            }), 200
+        
+        # Generar número de pedido
+        try:
+            counters_col = mongo.db['counters']
+            seq_doc = counters_col.find_one_and_update(
+                {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
+            )
+            numero_pedido = str(seq_doc.get('seq', 0))
+        except Exception as e:
+            print(f"Error generando número de pedido: {e}")
+            numero_pedido = f"PED-{int(time.time())}"
+        
+        # Preparar datos del presupuesto
+        datos_presupuesto = data.get('datos_presupuesto') or {}
+        if isinstance(datos_presupuesto, str):
+            try:
+                datos_presupuesto = json.loads(datos_presupuesto)
+            except Exception:
+                datos_presupuesto = {}
+        
+        # Crear documento del pedido
+        doc_pedido = {
+            'empresa_id': empresa_id,
+            'trabajo_id': trabajo_id,
+            'numero_pedido': numero_pedido,
+            'cliente': cliente,
+            'referencia': referencia,
+            'nombre': data.get('nombre') or f'Pedido {numero_pedido}',
+            'fecha_pedido': datetime.now().isoformat(),
+            'fecha_entrega': data.get('fecha_entrega') or None,
+            'datos_presupuesto': datos_presupuesto,
+            'origen': 'erp',  # Marcamos que viene del ERP
+            'created_by': f"{request_user.get('id')} (ERP Integration)"
+        }
+        
+        # Establecer estado del pedido
+        try:
+            available_states = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
+            requested_estado = (data.get('estado') or 'en-diseno').lower()
+            estado = available_states.get(requested_estado) or next(iter(available_states.values()), 'En Diseño')
+        except Exception:
+            estado = data.get('estado') or 'En Diseño'
+        
+        doc_pedido['estado'] = estado
+        doc_pedido['fecha_finalizacion'] = None
+        
+        # Insertar pedido
+        try:
+            result = pedidos_col.insert_one(doc_pedido)
+            pedido_id = str(result.inserted_id)
+            doc_pedido['_id'] = pedido_id
+            
+            # Registrar auditoría
+            try:
+                log_audit('create_pedido_erp', {
+                    'id': f"{request_user.get('id')} (ERP)",
+                    'empresa_id': empresa_id,
+                    'role': 'erp'
+                }, {
+                    'trabajo_id': trabajo_id,
+                    'pedido_id': pedido_id,
+                    'numero_pedido': numero_pedido,
+                    'cliente': cliente
+                })
+            except Exception as e:
+                print(f"Error registrando auditoría: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Pedido creado exitosamente desde ERP',
+                'pedido': fix_id(doc_pedido),
+                'pedido_id': pedido_id,
+                'numero_pedido': numero_pedido
+            }), 201
+        except Exception as e:
+            print(f"Error insertando pedido: {e}")
+            return jsonify({'error': f'Error creando pedido: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"Error en crear_pedido_desde_erp: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/validar-modo-automatico', methods=['GET'])
+def validar_modo_automatico():
+    """
+    Endpoint para que sistemas externos (ERP) validen si el modo automático está habilitado.
+    
+    Headers requeridos:
+    - X-Empresa-Id: ID de la empresa
+    - X-User-Id: ID del usuario (puede ser "erp" o token JWT)
+    - X-Role: Rol del usuario (puede ser "erp" o similar para sistemas)
+    
+    Retorna:
+    - modo_automatico: true/false
+    - modo: 'automatico' o 'manual'
+    """
+    try:
+        # Permitir autenticación por headers para sistemas ERP
+        empresa_id = request.headers.get('X-Empresa-Id', '').strip()
+        
+        if not empresa_id:
+            # Fallback a require_request_user si no viene el header
+            request_user, auth_error = require_request_user()
+            if auth_error:
+                return auth_error
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        else:
+            empresa_id = normalize_empresa_id(empresa_id)
+
+        col_general = get_empresa_collection('config_general', empresa_id)
+        doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
+        valor = (doc.get('valor') if doc and doc.get('valor') else 'manual')
+        valor = valor if valor in ['manual', 'automatico'] else 'manual'
+        
+        return jsonify({
+            'success': True,
+            'modo': valor,
+            'modo_automatico': (valor == 'automatico'),
+            'mensaje': 'Modo automático habilitado' if valor == 'automatico' else 'Modo manual habilitado'
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1945,10 +4046,154 @@ def get_presupuestos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
-        # Lógica MongoDB pendiente si es necesario
-        return jsonify({'presupuestos': []}), 200
+        col = get_empresa_collection('presupuestos', empresa_id)
+        presupuestos = list(col.find({'empresa_id': empresa_id}))
+
+        # Adjuntar trabajo relacionado si existe
+        trabajos_col = get_empresa_collection('trabajos', empresa_id)
+        trabajos_map = {}
+        for t in trabajos_col.find({'empresa_id': empresa_id}):
+            tt = fix_id(t)
+            trabajos_map[str(tt.get('id'))] = tt
+
+        presupuestos_out = []
+        for p in presupuestos:
+            p = fix_id(p)
+            try:
+                trabajo = trabajos_map.get(str(p.get('trabajo_id')))
+                if trabajo:
+                    p['trabajo'] = trabajo
+            except Exception:
+                pass
+            # intentar parsear datos_json si es string
+            try:
+                if p.get('datos_json') and isinstance(p.get('datos_json'), str):
+                    p['datos_json'] = json.loads(p['datos_json'])
+            except Exception:
+                pass
+            # Elevar claves comunes desde datos_json a nivel top-level para compatibilidad con frontend
+            try:
+                common = ['cliente', 'nombre', 'referencia', 'razon_social', 'razonSocial', 'cif', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'acabado', 'observaciones', 'material', 'detalleTintaEspecial']
+                dj = p.get('datos_json') or {}
+                if isinstance(dj, dict):
+                    for ck in common:
+                        if ck in dj and not p.get(ck):
+                            p[ck] = dj.get(ck)
+                # mantener también `datos_presupuesto` para compatibilidad con UI antiguas
+                if isinstance(dj, dict) and not p.get('datos_presupuesto'):
+                    p['datos_presupuesto'] = dj
+            except Exception:
+                pass
+            presupuestos_out.append(p)
+
+        return jsonify({'presupuestos': presupuestos_out}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/presupuestos/<presupuesto_id>', methods=['PUT'])
+def update_presupuesto(presupuesto_id):
+    """Actualiza campos de un presupuesto existente por id."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        data = request.get_json() or {}
+        col = get_empresa_collection('presupuestos', empresa_id)
+
+        # Construir update
+        update_fields = {}
+        # Campos de primer nivel permitidos
+        for key in ('numero_presupuesto', 'fecha_presupuesto', 'aprobado', 'referencia', 'pedido_id'):
+            if key in data:
+                update_fields[key] = data.get(key)
+
+        # datos_json completo
+        if 'datos_json' in data:
+            update_fields['datos_json'] = data.get('datos_json')
+        # mantener compatibilidad: también actualizar datos_presupuesto si se envía datos_json
+        if 'datos_json' in data:
+            update_fields['datos_presupuesto'] = data.get('datos_json')
+
+        if not update_fields:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+
+        # Intentar convertir a ObjectId, si falla usar como string
+        try:
+            oid = ObjectId(presupuesto_id)
+            res = col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': update_fields})
+        except Exception:
+            # fallback: buscar por campo string 'id' o por trabajo_id
+            res = col.update_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]}, {'$set': update_fields})
+
+        if res.matched_count == 0:
+            return jsonify({'error': 'Presupuesto no encontrado'}), 404
+
+        # Si se marcó como aprobado, crear un pedido asociado si no existe
+        try:
+            if update_fields.get('aprobado'):
+                # obtener el documento actualizado del presupuesto
+                pres_doc = None
+                try:
+                    oid = ObjectId(presupuesto_id)
+                    pres_doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+                except Exception:
+                    pres_doc = col.find_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]})
+
+                if pres_doc and not pres_doc.get('pedido_id'):
+                    # crear pedido vinculado
+                    pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                    # generar numero_pedido (contador) similar a crear_pedido()
+                    try:
+                        counters_col = mongo.db['counters']
+                        seq_doc = counters_col.find_one_and_update(
+                            {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                            {'$inc': {'seq': 1}},
+                            upsert=True,
+                            return_document=pymongo.ReturnDocument.AFTER
+                        )
+                        numero_pedido = str(seq_doc.get('seq', 0))
+                    except Exception:
+                        numero_pedido = f"PED-{int(time.time())}"
+
+                    doc_pedido = {
+                        'empresa_id': empresa_id,
+                        'trabajo_id': pres_doc.get('trabajo_id'),
+                        'numero_pedido': numero_pedido,
+                        'referencia': pres_doc.get('referencia'),
+                        'fecha_pedido': datetime.now().isoformat(),
+                        'datos_presupuesto': pres_doc.get('datos_json')
+                    }
+                    try:
+                        available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
+                        default_label = next(iter(available.values()), 'En Diseño')
+                    except Exception:
+                        default_label = 'En Diseño'
+                    doc_pedido['estado'] = default_label
+                    doc_pedido['fecha_finalizacion'] = None
+                    result_pedido = pedidos_col.insert_one(doc_pedido)
+                    pedido_id = str(result_pedido.inserted_id)
+                    # attach inserted id to returned doc for client convenience
+                    doc_pedido['_id'] = pedido_id
+
+                    # grabar pedido_id y fecha_aprobacion en el presupuesto
+                    extra = {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}
+                    try:
+                        oid = ObjectId(presupuesto_id)
+                        col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': extra})
+                    except Exception:
+                        col.update_one({'empresa_id': empresa_id, '$or': [{'_id': presupuesto_id}, {'id': presupuesto_id}]}, {'$set': extra})
+                    # return the created pedido to caller (non-blocking)
+                    return jsonify({'success': True, 'pedido': doc_pedido}), 200
+        except Exception:
+            # No bloquear la actualización por errores en la creación del pedido
+            pass
+
+        return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1958,14 +4203,19 @@ def crear_presupuesto():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_presupuesto = data.get('numero_presupuesto')
         fecha_presupuesto = data.get('fecha_presupuesto')
         aprobado = data.get('aprobado', False)
         referencia = data.get('referencia')
-        datos_json = data.get('datos_json')
+        datos_json = data.get('datos_json') or {}
+        # Aceptar también campos enviados al nivel superior y consolidarlos dentro de datos_json
+        extra_keys = ['cliente', 'nombre', 'referencia', 'razonSocial', 'razon_social', 'cif', 'personasContacto', 'email', 'vendedor', 'formatoAncho', 'formatoLargo', 'tirada', 'selectedTintas', 'detalleTintaEspecial', 'coberturaResult', 'troquelEstadoSel', 'troquelFormaSel', 'troquelCoste', 'troquelId', 'observaciones', 'acabado', 'material', 'maquina', 'fecha', 'fecha_entrega']
+        for k in extra_keys:
+            if k in data and (k not in datos_json or datos_json.get(k) is None):
+                datos_json[k] = data.get(k)
         if not trabajo_id or not numero_presupuesto:
             return jsonify({'error': 'Faltan datos obligatorios'}), 400
         col = get_empresa_collection('presupuestos', empresa_id)
@@ -1976,10 +4226,59 @@ def crear_presupuesto():
             'fecha_presupuesto': fecha_presupuesto,
             'aprobado': aprobado,
             'referencia': referencia,
-            'datos_json': datos_json
+            'datos_json': datos_json,
+            # Mantener compatibilidad con nomenclatura previa (frontend espera a veces `datos_presupuesto`)
+            'datos_presupuesto': datos_json
         }
+        # Mantener cliente a nivel superior para compatibilidad con la UI
+        if datos_json.get('cliente') and not doc.get('cliente'):
+            doc['cliente'] = datos_json.get('cliente')
         result = col.insert_one(doc)
-        return jsonify({'success': True, 'presupuesto_id': str(result.inserted_id)}), 201
+        pres_id = str(result.inserted_id)
+
+        # Si viene aprobado desde creación, crear pedido asociado
+        try:
+            if aprobado:
+                pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                try:
+                    counters_col = mongo.db['counters']
+                    seq_doc = counters_col.find_one_and_update(
+                        {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                        {'$inc': {'seq': 1}},
+                        upsert=True,
+                        return_document=pymongo.ReturnDocument.AFTER
+                    )
+                    numero_pedido = str(seq_doc.get('seq', 0))
+                except Exception:
+                    numero_pedido = f"PED-{int(time.time())}"
+
+                doc_pedido = {
+                    'empresa_id': empresa_id,
+                    'trabajo_id': trabajo_id,
+                    'numero_pedido': numero_pedido,
+                    'referencia': referencia,
+                    'fecha_pedido': datetime.now().isoformat(),
+                    'datos_presupuesto': datos_json
+                }
+                try:
+                    available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
+                    default_label = next(iter(available.values()), 'En Diseño')
+                except Exception:
+                    default_label = 'En Diseño'
+                doc_pedido['estado'] = default_label
+                doc_pedido['fecha_finalizacion'] = None
+                result_pedido = pedidos_col.insert_one(doc_pedido)
+                pedido_id = str(result_pedido.inserted_id)
+                # actualizar presupuesto con pedido_id y fecha_aprobacion
+                try:
+                    oid = ObjectId(pres_id)
+                    col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+                except Exception:
+                    col.update_one({'empresa_id': empresa_id, '$or': [{'_id': pres_id}, {'id': pres_id}]}, {'$set': {'pedido_id': pedido_id, 'fecha_aprobacion': datetime.now().isoformat()}})
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'presupuesto_id': pres_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1991,10 +4290,7 @@ def crear_pedido_manual():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
-
-        if modo_automatico_activo():
-            return jsonify({'error': 'Creación manual deshabilitada. Usa integración API REST.'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         nombre = data.get('nombre')
@@ -2036,7 +4332,7 @@ def crear_documento_integracion():
         request_user = get_request_user()
         if not request_user:
             return jsonify({'error': 'Autenticación requerida para integración'}), 401
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json() or {}
         tipo = (data.get('tipo') or '').strip().lower()
@@ -2091,10 +4387,10 @@ def get_trabajos_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         from datetime import datetime, timedelta
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         # TODO: Lógica MongoDB para obtener trabajos y reglas de estado
         
         # Calcular fecha de hace 15 días
@@ -2114,7 +4410,7 @@ def crear_pedido():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_pedido = data.get('numero_pedido')
@@ -2147,16 +4443,108 @@ def crear_pedido():
             'fecha_pedido': fecha_pedido,
             'datos_presupuesto': datos_presupuesto
         }
-        # Establecer estado por defecto ('Diseño') usando las etiquetas configuradas
+        # Establecer estado por defecto ('En Diseño') usando las etiquetas configuradas
         try:
-            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
-            default_label = available.get('diseno') or 'Diseño'
+            available = {item['valor']: item.get('label') for item in get_estados_pedido_disponibles(empresa_id)}
+            default_label = next(iter(available.values()), 'En Diseño')
         except Exception:
-            default_label = 'Diseño'
+            default_label = 'En Diseño'
         doc['estado'] = default_label
         doc['fecha_finalizacion'] = None
-        result = col.insert_one(doc)
-        return jsonify({'success': True, 'pedido_id': str(result.inserted_id)}), 201
+        try:
+            result = col.insert_one(doc)
+            pedido_id = str(result.inserted_id)
+        except pymongo.errors.DuplicateKeyError:
+            # POST /api/trabajos already inserted a stub document into the pedidos
+            # collection (because get_empresa_collection maps 'trabajos' → 'pedidos').
+            # That stub has (empresa_id, trabajo_id) set, so a second insert fails.
+            # Solution: update the existing stub with the full pedido data.
+            existing = col.find_one({'empresa_id': empresa_id, 'trabajo_id': trabajo_id})
+            if not existing:
+                raise
+            update_fields = {k: v for k, v in doc.items() if k != '_id'}
+            col.update_one({'_id': existing['_id']}, {'$set': update_fields})
+            pedido_id = str(existing['_id'])
+        return jsonify({'success': True, 'pedido_id': pedido_id}), 201
+    except Exception as e:
+        _traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/migrate-estado', methods=['POST'])
+def migrate_estados():
+    """Migra todos los pedidos de un estado a otro"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        
+        # Validar permisos
+        user_role = str(request_user.get('rol') or '').strip().lower()
+        if user_role not in ('administrador', 'root', 'admin'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        
+        source_estado_id = data.get('source_estado_id')
+        destination_estado_value = data.get('destination_estado_value')
+        
+        if not source_estado_id or not destination_estado_value:
+            return jsonify({'error': 'source_estado_id y destination_estado_value son requeridos'}), 400
+        
+        # Validar que source_estado_id sea un ObjectId válido
+        try:
+            source_oid = ObjectId(source_estado_id)
+        except Exception:
+            return jsonify({'error': 'ID de estado fuente inválido'}), 400
+        
+        # Validar que destination_estado_value sea válido
+        available_items = get_estados_pedido_disponibles(empresa_id)
+        disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
+        dest_slug = slugify_estado(destination_estado_value)
+        
+        if dest_slug not in disponibles:
+            return jsonify({'error': 'Estado destino no es válido'}), 400
+        
+        # Obtener el estado destino normalizado
+        estado_destino_label = disponibles.get(dest_slug) or destination_estado_value
+        
+        # Obtener el estado fuente de la base de datos de configuración
+        settings_col = get_empresa_collection('config_opciones', empresa_id)
+        source_estado_doc = settings_col.find_one({
+            'categoria': 'estados_pedido',
+            '_id': source_oid
+        })
+        
+        if not source_estado_doc:
+            return jsonify({'error': 'Estado fuente no encontrado'}), 404
+        
+        estado_fuente_label = source_estado_doc.get('valor')
+        
+        # Buscar todos los pedidos con el estado fuente y actualizarlos
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        result = pedidos_col.update_many(
+            {
+                'empresa_id': empresa_id,
+                'estado': estado_fuente_label
+            },
+            {
+                '$set': {
+                    'estado': estado_destino_label,
+                    'fecha_finalizacion': None  # Resetear fecha de finalización
+                }
+            }
+        )
+        
+        migrated_count = result.modified_count
+        
+        return jsonify({
+            'success': True,
+            'migrated_count': migrated_count,
+            'message': f'Se migraron {migrated_count} pedido(s) de "{estado_fuente_label}" a "{estado_destino_label}"'
+        }), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2167,7 +4555,7 @@ def update_pedido(pedido_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -2182,11 +4570,16 @@ def update_pedido(pedido_id):
 
         # Validación y normalización del estado según reglas configuradas
         if 'estado' in data:
+            # Validar que el usuario tenga permiso para cambiar estados
+            if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+                return jsonify({'error': 'No autorizado para cambiar estados'}), 403
             raw_estado = str(data.get('estado') or '').strip()
             if not raw_estado:
                 return jsonify({'error': 'estado vacío'}), 400
             nuevo_estado = slugify_estado(raw_estado)
-            disponibles = {item['value'] for item in get_estados_pedido_disponibles()}
+            # Validar contra los slugs de estados disponibles (frontend envía slugificado)
+            available_items = get_estados_pedido_disponibles(empresa_id)
+            disponibles = {slugify_estado(item['valor']): item['valor'] for item in available_items}
             if nuevo_estado not in disponibles:
                 return jsonify({'error': 'Estado no válido'}), 400
 
@@ -2194,22 +4587,20 @@ def update_pedido(pedido_id):
             pedido_actual = col.find_one({'_id': oid, 'empresa_id': empresa_id})
             if not pedido_actual:
                 return jsonify({'error': 'Pedido no encontrado'}), 404
-            reglas = get_estados_pedido_rules().get('rules', ESTADOS_RULES_DEFAULT)
+            reglas = get_estados_pedido_rules(empresa_id).get('rules', ESTADOS_RULES_DEFAULT)
             estados_finales = set(reglas.get('estados_finalizados', []))
             estado_actual = slugify_estado(str(pedido_actual.get('estado') or ''))
 
             # Allow root users to override final-state lock
             request_role = str(request_user.get('rol') or '').strip().lower()
-            # Allow override for root users or if active_role is root
-            col_general = get_empresa_collection('config_general', 0)
-            ar_doc = col_general.find_one({'clave': 'active_role'})
-            active_role_cfg = (ar_doc.get('valor') if ar_doc and ar_doc.get('valor') else 'root')
-            if estado_actual in estados_finales and estado_actual != nuevo_estado and request_role != 'root' and slugify_estado(active_role_cfg) != 'root':
+            # Allow override only for root users (removed dependency on configurable
+            # "active_role"). If the current state is final and the requester is
+            # not 'root', disallow the change.
+            if estado_actual in estados_finales and estado_actual != nuevo_estado and request_role != 'root':
                 return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
 
             # Guardar el estado en formato de label (mantener consistencia con datos existentes)
-            available = {item['value']: item.get('label') for item in get_estados_pedido_disponibles()}
-            estado_label = available.get(nuevo_estado) or nuevo_estado
+            estado_label = disponibles.get(nuevo_estado) or nuevo_estado
             update['estado'] = estado_label
 
             # Ajustar fecha_finalizacion automáticamente si aplicable
@@ -2217,6 +4608,11 @@ def update_pedido(pedido_id):
                 update['fecha_finalizacion'] = datetime.now().isoformat()
             else:
                 update['fecha_finalizacion'] = None
+
+            # Limpiar en_produccion si el nuevo estado sale de la cola de producción
+            en_cola_list = reglas.get('en_cola_produccion', [])
+            if nuevo_estado not in en_cola_list:
+                update['en_produccion'] = False
 
         if not update:
             return jsonify({'error': 'Nada que actualizar'}), 400
@@ -2241,7 +4637,7 @@ def delete_pedido(pedido_id):
         if user_role not in ('administrador', 'root', 'admin'):
             return jsonify({'error': 'Permiso denegado'}), 403
 
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -2255,6 +4651,7 @@ def delete_pedido(pedido_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/produccion/enviar', methods=['POST'])
 def enviar_trabajo_produccion():
     """Envía un trabajo a producción en una máquina"""
@@ -2262,9 +4659,22 @@ def enviar_trabajo_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        
+        # Validar que el usuario tenga permiso para cambiar estados
+        if not can_role_permission(request_user.get('rol'), 'manage_estados_pedido'):
+            return jsonify({'error': 'No autorizado para cambiar estados'}), 403
+        
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
+        # Logging para depuración: mostrar body recibido
+        try:
+            print('POST /api/produccion/enviar body:', data)
+        except Exception:
+            try:
+                print('POST /api/produccion/enviar raw:', request.data)
+            except Exception:
+                pass
         trabajo_id = data.get('trabajo_id')
         maquina_id = data.get('maquina_id')
         
@@ -2273,9 +4683,52 @@ def enviar_trabajo_produccion():
         
         # Verificar que el trabajo exista y su estado permita envío
         trabajos_col = get_empresa_collection('trabajos', empresa_id)
-        trabajo = trabajos_col.find_one({'_id': fix_id(trabajo_id), 'empresa_id': empresa_id})
+        trabajo = None
+        # Intentar varias formas de localizar el trabajo: _id ObjectId, campo numérico `id`, campo string `id`, o `trabajo_id`
+        try:
+            trabajo = trabajos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+        except Exception:
+            trabajo = None
+
         if not trabajo:
-            return jsonify({'error': 'Trabajo no encontrado'}), 404
+            # si viene un número, probar como entero en campo `id`
+            try:
+                trabajo = trabajos_col.find_one({'id': int(trabajo_id), 'empresa_id': empresa_id})
+            except Exception:
+                trabajo = None
+
+        if not trabajo:
+            # finalmente probar por campos string y por `trabajo_id`
+            trabajo = trabajos_col.find_one({
+                'empresa_id': empresa_id,
+                '$or': [
+                    {'id': str(trabajo_id)},
+                    {'trabajo_id': trabajo_id},
+                    {'_id': trabajo_id}
+                ]
+            })
+
+        if not trabajo:
+            # Intentar recuperar información desde `pedidos` si existe un pedido que referencia este trabajo
+            pedidos_col = get_empresa_collection('pedidos', empresa_id)
+            pedido_doc = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+            if pedido_doc:
+                # Crear un trabajo mínimo para poder encolarlo en producción
+                nuevo_trabajo = {
+                    'empresa_id': empresa_id,
+                    'nombre': pedido_doc.get('referencia') or pedido_doc.get('numero_pedido') or f'Trabajo {int(time.time())}',
+                    'cliente': (pedido_doc.get('cliente') or '') if not isinstance(pedido_doc.get('cliente'), dict) else (pedido_doc.get('cliente').get('nombre') or ''),
+                    'referencia': pedido_doc.get('referencia') or '',
+                    'fecha_entrega': pedido_doc.get('fecha_entrega'),
+                    'estado': 'Pendiente',
+                    'created_at': datetime.utcnow().isoformat(),
+                    'id': trabajo_id
+                }
+                res = trabajos_col.insert_one(nuevo_trabajo)
+                nuevo_trabajo['_id'] = res.inserted_id
+                trabajo = nuevo_trabajo
+            else:
+                return jsonify({'error': 'Trabajo no encontrado'}), 404
 
         rules = get_estados_pedido_rules().get('rules', ESTADOS_RULES_DEFAULT)
         bloqueados = set(rules.get('bloqueados_produccion', []))
@@ -2284,38 +4737,131 @@ def enviar_trabajo_produccion():
         preimpresion = list(rules.get('preimpresion', []))
 
         estado_actual = (trabajo.get('estado') or '').strip().lower()
-        if estado_actual in bloqueados or estado_actual in en_cola:
+        
+        # Obtener la orden existente ANTES de validar estados
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        # Comprobar si ya existe una orden para este trabajo (aceptar _id ObjectId o string)
+        existing_order = None
+        try:
+            existing_order = orden_col.find_one({'trabajo_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+        except Exception:
+            existing_order = None
+        if not existing_order:
+            existing_order = orden_col.find_one({'empresa_id': empresa_id, '$or': [{'trabajo_id': trabajo_id}, {'trabajo_id': str(trabajo_id)}]})
+        
+        # Solo rechazar si está en estados bloqueados O si está en en_cola pero NO existe en orden_col
+        # (si ya existe en orden_col, permitir actualizar máquina o posición)
+        if estado_actual in bloqueados or (estado_actual in en_cola and not existing_order):
             return jsonify({'error': f'No se puede enviar a producción cuando el estado es {estado_actual}'}), 400
 
         # Si llega desde fases previas a impresión, avanzar automáticamente
         # para que pueda entrar y verse en las colas de impresión.
         if estado_actual in set(preimpresion) and len(en_cola_list) > 0:
             destino_estado = en_cola_list[0]
-            trabajos_col.update_one({'_id': fix_id(trabajo_id), 'empresa_id': empresa_id}, {'$set': {'estado': destino_estado, 'fecha_finalizacion': None}})
+            # Construir query de actualización usando el identificador real del documento encontrado
+            update_query = {'empresa_id': empresa_id}
+            if trabajo.get('_id'):
+                update_query['_id'] = trabajo.get('_id')
+            elif trabajo.get('id') is not None:
+                update_query['id'] = trabajo.get('id')
+            else:
+                update_query['trabajo_id'] = trabajo_id
+            trabajos_col.update_one(update_query, {'$set': {'estado': destino_estado, 'fecha_finalizacion': None}})
 
-        # Verificar que no esté ya en producción
-        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
-        if orden_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id}):
-            return jsonify({'error': 'El trabajo ya está en producción'}), 400
+        # Verificar si ya está en producción (para permitir cambiar de máquina)
+        
+        # Obtener la siguiente posición en la máquina (maquina_id puede ser int o string)
+        try:
+            maquina_id_query = int(maquina_id)
+        except Exception:
+            maquina_id_query = str(maquina_id)
 
-        # Obtener la siguiente posición en la máquina
-        max_pos_doc = orden_col.find({'maquina_id': int(maquina_id), 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
-        max_pos = 0
-        for doc in max_pos_doc:
-            max_pos = doc.get('posicion', 0)
-        nueva_posicion = (max_pos or 0) + 1
+        # Si ya existe en cola pero en otra máquina, permitir cambio de máquina
+        # Si es nuevo, insertar con nueva posición
+        if existing_order and str(existing_order.get('maquina_id')) == str(maquina_id_query):
+            # Mismo trabajo, misma máquina - sin cambios
+            nueva_posicion = existing_order.get('posicion', 1)
+        else:
+            # Nuevo trabajo o cambio de máquina
+            try:
+                counters_col = mongo.db['counters']
+                counter_key = f"pos_{empresa_id}_{maquina_id_query}"
+                seq_doc = counters_col.find_one_and_update(
+                    {'key': counter_key, 'empresa_id': empresa_id},
+                    {'$inc': {'seq': 1}},
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER
+                )
+                nueva_posicion = int(seq_doc.get('seq', 1))
+            except Exception:
+                # Fallback: calcular max+1 si el contador no está disponible
+                max_pos_doc = orden_col.find({'maquina_id': maquina_id_query, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+                max_pos = 0
+                for doc in max_pos_doc:
+                    max_pos = doc.get('posicion', 0)
+                nueva_posicion = (max_pos or 0) + 1
 
-        # Insertar en trabajo_orden
-        orden_col.insert_one({
-            'empresa_id': empresa_id,
-            'trabajo_id': trabajo_id,
-            'maquina_id': int(maquina_id),
-            'posicion': nueva_posicion
-        })
+        # Insertar o actualizar en trabajo_orden
+        try:
+            orden_col.find_one_and_update(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$set': {
+                    'empresa_id': empresa_id,
+                    'trabajo_id': trabajo_id,
+                    'maquina_id': maquina_id_query,
+                    'posicion': nueva_posicion
+                }},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+        except Exception:
+            # Fallback a inserción/update simple
+            orden_col.insert_one({
+                'empresa_id': empresa_id,
+                'trabajo_id': trabajo_id,
+                'maquina_id': maquina_id_query,
+                'posicion': nueva_posicion
+            })
+
+        # Actualizar el estado del trabajo para que pase a la cola de impresión
+        try:
+            nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+            update_query = {'empresa_id': empresa_id}
+            if trabajo.get('_id'):
+                update_query['_id'] = trabajo.get('_id')
+            elif trabajo.get('id') is not None:
+                update_query['id'] = trabajo.get('id')
+            else:
+                update_query['trabajo_id'] = trabajo_id
+
+            trabajos_col.update_one(update_query, {'$set': {'estado': nuevo_estado, 'en_produccion': True, 'fecha_finalizacion': None}})
+        except Exception:
+            pass
+
+        # Actualizar también en pedidos (la colección canónica) si existe
+        try:
+            pedidos_col.update_one(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$set': {'estado': nuevo_estado, 'en_produccion': True, 'fecha_finalizacion': None}}
+            )
+        except Exception:
+            pass
+
 
         # Persistir máquina real en el pedido para trazabilidad
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
-        maq = maquinas_col.find_one({'id': int(maquina_id), 'empresa_id': empresa_id})
+        maq = None
+        try:
+            maq = maquinas_col.find_one({'id': int(maquina_id), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        if not maq:
+            try:
+                maq = maquinas_col.find_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+        if not maq:
+            maq = maquinas_col.find_one({'id': str(maquina_id), 'empresa_id': empresa_id})
         maquina_nombre = maq['nombre'] if maq else None
 
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
@@ -2331,6 +4877,19 @@ def enviar_trabajo_produccion():
             datos_pedido['maquina_bd'] = maquina_nombre
             datos_pedido['maquina_id_bd'] = maquina_id
             pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'datos_presupuesto': datos_pedido}})
+            try:
+                nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+                pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'estado': nuevo_estado}})
+            except Exception:
+                pass
+        else:
+            # Si hay pedido pero no se pudo resolver el nombre de la máquina, aun así actualizar su estado
+            if pedido:
+                try:
+                    nuevo_estado = en_cola_list[0] if len(en_cola_list) > 0 else 'pendiente-de-impresion'
+                    pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'estado': nuevo_estado}})
+                except Exception:
+                    pass
 
         return jsonify({'success': True}), 200
     except Exception as e:
@@ -2344,38 +4903,145 @@ def api_get_produccion():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         maquina_param = request.args.get('maquina')
         if not maquina_param:
             return jsonify({'error': 'maquina parameter requerido'}), 400
-
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
 
+        # Pagination params (page 1-based)
+        try:
+            page = max(1, int(request.args.get('page', 1)))
+        except Exception:
+            page = 1
+        try:
+            page_size = int(request.args.get('page_size', 100))
+        except Exception:
+            page_size = 100
+        page_size = max(1, min(page_size, 500))
+
         # Accept both numeric maquina_id and string/ObjectId-like ids
         rows = []
+        maquina_match = None
+        skip = (page - 1) * page_size
+        # Optional Redis caching: try to return cached response for this query
+        cache_key = f"produccion:{empresa_id}:{maquina_param}:{page}:{page_size}"
+        rc = None
         try:
-            maquina_int = int(maquina_param)
-            rows = list(orden_col.find({'maquina_id': maquina_int, 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                cached = rc.get(cache_key)
+                if cached:
+                    try:
+                        return app.response_class(cached, mimetype='application/json'), 200
+                    except Exception:
+                        pass
         except Exception:
-            # try string match
-            rows = list(orden_col.find({'maquina_id': str(maquina_param), 'empresa_id': empresa_id}).sort([('posicion', 1), ('_id', 1)]))
-        trabajos = []
-        for row in rows:
+            rc = None
+        # Normalize maquina id and query using explicit query dict to avoid
+        # consuming the cursor when counting results (use count_documents).
+        try:
+            maquina_match = int(maquina_param)
+        except Exception:
+            maquina_match = str(maquina_param)
+
+        query = {'maquina_id': maquina_match, 'empresa_id': empresa_id}
+        cursor = orden_col.find(query).sort([('posicion', 1), ('_id', 1)])
+
+        # Fetch ALL rows for this machine (queue sizes are typically small) and
+        # dedupe globally by canonical pedido id before applying pagination.
+        all_rows = list(cursor)
+
+        # Collect trabajo ids from all rows so we can fetch pedidos once
+        trabajo_ids = []
+        object_ids = []
+        for row in all_rows:
+            t = row.get('trabajo_id')
+            if t is None:
+                continue
+            s = str(t)
+            trabajo_ids.append(s)
+            try:
+                if isinstance(t, str) and len(t) == 24:
+                    object_ids.append(ObjectId(t))
+            except Exception:
+                pass
+
+        pedidos_map = {}
+        if trabajo_ids or object_ids:
+            or_clauses = []
+            if trabajo_ids:
+                or_clauses.append({'trabajo_id': {'$in': trabajo_ids}})
+            if object_ids:
+                or_clauses.append({'_id': {'$in': object_ids}})
+            pquery = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
+            for p in pedidos_col.find(pquery):
+                if '_id' in p:
+                    pedidos_map[str(p['_id'])] = p
+                if 'trabajo_id' in p and p['trabajo_id'] is not None:
+                    pedidos_map[str(p['trabajo_id'])] = p
+
+        # Build a map canonical_id -> best row (choose smallest posicion)
+        unique_rows = {}
+        for row in all_rows:
             trabajo_id = row.get('trabajo_id')
             posicion = row.get('posicion')
+
             pedido = None
             if trabajo_id is not None:
-                pedido = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+                pedido = pedidos_map.get(str(trabajo_id))
+                if not pedido:
+                    try:
+                        if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                            pedido = pedidos_map.get(str(ObjectId(trabajo_id)))
+                    except Exception:
+                        pedido = None
+
+            if pedido and '_id' in pedido:
+                canonical_id = str(pedido.get('_id'))
+            else:
+                canonical_id = str(trabajo_id) if trabajo_id is not None else None
+
+            # Keep the row with the lowest posicion for this canonical id
+            prev = unique_rows.get(canonical_id)
+            if not prev or (posicion is not None and (prev.get('posicion') is None or posicion < prev.get('posicion'))):
+                unique_rows[canonical_id] = {'row': row, 'pedido': pedido}
+
+        # Now produce a sorted list of unique entries and apply pagination
+        sorted_items = sorted(unique_rows.items(), key=lambda kv: (kv[1]['row'].get('posicion') or 0, str(kv[0] or '')))
+        total = len(sorted_items)
+        paged = sorted_items[skip:skip+page_size]
+
+        trabajos = []
+        for canonical_id, info in paged:
+            row = info['row']
+            pedido = info.get('pedido')
+            posicion = row.get('posicion')
             if pedido:
                 p = fix_id(pedido)
                 p['posicion'] = posicion
                 trabajos.append(p)
             else:
-                # fallback: include minimal row so frontend can still render placeholders
-                trabajos.append({'trabajo_id': trabajo_id, 'posicion': posicion})
+                trabajos.append({'id': canonical_id, 'nombre': 'Pendiente', 'posicion': posicion})
 
-        return jsonify({'trabajos': trabajos}), 200
+        # include pagination metadata when requested
+        resp = {'trabajos': trabajos}
+        try:
+            resp['page'] = page
+            resp['page_size'] = page_size
+            resp['total'] = int(total)
+        except Exception:
+            pass
+        # Cache the response briefly so small bursts of requests reuse it (if redis configured)
+        try:
+            if rc:
+                rc.set(cache_key, json.dumps(resp), ex=3)
+        except Exception:
+            pass
+        return jsonify(resp), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2386,7 +5052,7 @@ def mover_trabajo_maquina():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajo_id = data.get('trabajo_id')
@@ -2397,26 +5063,114 @@ def mover_trabajo_maquina():
         
         # Eliminar de la máquina anterior (si existe)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
-        orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
 
-        # Obtener la siguiente posición en la máquina destino
-        max_pos_doc = orden_col.find({'maquina_id': int(maquina_destino), 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
-        max_pos = 0
-        for doc in max_pos_doc:
-            max_pos = doc.get('posicion', 0)
-        nueva_posicion = (max_pos or 0) + 1
+        # Build list of possible trabajo_id variants stored in trabajo_orden
+        posible_ids = set()
+        if trabajo_id is not None:
+            posible_ids.add(trabajo_id)
+            # if looks like ObjectId hex, include ObjectId form
+            try:
+                if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                    posible_ids.add(ObjectId(trabajo_id))
+            except Exception:
+                pass
 
-        # Insertar en la nueva máquina al final
-        orden_col.insert_one({
-            'empresa_id': empresa_id,
-            'trabajo_id': trabajo_id,
-            'maquina_id': int(maquina_destino),
-            'posicion': nueva_posicion
-        })
+        # Check pedidos referring to this trabajo_id (by trabajo_id or by _id)
+        try:
+            pedido_candidate = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+            if pedido_candidate and '_id' in pedido_candidate:
+                posible_ids.add(str(pedido_candidate['_id']))
+                try:
+                    posible_ids.add(pedido_candidate['_id'])
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        try:
+            if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                pedido_by_id = pedidos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+                if pedido_by_id and '_id' in pedido_by_id:
+                    posible_ids.add(str(pedido_by_id['_id']))
+                    try:
+                        posible_ids.add(pedido_by_id['_id'])
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Perform delete matching any of the possible id representations
+        if posible_ids:
+            or_clauses = []
+            for pid in posible_ids:
+                or_clauses.append({'trabajo_id': pid})
+            orden_col.delete_many({'empresa_id': empresa_id, '$or': or_clauses})
+        else:
+            orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+
+        # Normalizar `maquina_destino`: aceptar tanto enteros como cadenas (ObjectId-like)
+        try:
+            maquina_destino_norm = int(maquina_destino)
+        except Exception:
+            maquina_destino_norm = str(maquina_destino)
+
+        # Obtener la siguiente posición en la máquina destino (usar contador atómico si es posible)
+        try:
+            counters_col = mongo.db['counters']
+            counter_key = f"pos_{empresa_id}_{maquina_destino_norm}"
+            seq_doc = counters_col.find_one_and_update(
+                {'key': counter_key, 'empresa_id': empresa_id},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+            nueva_posicion = int(seq_doc.get('seq', 1))
+        except Exception:
+            max_pos_doc = orden_col.find({'maquina_id': maquina_destino_norm, 'empresa_id': empresa_id}).sort('posicion', -1).limit(1)
+            max_pos = 0
+            for doc in max_pos_doc:
+                max_pos = doc.get('posicion', 0)
+            nueva_posicion = (max_pos or 0) + 1
+
+        # Insertar/actualizar en la nueva máquina usando upsert para evitar duplicados
+        try:
+            orden_col.find_one_and_update(
+                {'empresa_id': empresa_id, 'trabajo_id': trabajo_id},
+                {'$set': {
+                    'maquina_id': maquina_destino_norm,
+                    'posicion': nueva_posicion
+                },
+                 '$setOnInsert': {
+                     'empresa_id': empresa_id,
+                     'trabajo_id': trabajo_id
+                 }
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+        except Exception:
+            orden_col.insert_one({
+                'empresa_id': empresa_id,
+                'trabajo_id': trabajo_id,
+                'maquina_id': maquina_destino_norm,
+                'posicion': nueva_posicion
+            })
 
         # Persistir máquina actualizada en el pedido
         maquinas_col = get_empresa_collection('maquinas', empresa_id)
-        maq = maquinas_col.find_one({'id': int(maquina_destino), 'empresa_id': empresa_id})
+        maq = None
+        try:
+            maq = maquinas_col.find_one({'id': maquina_destino_norm, 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        if not maq:
+            try:
+                maq = maquinas_col.find_one({'_id': ObjectId(maquina_destino), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+        if not maq:
+            maq = maquinas_col.find_one({'id': str(maquina_destino), 'empresa_id': empresa_id})
         maquina_nombre = maq['nombre'] if maq else None
 
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
@@ -2433,6 +5187,59 @@ def mover_trabajo_maquina():
             datos_pedido['maquina_id_bd'] = maquina_destino
             pedidos_col.update_one({'_id': pedido['_id']}, {'$set': {'datos_presupuesto': datos_pedido}})
 
+        # Log the move request for debugging
+        try:
+            app.logger.info(f"MOVER_REQUEST empresa={empresa_id} trabajo_id={trabajo_id} maquina_destino={maquina_destino} maquina_destino_norm={maquina_destino_norm}")
+        except Exception:
+            pass
+
+        # Invalidate production cache for this company (if redis configured).
+        # Remove keys that may use numeric or string forms of the machine id.
+        try:
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                deleted = []
+                try:
+                    # generic company-wide pattern (keep for safety)
+                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
+                        try:
+                            rc.delete(key)
+                            deleted.append(key)
+                        except Exception:
+                            pass
+                    # more targeted: machine numeric form
+                    try:
+                        mnum = str(maquina_destino_norm)
+                        for key in rc.scan_iter(f"produccion:{empresa_id}:{mnum}:*"):
+                            try:
+                                rc.delete(key)
+                                deleted.append(key)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    # targeted: original machine param as provided (string form)
+                    try:
+                        mraw = str(maquina_destino)
+                        for key in rc.scan_iter(f"produccion:{empresa_id}:{mraw}:*"):
+                            try:
+                                rc.delete(key)
+                                deleted.append(key)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                try:
+                    app.logger.info(f"MOVER_CACHE_INVALIDATED deleted_count={len(deleted)} sample_deleted={deleted[:6]}")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2444,25 +5251,107 @@ def reordenar_trabajos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajos = data.get('trabajos', [])  # Lista de {trabajo_id, nueva_posicion}
         maquina_id = data.get('maquina_id')
-        
+
         if not trabajos or maquina_id is None:
             return jsonify({'error': 'Faltan datos'}), 400
 
-        maquina_id = int(maquina_id)
+        # Normalizar `maquina_id`: aceptar tanto enteros como cadenas (ObjectId-like)
+        try:
+            print('REORDER: start')
+            maquina_id = int(maquina_id)
+        except Exception:
+            maquina_id = str(maquina_id)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        print('REORDER: orden_col and pedidos_col prepared')
+
+        # Build a mapping from canonical_id -> list of trabajo_orden _id documents for this maquina
+        current_rows = list(orden_col.find({'maquina_id': maquina_id, 'empresa_id': empresa_id}))
+        # collect trabajo_ids from current_rows and fetch pedidos in one query
+        trabajo_ids = []
+        object_ids = []
+        for r in current_rows:
+            t = r.get('trabajo_id')
+            if t is None:
+                continue
+            trabajo_ids.append(str(t))
+            try:
+                if isinstance(t, str) and len(t) == 24:
+                    object_ids.append(ObjectId(t))
+            except Exception:
+                pass
+
+        pedidos_map = {}
+        if trabajo_ids or object_ids:
+            or_clauses = []
+            if trabajo_ids:
+                or_clauses.append({'trabajo_id': {'$in': trabajo_ids}})
+            if object_ids:
+                or_clauses.append({'_id': {'$in': object_ids}})
+            query = {'empresa_id': empresa_id, '$or': or_clauses} if or_clauses else {'empresa_id': empresa_id}
+            for p in pedidos_col.find(query):
+                if '_id' in p:
+                    pedidos_map[str(p['_id'])] = p
+                if 'trabajo_id' in p and p['trabajo_id'] is not None:
+                    pedidos_map[str(p['trabajo_id'])] = p
+
+        canonical_map = {}  # canonical_id -> [doc_ids]
+        for r in current_rows:
+            t_id = r.get('trabajo_id')
+            canonical = None
+            pedido = None
+            if t_id is not None:
+                pedido = pedidos_map.get(str(t_id))
+                if not pedido:
+                    try:
+                        if isinstance(t_id, str) and len(t_id) == 24:
+                            pedido = pedidos_map.get(str(ObjectId(t_id)))
+                    except Exception:
+                        pedido = None
+
+            if pedido and '_id' in pedido:
+                canonical = str(pedido.get('_id'))
+            else:
+                canonical = str(t_id) if t_id is not None else None
+
+            if canonical is None:
+                continue
+            canonical_map.setdefault(canonical, []).append(r['_id'])
+
+        # Prepare bulk operations to update positions efficiently
+        ops = []
         for item in trabajos:
-            trabajo_id = item['trabajo_id']
-            nueva_posicion = int(item['nueva_posicion'])
-            orden_col.update_one(
-                {'trabajo_id': trabajo_id, 'empresa_id': empresa_id},
-                {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}},
-                upsert=True
-            )
+            trabajo_id = str(item.get('trabajo_id'))
+            nueva_posicion = int(item.get('nueva_posicion') or 0)
+            doc_ids = canonical_map.get(trabajo_id) or []
+            if doc_ids:
+                ops.append(UpdateMany({'_id': {'$in': doc_ids}, 'empresa_id': empresa_id}, {'$set': {'maquina_id': maquina_id, 'posicion': nueva_posicion}}))
+            else:
+                # insert new row if nothing existed for this canonical id
+                ops.append(InsertOne({'empresa_id': empresa_id, 'trabajo_id': trabajo_id, 'maquina_id': maquina_id, 'posicion': nueva_posicion}))
+
+        if ops:
+            orden_col.bulk_write(ops, ordered=False)
+
+        # Invalidate production cache for this company (if redis configured)
+        try:
+            import redis as _redis
+            redis_url = os.environ.get('REDIS_URL', '').strip()
+            if redis_url:
+                rc = _redis.from_url(redis_url, socket_connect_timeout=1)
+                try:
+                    for key in rc.scan_iter(f"produccion:{empresa_id}:*"):
+                        rc.delete(key)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2474,7 +5363,18 @@ def cambiar_estado_trabajo(trabajo_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        
+        # DEBUG: log the actual role being used
+        actual_role = request_user.get('rol')
+        x_role_header = request.headers.get('X-Role', 'NOT_SET')
+        print(f"DEBUG: cambiar_estado_trabajo - user_role={actual_role}, X-Role_header={x_role_header}", flush=True)
+        
+        # Validar que el usuario tenga permiso para cambiar estados
+        if not can_role_permission(actual_role, 'manage_estados_pedido'):
+            print(f"DEBUG: Permission denied for role={actual_role}, manage_estados_pedido check failed", flush=True)
+            return jsonify({'error': 'No autorizado para cambiar estados'}), 403
+        
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json()
         nuevo_estado = data.get('estado')
         if not nuevo_estado:
@@ -2497,6 +5397,54 @@ def cambiar_estado_trabajo(trabajo_id):
             orden_col = get_empresa_collection('trabajo_orden', empresa_id)
             orden_col.delete_many({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
         return jsonify({'success': True, 'estado': nuevo_estado, 'fecha_finalizacion': fecha_finalizacion}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/produccion/rebuild_counters', methods=['POST'])
+def rebuild_production_counters():
+    """Reconstruye/normaliza los contadores atómicos (`counters`) a partir de `trabajo_orden`.
+    Opcional: JSON body puede incluir `maquina_id` para restringir a una máquina.
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json(silent=True) or {}
+        maquina_filter = data.get('maquina_id', None)
+
+        orden_col = get_empresa_collection('trabajo_orden', empresa_id)
+        counters_col = mongo.db['counters']
+
+        # Construir filtro para distinct
+        base_query = {'empresa_id': empresa_id}
+        if maquina_filter is not None:
+            try:
+                maquina_norm = int(maquina_filter)
+            except Exception:
+                maquina_norm = str(maquina_filter)
+            base_query['maquina_id'] = maquina_norm
+
+        maquinas = orden_col.distinct('maquina_id', filter=base_query)
+        updated = []
+        for m in maquinas:
+            # Calcular max posicion para esta maquina
+            q = {'empresa_id': empresa_id, 'maquina_id': m}
+            max_pos = 0
+            doc = orden_col.find(q).sort('posicion', -1).limit(1)
+            for r in doc:
+                max_pos = int(r.get('posicion') or 0)
+            next_seq = (max_pos or 0) + 1
+            counter_key = f"pos_{empresa_id}_{m}"
+            counters_col.update_one(
+                {'key': counter_key, 'empresa_id': empresa_id},
+                {'$set': {'seq': next_seq, 'updated_at': datetime.utcnow().isoformat()}},
+                upsert=True
+            )
+            updated.append({'maquina_id': m, 'set_seq': next_seq})
+
+        return jsonify({'success': True, 'updated': updated}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2587,7 +5535,7 @@ def get_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para obtener el orden de los trabajos
         rows = []
@@ -2604,7 +5552,7 @@ def save_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         data = request.get_json()
         trabajos = data.get('trabajos', [])
@@ -2633,7 +5581,7 @@ def create_trabajo():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
         nombre = (data.get('nombre') or '').strip()
         cliente = data.get('cliente') or ''
@@ -2654,9 +5602,84 @@ def create_trabajo():
             'created_at': datetime.utcnow().isoformat()
         }
         res = col.insert_one(nuevo)
-        return jsonify({'success': True, 'trabajo_id': str(res.inserted_id)}), 201
+        trabajo_id = str(res.inserted_id)
+        # Asegurar que el documento tiene un campo trabajo_id que coincida con _id
+        col.update_one({'_id': res.inserted_id}, {'$set': {'trabajo_id': trabajo_id}})
+        return jsonify({'success': True, 'trabajo_id': trabajo_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# --- Compatibility aliases: prefer 'pedidos' terminology but keep 'trabajos' handlers ---
+def _mark_deprecated_and_forward(result):
+    # Normalize result into a Flask response and add a deprecation header
+    resp = make_response(result)
+    try:
+        resp.headers['X-Deprecated-Route'] = 'Use /api/pedidos/* endpoints instead'
+    except Exception:
+        pass
+    return resp
+
+
+@app.route('/api/pedidos/<pedido_id>/estado', methods=['PUT', 'POST'])
+def cambiar_estado_pedido(pedido_id):
+    return _mark_deprecated_and_forward(cambiar_estado_trabajo(pedido_id))
+
+
+@app.route('/api/pedidos/orden', methods=['GET'])
+def get_pedidos_orden():
+    return _mark_deprecated_and_forward(get_trabajos_orden())
+
+
+@app.route('/api/pedidos/orden', methods=['POST'])
+def save_pedidos_orden():
+    return _mark_deprecated_and_forward(save_trabajos_orden())
+
+
+@app.route('/api/pedidos/orden/reset', methods=['POST'])
+def reset_pedidos_orden():
+    return _mark_deprecated_and_forward(reset_trabajos_orden())
+
+
+# Additional non-destructive aliases to help transition from 'trabajo' -> 'pedido'
+@app.route('/api/pedidos-produccion', methods=['GET'])
+def get_pedidos_produccion():
+    res = get_trabajos_produccion()
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/pedidos/produccion/enviar', methods=['POST'])
+def enviar_pedido_produccion():
+    res = enviar_trabajo_produccion()
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/presupuestos/<int:pedido_id>', methods=['GET'])
+def get_presupuesto_por_pedido(pedido_id):
+    res = get_presupuesto(pedido_id)
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/presupuestos/aceptar/<pedido_id>', methods=['POST'])
+def aceptar_presupuesto_por_pedido(pedido_id):
+    res = aceptar_presupuesto(pedido_id)
+    if res is None:
+        return _mark_deprecated_and_forward((jsonify({'error': 'Not implemented'}), 501))
+    return _mark_deprecated_and_forward(res)
+
+
+@app.route('/api/pedidos/trabajo', methods=['POST'])
+def create_pedido_trabajo_alias():
+    """Alias temporal: crea un 'trabajo' mínimo vía la ruta de pedidos.
+    Mantiene compatibilidad con scripts que usan /api/trabajos"""
+    return _mark_deprecated_and_forward(create_trabajo())
+
 
 @app.route('/api/trabajos/orden/reset', methods=['POST'])
 def reset_trabajos_orden():
@@ -2665,7 +5688,7 @@ def reset_trabajos_orden():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para resetear el orden
         # SQL legacy eliminado por migración a MongoDB
@@ -2726,7 +5749,7 @@ def generar_datos_prueba():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para insertar presupuestos de ejemplo
         
@@ -2858,7 +5881,7 @@ def debug_info():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = int(request_user.get('empresa_id') or 0)
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         # TODO: Lógica MongoDB para debugging de la BD
         
@@ -2890,6 +5913,500 @@ def debug_info():
             'pedidos': total_pedidos,
             'ultimos_trabajos': ultimos_trabajos,
             'ultimos_presupuestos': ultimos_presupuestos
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GESTIÓN DE ARCHIVOS  (Artes Finales del Cliente  +  Unitario versionado)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/pedidos/<pedido_id>/archivos', methods=['POST'])
+def upload_archivos_pedido(pedido_id):
+    """
+    Sube uno o más archivos a un pedido.
+    Form-data:
+      tipo  : 'arte' | 'unitario'
+      files : uno o más archivos  (unitario: 1 archivo por subida = nueva versión)
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+        if not pedidos_col.find_one({'_id': oid, 'empresa_id': empresa_id}):
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        tipo = request.form.get('tipo', '').strip()
+        if tipo not in ('arte', 'unitario'):
+            return jsonify({'error': 'tipo debe ser "arte" o "unitario"'}), 400
+
+        files = [f for f in request.files.getlist('files') if f.filename != '']
+        if not files:
+            return jsonify({'error': 'No se recibieron archivos'}), 400
+        if tipo == 'unitario' and len(files) > 1:
+            return jsonify({'error': 'Unitario acepta solo un archivo por subida'}), 400
+
+        allowed   = ALLOWED_EXTENSIONS_ARTES if tipo == 'arte' else ALLOWED_EXTENSIONS_UNITARIO
+        subdir    = 'artes' if tipo == 'arte' else 'unitario'
+        col       = get_empresa_collection('pedido_archivos', empresa_id)
+        resultado = []
+
+        for f in files:
+            if not _allowed_file(f.filename, allowed):
+                return jsonify({'error': f'Extensión no permitida para "{f.filename}". Permitidas: {", ".join(sorted(allowed))}'}), 400
+
+            version = None
+            if tipo == 'unitario':
+                last = col.find_one(
+                    {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'unitario'},
+                    sort=[('version', pymongo.DESCENDING)]
+                )
+                version = (last['version'] + 1) if last and last.get('version') else 1
+
+            safe_name   = secure_filename(f.filename) or 'archivo'
+            file_uid    = uuid.uuid4().hex[:8]
+            stored_name = (f'{file_uid}_v{version}_{safe_name}' if tipo == 'unitario'
+                           else f'{file_uid}_{safe_name}')
+            upload_dir  = _get_upload_dir(empresa_id, pedido_id, subdir)
+            full_path   = os.path.join(upload_dir, stored_name)
+            f.save(full_path)
+
+            doc = {
+                'pedido_id':       pedido_id,
+                'empresa_id':      empresa_id,
+                'tipo':            tipo,
+                'nombre_original': f.filename,
+                'nombre_archivo':  stored_name,
+                'ruta_relativa':   '/'.join([str(empresa_id), str(pedido_id), subdir, stored_name]),
+                'version':         version,
+                'tamanio':         os.path.getsize(full_path),
+                'mime_type':       f.mimetype or '',
+                'subido_por':      request_user.get('nombre') or str(request_user.get('id') or ''),
+                'fecha_subida':    datetime.now().isoformat(),
+            }
+            inserted = col.insert_one(doc)
+            resultado.append(fix_id(col.find_one({'_id': inserted.inserted_id})))
+
+        return jsonify({'archivos': resultado}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/archivos', methods=['GET'])
+def get_archivos_pedido(pedido_id):
+    """Lista todos los archivos de un pedido. Filtro opcional: ?tipo=arte|unitario"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col   = get_empresa_collection('pedido_archivos', empresa_id)
+        query = {'pedido_id': pedido_id, 'empresa_id': empresa_id}
+        tipo  = request.args.get('tipo')
+        if tipo in ('arte', 'unitario'):
+            query['tipo'] = tipo
+        docs = list(col.find(query).sort([
+            ('tipo',         pymongo.ASCENDING),
+            ('version',      pymongo.ASCENDING),
+            ('fecha_subida', pymongo.ASCENDING),
+        ]))
+        return jsonify({'archivos': [fix_id(d) for d in docs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>', methods=['GET'])
+def descargar_archivo(archivo_id):
+    """Descarga un archivo como attachment (fuerza descarga en el navegador)."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        return send_file(
+            full_path,
+            mimetype=doc.get('mime_type') or 'application/octet-stream',
+            as_attachment=True,
+            download_name=doc.get('nombre_original') or doc['nombre_archivo'],
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>/inline', methods=['GET'])
+def preview_archivo_inline(archivo_id):
+    """
+    Sirve el archivo inline para vista previa en iframe.
+    El hook apply_security_headers exime esta función del X-Frame-Options: DENY.
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        return send_file(
+            full_path,
+            mimetype=doc.get('mime_type') or 'application/pdf',
+            as_attachment=False,
+            download_name=doc.get('nombre_original') or doc['nombre_archivo'],
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archivos/<archivo_id>', methods=['DELETE'])
+def eliminar_archivo(archivo_id):
+    """
+    Elimina un archivo (arte o versión unitario).
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        try:
+            if os.path.isfile(full_path):
+                os.remove(full_path)
+        except Exception as fs_err:
+            print(f'Warning: no se pudo eliminar {full_path}: {fs_err}')
+        col.delete_one({'_id': oid})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Helpers PDF ──────────────────────────────────────────────────────────────
+
+# Carga PANTONE map una sola vez (sRGB por nombre de PANTONE)
+_PANTONE_MAP: dict = {}
+try:
+    _pantone_map_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'pantone_map.json')
+    with open(_pantone_map_path, encoding='utf-8') as _f:
+        _PANTONE_MAP = json.load(_f)
+except Exception:
+    pass
+
+# Colores fijos para tintas de proceso CMYK
+_PROCESO_COLORES = {
+    'cyan': '#00AEEF', 'c': '#00AEEF',
+    'magenta': '#EC008C', 'm': '#EC008C',
+    'yellow': '#FFF200', 'y': '#FFF200',
+    'black': '#232323', 'k': '#232323',
+}
+
+# Nombres técnicos de die-cuts / elementos de troquelado (no son tintas de impresión)
+_DIE_CUT_NAMES = {
+    'troquel', 'cutter', 'die', 'die cut', 'die line', 'dieline',
+    'laser', 'crease', 'fold', 'score', 'stucco', 'varnish', 'barniz', 'charol',
+    'cut', 'corte', 'perf', 'perforation',
+}
+
+
+def _resolve(obj):
+    """Resuelve IndirectObject a su valor real."""
+    try:
+        from PyPDF2.generic import IndirectObject
+        if isinstance(obj, IndirectObject):
+            return obj.get_object()
+    except Exception:
+        pass
+    return obj
+
+
+def _es_die_cut(nombre):
+    """Devuelve True si el nombre de separación corresponde a un elemento técnico (no tinta)."""
+    n = nombre.lower().strip()
+    if n in _DIE_CUT_NAMES:
+        return True
+    return any(d in n for d in ('troquel', 'cutter', 'dieline', 'die line', 'crease', 'stucco'))
+
+
+def _color_para_separacion(nombre, tint_fn_raw=None):
+    """
+    Devuelve string de color para mostrar la separación:
+      1) Colores fijos para C/M/Y/K
+      2) Lookup en pantone_map.json (sRGB → hex)
+      3) Tint function del PDF (LAB → CSS lab() o CMYK → hex)
+    """
+    # 1. Proceso CMYK
+    color = _PROCESO_COLORES.get(nombre.lower())
+    if color:
+        return color
+
+    # 2. PANTONE map
+    for key in (nombre, f'PANTONE {nombre} C', nombre.upper(), f'PANTONE {nombre.upper()} C'):
+        entry = _PANTONE_MAP.get(key)
+        if entry:
+            r, g, b = entry['srgb']
+            return f'#{r:02X}{g:02X}{b:02X}'
+
+    # 3. Heurísticas por nombre (inks custom sin entrada en pantone_map)
+    n_low = nombre.lower()
+    if any(w in n_low for w in ('negro', 'noir', 'black', 'schwarz', 'nero', 'siyah', 'pluma')):
+        return '#1A1A1A'
+    if any(w in n_low for w in ('blanco', 'blanc', 'white', 'weiss', 'bianco')):
+        return '#E8E8E8'
+    if any(w in n_low for w in ('oro', 'gold', 'dorado', 'golden')):
+        return '#C9A227'
+    if any(w in n_low for w in ('plata', 'silver', 'argent', 'metaliz', 'cromad')):
+        return '#A8A9AD'
+    if any(w in n_low for w in ('rojo', 'red', 'rouge', 'rosso', 'rot')):
+        return '#CC2B2B'
+    if any(w in n_low for w in ('azul', 'blue', 'bleu', 'blu', 'blau')):
+        return '#1A56DB'
+    if any(w in n_low for w in ('verde', 'green', 'vert', 'gruen', 'grün')):
+        return '#1D7A3A'
+
+    # 4. Tint function del PDF
+    if tint_fn_raw is not None:
+        try:
+            fn = _resolve(tint_fn_raw)
+            if isinstance(fn, dict):
+                c1 = fn.get('/C1')
+                if c1:
+                    vals = [float(_resolve(x)) for x in c1]
+                    if len(vals) == 3:
+                        return f'lab({round(vals[0], 1)}% {round(vals[1], 2)} {round(vals[2], 2)})'
+                    if len(vals) >= 4:
+                        c2, m2, y2, k2 = vals[0], vals[1], vals[2], vals[3]
+                        r = max(0, min(255, round(255 * (1 - c2) * (1 - k2))))
+                        g = max(0, min(255, round(255 * (1 - m2) * (1 - k2))))
+                        b = max(0, min(255, round(255 * (1 - y2) * (1 - k2))))
+                        return f'#{r:02X}{g:02X}{b:02X}'
+        except Exception:
+            pass
+    return None
+
+
+def _coleccion_to_tipo(coleccion):
+    """Clasifica una separación según la colección Esko."""
+    c = str(coleccion).lower()
+    if c == 'process':
+        return 'proceso'
+    if 'pantone' in c or 'hks' in c or 'toyo' in c or 'dic' in c:
+        return 'spot'
+    return 'especial'          # designer, cutter, varnish, etc.
+
+
+def _ht_type1_values(ht):
+    """Extrae lpi/angulo/forma de un halftone Type 1 dict."""
+    try:
+        lpi    = float(_resolve(ht.get('/Frequency') or 0)) or None
+        angulo = float(_resolve(ht.get('/Angle') or 0))
+        forma  = str(_resolve(ht.get('/SpotFunction') or '')).lstrip('/') or None
+        return {'lpi': round(lpi, 1) if lpi else None,
+                'angulo': round(angulo, 1),
+                'forma':  forma}
+    except Exception:
+        return {}
+
+
+def _extraer_separaciones_pdf(ruta):
+    """
+    Extrae separaciones de un PDF de preimpresión.
+
+    Estrategia (en orden de prioridad):
+      1) OutputIntents → PrintingOrder + Esko_Colorants  (Esko CE / ArtPro+)
+      2) ExtGState → /HT  para lineatura y ángulos si están embebidos
+      3) Fallback: ColorSpace resources de página (cualquier PDF)
+
+    Filtros aplicados:
+      - Se descartan separaciones no referenciadas en ninguna página (0% uso)
+      - Se descartan die-cuts / elementos técnicos (troquel, cutter, etc.)
+
+    Colores (campo 'color'):
+      1) Fijos para CMYK proceso
+      2) pantone_map.json  (sRGB)
+      3) Tint function del PDF (LAB → CSS lab() o CMYK → hex)
+
+    Devuelve lista de dicts: {nombre, tipo, color?, lpi?, angulo?, forma?}
+    """
+    separaciones = []
+    try:
+        reader = PdfReader(ruta)
+        cat = _resolve(reader.trailer.get('/Root') or {})
+
+        # ── Escaneo de páginas: referencias reales + tint functions ──────────
+        page_referenced = set()   # seps que aparecen en algún ColorSpace de página
+        tint_fns: dict = {}       # nombre → tint fn object para extraer color
+        process_names = {'cyan', 'magenta', 'yellow', 'black', 'c', 'm', 'y', 'k'}
+        for page in reader.pages:
+            res = _resolve(page.get('/Resources') or {})
+            cs_dict = _resolve(res.get('/ColorSpace') or {})
+            for _key, raw_val in cs_dict.items():
+                val = _resolve(raw_val)
+                if not isinstance(val, list) or len(val) < 2:
+                    continue
+                cs_type = str(val[0])
+                if cs_type == '/Separation':
+                    nombre = str(_resolve(val[1])).lstrip('/')
+                    page_referenced.add(nombre)
+                    if len(val) >= 4 and nombre not in tint_fns:
+                        tint_fns[nombre] = val[3]
+                elif cs_type == '/DeviceN':
+                    names_obj = _resolve(val[1])
+                    for n in (names_obj if isinstance(names_obj, list) else []):
+                        page_referenced.add(str(_resolve(n)).lstrip('/'))
+
+        # ── Estrategia 1: OutputIntents ──────────────────────────────────────
+        oi_arr = _resolve(cat.get('/OutputIntents') or [])
+        for oi_raw in (oi_arr or []):
+            oi = _resolve(oi_raw)
+            if not isinstance(oi, dict):
+                continue
+            mh    = _resolve(oi.get('/MixingHints') or {})
+            order = _resolve(mh.get('/PrintingOrder') or [])
+            esko  = _resolve(oi.get('/Esko_Colorants') or {})
+            if not order:
+                continue
+            for sep in order:
+                nombre = str(_resolve(sep)).lstrip('/')
+                if nombre not in page_referenced:
+                    continue          # sin cobertura real en ninguna página
+                if _es_die_cut(nombre):
+                    continue          # elemento técnico, no tinta de impresión
+                col_info  = _resolve(esko.get(sep) or {}) if esko else {}
+                coleccion = str(_resolve(col_info.get('/Collection', ''))) if isinstance(col_info, dict) else ''
+                tipo  = _coleccion_to_tipo(coleccion)
+                color = _color_para_separacion(nombre, tint_fns.get(nombre))
+                entry = {'nombre': nombre, 'tipo': tipo}
+                if color:
+                    entry['color'] = color
+                separaciones.append(entry)
+            break  # primer OutputIntent válido es suficiente
+
+        # ── Estrategia 2: ExtGState /HT → lineatura y ángulos ────────────────
+        ht_global: dict = {}
+        for page in reader.pages:
+            res = _resolve(page.get('/Resources') or {})
+            gs  = _resolve(res.get('/ExtGState') or {})
+            for _gname, gval in gs.items():
+                g = _resolve(gval)
+                if not isinstance(g, dict):
+                    continue
+                ht_raw = g.get('/HT')
+                if ht_raw is None:
+                    continue
+                ht = _resolve(ht_raw)
+                if not isinstance(ht, dict):
+                    continue
+                ht_type = int(_resolve(ht.get('/HalftoneType') or 0))
+                if ht_type == 1:
+                    vals = _ht_type1_values(ht)
+                    if vals.get('lpi'):
+                        ht_global[None] = vals
+                elif ht_type == 5:
+                    for k in ht.keys():
+                        sname = str(k).lstrip('/')
+                        if sname in ('HalftoneType', 'Default'):
+                            continue
+                        ht_sub = _resolve(ht[k])
+                        if isinstance(ht_sub, dict):
+                            vals = _ht_type1_values(ht_sub)
+                            if vals.get('lpi'):
+                                ht_global[sname] = vals
+                    if ht.get('/Default'):
+                        def_vals = _ht_type1_values(_resolve(ht['/Default']))
+                        if def_vals.get('lpi'):
+                            ht_global.setdefault(None, def_vals)
+
+        if ht_global:
+            for s in separaciones:
+                vals = ht_global.get(s['nombre']) or ht_global.get(None) or {}
+                s.update({k: v for k, v in vals.items() if v is not None})
+
+        # ── Estrategia 3: Fallback ColorSpace ────────────────────────────────
+        if not separaciones:
+            seen: set = set()
+            for nombre in page_referenced:
+                if nombre in ('None', 'All') or nombre in seen:
+                    continue
+                if _es_die_cut(nombre):
+                    continue
+                seen.add(nombre)
+                tipo  = 'proceso' if nombre.lower() in process_names else 'spot'
+                color = _color_para_separacion(nombre, tint_fns.get(nombre))
+                entry = {'nombre': nombre, 'tipo': tipo}
+                if color:
+                    entry['color'] = color
+                separaciones.append(entry)
+
+    except Exception:
+        pass
+    return separaciones
+
+
+@app.route('/api/archivos/<archivo_id>/metadatos', methods=['GET'])
+def metadatos_archivo(archivo_id):
+    """
+    Devuelve metadatos de un PDF: separaciones (nombre, tipo, lpi?, angulo?),
+    nombre original, tamaño y versión.
+    """
+    try:
+        empresa_id = normalize_empresa_id(
+            (request.headers.get('X-Empresa-Id') or '1').strip()
+        )
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        mime = doc.get('mime_type', '')
+        separaciones = _extraer_separaciones_pdf(full_path) if 'pdf' in mime.lower() else []
+        fecha = doc.get('fecha_subida', '')
+        if hasattr(fecha, 'isoformat'):
+            fecha = fecha.isoformat()
+        return jsonify({
+            'nombre_original': doc.get('nombre_original', ''),
+            'tamanio':         doc.get('tamanio', 0),
+            'version':         doc.get('version'),
+            'fecha_subida':    str(fecha),
+            'separaciones':    separaciones,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

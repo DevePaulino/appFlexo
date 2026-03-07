@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import NuevoTroquelModal from './NuevoTroquelModal';
+import NuevaMaquinaModal from './NuevaMaquinaModal';
 
 const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
     { label: 'M', color: '#EC008C', isCMYK: true },
     { label: 'Y', color: '#FFF200', isCMYK: true },
-    { label: 'K', color: '#232323', isCMYK: true },
-    { label: 'P1', color: '#ddd', isCMYK: false },
-    { label: 'P2', color: '#ddd', isCMYK: false },
-    { label: 'P3', color: '#ddd', isCMYK: false },
-    { label: 'P4', color: '#ddd', isCMYK: false },
-    { label: 'P5', color: '#ddd', isCMYK: false }
+    { label: 'K', color: '#232323', isCMYK: true }
 ];
-const troquelEstado = ['Nuevo', 'Usado'];
-const troquelForma = ['Rectangular', 'Circular', 'Irregular'];
+const troquelEstado = ['Disponible', 'En uso'];
+const troquelTipo = ['regular', 'irregular', 'corbata'];
+const troquelForma = ['Rectangular', 'Circular', 'Irregular', 'Ovalado'];
+const API_TROQUELES = 'http://localhost:8080/api/troqueles';
 
 function borderColorState(value, isRequired, isNumeric = false, submitted = false) {
     if (!isRequired) return '#CCC';
@@ -38,54 +37,68 @@ function isValidCif(value) {
 }
 
 const styles = {
-    container: { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#E9EEF5', flex: 1 },
+    container: { paddingHorizontal: 12, paddingVertical: 12, flex: 1 },
     section: {
         marginBottom: 10,
         marginTop: 4,
         backgroundColor: '#FFF',
         borderRadius: 14,
-        padding: 16,
+        padding: 12,
         borderWidth: 1.5,
-        borderColor: '#D0D5DD'
+        borderColor: '#E2E8F0'
     },
-    sectionTitle: { fontSize: 16, fontWeight: '900', color: '#1D2939', marginBottom: 10, letterSpacing: 0.2 },
+    sectionTitle: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#64748B',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        backgroundColor: '#E2E8F0',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: -12,
+        marginTop: -12,
+        marginBottom: 14,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+    },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
-    label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
+    label: { fontSize: 13, color: '#475569', fontWeight: '700', marginBottom: 6 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
     col: { flex: 1 },
     input: (value, isRequired, isNumeric = false, submitted = false) => ({
         fontSize: 14,
         borderWidth: 1,
         borderColor: borderColorState(value, isRequired, isNumeric, submitted),
-        backgroundColor: '#FBFBFD',
+        backgroundColor: '#F8FAFC',
         paddingVertical: 10,
         paddingHorizontal: 10,
         borderRadius: 10,
         marginBottom: 10,
         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-        color: '#232323'
+        color: '#0F172A'
     }),
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
-        backgroundColor: '#A8A8AA', paddingHorizontal: 16, paddingVertical: 10,
-        borderRadius: 12,
-        alignItems: 'center', marginBottom: 8, minWidth: 160
+        backgroundColor: '#F1F5F9', paddingHorizontal: 22, paddingVertical: 11,
+        borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0',
+        alignItems: 'center', minWidth: 130
     },
     bigBtnText: {
-        color: '#FFF', fontWeight: '700', fontSize: 13
+        color: '#475569', fontWeight: '600', fontSize: 13
     },
     tintaBtn: (active, tinta) => ({
-        paddingHorizontal: 14, paddingVertical: 12,
-        backgroundColor: active ? '#E8E8EC' : '#FBFBFD',
-        borderRadius: 22,
-        borderWidth: active ? 2.4 : 1,
-        borderColor: active ? (tinta.isCMYK ? tinta.color : '#DDD') : '#DDD',
-        marginRight: 8, marginBottom: 8, minWidth: 45, alignItems: 'center'
+        paddingHorizontal: 10, paddingVertical: 8,
+        backgroundColor: active ? '#E2E8F0' : '#F8FAFC',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E2E8F0',
+        marginRight: 8, marginBottom: 8, minWidth: 40, alignItems: 'center'
     }),
-    tintaTxt: { color: '#232323', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 13, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     tintaCounter: {
-        marginTop: -4, marginBottom: 8, backgroundColor: '#EEEEEE', alignSelf: 'flex-start', paddingHorizontal: 18,
+        marginTop: -4, marginBottom: 8, backgroundColor: '#E2E8F0', alignSelf: 'flex-start', paddingHorizontal: 18,
         paddingVertical: 7, borderRadius: 14, fontWeight: '700', fontSize: 16, color: '#444', letterSpacing: 0.5
     },
     coverageRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, marginBottom: 8 },
@@ -93,13 +106,13 @@ const styles = {
         paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, borderWidth: 2,
         borderColor: color, backgroundColor: '#FBFBFD', marginRight: 8, marginBottom: 8, minWidth: 60, alignItems: 'center'
     }),
-    coverageTxt: { color: '#232323', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
-    submitContainer: { alignItems: 'center', marginTop: 24, marginBottom: 20 },
+    coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: '#344054', paddingHorizontal: 22, paddingVertical: 10,
+        backgroundColor: '#475569', paddingHorizontal: 22, paddingVertical: 10,
         borderRadius: 14,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#0F172A',
         shadowOpacity: 0.12,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },
@@ -108,15 +121,16 @@ const styles = {
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#344054',
+        backgroundColor: '#1E293B',
         paddingVertical: 14,
         paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#243447',
         position: 'relative',
+        marginTop: 16,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        borderRadius: 12,
     },
     modalHeaderTitle: {
-        textAlign: 'center',
         fontSize: 22,
         fontWeight: '900',
         color: '#F8FAFC',
@@ -124,22 +138,17 @@ const styles = {
     modalCloseBtn: {
         position: 'absolute',
         right: 16,
-        top: 16,
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.18)',
+        top: 14,
+        padding: 4,
     },
     modalCloseText: {
-        fontSize: 15,
+        fontSize: 20,
         color: '#F8FAFC',
-        fontWeight: '800',
+        fontWeight: '900',
     },
     clientePickerBtn: {
         borderWidth: 1,
-        borderColor: '#CCC',
+        borderColor: '#CBD5E1',
         backgroundColor: '#FBFBFD',
         borderRadius: 10,
         paddingVertical: 10,
@@ -148,12 +157,12 @@ const styles = {
     },
     clientePickerBtnText: {
         fontSize: 14,
-        color: '#232323',
+        color: '#0F172A',
         fontWeight: '600',
     },
     clientePickerHint: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: -4,
         marginBottom: 10,
     },
@@ -167,14 +176,14 @@ const styles = {
         backgroundColor: '#FFF',
         borderRadius: 14,
         borderWidth: 1.5,
-        borderColor: '#D0D5DD',
+        borderColor: '#E2E8F0',
         maxHeight: '75%',
         padding: 14,
     },
     pickerModalTitle: {
         fontSize: 17,
         fontWeight: '800',
-        color: '#232323',
+        color: '#0F172A',
         marginBottom: 10,
     },
     pickerItem: {
@@ -189,11 +198,11 @@ const styles = {
     pickerItemTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#232323',
+        color: '#0F172A',
     },
     pickerItemSub: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: 2,
     },
     pickerFooter: {
@@ -219,11 +228,11 @@ const styles = {
     sugerenciaTitulo: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#232323',
+        color: '#0F172A',
     },
     sugerenciaSub: {
         fontSize: 12,
-        color: '#666',
+        color: '#475569',
         marginTop: 2,
     }
 };
@@ -236,6 +245,7 @@ const BotonSelector = ({
     small,
     required,
     submitted,
+    disabled = false,
 }) => (
     <View style={styles.selectorRow}>
         {opciones.map((opcion) => {
@@ -247,26 +257,27 @@ const BotonSelector = ({
                 : !valorSeleccionado;
             const border =
                 active
-                    ? '#3AB274'
+                    ? '#94A3B8'
                     : (sinSeleccion && required && submitted
                         ? '#D21820'
-                        : '#CCC');
+                        : '#E2E8F0');
             return (
                 <TouchableOpacity
                     key={opcion}
                     style={{
-                        paddingHorizontal: small ? 12 : 18,
-                        paddingVertical: small ? 8 : 12,
-                        backgroundColor: active ? '#E8E8EC' : '#FBFBFD',
-                        borderRadius: 22,
-                        borderWidth: 2,
+                        paddingHorizontal: small ? 10 : 14,
+                        paddingVertical: small ? 6 : 8,
+                        backgroundColor: active ? '#E2E8F0' : '#F8FAFC',
+                        borderRadius: 10,
+                        borderWidth: 1,
                         borderColor: border,
                         marginRight: 8,
                         marginBottom: 8,
-                        minWidth: small ? 70 : 90,
+                        minWidth: small ? 55 : 70,
                         alignItems: 'center'
                     }}
                     onPress={() => {
+                        if (disabled) return;
                         if (!multiple) {
                             onSelect(opcion);
                             return;
@@ -280,10 +291,10 @@ const BotonSelector = ({
                     }}
                 >
                     <Text style={{
-                        color: active ? '#393B3F' : '#6C6C70',
+                        color: active ? '#0F172A' : '#475569',
                         fontWeight: active ? '700' : '500',
                         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
-                        fontSize: 15
+                        fontSize: 13
                     }}>{opcion}</Text>
                 </TouchableOpacity>
             );
@@ -291,8 +302,21 @@ const BotonSelector = ({
     </View>
 );
 
-const TintasSelector = ({ selectedTintas, setSelectedTintas, opcionesTintas = [] }) => (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+const TintasSelector = ({
+    selectedTintas,
+    setSelectedTintas,
+    opcionesTintas = [],
+    pantones = [],
+    onRemovePantone,
+    onStartAdd,
+    addingPantone,
+    addingValue,
+    onChangeAdding,
+    onConfirmAdding,
+    addingMatchHex
+    , disabled = false
+}) => (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8, alignItems: 'flex-start' }}>
         {opcionesTintas.map((tinta) => {
             const active = selectedTintas.includes(tinta.label);
             return (
@@ -300,6 +324,7 @@ const TintasSelector = ({ selectedTintas, setSelectedTintas, opcionesTintas = []
                     key={tinta.label}
                     style={styles.tintaBtn(active, tinta)}
                     onPress={() => {
+                        if (disabled) return;
                         setSelectedTintas(prev =>
                             active ? prev.filter(l => l !== tinta.label) : [...prev, tinta.label]
                         );
@@ -309,6 +334,76 @@ const TintasSelector = ({ selectedTintas, setSelectedTintas, opcionesTintas = []
                 </TouchableOpacity>
             );
         })}
+
+        {/* render pantone chips inline after CMYK */}
+        {pantones.map((p, idx) => {
+            const active = selectedTintas.includes(p.label);
+            const tintaObj = { label: p.label, color: p.hex, isCMYK: false };
+            return (
+                <View key={`${p.label}-${idx}`} style={{ marginRight: 8, marginBottom: 8 }}>
+                    <TouchableOpacity
+                        style={[styles.tintaBtn(active, tintaObj), { backgroundColor: p.hex || (active ? '#E8E8EC' : '#FBFBFD') }]}
+                        onPress={() => {
+                            if (disabled) return;
+                            setSelectedTintas(prev =>
+                                active ? prev.filter(l => l !== p.label) : [...prev, p.label]
+                            );
+                        }}
+                    >
+                        <Text style={[styles.tintaTxt, { color: '#fff' }]}>{p.label}</Text>
+                        {!disabled && (
+                            <TouchableOpacity
+                                onPress={() => typeof onRemovePantone === 'function' && onRemovePantone(idx)}
+                                style={{ position: 'absolute', right: -6, top: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Text style={{ color: '#fff', fontSize: 12 }}>×</Text>
+                            </TouchableOpacity>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            );
+        })}
+
+        {addingPantone ? (
+            <TextInput
+                value={addingValue}
+                onChangeText={onChangeAdding}
+                placeholder="Nº Pantone"
+                placeholderTextColor="#94A3B8"
+                autoFocus
+                onSubmitEditing={(e) => {
+                    const txt = (e.nativeEvent && e.nativeEvent.text) || addingValue;
+                    if (typeof onConfirmAdding === 'function') onConfirmAdding(txt);
+                }}
+                onBlur={() => {
+                    if (typeof onConfirmAdding === 'function') onConfirmAdding(addingValue);
+                }}
+                style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    minWidth: 70,
+                    textAlign: 'center',
+                    marginRight: 8,
+                    marginBottom: 8,
+                    borderWidth: 1,
+                    borderColor: addingMatchHex ? 'transparent' : '#E2E8F0',
+                    backgroundColor: addingMatchHex || '#F8FAFC',
+                    color: addingMatchHex ? '#FFF' : '#0F172A',
+                    fontSize: 13,
+                }}
+            />
+        ) : (
+            <TouchableOpacity
+                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
+                onPress={() => {
+                    if (disabled) return;
+                    if (typeof onStartAdd === 'function') onStartAdd();
+                }}
+            >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>+</Text>
+            </TouchableOpacity>
+        )}
     </View>
 );
 
@@ -352,7 +447,11 @@ export default function NuevoPresupuestoModal({
     showMaquinaField = false,
     maquinaLabel = 'Máquina',
     initialValues = null,
+    readOnly = false,
+    currentUser = null,
+    puedeCrear = true,
 }) {
+    const isReadOnly = !!readOnly;
     const getNowDateStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -372,9 +471,7 @@ export default function NuevoPresupuestoModal({
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerField, setDatePickerField] = useState('fecha');
     const [referencia, setReferencia] = useState('');
-    const [vendedor, setVendedor] = useState('');
-    const [formatoAncho, setFormatoAncho] = useState('');
-    const [formatoLargo, setFormatoLargo] = useState('');
+    const [vendedor, setVendedor] = useState(currentUser?.nombre || '');
     const [maquina, setMaquina] = useState('');
     const [material, setMaterial] = useState('');
     const [acabado, setAcabado] = useState([]);
@@ -392,6 +489,7 @@ export default function NuevoPresupuestoModal({
     const [coberturaError, setCoberturaError] = useState('');
     const [clientesGuardados, setClientesGuardados] = useState([]);
     const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState(null);
+    const [clienteExpandido, setClienteExpandido] = useState(false);
     const [cargandoClientes, setCargandoClientes] = useState(false);
     const [maquinasActivas, setMaquinasActivas] = useState([]);
     const [catalogos, setCatalogos] = useState({
@@ -403,6 +501,10 @@ export default function NuevoPresupuestoModal({
     const [clientePickerVisible, setClientePickerVisible] = useState(false);
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [clienteInputFocused, setClienteInputFocused] = useState(false);
+    const [troquelesCat, setTroquelesCat] = useState([]);
+    const [troquelSel, setTroquelSel] = useState(null);
+    const [showTroquelCreate, setShowTroquelCreate] = useState(false);
+    const [showMaquinaCreate, setShowMaquinaCreate] = useState(false);
 
     // pedido id when editing
     const [pedidoId, setPedidoId] = useState(null);
@@ -420,14 +522,18 @@ export default function NuevoPresupuestoModal({
             setFecha(initialValues.datos_presupuesto?.fecha || initialValues.fecha_pedido || initialValues.fecha || getNowDateStr());
             setFechaEntrega(initialValues.datos_presupuesto?.fecha || initialValues.fecha_entrega || initialValues.fechaEntrega || getDatePlusDaysStr(7));
             setReferencia(initialValues.referencia || initialValues.datos_presupuesto?.referencia || '');
-            setVendedor(initialValues.datos_presupuesto?.vendedor || '');
-            setFormatoAncho(initialValues.datos_presupuesto?.formatoAncho || initialValues.formatoAncho || '');
-            setFormatoLargo(initialValues.datos_presupuesto?.formatoLargo || initialValues.formatoLargo || '');
+            setVendedor(initialValues.datos_presupuesto?.vendedor || currentUser?.nombre || '');
             setMaquina(initialValues.datos_presupuesto?.maquina || initialValues.maquina || '');
             setMaterial(initialValues.datos_presupuesto?.material || initialValues.material || '');
             setAcabado(initialValues.datos_presupuesto?.acabado || initialValues.acabado || []);
             setTirada(initialValues.datos_presupuesto?.tirada || initialValues.tirada || '');
-            setSelectedTintas(initialValues.datos_presupuesto?.selectedTintas || initialValues.selectedTintas || []);
+            const savedPantones = initialValues.datos_presupuesto?.pantones || initialValues.pantones || [];
+            const savedSelectedTintas = initialValues.datos_presupuesto?.selectedTintas || initialValues.selectedTintas || [];
+            const validPantoneLabels = new Set(savedPantones.map(p => p.label));
+            const cmykLabels = new Set(['C', 'M', 'Y', 'K']);
+            const filteredTintas = savedSelectedTintas.filter(l => cmykLabels.has(l) || validPantoneLabels.has(l));
+            setPantones(savedPantones);
+            setSelectedTintas(filteredTintas);
             setDetalleTintaEspecial(initialValues.datos_presupuesto?.detalleTintaEspecial || initialValues.detalleTintaEspecial || []);
             setTroquelEstadoSel(initialValues.datos_presupuesto?.troquelEstadoSel || initialValues.troquelEstadoSel || '');
             setTroquelFormaSel(initialValues.datos_presupuesto?.troquelFormaSel || initialValues.troquelFormaSel || '');
@@ -437,6 +543,17 @@ export default function NuevoPresupuestoModal({
             // ignore
         }
     }, [initialValues]);
+
+    // Auto-select troquel when catalog loads (for editing existing pedidos)
+    useEffect(() => {
+        if (troquelesCat.length > 0 && !troquelSel && initialValues) {
+            const troquelId = initialValues.datos_presupuesto?.troquelId || initialValues.troquelId;
+            if (troquelId) {
+                const found = troquelesCat.find(t => (t._id || t.id) === troquelId);
+                if (found) handleTroquelSelect(found);
+            }
+        }
+    }, [troquelesCat]);
 
     const emailNormalizado = (email || '').trim();
     const cifNormalizado = normalizeCif(cif);
@@ -465,10 +582,11 @@ export default function NuevoPresupuestoModal({
         fechaEntregaObj.getTime() < fechaCreacionObj.getTime();
 
     const comerciales = (usuariosComerciales || []).map((item) => item.nombre);
-    const materiales = (catalogos.materiales || []).map((item) => item.valor);
-    const acabados = (catalogos.acabados || []).map((item) => item.valor);
-    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor);
-    const numeroTintasSeleccionadas = selectedTintas.length;
+    const materiales = (catalogos.materiales || []).map((item) => item.valor).filter(Boolean);
+    const acabados = (catalogos.acabados || []).map((item) => item.valor).filter(Boolean);
+    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor).filter(Boolean);
+    const tintasEspecialesCount = Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.length : (detalleTintaEspecial ? 1 : 0);
+    const numeroTintasSeleccionadas = selectedTintas.length + tintasEspecialesCount;
     const puedeSeleccionarMaquina = (itemMaquina) => {
         if (!showMaquinaField) return true;
         const coloresMaquina = Number(itemMaquina?.numero_colores || 0);
@@ -479,6 +597,78 @@ export default function NuevoPresupuestoModal({
     const maquinaSeleccionadaObj = (maquinasActivas || []).find((item) => item.nombre === maquina);
     const maquinaIncompatible = !!maquinaSeleccionadaObj && !puedeSeleccionarMaquina(maquinaSeleccionadaObj);
     const tintasOpciones = [...TINTAS_BASE_CMYK];
+    // cargamos mapa de pantones generado por el script
+    let PANTONE_MAP = {};
+    try {
+        PANTONE_MAP = require('../data/pantone_map.json');
+    } catch (e) {
+        PANTONE_MAP = {};
+    }
+    // three positional Pantone slots that replace the old P1/P2/P3 buttons
+    const [pantones, setPantones] = useState([]); // dynamic list of added pantones
+    const [pantoneInput, setPantoneInput] = useState('');
+    const [addingPantone, setAddingPantone] = useState(false);
+
+    const srgbToHex = (srgb) => {
+        if (!srgb || srgb.length < 3) return '#EAEAEA';
+        return '#' + srgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+    };
+
+    const findPantoneInMap = (text) => {
+        if (!text) return null;
+        const t = String(text).trim();
+        const tries = [];
+        // common variants
+        if (/^\d+$/.test(t)) tries.push(`PANTONE ${t} C`);
+        tries.push(t.toUpperCase());
+        if (!t.toUpperCase().startsWith('PANTONE')) tries.push(`PANTONE ${t.toUpperCase()} C`);
+        for (const k of tries) {
+            if (PANTONE_MAP[k]) return { key: k, data: PANTONE_MAP[k] };
+        }
+        return null;
+    };
+
+    const addPantone = (text) => {
+        const existing = findPantoneInMap(text);
+        let label = text;
+        let hex = '#EAEAEA';
+        let found = false;
+        if (existing) {
+            found = true;
+            label = `P. ${existing.key.replace(/PANTONE\s*/i, '').replace(/\s*C$/i, '').trim()} C`;
+            hex = srgbToHex(existing.data.srgb);
+        }
+        const item = { key: label, label, hex, found };
+        setPantones(prev => {
+            const next = [...prev, item];
+            return next;
+        });
+        // insert into selectedTintas after any CMYK entries, preserving other non-CMYK ordering
+        setSelectedTintas(prev => {
+            const prevCopy = Array.isArray(prev) ? [...prev] : [];
+            // remove any existing occurrence of this label
+            const filtered = prevCopy.filter(l => l !== item.label);
+            // collect CMYK in order
+            const cmykOrder = ['C', 'M', 'Y', 'K'];
+            const cmyk = cmykOrder.filter(k => filtered.includes(k));
+            const others = filtered.filter(l => !cmykOrder.includes(l));
+            return [...cmyk, ...others, item.label];
+        });
+    };
+
+    // removed addPantoneAt: pantones are appended correlatively after CMYK
+
+    const removePantoneAt = (idx) => {
+        setPantones(prev => {
+            const copy = [...prev];
+            const removed = copy.splice(idx, 1)[0];
+            // remove from selectedTintas
+            if (removed) {
+                setSelectedTintas(sprev => (Array.isArray(sprev) ? sprev.filter(s => s !== removed.label) : []));
+            }
+            return copy;
+        });
+    };
     const parseTintasEspecialesTexto = (value) => {
         return (value || '')
             .split(',')
@@ -501,11 +691,23 @@ export default function NuevoPresupuestoModal({
 
     const cargarCatalogos = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/settings');
-            const data = response.ok ? await response.json() : { settings: {} };
-            const settings = data.settings || {};
+            const authHdrs = {
+                'Content-Type': 'application/json',
+                'X-Empresa-Id': currentUser?.empresa_id || '1',
+                'X-User-Id': currentUser?.id || 'admin',
+                'X-Role': currentUser?.role || 'administrador',
+            };
+            const [settingsRes, catRes] = await Promise.all([
+                fetch('http://localhost:8080/api/settings'),
+                fetch('http://localhost:8080/api/materiales/catalogo', { headers: authHdrs }),
+            ]);
+            const settingsData = settingsRes.ok ? await settingsRes.json() : { settings: {} };
+            const settings = settingsData.settings || {};
+            const catData = catRes.ok ? await catRes.json() : { catalogo: [] };
+            // Use full materials catalog if available, else fall back to settings.materiales
+            const catalogoMateriales = (catData.catalogo || []).map(item => ({ valor: item.nombre }));
             setCatalogos({
-                materiales: settings.materiales || [],
+                materiales: catalogoMateriales.length > 0 ? catalogoMateriales : (settings.materiales || []),
                 acabados: settings.acabados || [],
                 tintas_especiales: settings.tintas_especiales || []
             });
@@ -522,9 +724,14 @@ export default function NuevoPresupuestoModal({
         try {
             const response = await fetch('http://localhost:8080/api/usuarios?rol=comercial');
             const data = response.ok ? await response.json() : { usuarios: [] };
-            setUsuariosComerciales(Array.isArray(data.usuarios) ? data.usuarios : []);
+            let lista = Array.isArray(data.usuarios) ? data.usuarios : [];
+            // Ensure the logged-in user always appears in the list
+            if (currentUser?.nombre && !lista.some((u) => u.nombre === currentUser.nombre)) {
+                lista = [{ id: currentUser.id || 'current', nombre: currentUser.nombre }, ...lista];
+            }
+            setUsuariosComerciales(lista);
         } catch {
-            setUsuariosComerciales([]);
+            setUsuariosComerciales(currentUser?.nombre ? [{ id: currentUser.id || 'current', nombre: currentUser.nombre }] : []);
         }
     };
 
@@ -539,11 +746,41 @@ export default function NuevoPresupuestoModal({
         }
     };
 
+    const cargarTroqueles = async () => {
+        try {
+            const authHdrs = {
+                'Content-Type': 'application/json',
+                'X-Empresa-Id': currentUser?.empresa_id || '1',
+                'X-User-Id': currentUser?.id || 'admin',
+                'X-Role': currentUser?.role || 'administrador',
+            };
+            const resp = await fetch(API_TROQUELES, { headers: authHdrs });
+            const data = resp.ok ? await resp.json() : { troqueles: [] };
+            setTroquelesCat(data.troqueles || []);
+        } catch {
+            setTroquelesCat([]);
+        }
+    };
+
+    const handleTroquelSelect = (troquel) => {
+        setTroquelSel(troquel);
+        if (troquel) {
+            setTroquelEstadoSel(troquel.estado || '');
+            setTroquelFormaSel(troquel.forma || '');
+            setTroquelCoste('');
+        } else {
+            setTroquelEstadoSel('');
+            setTroquelFormaSel('');
+            setTroquelCoste('');
+        }
+    };
+
     useEffect(() => {
         if (visible) {
             cargarClientesGuardados();
             cargarCatalogos();
             cargarUsuariosComerciales();
+            cargarTroqueles();
             if (showMaquinaField) {
                 cargarMaquinasActivas();
             }
@@ -569,6 +806,7 @@ export default function NuevoPresupuestoModal({
     });
 
     const seleccionarClienteGuardado = (item) => {
+        if (isReadOnly) return;
         setClienteSeleccionadoId(item?.id || null);
         setCliente(item?.nombre || '');
         setRazonSocial(item?.razon_social || '');
@@ -578,10 +816,12 @@ export default function NuevoPresupuestoModal({
         setClientePickerVisible(false);
         setBusquedaCliente('');
         setClienteInputFocused(false);
+        setClienteExpandido(false);
     };
 
     const pickImageEtiqueta = Platform.OS === 'web'
         ? (e) => {
+            if (isReadOnly) return;
             if (e.target.files && e.target.files[0]) {
                 setEtiquetaUri(URL.createObjectURL(e.target.files[0]));
                 setImagenCobertura(e.target.files[0]);
@@ -589,6 +829,7 @@ export default function NuevoPresupuestoModal({
             }
         }
         : async () => {
+            if (isReadOnly) return;
             const { launchImageLibraryAsync } = await import('expo-image-picker');
             let result = await launchImageLibraryAsync({ mediaTypes: 'Images', quality: 1 });
             if (!result.canceled) {
@@ -599,6 +840,7 @@ export default function NuevoPresupuestoModal({
         };
 
     const handleCalcularCobertura = async () => {
+        if (isReadOnly) return;
         setCoberturaError('');
         if (!imagenCobertura) {
             setCoberturaError("Necesario subir un archivo de la etiqueta");
@@ -617,6 +859,10 @@ export default function NuevoPresupuestoModal({
     }, [imagenCobertura, selectedTintas]);
 
     const handleSubmit = () => {
+        if (!puedeCrear) {
+            Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear presupuestos.');
+            return;
+        }
         setSubmitted(true);
         if (emailVacio || emailInvalido || cifInvalido) {
             Alert.alert('Error', 'Email vacío o inválido, o CIF inválido. Revisa los campos.');
@@ -625,9 +871,15 @@ export default function NuevoPresupuestoModal({
 
         const fechaEntregaValida = !showFechaEntrega || !!fechaEntrega;
         const maquinaValida = !showMaquinaField || !!maquina;
-        if (fechaEntregaAntesCreacion) return;
+        if (fechaEntregaAntesCreacion) {
+            Alert.alert('Error', 'La fecha de entrega no puede ser anterior a la fecha de creación.');
+            return;
+        }
 
-        if (showMaquinaField && maquinaIncompatible) return;
+        if (showMaquinaField && maquinaIncompatible) {
+            Alert.alert('Máquina incompatible', 'La máquina seleccionada no soporta el número de tintas elegidas.');
+            return;
+        }
 
         const acabadoValido = Array.isArray(acabado) ? acabado.length > 0 : !!acabado;
 
@@ -635,8 +887,6 @@ export default function NuevoPresupuestoModal({
         // Allow non-saved clients: require cliente name but don't force clienteSeleccionadoId
         if (!cliente) missing.push('Nombre cliente');
         if (!referencia) missing.push('Referencia');
-        if (!formatoAncho) missing.push('Formato ancho');
-        if (!formatoLargo) missing.push('Formato largo');
         if (!material) missing.push('Material');
         if (!acabadoValido) missing.push('Acabado');
         if (!tirada) missing.push('Tirada');
@@ -649,7 +899,8 @@ export default function NuevoPresupuestoModal({
             return;
         }
 
-        if (cliente && referencia && formatoAncho && formatoLargo && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
+        if (cliente && referencia && material && acabadoValido && tirada && selectedTintas.length > 0 && fechaEntregaValida && maquinaValida) {
+            // Clone arrays/objects to avoid passing references to component state
             const presupuesto = {
                 id: Date.now(),
                 numero: `PRE-${Math.floor(Math.random() * 10000)}`,
@@ -662,18 +913,18 @@ export default function NuevoPresupuestoModal({
                 fechaEntrega,
                 referencia,
                 vendedor,
-                formatoAncho,
-                formatoLargo,
                 maquina,
                 material,
-                acabado,
+                acabado: Array.isArray(acabado) ? [...acabado] : acabado,
                 tirada,
-                selectedTintas,
-                detalleTintaEspecial,
-                coberturaResult,
+                selectedTintas: Array.isArray(selectedTintas) ? [...selectedTintas] : (selectedTintas || []),
+                detalleTintaEspecial: Array.isArray(detalleTintaEspecial) ? [...detalleTintaEspecial] : (detalleTintaEspecial || []),
+                coberturaResult: coberturaResult ? JSON.parse(JSON.stringify(coberturaResult)) : null,
+                pantones: Array.isArray(pantones) ? pantones.map(p => ({ ...p })) : [],
                 troquelEstadoSel,
                 troquelFormaSel,
                 troquelCoste,
+                troquelId: troquelSel?._id || troquelSel?.id || null,
                 observaciones
             };
             if (pedidoId) presupuesto.pedido_id = pedidoId;
@@ -719,24 +970,27 @@ export default function NuevoPresupuestoModal({
         setFechaEntrega(getDatePlusDaysStr(7));
         setReferencia('');
         setVendedor('');
-        setFormatoAncho('');
-        setFormatoLargo('');
         setMaquina('');
         setMaterial('');
         setAcabado([]);
         setTirada('');
         setSelectedTintas([]);
         setDetalleTintaEspecial([]);
+        setPantones([]);
+        setAddingPantone(false);
+        setPantoneInput('');
         setImagenCobertura(null);
         setEtiquetaUri(null);
         setTroquelEstadoSel('');
         setTroquelFormaSel('');
         setTroquelCoste('');
+        setTroquelSel(null);
         setObservaciones('');
         setCoberturaResult(null);
         setSubmitted(false);
         setCoberturaError('');
         setClienteSeleccionadoId(null);
+        setClienteExpandido(false);
         setClientePickerVisible(false);
         setBusquedaCliente('');
         setPedidoId(null);
@@ -750,8 +1004,9 @@ export default function NuevoPresupuestoModal({
     }, [visible, initialValues]);
 
     return (
-        <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-            <View style={{ flex: 1, backgroundColor: '#E9EEF5' }}>
+        <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 10 }}>
+                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', overflow: 'hidden', flexDirection: 'column' }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>
@@ -769,12 +1024,14 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>Cliente</Text>
                                         <TouchableOpacity
-                                            style={styles.clientePickerBtn}
-                                            onPress={() => setClientePickerVisible(true)}
+                                            style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#F1F5F9' } : null]}
+                                            onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
                                         >
-                                            <Text style={styles.clientePickerBtnText}>Seleccionar cliente guardado</Text>
+                                            <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>
+                                                {cliente ? (razonSocial || cliente) : 'Seleccionar cliente guardado'}
+                                            </Text>
                                         </TouchableOpacity>
-                                        <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>
+                                        {!cliente && <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>}
                                         {/* eliminado campo placeholder innecesario para aprovechar espacio */}
                                     </View>
                                     <View style={styles.col}>
@@ -906,11 +1163,12 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>Comercial</Text>
                                         {Platform.OS === 'web' ? (
-                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#FBFBFD', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
+                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
                                                 <select
                                                     value={vendedor}
-                                                    onChange={(e) => setVendedor(e.target.value)}
-                                                    style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '10px 12px', fontSize: '14px', color: '#232323', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: 'pointer' }}
+                                                    onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
+                                                    disabled={isReadOnly}
+                                                    style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 14, color: '#0F172A', outlineWidth: 0, WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
                                                 >
                                                     <option value="">Seleccionar comercial</option>
                                                     {usuariosComerciales.map((u) => (
@@ -925,6 +1183,7 @@ export default function NuevoPresupuestoModal({
                                                 onSelect={setVendedor}
                                                 required={true}
                                                 submitted={submitted}
+                                                disabled={isReadOnly}
                                             />
                                         )}
                                     </View>
@@ -934,73 +1193,98 @@ export default function NuevoPresupuestoModal({
                                         <Text style={styles.label}>Referencia / Descripción</Text>
                                         <TextInput
                                             value={referencia}
-                                            onChangeText={setReferencia}
+                                            onChangeText={(t) => { if (isReadOnly) return; setReferencia(t); }}
                                             placeholder="Trabajo/referencia"
+                                            placeholderTextColor="#94A3B8"
                                             style={styles.input(referencia, true, false, submitted)}
+                                            editable={!isReadOnly}
                                         />
                                     </View>
                                 </View>
-                                <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Razón social</Text>
-                                        <TextInput
-                                            value={razonSocial}
-                                            onChangeText={() => {}}
-                                            placeholder="Razón social"
-                                            style={styles.input(razonSocial, false, false, submitted)}
-                                            editable={false}
-                                        />
-                                    </View>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>CIF</Text>
-                                        <TextInput
-                                            value={cif}
-                                            onChangeText={() => {}}
-                                            placeholder="CIF"
-                                            style={[
-                                                styles.input(cif, false, false, submitted),
-                                                submitted && cifInvalido ? { borderColor: '#D21820' } : null
-                                            ]}
-                                            editable={false}
-                                        />
-                                        {submitted && cifInvalido && (
-                                            <Text style={styles.errorText}>CIF no válido (formato esperado: A1234567B)</Text>
+                                {cliente ? (
+                                    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
+                                        <TouchableOpacity
+                                            onPress={() => setClienteExpandido(v => !v)}
+                                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F8FAFC' }}
+                                        >
+                                            <Text style={{ fontSize: 12, color: '#64748B', flex: 1 }} numberOfLines={1}>
+                                                {[cif, personasContacto, email].filter(Boolean).join(' · ')}
+                                            </Text>
+                                            <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', marginLeft: 10 }}>
+                                                {clienteExpandido ? '▲ Menos' : '▼ Ver datos'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {clienteExpandido && (
+                                            <View style={{ padding: 12, paddingTop: 8 }}>
+                                                <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Razón social</Text>
+                                                        <TextInput
+                                                            value={razonSocial}
+                                                            onChangeText={() => {}}
+                                                            placeholder="Razón social"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={styles.input(razonSocial, false, false, submitted)}
+                                                            editable={false}
+                                                        />
+                                                    </View>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>CIF</Text>
+                                                        <TextInput
+                                                            value={cif}
+                                                            onChangeText={() => {}}
+                                                            placeholder="CIF"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={[
+                                                                styles.input(cif, false, false, submitted),
+                                                                submitted && cifInvalido ? { borderColor: '#D21820' } : null
+                                                            ]}
+                                                            editable={false}
+                                                        />
+                                                        {submitted && cifInvalido && (
+                                                            <Text style={styles.errorText}>CIF no válido (formato esperado: A1234567B)</Text>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Personas de contacto</Text>
+                                                        <TextInput
+                                                            value={personasContacto}
+                                                            onChangeText={() => {}}
+                                                            placeholder="Nombre(s) de contacto"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={styles.input(personasContacto, false, false, submitted)}
+                                                            editable={false}
+                                                        />
+                                                    </View>
+                                                    <View style={styles.col}>
+                                                        <Text style={styles.label}>Email</Text>
+                                                        <TextInput
+                                                            value={email}
+                                                            onChangeText={() => {}}
+                                                            placeholder="email@cliente.com"
+                                                            placeholderTextColor="#94A3B8"
+                                                            style={[
+                                                                styles.input(email, false, false, submitted),
+                                                                submitted && emailInvalido ? { borderColor: '#D21820' } : null
+                                                            ]}
+                                                            keyboardType="email-address"
+                                                            autoCapitalize="none"
+                                                            editable={false}
+                                                        />
+                                                        {submitted && emailInvalido && (
+                                                            <Text style={styles.errorText}>Email no válido</Text>
+                                                        )}
+                                                        {submitted && emailVacio && (
+                                                            <Text style={styles.errorText}>El email es obligatorio</Text>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </View>
                                         )}
                                     </View>
-                                </View>
-                                <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Personas de contacto</Text>
-                                        <TextInput
-                                            value={personasContacto}
-                                            onChangeText={() => {}}
-                                            placeholder="Nombre(s) de contacto"
-                                            style={styles.input(personasContacto, false, false, submitted)}
-                                            editable={false}
-                                        />
-                                    </View>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>Email</Text>
-                                        <TextInput
-                                            value={email}
-                                            onChangeText={() => {}}
-                                            placeholder="email@cliente.com"
-                                            style={[
-                                                styles.input(email, false, false, submitted),
-                                                submitted && emailInvalido ? { borderColor: '#D21820' } : null
-                                            ]}
-                                            keyboardType="email-address"
-                                            autoCapitalize="none"
-                                            editable={false}
-                                        />
-                                        {submitted && emailInvalido && (
-                                            <Text style={styles.errorText}>Email no válido</Text>
-                                        )}
-                                        {submitted && emailVacio && (
-                                            <Text style={styles.errorText}>El email es obligatorio</Text>
-                                        )}
-                                    </View>
-                                </View>
+                                ) : null}
                             </View>
                         </View>
                     </View>
@@ -1009,108 +1293,181 @@ export default function NuevoPresupuestoModal({
                     {/* PRODUCTO */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Producto</Text>
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Formato ancho (mm)</Text>
-                                <TextInput
-                                    value={formatoAncho}
-                                    onChangeText={setFormatoAncho}
-                                    keyboardType="numeric"
-                                    placeholder="Ej: 100"
-                                    style={styles.input(formatoAncho, true, true, submitted)}
-                                />
-                            </View>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Formato largo (mm)</Text>
-                                <TextInput
-                                    value={formatoLargo}
-                                    onChangeText={setFormatoLargo}
-                                    keyboardType="numeric"
-                                    placeholder="Ej: 200"
-                                    style={styles.input(formatoLargo, true, true, submitted)}
-                                />
-                            </View>
+                        <View style={[styles.row, { alignItems: 'flex-start' }]}>
                             {showMaquinaField && (
-                                <View style={styles.col}>
-                                    <Text style={styles.label}>{maquinaLabel}</Text>
-                                    {Platform.OS === 'web' ? (
-                                        <View style={{
-                                            borderWidth: 1,
-                                            borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
-                                            backgroundColor: '#FBFBFD',
-                                            borderRadius: 10,
-                                            marginBottom: 10,
-                                            overflow: 'hidden'
-                                        }}>
-                                            <select
-                                                value={maquina}
-                                                onChange={(e) => setMaquina(e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    padding: '10px',
-                                                    fontSize: '14px',
-                                                    color: '#232323'
-                                                }}
+                            <View style={styles.col}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <Text style={[styles.label, { marginBottom: 0 }]}>{maquinaLabel}</Text>
+                                    {!isReadOnly && (
+                                        <TouchableOpacity
+                                            onPress={() => setShowMaquinaCreate(true)}
+                                            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                        >
+                                            <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                                {Platform.OS === 'web' ? (
+                                    <View style={{
+                                        borderWidth: 1,
+                                        borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
+                                        backgroundColor: '#F8FAFC',
+                                        borderRadius: 10,
+                                        marginBottom: 8,
+                                        overflow: 'hidden'
+                                    }}>
+                                        <select
+                                            value={maquina}
+                                            onChange={(e) => setMaquina(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                borderWidth: 0,
+                                                backgroundColor: 'transparent',
+                                                paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10,
+                                                fontSize: 14,
+                                                color: '#0F172A',
+                                                outlineWidth: 0,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <option value="">Seleccionar máquina activa</option>
+                                            {maquinasActivas.map((itemMaquina) => (
+                                                <option
+                                                    key={itemMaquina.id}
+                                                    value={itemMaquina.nombre}
+                                                >
+                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} colores)${!puedeSeleccionarMaquina(itemMaquina) ? ' ⚠ no compatible' : ''}`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </View>
+                                ) : (
+                                    <View style={styles.selectorRow}>
+                                        {maquinasActivas.map((itemMaquina) => {
+                                            const activa = maquina === itemMaquina.nombre;
+                                            const habilitada = puedeSeleccionarMaquina(itemMaquina);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={itemMaquina.id}
+                                                    style={{
+                                                        paddingHorizontal: 12,
+                                                        paddingVertical: 8,
+                                                        backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
+                                                        borderRadius: 22,
+                                                        borderWidth: 2,
+                                                        borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#3AB274' : '#CCC'),
+                                                        marginRight: 8,
+                                                        marginBottom: 8,
+                                                        minWidth: 90,
+                                                        alignItems: 'center',
+                                                        opacity: habilitada ? 1 : 0.35,
+                                                    }}
+                                                    onPress={() => setMaquina(itemMaquina.nombre)}
+                                                >
+                                                    <Text style={{
+                                                        color: activa ? '#393B3F' : '#6C6C70',
+                                                        fontWeight: activa ? '700' : '500',
+                                                        fontSize: 13,
+                                                    }}>
+                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? ' ⚠' : ''}`}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+                                {submitted && !maquina && (
+                                    <Text style={styles.errorText}>Selecciona una máquina activa</Text>
+                                )}
+                                {submitted && maquinaIncompatible && (
+                                    <Text style={styles.errorText}>
+                                        La máquina seleccionada no soporta las tintas marcadas ({numeroTintasSeleccionadas}).
+                                    </Text>
+                                )}
+                            </View>
+                            )}
+                        <View style={styles.col}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <Text style={styles.label}>Troquel</Text>
+                                {!isReadOnly && (
+                                    <TouchableOpacity
+                                        onPress={() => setShowTroquelCreate(true)}
+                                        style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                    >
+                                        <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                            {troquelesCat.length === 0 ? (
+                                <Text style={{ color: '#94A3B8', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
+                            ) : Platform.OS === 'web' ? (
+                                <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                    <select
+                                        style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }}
+                                        value={troquelSel?._id || troquelSel?.id || ''}
+                                        disabled={isReadOnly}
+                                        onChange={e => {
+                                            const found = troquelesCat.find(t => (t._id || t.id) === e.target.value);
+                                            handleTroquelSelect(found || null);
+                                        }}
+                                    >
+                                        <option value="">Sin troquel</option>
+                                        {troquelesCat.map((t, i) => (
+                                            <option key={t._id || t.id || i} value={t._id || t.id}>
+                                                {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </View>
+                            ) : (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                    <TouchableOpacity
+                                        disabled={isReadOnly}
+                                        onPress={() => handleTroquelSelect(null)}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#F1F5F9' }}
+                                    >
+                                        <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>Sin troquel</Text>
+                                    </TouchableOpacity>
+                                    {troquelesCat.map((t, i) => {
+                                        const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
+                                        return (
+                                            <TouchableOpacity
+                                                key={t._id || t.id || i}
+                                                disabled={isReadOnly}
+                                                onPress={() => handleTroquelSelect(t)}
+                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#475569' : '#F1F5F9' }}
                                             >
-                                                <option value="">Seleccionar máquina activa</option>
-                                                {maquinasActivas.map((itemMaquina) => (
-                                                    <option
-                                                        key={itemMaquina.id}
-                                                        value={itemMaquina.nombre}
-                                                    >
-                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} colores)${!puedeSeleccionarMaquina(itemMaquina) ? ' ⚠ no compatible' : ''}`}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.selectorRow}>
-                                            {maquinasActivas.map((itemMaquina) => {
-                                                const activa = maquina === itemMaquina.nombre;
-                                                const habilitada = puedeSeleccionarMaquina(itemMaquina);
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={itemMaquina.id}
-                                                        style={{
-                                                            paddingHorizontal: 12,
-                                                            paddingVertical: 8,
-                                                            backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
-                                                            borderRadius: 22,
-                                                            borderWidth: 2,
-                                                            borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#3AB274' : '#CCC'),
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            minWidth: 90,
-                                                            alignItems: 'center',
-                                                            opacity: habilitada ? 1 : 0.35,
-                                                        }}
-                                                        onPress={() => setMaquina(itemMaquina.nombre)}
-                                                    >
-                                                        <Text style={{
-                                                            color: activa ? '#393B3F' : '#6C6C70',
-                                                            fontWeight: activa ? '700' : '500',
-                                                            fontSize: 13,
-                                                        }}>
-                                                            {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? ' ⚠' : ''}`}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                        </View>
-                                    )}
-                                    {submitted && !maquina && (
-                                        <Text style={styles.errorText}>Selecciona una máquina activa</Text>
-                                    )}
-                                    {submitted && maquinaIncompatible && (
-                                        <Text style={styles.errorText}>
-                                            La máquina seleccionada no soporta las tintas marcadas ({numeroTintasSeleccionadas}).
-                                        </Text>
-                                    )}
+                                                <Text style={{ color: isSelected ? '#fff' : '#475569', fontSize: 13 }}>{t.numero}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
                             )}
                         </View>
+                    </View>
+                    {troquelSel && (
+                        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 10 }}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                {[
+                                    { label: 'Número', value: troquelSel.numero },
+                                    { label: 'Tipo', value: troquelSel.tipo },
+                                    { label: 'Forma', value: troquelSel.forma },
+                                    { label: 'Estado', value: troquelSel.estado },
+                                    { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null },
+                                    { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null },
+                                    { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null },
+                                    { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null },
+                                    { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null },
+                                    { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null },
+                                ].filter(f => f.value != null && f.value !== '').map(f => (
+                                    <View key={f.label} style={{ minWidth: 110 }}>
+                                        <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text>
+                                        <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                         <View style={styles.row}>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Material</Text>
@@ -1120,6 +1477,7 @@ export default function NuevoPresupuestoModal({
                                     onSelect={setMaterial}
                                     required={true}
                                     submitted={submitted}
+                                    disabled={isReadOnly}
                                 />
                             </View>
                             <View style={styles.col}>
@@ -1129,8 +1487,9 @@ export default function NuevoPresupuestoModal({
                                     valorSeleccionado={acabado}
                                     onSelect={setAcabado}
                                     multiple={true}
-                                    required={true}
+                                    required={false}
                                     submitted={submitted}
+                                    disabled={isReadOnly}
                                 />
                             </View>
                         </View>
@@ -1139,10 +1498,12 @@ export default function NuevoPresupuestoModal({
                                 <Text style={styles.label}>Tirada total</Text>
                                 <TextInput
                                     value={tirada}
-                                    onChangeText={setTirada}
+                                    onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
                                     keyboardType="numeric"
                                     placeholder="Cantidad"
+                                    placeholderTextColor="#94A3B8"
                                     style={styles.input(tirada, true, true, submitted)}
+                                    editable={!isReadOnly}
                                 />
                             </View>
                         </View>
@@ -1159,8 +1520,23 @@ export default function NuevoPresupuestoModal({
                                     selectedTintas={selectedTintas}
                                     setSelectedTintas={setSelectedTintas}
                                     opcionesTintas={tintasOpciones}
+                                    pantones={pantones}
+                                    onRemovePantone={removePantoneAt}
+                                    onStartAdd={() => { if (isReadOnly) return; setAddingPantone(true); setPantoneInput(''); }}
+                                    addingPantone={addingPantone}
+                                    addingValue={pantoneInput}
+                                    onChangeAdding={(t) => { if (isReadOnly) return; setPantoneInput(t); }}
+                                    onConfirmAdding={(txt) => {
+                                        const val = (txt || '').trim();
+                                        if (val && !isReadOnly) addPantone(val);
+                                        setAddingPantone(false);
+                                        setPantoneInput('');
+                                    }}
+                                    addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
+                                    disabled={isReadOnly}
                                 />
-                                <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {selectedTintas.length}</Text>
+                                <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {numeroTintasSeleccionadas}</Text>
+                                
                             </View>
                             <View style={styles.col}>
                                 <Text style={styles.label}>Tinta especial</Text>
@@ -1178,6 +1554,7 @@ export default function NuevoPresupuestoModal({
                                         value={Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.join(', ') : ''}
                                         onChangeText={(text) => setDetalleTintaEspecial(parseTintasEspecialesTexto(text))}
                                         placeholder="Ej: metalizada, oro"
+                                        placeholderTextColor="#94A3B8"
                                         style={styles.input(detalleTintaEspecial, false, false, submitted)}
                                     />
                                 )}
@@ -1185,16 +1562,21 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
 
-                    {/* SUBMIT */}
-                    <View style={styles.submitContainer}>
-                        <TouchableOpacity style={[styles.bigBtn, styles.submitBtn]} onPress={handleSubmit}>
-                            <Text style={styles.bigBtnText}>{submitLabel}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
-                            <Text style={styles.bigBtnText}>Cancelar</Text>
-                        </TouchableOpacity>
-                    </View>
                 </ScrollView>
+
+                {/* ── Barra de acciones inferior ── */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                    <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
+                        <Text style={styles.bigBtnText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
+                        onPress={() => puedeCrear && handleSubmit()}
+                        disabled={!puedeCrear}
+                    >
+                        <Text style={[styles.bigBtnText, { color: '#F8FAFC' }]}>{submitLabel}</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {showDatePicker && Platform.OS !== 'web' && (
                     <DateTimePicker
@@ -1226,6 +1608,7 @@ export default function NuevoPresupuestoModal({
                                 value={busquedaCliente}
                                 onChangeText={setBusquedaCliente}
                                 placeholder="Buscar por nombre, CIF, contacto o email"
+                                placeholderTextColor="#94A3B8"
                                 style={styles.input(busquedaCliente, false, false, false)}
                             />
 
@@ -1267,6 +1650,46 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
                 </Modal>
+                {/* ── Troquel create sub-modal ── */}
+                <NuevoTroquelModal
+                    visible={showTroquelCreate}
+                    onClose={() => setShowTroquelCreate(false)}
+                    onSave={async (troquelData) => {
+                        try {
+                            const resp = await fetch(API_TROQUELES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(troquelData) });
+                            const data = resp.ok ? await resp.json() : {};
+                            if (!resp.ok) { alert(data.error || 'Error guardando troquel'); return; }
+                            await cargarTroqueles();
+                            const nuevo = data.troquel;
+                            if (nuevo) handleTroquelSelect({ ...nuevo, id: nuevo._id || nuevo.id });
+                        } catch (e) {
+                            alert('Error de conexión');
+                        }
+                    }}
+                />
+
+                {/* ── Máquina create sub-modal ── */}
+                <NuevaMaquinaModal
+                    visible={showMaquinaCreate}
+                    onClose={() => setShowMaquinaCreate(false)}
+                    onSave={async (data) => {
+                        try {
+                            const res = await fetch('http://localhost:8080/api/maquinas', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data),
+                            });
+                            const json = await res.json().catch(() => ({}));
+                            if (!res.ok) { alert(json.error || 'Error guardando máquina'); return; }
+                            await cargarMaquinasActivas();
+                            setMaquina(data.nombre);
+                        } catch (e) {
+                            alert('Error de conexión');
+                        }
+                    }}
+                />
+
+                </View>
             </View>
         </Modal>
     );
