@@ -4609,6 +4609,11 @@ def update_pedido(pedido_id):
             else:
                 update['fecha_finalizacion'] = None
 
+            # Limpiar en_produccion si el nuevo estado sale de la cola de producción
+            en_cola_list = reglas.get('en_cola_produccion', [])
+            if nuevo_estado not in en_cola_list:
+                update['en_produccion'] = False
+
         if not update:
             return jsonify({'error': 'Nada que actualizar'}), 400
 

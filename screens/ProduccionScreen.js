@@ -521,8 +521,9 @@ export default function ProduccionScreen() {
   };
 
   const getStatusColor = (estado) => {
-    const color = generateColorFromHash(estado);
-    switch (estado) {
+    const slug = slugifyEstado(estado);
+    const color = generateColorFromHash(slug);
+    switch (slug) {
       case 'en-diseno':
       case 'diseno': // compat con pedidos antiguos
         return [styles.statusDiseno, styles.statusDisenoText];

@@ -134,8 +134,9 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   };
 
   const getStatusColor = (estado) => {
-    const color = generateColorFromHash(estado);
-    switch (estado) {
+    const slug = slugifyEstado(estado);
+    const color = generateColorFromHash(slug);
+    switch (slug) {
       case 'en-diseno': case 'diseno': return [styles.statusDiseno, styles.statusDisenoText];
       case 'pendiente-de-aprobacion': return [styles.statusPendienteAprobacion, styles.statusPendienteAprobacionText];
       case 'pendiente-de-cliche': return [styles.statusPendienteCliche, styles.statusPendienteClicheText];

@@ -104,6 +104,8 @@ export default React.memo(TrabajoRow, (a, b) => {
     const bid = b.trabajo.trabajo_id || b.trabajo.id;
     return (
       aid === bid &&
+      a.trabajo.estado === b.trabajo.estado &&
+      a.trabajo.en_produccion === b.trabajo.en_produccion &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.maquinaActual === b.maquinaActual &&
       a.canReorder === b.canReorder
