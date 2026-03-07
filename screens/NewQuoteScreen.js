@@ -32,7 +32,7 @@ function borderColorState(value, isRequired, isNumeric = false, submitted = fals
     if ((value === undefined || value === null || value === '') && submitted) return '#D21820';
     if (isNumeric && value !== '' && !/^[0-9]+$/.test(value)) return '#D21820';
     if ((typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return submitted ? '#D21820' : '#CCC';
-    return '#3AB274';
+    return '#E55A2B';
 }
 
 const styles = {
@@ -108,7 +108,7 @@ const BotonSelector = ({
             const active = valorSeleccionado === opcion;
             const border =
                 active
-                    ? '#3AB274'
+                    ? '#E55A2B'
                     : (!valorSeleccionado && required && submitted
                         ? '#D21820'
                         : '#CCC');
@@ -583,7 +583,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                         <TouchableOpacity
                             style={[
                                 styles.bigBtn,
-                                { backgroundColor: imagenCobertura && selectedTintas.length > 0 ? '#3AB274' : '#A8A8AA' },
+                                { backgroundColor: imagenCobertura && selectedTintas.length > 0 ? '#E55A2B' : '#A8A8AA' },
                             ]}
                             onPress={handleCalcularCobertura}
                             disabled={!(imagenCobertura && selectedTintas.length > 0)}

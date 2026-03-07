@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   selectChipActive: {
-    borderColor: '#3AB274',
+    borderColor: '#E55A2B',
     backgroundColor: '#EAF8F0',
   },
   selectChipText: {

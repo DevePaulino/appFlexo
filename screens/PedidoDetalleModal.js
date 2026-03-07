@@ -976,7 +976,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           <View style={{ flex: 1, overflow: 'hidden' }}>
             {loading ? (
               <View style={styles.loading}>
-                <ActivityIndicator size="large" color="#3AB274" />
+                <ActivityIndicator size="large" color="#E55A2B" />
               </View>
             ) : error ? (
               <Text style={styles.errorText}>{error}</Text>
@@ -1008,7 +1008,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                               {renderRow('Nombre trabajo:', pedido.nombre || '-')}
                               {renderRow('Estado:', pedido.estado || '-')}
                               {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                              {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
+                              {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
                             </View>
                             <View style={styles.sectionCard}>
                               <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
@@ -1073,7 +1073,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             {renderRow('Nombre trabajo:', pedido.nombre || '-')}
                             {renderRow('Estado:', pedido.estado || '-')}
                             {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                            {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#3AB274')}
+                            {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
                           </View>
                         </View>
                         <View style={styles.rightCol}>

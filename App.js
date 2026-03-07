@@ -18,6 +18,7 @@ import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
 import MaterialScreen from './screens/MaterialScreen';
+import SettingMenuScreen from './screens/SettingMenuScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 
 // Inject global web CSS: placeholder text italic + muted color
@@ -39,18 +40,21 @@ const AUTH_EXCLUDED_PATHS = [
 ];
 
 const Stack = createNativeStackNavigator();
+const SettingsStack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Pedidos', 'Máquinas', 'Presupuesto', 'Producción', 'Clientes', 'Troqueles', 'Setting', 'Materiales'];
+const VALID_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
 const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
 
+// Tabs que existían antes y ahora viven en Ajustes → redirigir a Setting
+const MIGRATED_TABS = ['Máquinas', 'Troqueles', 'Materiales'];
+
 const SETTINGS_SUBMENU = [
-  { key: 'settings-usuarios-roles', label: 'Usuarios', target: { type: 'setting-section', section: 'usuarios-roles' } },
-  { key: 'settings-creditos', label: 'Créditos', target: { type: 'setting-section', section: 'creditos' } },
-  { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'setting-section', section: 'funcionalidades' } },
-  { key: 'settings-impresion', label: 'Impresión', target: { type: 'setting-section', section: 'impresion' } },
-  { key: 'settings-materiales', label: 'Materiales', target: { type: 'tab', route: 'Materiales' } },
-  { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'tab', route: 'Máquinas' } },
-  { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'tab', route: 'Troqueles' } },
+  { key: 'settings-usuarios-roles', label: 'Usuarios y roles', target: { type: 'stack', route: 'SettingsUsuariosRoles' } },
+  { key: 'settings-impresion', label: 'Impresión', target: { type: 'stack', route: 'SettingsImpresion' } },
+  { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'stack', route: 'SettingsMaquinas' } },
+  { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'stack', route: 'SettingsTroqueles' } },
+  { key: 'settings-materiales', label: 'Materiales', target: { type: 'stack', route: 'SettingsMateriales' } },
+  { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'stack', route: 'SettingsFuncionalidades' } },
 ];
 
 const linking = {
@@ -63,24 +67,28 @@ const linking = {
           Presupuesto: 'presupuestos',
           Producción: 'produccion',
           Clientes: 'clientes',
-          Máquinas: 'maquinas',
-          Troqueles: 'troqueles',
-          Materiales: 'materiales-settings',
-          Setting: 'setting',
+          Setting: {
+            screens: {
+              SettingsMenu: 'setting',
+              SettingsUsuariosRoles: 'setting/usuarios-roles',
+              SettingsFuncionalidades: 'setting/funcionalidades',
+              SettingsImpresion: 'setting/impresion',
+              SettingsMaquinas: 'setting/maquinas',
+              SettingsTroqueles: 'setting/troqueles',
+              SettingsMateriales: 'setting/materiales',
+            },
+          },
         },
       },
       'Nueva Cotización': 'nueva-cotizacion',
-      SettingsUsuariosRoles: 'setting/usuarios-roles',
-      SettingsFuncionalidades: 'setting/funcionalidades',
-      
-      SettingsImpresion: 'setting/impresion',
     },
   },
 };
 
 function normalizeTabName(tabName) {
   if (!tabName) return 'Pedidos';
-  if (tabName === 'Settings' || tabName === 'Setting') return 'Pedidos';
+  if (tabName === 'Settings') return 'Pedidos'; // old route name, no longer exists
+  if (MIGRATED_TABS.includes(tabName)) return 'Setting';
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
@@ -139,27 +147,13 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
 
   const goToSubmenuTarget = (target) => {
     setSubmenuOpen(false);
-    if (target?.type === 'setting-section') {
-      navigation.navigate('Setting', { section: target.section });
+    if (target?.type === 'stack' && target.route) {
+      navigation.navigate('Setting', { screen: target.route });
       onTabChange('Setting');
-      return;
-    }
-
-    if (target?.type === 'tab' && target.route) {
-      navigation.navigate(target.route);
-      onTabChange(target.route);
     }
   };
 
-  const isSubmenuTargetActive = (target) => {
-    if (target?.type === 'tab' && target.route) {
-      return activeRouteName === target.route;
-    }
-    if (target?.type === 'setting-section' && target.section) {
-      return activeRouteName === 'Setting' && activeSettingSection === target.section;
-    }
-    return false;
-  };
+  const isSubmenuTargetActive = (_target) => false;
 
   const confirmLogout = () => {
     if (!onLogout) return;
@@ -243,7 +237,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
           const label = options.tabBarLabel || options.title || route.name;
           const isFocused = activeRouteName === route.name;
           const isSetting = route.name === 'Setting';
-          const settingContext = activeRouteName === 'Setting' || activeRouteName === 'Máquinas' || activeRouteName === 'Troqueles';
+          const settingContext = activeRouteName === 'Setting';
           const isActive = isFocused || (isSetting && (submenuOpen || settingContext));
 
           return (
@@ -295,6 +289,44 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   );
 }
 
+function SettingsNavigator({ currentUser }) {
+  return (
+    <SettingsStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <SettingsStack.Screen
+        name="SettingsMenu"
+        children={(props) => <SettingMenuScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsUsuariosRoles"
+        initialParams={{ section: 'usuarios-roles' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsFuncionalidades"
+        initialParams={{ section: 'funcionalidades' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsImpresion"
+        initialParams={{ section: 'impresion' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsMaquinas"
+        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsTroqueles"
+        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsMateriales"
+        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
+      />
+    </SettingsStack.Navigator>
+  );
+}
+
 function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRoleChange }) {
   return (
     <Tab.Navigator
@@ -327,27 +359,9 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRole
         children={(props) => <ClientesScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
-        name="Máquinas"
-        options={{ tabBarLabel: 'Máquinas' }}
-        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
-      />
-      <Tab.Screen
-        name="Troqueles"
-        options={{ tabBarLabel: 'Troqueles' }}
-        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
-      />
-      <Tab.Screen
-        name="Materiales"
-        options={{ tabBarLabel: 'Materiales' }}
-        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
-      />
-      <Tab.Screen
         name="Setting"
-        initialParams={{ section: 'usuarios-roles' }}
-        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
-        options={{
-          tabBarLabel: 'Ajustes',
-        }}
+        children={(props) => <SettingsNavigator {...props} currentUser={currentUser} />}
+        options={{ tabBarLabel: 'Ajustes' }}
       />
     </Tab.Navigator>
   );
@@ -924,25 +938,6 @@ export default function App() {
             name="Nueva Cotización"
             component={NewQuoteScreen}
             options={{ headerShown: true }}
-          />
-          <Stack.Screen
-            name="SettingsUsuariosRoles"
-            initialParams={{ section: 'usuarios-roles' }}
-            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
-            options={{ title: 'Usuarios', headerShown: true }}
-          />
-          <Stack.Screen
-            name="SettingsFuncionalidades"
-            initialParams={{ section: 'funcionalidades' }}
-            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
-            options={{ title: 'Funcionalidades web', headerShown: true }}
-          />
-          
-          <Stack.Screen
-            name="SettingsImpresion"
-            initialParams={{ section: 'impresion' }}
-            children={(props) => <ConfigScreen {...props} currentUser={authUser} />}
-            options={{ title: 'Impresión', headerShown: true }}
           />
         </Stack.Navigator>
       </NavigationContainer>

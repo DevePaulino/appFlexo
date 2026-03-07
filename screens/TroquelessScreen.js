@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#fff',
-    backgroundColor: '#3AB274',
+    backgroundColor: '#E55A2B',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function TroquelessScreen({ currentUser }) {
+export default function TroquelessScreen({ currentUser, navigation }) {
   const ITEMS_PER_PAGE = 100;
   const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
@@ -1063,7 +1063,7 @@ export default function TroquelessScreen({ currentUser }) {
                     <Text style={styles.cellText} numberOfLines={1}>{troquele.distanciaSesgado || '-'}</Text>
                   </View>
                   <View style={[styles.tableCell, styles.colEstado]}>
-                    <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#3AB274' : '#FF9800' }]}>
+                    <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#16A34A' : '#FF9800' }]}>
                       {troquele.estado}
                     </Text>
                   </View>
@@ -1130,7 +1130,7 @@ export default function TroquelessScreen({ currentUser }) {
               <>
                 <View style={styles.detailHeadRow}>
                   <Text style={styles.detailTitle}>{troquelSeleccionado.numero}</Text>
-                  <Text style={[styles.statusBadge, { backgroundColor: troquelSeleccionado.estado === 'Disponible' ? '#3AB274' : '#FF9800' }]}>
+                  <Text style={[styles.statusBadge, { backgroundColor: troquelSeleccionado.estado === 'Disponible' ? '#16A34A' : '#FF9800' }]}>
                     {troquelSeleccionado.estado}
                   </Text>
                 </View>

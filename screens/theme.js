@@ -24,7 +24,13 @@ export const C = {
   borderStrong:  '#CBD5E1',  // slate-300  (inputs default)
   borderFocus:   '#475569',  // primary focus ring
 
-  // Brand / Primary
+  // Brand / Action
+  action:        '#E55A2B',  // vermilion — color de acción principal
+  actionDark:    '#C44820',  // pressed / hover
+  actionBg:      '#FFF0EB',  // fondo claro para chips/badges de acción
+  actionText:    '#FFFFFF',
+
+  // Brand / Primary (navegación, encabezados secundarios)
   primary:       '#475569',  // slate-600
   primaryDark:   '#334155',  // slate-700
   primaryLight:  '#F1F5F9',  // slate-100
@@ -109,9 +115,9 @@ export const F = {
 
 // ─── Paper theme config (for PaperProvider in App.js) ────────────────────────
 export const paperThemeColors = {
-  primary:          C.primary,
-  onPrimary:        C.primaryText,
-  primaryContainer: C.primaryLight,
+  primary:          C.action,
+  onPrimary:        C.actionText,
+  primaryContainer: C.actionBg,
   secondary:        C.secondary,
   background:       C.bg,
   surface:          C.surface,

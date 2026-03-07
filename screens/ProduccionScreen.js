@@ -4,6 +4,7 @@ import { useRoute } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import ProductionBoard from '../components/ProductionBoard';
+import EmptyState from '../components/EmptyState';
 
 const styles = StyleSheet.create({
   container: {
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   chartFillGreen: {
-    backgroundColor: '#3AB274',
+    backgroundColor: '#E55A2B',
   },
   chartFillYellow: {
     backgroundColor: '#F5A623',
@@ -216,13 +217,13 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderWidth: 2,
-    borderColor: '#3AB274',
+    borderColor: '#E55A2B',
     borderRadius: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#3AB274',
+    backgroundColor: '#E55A2B',
   },
   checkmark: {
     color: '#FFF',
@@ -233,13 +234,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: '#3AB274',
+    borderColor: '#E55A2B',
     borderRadius: 3,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#3AB274',
+    backgroundColor: '#E55A2B',
   },
   checkmark: {
     color: '#FFF',
@@ -488,7 +489,7 @@ export default function ProduccionScreen() {
   };
 
   const getMachineTone = (maquinaId) => {
-    const palette = ['#3AB274', '#2E86DE', '#8E44AD', '#F39C12', '#E67E22', '#16A085', '#D64541', '#6C5CE7'];
+    const palette = ['#E55A2B', '#2E86DE', '#8E44AD', '#F39C12', '#E67E22', '#16A085', '#D64541', '#6C5CE7'];
     const index = Math.abs(Number(maquinaId) || 0) % palette.length;
     return palette[index];
   };
@@ -849,9 +850,12 @@ export default function ProduccionScreen() {
 
   if (!maquinas || maquinas.length === 0) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ fontSize: 16, marginBottom: 10 }}>No hay máquinas configuradas</Text>
-        <Text style={{ fontSize: 12, color: '#666', textAlign: 'center' }}>Debes agregar máquinas en el backend primero</Text>
+      <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+        <EmptyState
+          icon="⚙️"
+          title="Sin máquinas configuradas"
+          message="Añade al menos una máquina de impresión en Ajustes → Máquinas para empezar a planificar producción."
+        />
       </View>
     );
   }

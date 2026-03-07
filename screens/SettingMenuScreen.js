@@ -76,14 +76,29 @@ export default function SettingMenuScreen() {
       route: 'SettingsUsuariosRoles',
     },
     {
-      title: 'Funcionalidades web',
-      description: 'Funciones experimentales y modos de desarrollo.',
-      route: 'SettingsFuncionalidades',
-    },
-    {
       title: 'Impresión',
       description: 'Materiales, acabados y tintas especiales.',
       route: 'SettingsImpresion',
+    },
+    {
+      title: 'Máquinas',
+      description: 'Catálogo de máquinas de impresión.',
+      route: 'SettingsMaquinas',
+    },
+    {
+      title: 'Troqueles',
+      description: 'Catálogo de troqueles disponibles.',
+      route: 'SettingsTroqueles',
+    },
+    {
+      title: 'Materiales',
+      description: 'Sustratos, gramajes y costes de material.',
+      route: 'SettingsMateriales',
+    },
+    {
+      title: 'Funcionalidades web',
+      description: 'Funciones experimentales y modos de desarrollo.',
+      route: 'SettingsFuncionalidades',
     },
   ];
 

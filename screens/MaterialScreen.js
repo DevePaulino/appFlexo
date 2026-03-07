@@ -20,7 +20,7 @@ const MATERIAL_COLORS = [
 
 const API_BASE = 'http://localhost:8080';
 
-export default function MaterialScreen({ currentUser }) {
+export default function MaterialScreen({ currentUser, navigation }) {
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('catalogo'); // 'catalogo' | 'stock' | 'historial'
 

@@ -4,6 +4,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 import { PedidosContext } from '../PedidosContext';
 import { usePermission } from './usePermission';
+import Toast from '../components/Toast';
+import useToast from '../components/useToast';
+import EmptyState from '../components/EmptyState';
 
 const styles = StyleSheet.create({
   container: {
@@ -40,7 +43,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  headerSearchRow: {
+    marginTop: 6,
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -76,22 +82,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#475569',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    backgroundColor: '#E55A2B',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
   btnPlusDisabled: {
     backgroundColor: '#94A3B8',
   },
   btnPlusText: {
     color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 28,
-    lineHeight: 28,
-    marginTop: -2,
+    fontWeight: '700',
+    fontSize: 13,
   },
   hoverHint: {
     position: 'absolute',
@@ -134,11 +139,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   chartFillAprobado: {
-    backgroundColor: '#3AB274',
+    backgroundColor: '#16A34A',
     height: '100%',
   },
   chartFillPendiente: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#F59E0B',
     height: '100%',
   },
   chartLegendRow: {
@@ -263,7 +268,7 @@ const styles = StyleSheet.create({
     flex: 0.18,
   },
   actionBtn: {
-    backgroundColor: '#3AB274',
+    backgroundColor: '#E55A2B',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -427,6 +432,7 @@ export default function PresupuestoScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
+  const { toast, showToast, hideToast } = useToast();
   const [filtrados, setFiltrados] = useState([]);
   const [paginaPresupuestos, setPaginaPresupuestos] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -633,25 +639,25 @@ export default function PresupuestoScreen({ currentUser }) {
               console.log('Datos de respuesta:', respData);
               if (respData.error) {
                 console.error('Error guardando presupuesto:', respData.error);
-                alert(`❌ Error al guardar presupuesto:\n${respData.error}`);
+                showToast(respData.error || 'Error al guardar presupuesto', 'error');
               } else {
                 console.log('✅ Presupuesto guardado exitosamente');
-                alert('✅ ¡Presupuesto guardado exitosamente!');
+                showToast('Presupuesto guardado', 'success');
                 cargarPresupuestos();
               }
             })
             .catch((err) => {
               console.error('Error en fetch de presupuesto:', err);
-              alert(`❌ Error en la solicitud:\n${err.message}`);
+              showToast(`Error en la solicitud: ${err.message}`, 'error');
             });
         } else {
           console.error('Error creando trabajo:', data);
-          alert(`❌ Error al crear trabajo:\n${data.error || 'desconocido'}`);
+          showToast(data.error || 'Error al crear trabajo', 'error');
         }
       })
       .catch((err) => {
         console.error('Error en fetch de trabajo:', err);
-        alert(`❌ Error en la solicitud de trabajo:\n${err.message}`);
+        showToast(`Error al crear trabajo: ${err.message}`, 'error');
       });
   };
 
@@ -670,7 +676,7 @@ export default function PresupuestoScreen({ currentUser }) {
     const targetId = presupuesto.trabajo_id || presupuesto.id || presupuesto._id;
     if (!targetId) {
       console.error('No se encuentra trabajo_id en presupuesto:', presupuesto);
-      alert('No es posible aceptar este presupuesto: falta identificador de trabajo.');
+      showToast('No es posible aceptar este presupuesto: falta identificador de trabajo.', 'warning');
       return;
     }
 
@@ -757,7 +763,7 @@ export default function PresupuestoScreen({ currentUser }) {
     const { pedido, authHeaders: hdrs, selectedStockId, metros } = stockModal;
     const metrosNum = parseFloat(metros);
     if (!selectedStockId || isNaN(metrosNum) || metrosNum <= 0) {
-      alert('Selecciona un material e indica los metros a consumir.');
+      showToast('Selecciona un material e indica los metros a consumir.', 'warning');
       return;
     }
     try {
@@ -773,7 +779,7 @@ export default function PresupuestoScreen({ currentUser }) {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Error al registrar consumo de stock');
+        showToast(data.error || 'Error al registrar consumo de stock', 'error');
         return;
       }
     } catch (e) {
@@ -941,36 +947,26 @@ export default function PresupuestoScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
           <Text style={styles.headerTitle}>Presupuestos</Text>
-          {modoCreacion !== 'automatico' ? (
-            <View style={styles.btnPlusWrap}>
-              <Pressable
-                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-                onPress={() => puedeCrear && setModalVisible(true)}
-                disabled={!puedeCrear}
-                onHoverIn={handleHoverNuevoIn}
-                onHoverOut={handleHoverNuevoOut}
-              >
-                <Text style={styles.btnPlusText}>+</Text>
-              </Pressable>
-              {hoverNuevo && (
-                <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo presupuesto'}</Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={{ width: 38 }} />
+          {modoCreacion !== 'automatico' && (
+            <Pressable
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && setModalVisible(true)}
+              disabled={!puedeCrear}
+            >
+              <Text style={styles.btnPlusText}>+ Nuevo presupuesto</Text>
+            </Pressable>
           )}
         </View>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
-          value={busqueda}
-          onChangeText={setBusqueda}
-          placeholderTextColor="#94A3B8"
-        />
+        <View style={styles.headerSearchRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por cualquier campo..."
+            value={busqueda}
+            onChangeText={setBusqueda}
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
       </View>
 
       <View style={styles.content}>
@@ -1005,14 +1001,14 @@ export default function PresupuestoScreen({ currentUser }) {
               style={[styles.chartLegendItem, estadosFiltro.includes('aprobado') && styles.chartLegendItemActive]}
               onPress={() => toggleEstadoFiltro('aprobado')}
             >
-              <View style={[styles.chartLegendDot, { backgroundColor: '#3AB274' }]} />
+              <View style={[styles.chartLegendDot, { backgroundColor: '#16A34A' }]} />
               <Text style={styles.chartLegendText}>Aprobados: {aprobadosCount}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.chartLegendItem, estadosFiltro.includes('pendiente') && styles.chartLegendItemActive]}
               onPress={() => toggleEstadoFiltro('pendiente')}
             >
-              <View style={[styles.chartLegendDot, { backgroundColor: '#FF6B6B' }]} />
+              <View style={[styles.chartLegendDot, { backgroundColor: '#F59E0B' }]} />
               <Text style={styles.chartLegendText}>Pendientes: {pendientesCount}</Text>
             </TouchableOpacity>
           </View>
@@ -1031,9 +1027,13 @@ export default function PresupuestoScreen({ currentUser }) {
 
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
-          <Text style={styles.emptyText}>
-            {busqueda ? 'No se encontraron resultados' : 'No hay presupuestos'}
-          </Text>
+          <EmptyState
+            icon="📄"
+            title={busqueda ? 'Sin resultados' : 'No hay presupuestos'}
+            message={busqueda ? 'Prueba con otro término de búsqueda.' : 'Crea el primer presupuesto para empezar.'}
+            action={!busqueda && puedeCrear ? 'Nuevo presupuesto' : undefined}
+            onAction={!busqueda && puedeCrear ? () => setModalVisible(true) : undefined}
+          />
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
@@ -1082,7 +1082,7 @@ export default function PresupuestoScreen({ currentUser }) {
                     {presupuesto.aprobado ? 'Aceptado' : 'Pendiente'}
                   </Text>
                   {!presupuesto.aprobado ? (
-                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#3AB274' }]} onPress={() => handleAceptarPresupuesto(presupuesto)}>
+                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#E55A2B' }]} onPress={() => handleAceptarPresupuesto(presupuesto)}>
                       <Text style={styles.actionBtnText}>Aceptar</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -1278,6 +1278,7 @@ export default function PresupuestoScreen({ currentUser }) {
         currentUser={currentUser}
         puedeCrear={puedeCrear}
       />
+      <Toast message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   );
 }

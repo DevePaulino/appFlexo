@@ -5,6 +5,9 @@ import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
 import { PedidosContext } from '../PedidosContext';
 import { usePermission } from './usePermission';
+import Toast from '../components/Toast';
+import useToast from '../components/useToast';
+import EmptyState from '../components/EmptyState';
 
 const styles = StyleSheet.create({
   container: {
@@ -41,7 +44,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  headerSearchRow: {
+    marginTop: 6,
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -88,7 +94,7 @@ const styles = StyleSheet.create({
   chartCount: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#3AB274',
+    color: '#E55A2B',
   },
   chartTrack: {
     height: 10,
@@ -208,22 +214,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#475569',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    backgroundColor: '#E55A2B',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
   btnPlusDisabled: {
     backgroundColor: '#94A3B8',
   },
   btnPlusText: {
     color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 28,
-    lineHeight: 28,
-    marginTop: -2,
+    fontWeight: '700',
+    fontSize: 13,
   },
   hoverHint: {
     position: 'absolute',
@@ -563,6 +568,7 @@ export default function TrabajoScreen({ currentUser }) {
   };
 
   const [trabajos, setTrabajos] = useState([]);
+  const { toast, showToast, hideToast } = useToast();
   const [filtrados, setFiltrados] = useState([]);
   const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -806,15 +812,15 @@ export default function TrabajoScreen({ currentUser }) {
         cargarPedidos();
       } else if (res && res.status === 403) {
         console.error('Permiso denegado al cambiar estado');
-        alert('No tienes permiso para cambiar estados');
+        showToast('No tienes permiso para cambiar estados', 'error');
       } else {
         const text = res ? await res.text().catch(()=>null) : null;
         console.error('Error cambiando estado:', res ? res.statusText : 'no response', text);
-        alert('Error al cambiar estado');
+        showToast('Error al cambiar estado', 'error');
       }
     } catch (e) {
       console.error('Error cambiando estado:', e);
-      alert('Error al cambiar estado');
+      showToast('Error al cambiar estado', 'error');
     }
   };
 
@@ -1000,7 +1006,7 @@ export default function TrabajoScreen({ currentUser }) {
     const { pedido, authHdrs, selectedStockId, metros } = stockModal;
     const metrosNum = parseFloat(metros);
     if (!selectedStockId || isNaN(metrosNum) || metrosNum <= 0) {
-      alert('Selecciona un material e indica los metros a consumir.');
+      showToast('Selecciona un material e indica los metros a consumir.', 'warning');
       return;
     }
     try {
@@ -1016,7 +1022,7 @@ export default function TrabajoScreen({ currentUser }) {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Error al registrar consumo de stock');
+        showToast(data.error || 'Error al registrar consumo de stock', 'error');
         return;
       }
     } catch (e) {
@@ -1054,7 +1060,7 @@ export default function TrabajoScreen({ currentUser }) {
 
   const handleAbrirSelectorProduccion = (trabajo) => {
     if (!puedeEnviarAProduccion(trabajo)) {
-      alert('Este pedido no se puede enviar a producción');
+      showToast('Este pedido no se puede enviar a producción', 'warning');
       return;
     }
     setTrabajoParaProduccion(trabajo);
@@ -1087,10 +1093,10 @@ export default function TrabajoScreen({ currentUser }) {
         setTrabajoParaProduccion(null);
         cargarPedidos();
       } else {
-        alert(data.error || 'No se pudo enviar a producción');
+        showToast(data.error || 'No se pudo enviar a producción', 'error');
       }
     } catch (e) {
-      alert(`Error: ${e.message}`);
+      showToast(`Error: ${e.message}`, 'error');
     }
   };
 
@@ -1118,36 +1124,26 @@ export default function TrabajoScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
           <Text style={styles.headerTitle}>Pedidos</Text>
-          {modoCreacion !== 'automatico' ? (
-            <View style={styles.btnPlusWrap}>
-              <Pressable
-                style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-                onPress={() => puedeCrear && setModalVisible(true)}
-                disabled={!puedeCrear}
-                onHoverIn={handleHoverNuevoIn}
-                onHoverOut={handleHoverNuevoOut}
-              >
-                <Text style={styles.btnPlusText}>+</Text>
-              </Pressable>
-              {hoverNuevo && (
-                <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo pedido'}</Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={{ width: 38 }} />
+          {modoCreacion !== 'automatico' && (
+            <Pressable
+              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+              onPress={() => puedeCrear && setModalVisible(true)}
+              disabled={!puedeCrear}
+            >
+              <Text style={styles.btnPlusText}>+ Nuevo pedido</Text>
+            </Pressable>
           )}
         </View>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
-          value={busqueda}
-          onChangeText={setBusqueda}
-          placeholderTextColor="#94A3B8"
-        />
+        <View style={styles.headerSearchRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por cualquier campo..."
+            value={busqueda}
+            onChangeText={setBusqueda}
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
       </View>
 
       <View style={styles.chartsContainer}>
@@ -1216,9 +1212,13 @@ export default function TrabajoScreen({ currentUser }) {
 
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
-          <Text style={styles.emptyText}>
-            {busqueda ? 'No se encontraron resultados' : 'No hay pedidos'}
-          </Text>
+          <EmptyState
+            icon="📋"
+            title={busqueda ? 'Sin resultados' : 'No hay pedidos'}
+            message={busqueda ? 'Prueba con otro término de búsqueda.' : 'Crea el primer pedido para empezar a trabajar.'}
+            action={!busqueda && puedeCrear ? 'Nuevo pedido' : undefined}
+            onAction={!busqueda && puedeCrear ? () => setModalVisible(true) : undefined}
+          />
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
@@ -1489,6 +1489,7 @@ export default function TrabajoScreen({ currentUser }) {
           </View>
         </View>
       </Modal>
+      <Toast message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   );
 }

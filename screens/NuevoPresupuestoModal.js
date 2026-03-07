@@ -21,7 +21,7 @@ function borderColorState(value, isRequired, isNumeric = false, submitted = fals
     if ((value === undefined || value === null || value === '') && submitted) return '#D21820';
     if (isNumeric && value !== '' && !/^[0-9]+$/.test(value)) return '#D21820';
     if ((typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return submitted ? '#D21820' : '#CCC';
-    return '#3AB274';
+    return '#E55A2B';
 }
 
 function isValidEmail(value) {
@@ -1355,7 +1355,7 @@ export default function NuevoPresupuestoModal({
                                                         backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
                                                         borderRadius: 22,
                                                         borderWidth: 2,
-                                                        borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#3AB274' : '#CCC'),
+                                                        borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#E55A2B' : '#CCC'),
                                                         marginRight: 8,
                                                         marginBottom: 8,
                                                         minWidth: 90,
