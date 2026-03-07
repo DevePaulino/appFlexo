@@ -976,7 +976,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           <View style={{ flex: 1, overflow: 'hidden' }}>
             {loading ? (
               <View style={styles.loading}>
-                <ActivityIndicator size="large" color="#E55A2B" />
+                <ActivityIndicator size="large" color="#64748B" />
               </View>
             ) : error ? (
               <Text style={styles.errorText}>{error}</Text>

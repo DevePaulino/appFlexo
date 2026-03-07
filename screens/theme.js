@@ -25,10 +25,10 @@ export const C = {
   borderFocus:   '#475569',  // primary focus ring
 
   // Brand / Action
-  action:        '#E55A2B',  // vermilion — color de acción principal
-  actionDark:    '#C44820',  // pressed / hover
-  actionBg:      '#FFF0EB',  // fondo claro para chips/badges de acción
-  actionText:    '#FFFFFF',
+  action:        '#1E293B',  // slate-800 — minimal dark action
+  actionDark:    '#0F172A',  // pressed / hover
+  actionBg:      '#F1F5F9',  // fondo claro para chips/badges de acción
+  actionText:    '#F8FAFC',
 
   // Brand / Primary (navegación, encabezados secundarios)
   primary:       '#475569',  // slate-600

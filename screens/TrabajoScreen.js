@@ -214,20 +214,22 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#E55A2B',
+    borderWidth: 1.5,
+    borderColor: 'rgba(248,250,252,0.55)',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   btnPlusDisabled: {
-    backgroundColor: '#94A3B8',
+    borderColor: 'rgba(248,250,252,0.2)',
   },
   btnPlusText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#F8FAFC',
+    fontWeight: '600',
     fontSize: 13,
   },
   hoverHint: {

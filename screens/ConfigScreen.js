@@ -133,13 +133,15 @@ const styles = StyleSheet.create({
     minWidth: 234,
   },
   addBtn: {
-    backgroundColor: '#475569',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: 'transparent',
+    borderRadius: 8,
     paddingHorizontal: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  addBtnText: { color: '#1E293B', fontWeight: '600', fontSize: 13 },
   chipList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
@@ -344,19 +346,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   usersBtnPlus: {
-    backgroundColor: '#475569',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    borderWidth: 1.5,
+    borderColor: 'rgba(248,250,252,0.55)',
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   usersBtnPlusText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 28,
-    lineHeight: 28,
-    marginTop: -2,
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
   usersRoleLabel: {
     color: '#475569',
@@ -2029,7 +2032,7 @@ export default function ConfigScreen({ route, currentUser }) {
           <Text style={styles.title}>{pageTitle}</Text>
           {showTopUsersPlus ? (
             <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
-              <Text style={styles.usersBtnPlusText}>+</Text>
+              <Text style={styles.usersBtnPlusText}>+ Nuevo usuario</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 38 }} />

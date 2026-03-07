@@ -54,14 +54,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   btn: {
-    backgroundColor: '#E55A2B',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: 'transparent',
     paddingHorizontal: 22,
-    paddingVertical: 11,
+    paddingVertical: 10,
     borderRadius: 10,
   },
   btnText: {
-    color: '#FFFFFF',
+    color: '#1E293B',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

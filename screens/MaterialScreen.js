@@ -1701,12 +1701,14 @@ const styles = StyleSheet.create({
 
   // Primary/secondary buttons
   btnPrimary: {
-    backgroundColor: '#475569',
-    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: 'transparent',
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  btnPrimaryText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
+  btnPrimaryText: { color: '#1E293B', fontWeight: '600', fontSize: 13 },
   btnCancel: {
     backgroundColor: '#F5F5F5',
     borderRadius: 6,
@@ -1717,12 +1719,14 @@ const styles = StyleSheet.create({
   },
   btnCancelText: { color: '#475569', fontWeight: '500', fontSize: 13 },
   btnSecondarySmall: {
-    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: 'transparent',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  btnSecondarySmallText: { color: '#1565C0', fontSize: 12, fontWeight: '600' },
+  btnSecondarySmallText: { color: '#475569', fontSize: 12, fontWeight: '600' },
 
   // Pagination
   paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 16 },

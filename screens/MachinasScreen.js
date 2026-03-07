@@ -75,19 +75,20 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   btnPlus: {
-    backgroundColor: '#475569',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    borderWidth: 1.5,
+    borderColor: 'rgba(248,250,252,0.55)',
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   btnPlusText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 28,
-    lineHeight: 28,
-    marginTop: -2,
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
   hoverHint: {
     position: 'absolute',
@@ -411,7 +412,7 @@ export default function MachinasScreen({ currentUser }) {
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
-              <Text style={styles.btnPlusText}>+</Text>
+              <Text style={styles.btnPlusText}>+ Nueva máquina</Text>
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
