@@ -1710,14 +1710,14 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: { color: '#1E293B', fontWeight: '600', fontSize: 13 },
   btnCancel: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'transparent',
     borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#DDD',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
   },
-  btnCancelText: { color: '#475569', fontWeight: '500', fontSize: 13 },
+  btnCancelText: { color: '#64748B', fontWeight: '600', fontSize: 13 },
   btnSecondarySmall: {
     borderWidth: 1,
     borderColor: '#CBD5E1',

@@ -313,20 +313,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
   },
   btnCancelText: {
-    color: '#555',
+    color: '#64748B',
     fontWeight: '600',
   },
   btnSave: {
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#475569',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   btnSaveText: {
-    color: '#fff',
+    color: '#1E293B',
     fontWeight: '700',
   },
 });

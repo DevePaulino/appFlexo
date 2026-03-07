@@ -81,12 +81,12 @@ const styles = {
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
-        backgroundColor: '#F1F5F9', paddingHorizontal: 22, paddingVertical: 11,
-        borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0',
+        backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 11,
+        borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0',
         alignItems: 'center', minWidth: 130
     },
     bigBtnText: {
-        color: '#475569', fontWeight: '600', fontSize: 13
+        color: '#64748B', fontWeight: '600', fontSize: 13
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 10, paddingVertical: 8,
@@ -109,13 +109,9 @@ const styles = {
     coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: '#475569', paddingHorizontal: 22, paddingVertical: 10,
-        borderRadius: 14,
+        backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 10,
+        borderRadius: 10, borderColor: '#CBD5E1',
         alignItems: 'center',
-        shadowColor: '#0F172A',
-        shadowOpacity: 0.12,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 3 },
     },
     submitText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
@@ -1574,7 +1570,7 @@ export default function NuevoPresupuestoModal({
                         onPress={() => puedeCrear && handleSubmit()}
                         disabled={!puedeCrear}
                     >
-                        <Text style={[styles.bigBtnText, { color: '#F8FAFC' }]}>{submitLabel}</Text>
+                        <Text style={[styles.bigBtnText, { color: '#1E293B', fontWeight: '700' }]}>{submitLabel}</Text>
                     </TouchableOpacity>
                 </View>
 

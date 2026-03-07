@@ -53,21 +53,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   btn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
     alignItems: 'center',
   },
   btnNew: {
-    backgroundColor: '#475569',
+    borderColor: '#CBD5E1',
   },
   btnNewText: {
-    color: '#FFFFFF',
+    color: '#1E293B',
+    fontWeight: '700',
   },
   btnText: {
-    color: '#374151',
-    fontWeight: '700',
+    color: '#64748B',
+    fontWeight: '600',
     fontSize: 13,
   },
   btnPlusWrap: {
@@ -169,18 +172,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#475569',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   deleteBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   actionBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFF',
+    color: '#475569',
   },
   emptyText: {
     fontSize: 16,
@@ -604,7 +610,7 @@ export default function ClientesScreen({ currentUser }) {
                   <Text style={styles.actionBtnText}>Ver</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => eliminarCliente(cliente)}>
-                  <Text style={styles.actionBtnText}>Eliminar</Text>
+                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
                 </TouchableOpacity>
               </View>
             </View>

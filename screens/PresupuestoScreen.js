@@ -270,7 +270,9 @@ const styles = StyleSheet.create({
     flex: 0.18,
   },
   actionBtn: {
-    backgroundColor: '#E55A2B',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -279,8 +281,8 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: '600',
+    color: '#16A34A',
   },
   emptyText: {
     fontSize: 16,
@@ -1084,7 +1086,7 @@ export default function PresupuestoScreen({ currentUser }) {
                     {presupuesto.aprobado ? 'Aceptado' : 'Pendiente'}
                   </Text>
                   {!presupuesto.aprobado ? (
-                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#E55A2B' }]} onPress={() => handleAceptarPresupuesto(presupuesto)}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleAceptarPresupuesto(presupuesto)}>
                       <Text style={styles.actionBtnText}>Aceptar</Text>
                     </TouchableOpacity>
                   ) : null}

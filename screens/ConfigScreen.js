@@ -491,21 +491,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   usersActionBtn: {
-    backgroundColor: '#475569',
-    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
   usersActionBtnDelete: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   usersActionBtnBilling: {
-    backgroundColor: '#334155',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
   usersActionBtnText: {
-    color: '#FFF',
+    color: '#475569',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   usersFormActions: {
     flexDirection: 'row',
@@ -515,22 +519,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   usersBtn: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    borderRadius: 8,
     alignItems: 'center',
   },
   usersBtnPrimary: {
-    backgroundColor: '#475569',
+    borderColor: '#CBD5E1',
   },
   usersBtnText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: '#64748B',
+    fontWeight: '600',
     fontSize: 13,
   },
   usersBtnPrimaryText: {
-    color: '#FFFFFF',
+    color: '#1E293B',
+    fontWeight: '700',
   },
   usersModalBackdrop: {
     flex: 1,
@@ -2087,7 +2094,7 @@ export default function ConfigScreen({ route, currentUser }) {
                               onPress={() => confirmarEliminarUsuario(usuario)}
                               disabled={!puedeAdministrarUsuarios || deletingUserId === usuario.id}
                             >
-                              <Text style={styles.usersActionBtnText}>{deletingUserId === usuario.id ? 'Eliminando...' : 'Eliminar'}</Text>
+                              <Text style={[styles.usersActionBtnText, { color: '#DC2626' }]}>{deletingUserId === usuario.id ? 'Eliminando...' : 'Eliminar'}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>

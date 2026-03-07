@@ -183,22 +183,24 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#475569',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   deleteBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   actionBtnDisabled: {
-    backgroundColor: '#94A3B8',
-    opacity: 0.6,
+    opacity: 0.45,
   },
   actionBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFF',
+    color: '#475569',
   },
   emptyText: {
     fontSize: 16,
@@ -509,7 +511,7 @@ export default function MachinasScreen({ currentUser }) {
                   disabled={maquina.trabajos_en_cola > 0}
                   onPress={() => handleEliminarMaquina(maquina)}
                 >
-                  <Text style={styles.actionBtnText}>Eliminar</Text>
+                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
                 </TouchableOpacity>
               </View>
               </View>
