@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import NuevoTroquelModal from './NuevoTroquelModal';
+import NuevaMaquinaModal from './NuevaMaquinaModal';
 
 const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
@@ -35,33 +37,33 @@ function isValidCif(value) {
 }
 
 const styles = {
-    container: { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#F1F5F9', flex: 1 },
+    container: { paddingHorizontal: 12, paddingVertical: 12, flex: 1 },
     section: {
         marginBottom: 10,
         marginTop: 4,
         backgroundColor: '#FFF',
         borderRadius: 14,
-        padding: 16,
+        padding: 12,
         borderWidth: 1.5,
         borderColor: '#E2E8F0'
     },
     sectionTitle: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#334155',
-        letterSpacing: 1,
+        fontWeight: '800',
+        color: '#64748B',
+        letterSpacing: 0.8,
         textTransform: 'uppercase',
         backgroundColor: '#E2E8F0',
-        paddingHorizontal: 16,
-        paddingVertical: 9,
-        marginHorizontal: -16,
-        marginTop: -16,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: -12,
+        marginTop: -12,
         marginBottom: 14,
         borderTopLeftRadius: 12,
         borderTopRightRadius: 12,
     },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
-    label: { fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 6 },
+    label: { fontSize: 13, color: '#475569', fontWeight: '700', marginBottom: 6 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
     col: { flex: 1 },
     input: (value, isRequired, isNumeric = false, submitted = false) => ({
@@ -122,12 +124,13 @@ const styles = {
         backgroundColor: '#1E293B',
         paddingVertical: 14,
         paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#334155',
         position: 'relative',
+        marginTop: 16,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        borderRadius: 12,
     },
     modalHeaderTitle: {
-        textAlign: 'center',
         fontSize: 22,
         fontWeight: '900',
         color: '#F8FAFC',
@@ -135,7 +138,7 @@ const styles = {
     modalCloseBtn: {
         position: 'absolute',
         right: 16,
-        top: 16,
+        top: 14,
         width: 34,
         height: 34,
         borderRadius: 17,
@@ -506,11 +509,7 @@ export default function NuevoPresupuestoModal({
     const [troquelesCat, setTroquelesCat] = useState([]);
     const [troquelSel, setTroquelSel] = useState(null);
     const [showTroquelCreate, setShowTroquelCreate] = useState(false);
-    const [troquelCreateForm, setTroquelCreateForm] = useState({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
-    const [savingTroquel, setSavingTroquel] = useState(false);
     const [showMaquinaCreate, setShowMaquinaCreate] = useState(false);
-    const [maquinaCreateForm, setMaquinaCreateForm] = useState({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
-    const [savingMaquina, setSavingMaquina] = useState(false);
 
     // pedido id when editing
     const [pedidoId, setPedidoId] = useState(null);
@@ -778,77 +777,6 @@ export default function NuevoPresupuestoModal({
             setTroquelEstadoSel('');
             setTroquelFormaSel('');
             setTroquelCoste('');
-        }
-    };
-
-    const saveTroquelFromModal = async () => {
-        const numero = (troquelCreateForm.numero || '').trim();
-        if (!numero) return alert('El número/referencia del troquel es obligatorio');
-        setSavingTroquel(true);
-        try {
-            const body = {
-                numero,
-                tipo: troquelCreateForm.tipo || 'regular',
-                forma: troquelCreateForm.forma,
-                estado: troquelCreateForm.estado,
-                anchoMotivo: troquelCreateForm.anchoMotivo,
-                altoMotivo: troquelCreateForm.altoMotivo,
-                motivosAncho: troquelCreateForm.motivosAncho,
-                separacionAncho: troquelCreateForm.separacionAncho,
-                valorZ: troquelCreateForm.valorZ,
-                distanciaSesgado: troquelCreateForm.distanciaSesgado,
-            };
-            const resp = await fetch(API_TROQUELES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-            const data = resp.ok ? await resp.json() : {};
-            if (!resp.ok) return alert(data.error || 'Error guardando troquel');
-            const resetForm = { numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' };
-            setShowTroquelCreate(false);
-            setTroquelCreateForm(resetForm);
-            await cargarTroqueles();
-            // Auto-select the new troquel
-            const nuevo = data.troquel;
-            if (nuevo) handleTroquelSelect({ ...nuevo, id: nuevo._id || nuevo.id });
-        } catch (e) {
-            alert('Error de conexión');
-        } finally {
-            setSavingTroquel(false);
-        }
-    };
-
-    const saveMaquinaFromModal = async () => {
-        const nombre = (maquinaCreateForm.nombre || '').trim();
-        if (!nombre) return alert('El nombre de la máquina es obligatorio');
-        const parseNum = (v) => { const n = Number(v); return (v === '' || v === null || v === undefined || isNaN(n)) ? null : n; };
-        setSavingMaquina(true);
-        try {
-            const body = {
-                nombre,
-                anio_fabricacion: maquinaCreateForm.anio_fabricacion.trim() || null,
-                tipo_maquina: maquinaCreateForm.tipo_maquina.trim() || null,
-                numero_colores: parseNum(maquinaCreateForm.numero_colores),
-                estado: maquinaCreateForm.estado || 'Activa',
-                ancho_max_material_mm: parseNum(maquinaCreateForm.ancho_max_material_mm),
-                ancho_max_impresion_mm: parseNum(maquinaCreateForm.ancho_max_impresion_mm),
-                velocidad_max_maquina_mmin: parseNum(maquinaCreateForm.velocidad_max_maquina_mmin),
-                velocidad_max_impresion_mmin: parseNum(maquinaCreateForm.velocidad_max_maquina_mmin),
-                espesor_planchas_mm: parseNum(maquinaCreateForm.espesor_planchas_mm),
-                sistemas_secado: maquinaCreateForm.sistemas_secado.trim() || null,
-            };
-            const res = await fetch('http://localhost:8080/api/maquinas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) return alert(data.error || 'Error guardando máquina');
-            setShowMaquinaCreate(false);
-            setMaquinaCreateForm({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
-            await cargarMaquinasActivas();
-            setMaquina(nombre);
-        } catch (e) {
-            alert('Error de conexión');
-        } finally {
-            setSavingMaquina(false);
         }
     };
 
@@ -1377,10 +1305,7 @@ export default function NuevoPresupuestoModal({
                                     <Text style={[styles.label, { marginBottom: 0 }]}>{maquinaLabel}</Text>
                                     {!isReadOnly && (
                                         <TouchableOpacity
-                                            onPress={() => {
-                                                setMaquinaCreateForm({ nombre: '', anio_fabricacion: '', tipo_maquina: '', numero_colores: '', estado: 'Activa', ancho_max_material_mm: '', ancho_max_impresion_mm: '', velocidad_max_maquina_mmin: '', espesor_planchas_mm: '', sistemas_secado: '' });
-                                                setShowMaquinaCreate(true);
-                                            }}
+                                            onPress={() => setShowMaquinaCreate(true)}
                                             style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                         >
                                             <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
@@ -1471,10 +1396,7 @@ export default function NuevoPresupuestoModal({
                                 <Text style={styles.label}>Troquel</Text>
                                 {!isReadOnly && (
                                     <TouchableOpacity
-                                        onPress={() => {
-                                            setTroquelCreateForm({ numero: '', tipo: 'regular', forma: 'Rectangular', estado: 'Disponible', anchoMotivo: '', altoMotivo: '', motivosAncho: '', separacionAncho: '', valorZ: '', distanciaSesgado: '' });
-                                            setShowTroquelCreate(true);
-                                        }}
+                                        onPress={() => setShowTroquelCreate(true)}
                                         style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                     >
                                         <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
@@ -1734,303 +1656,43 @@ export default function NuevoPresupuestoModal({
                     </View>
                 </Modal>
                 {/* ── Troquel create sub-modal ── */}
-                <Modal visible={showTroquelCreate} transparent animationType="fade" onRequestClose={() => setShowTroquelCreate(false)}>
-                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480 }}>
-                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1D2939', marginBottom: 16 }}>Nuevo troquel</Text>
-
-                            <Text style={styles.label}>Número / Referencia *</Text>
-                            <TextInput
-                                style={styles.input(troquelCreateForm.numero, true, false, false)}
-                                value={troquelCreateForm.numero}
-                                onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, numero: v }))}
-                                placeholder="Ej. TR-001"
-                                placeholderTextColor="#94A3B8"
-                                autoFocus
-                            />
-
-                            <Text style={[styles.label, { marginTop: 10 }]}>Tipo</Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                                {troquelTipo.map((t) => (
-                                    <TouchableOpacity
-                                        key={t}
-                                        onPress={() => setTroquelCreateForm(p => ({ ...p, tipo: t }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.tipo === t ? '#475569' : '#f0f0f0' }}
-                                    >
-                                        <Text style={{ color: troquelCreateForm.tipo === t ? '#fff' : '#444', fontSize: 13 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={[styles.label]}>Forma</Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                                {troquelForma.map((f) => (
-                                    <TouchableOpacity
-                                        key={f}
-                                        onPress={() => setTroquelCreateForm(p => ({ ...p, forma: f }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.forma === f ? '#475569' : '#f0f0f0' }}
-                                    >
-                                        <Text style={{ color: troquelCreateForm.forma === f ? '#fff' : '#444', fontSize: 13 }}>{f}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={[styles.label]}>Estado</Text>
-                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                                {troquelEstado.map((e) => (
-                                    <TouchableOpacity
-                                        key={e}
-                                        onPress={() => setTroquelCreateForm(p => ({ ...p, estado: e }))}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: troquelCreateForm.estado === e ? '#475569' : '#f0f0f0' }}
-                                    >
-                                        <Text style={{ color: troquelCreateForm.estado === e ? '#fff' : '#444', fontSize: 13 }}>{e}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Ancho motivo (mm)</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.anchoMotivo}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, anchoMotivo: v }))}
-                                        placeholder="Ej. 100"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Alto motivo (mm)</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.altoMotivo}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, altoMotivo: v }))}
-                                        placeholder="Ej. 150"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Motivos ancho</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.motivosAncho}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, motivosAncho: v }))}
-                                        placeholder="Ej. 4"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Separación (mm)</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.separacionAncho}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, separacionAncho: v }))}
-                                        placeholder="Ej. 3"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Valor Z (mm)</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.valorZ}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, valorZ: v }))}
-                                        placeholder="Ej. 110"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Dist. sesgado (mm)</Text>
-                                    <TextInput
-                                        style={styles.input('', false, true, false)}
-                                        value={troquelCreateForm.distanciaSesgado}
-                                        onChangeText={(v) => setTroquelCreateForm(p => ({ ...p, distanciaSesgado: v }))}
-                                        placeholder="Ej. 0"
-                                        placeholderTextColor="#94A3B8"
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-                                <TouchableOpacity
-                                    onPress={() => setShowTroquelCreate(false)}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#f5f5f5' }}
-                                >
-                                    <Text style={{ color: '#555', fontWeight: '600' }}>Cancelar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={saveTroquelFromModal}
-                                    disabled={savingTroquel}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8, backgroundColor: '#475569' }}
-                                >
-                                    <Text style={{ color: '#fff', fontWeight: '700' }}>{savingTroquel ? 'Guardando...' : 'Guardar'}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
+                <NuevoTroquelModal
+                    visible={showTroquelCreate}
+                    onClose={() => setShowTroquelCreate(false)}
+                    onSave={async (troquelData) => {
+                        try {
+                            const resp = await fetch(API_TROQUELES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(troquelData) });
+                            const data = resp.ok ? await resp.json() : {};
+                            if (!resp.ok) { alert(data.error || 'Error guardando troquel'); return; }
+                            await cargarTroqueles();
+                            const nuevo = data.troquel;
+                            if (nuevo) handleTroquelSelect({ ...nuevo, id: nuevo._id || nuevo.id });
+                        } catch (e) {
+                            alert('Error de conexión');
+                        }
+                    }}
+                />
 
                 {/* ── Máquina create sub-modal ── */}
-                <Modal visible={showMaquinaCreate} transparent animationType="fade" onRequestClose={() => setShowMaquinaCreate(false)}>
-                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 0, width: '100%', maxWidth: 580, overflow: 'hidden' }}>
-                            <View style={{ backgroundColor: '#1E293B', paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={{ fontSize: 17, fontWeight: '800', color: '#F8FAFC' }}>Nueva máquina</Text>
-                                <TouchableOpacity onPress={() => setShowMaquinaCreate(false)}>
-                                    <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>Cerrar</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 8 }}>
-                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                                    <View style={{ width: '100%' }}>
-                                        <Text style={styles.label}>Marca y modelo *</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.nombre, true, false, false)}
-                                            value={maquinaCreateForm.nombre}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, nombre: v }))}
-                                            placeholder="Ej. Rotativa A"
-                                            placeholderTextColor="#94A3B8"
-                                            autoFocus
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Año fabricación / versión</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.anio_fabricacion, false, false, false)}
-                                            value={maquinaCreateForm.anio_fabricacion}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, anio_fabricacion: v }))}
-                                            placeholder="Ej. 2018"
-                                            placeholderTextColor="#94A3B8"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Tipo de máquina</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.tipo_maquina, false, false, false)}
-                                            value={maquinaCreateForm.tipo_maquina}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, tipo_maquina: v }))}
-                                            placeholder="Ej. Flexográfica"
-                                            placeholderTextColor="#94A3B8"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Número de colores</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.numero_colores, false, true, false)}
-                                            value={maquinaCreateForm.numero_colores}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, numero_colores: v }))}
-                                            placeholder="Ej. 4"
-                                            placeholderTextColor="#94A3B8"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Estado</Text>
-                                        {Platform.OS === 'web' ? (
-                                            <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
-                                                <select
-                                                    value={maquinaCreateForm.estado || 'Activa'}
-                                                    onChange={(e) => setMaquinaCreateForm(p => ({ ...p, estado: e.target.value }))}
-                                                    style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, fontSize: 14, color: '#0F172A', cursor: 'pointer', outlineWidth: 0 }}
-                                                >
-                                                    <option value="Activa">Activa</option>
-                                                    <option value="Inactiva">Inactiva</option>
-                                                </select>
-                                            </View>
-                                        ) : (
-                                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-                                                {['Activa', 'Inactiva'].map(op => (
-                                                    <TouchableOpacity key={op} onPress={() => setMaquinaCreateForm(p => ({ ...p, estado: op }))}
-                                                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: maquinaCreateForm.estado === op ? '#475569' : '#F1F5F9' }}>
-                                                        <Text style={{ color: maquinaCreateForm.estado === op ? '#fff' : '#475569', fontSize: 13 }}>{op}</Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </View>
-                                        )}
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Ancho máx. material (mm)</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.ancho_max_material_mm, false, true, false)}
-                                            value={maquinaCreateForm.ancho_max_material_mm}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_material_mm: v }))}
-                                            placeholder="Ej. 450"
-                                            placeholderTextColor="#94A3B8"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Ancho máx. impresión (mm)</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.ancho_max_impresion_mm, false, true, false)}
-                                            value={maquinaCreateForm.ancho_max_impresion_mm}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, ancho_max_impresion_mm: v }))}
-                                            placeholder="Ej. 420"
-                                            placeholderTextColor="#94A3B8"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Velocidad máx. (m/min)</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.velocidad_max_maquina_mmin, false, true, false)}
-                                            value={maquinaCreateForm.velocidad_max_maquina_mmin}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, velocidad_max_maquina_mmin: v }))}
-                                            placeholder="Ej. 150"
-                                            placeholderTextColor="#94A3B8"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1, minWidth: 140 }}>
-                                        <Text style={styles.label}>Espesor planchas (mm)</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.espesor_planchas_mm, false, true, false)}
-                                            value={maquinaCreateForm.espesor_planchas_mm}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, espesor_planchas_mm: v }))}
-                                            placeholder="Ej. 1.14"
-                                            placeholderTextColor="#94A3B8"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                    <View style={{ width: '100%' }}>
-                                        <Text style={styles.label}>Sistemas de secado</Text>
-                                        <TextInput
-                                            style={styles.input(maquinaCreateForm.sistemas_secado, false, false, false)}
-                                            value={maquinaCreateForm.sistemas_secado}
-                                            onChangeText={(v) => setMaquinaCreateForm(p => ({ ...p, sistemas_secado: v }))}
-                                            placeholder="Ej. UV, secado por aire"
-                                            placeholderTextColor="#94A3B8"
-                                        />
-                                    </View>
-                                </View>
-                            </ScrollView>
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
-                                <TouchableOpacity
-                                    onPress={() => setShowMaquinaCreate(false)}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}
-                                >
-                                    <Text style={{ color: '#475569', fontWeight: '600' }}>Cancelar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={saveMaquinaFromModal}
-                                    disabled={savingMaquina}
-                                    style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: '#475569' }}
-                                >
-                                    <Text style={{ color: '#fff', fontWeight: '700' }}>{savingMaquina ? 'Guardando...' : 'Guardar'}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
+                <NuevaMaquinaModal
+                    visible={showMaquinaCreate}
+                    onClose={() => setShowMaquinaCreate(false)}
+                    onSave={async (data) => {
+                        try {
+                            const res = await fetch('http://localhost:8080/api/maquinas', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data),
+                            });
+                            const json = await res.json().catch(() => ({}));
+                            if (!res.ok) { alert(json.error || 'Error guardando máquina'); return; }
+                            await cargarMaquinasActivas();
+                            setMaquina(data.nombre);
+                        } catch (e) {
+                            alert('Error de conexión');
+                        }
+                    }}
+                />
 
                 </View>
             </View>

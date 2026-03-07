@@ -27,11 +27,11 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -40,8 +40,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -941,7 +940,9 @@ export default function PresupuestoScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          {modoCreacion !== 'automatico' && (
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Presupuestos</Text>
+          {modoCreacion !== 'automatico' ? (
             <View style={styles.btnPlusWrap}>
               <Pressable
                 style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
@@ -958,8 +959,9 @@ export default function PresupuestoScreen({ currentUser }) {
                 </View>
               )}
             </View>
+          ) : (
+            <View style={{ width: 38 }} />
           )}
-          <Text style={styles.headerTitle}>Presupuestos</Text>
         </View>
         <TextInput
           style={styles.searchInput}

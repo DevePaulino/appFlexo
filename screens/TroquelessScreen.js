@@ -140,15 +140,11 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     minHeight: 38,
     marginBottom: 6,
   },
-  headerTopLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -157,8 +153,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -393,7 +388,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
   },
   cardText: {
@@ -949,7 +944,17 @@ export default function TroquelessScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <View style={styles.headerTopLeft}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Troqueles</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {puedeImportarTroqueles && (
+              <TouchableOpacity
+                style={[styles.btn, styles.btnImport, styles.btnImportTop]}
+                onPress={handleImportarCsv}
+              >
+                <Text style={styles.btnImportTopText}>Importar</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.btnPlusWrap}>
               <Pressable
                 style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
@@ -966,16 +971,7 @@ export default function TroquelessScreen({ currentUser }) {
                 </View>
               )}
             </View>
-            <Text style={styles.headerTitle}>Troqueles</Text>
           </View>
-          {puedeImportarTroqueles && (
-            <TouchableOpacity
-              style={[styles.btn, styles.btnImport, styles.btnImportTop]}
-              onPress={handleImportarCsv}
-            >
-              <Text style={styles.btnImportTopText}>Importar</Text>
-            </TouchableOpacity>
-          )}
         </View>
         <TextInput
           style={styles.searchInput}

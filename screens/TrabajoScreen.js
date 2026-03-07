@@ -28,11 +28,11 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
     marginBottom: 6,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -41,8 +41,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
+    textAlign: 'center',
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -305,35 +304,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   colAcciones: {
-    flex: 0.3,
+    flex: 0.12,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
-  },
-  actionBtnReport: {
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  actionBtnTraping: {
-    backgroundColor: '#F5A623',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  actionBtnRepet: {
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  actionBtnTroquel: {
-    backgroundColor: '#0EA5A4',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
   },
   actionBtnProduccion: {
     backgroundColor: '#8E44AD',
@@ -439,7 +413,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
     marginBottom: 8,
   },
@@ -1132,7 +1106,9 @@ export default function TrabajoScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          {modoCreacion !== 'automatico' && (
+          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Pedidos</Text>
+          {modoCreacion !== 'automatico' ? (
             <View style={styles.btnPlusWrap}>
               <Pressable
                 style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
@@ -1149,8 +1125,9 @@ export default function TrabajoScreen({ currentUser }) {
                 </View>
               )}
             </View>
+          ) : (
+            <View style={{ width: 38 }} />
           )}
-          <Text style={styles.headerTitle}>Pedidos</Text>
         </View>
         <TextInput
           style={styles.searchInput}
@@ -1253,11 +1230,12 @@ export default function TrabajoScreen({ currentUser }) {
               <Text style={styles.headerText}>Estado</Text>
             </View>
             <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>Acciones</Text>
+              <Text style={styles.headerText}>Producción</Text>
             </View>
           </View>
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
+            const estadoColor = getEstadoDotColor(estadoTrabajoActual);
             const esFinalizado = estadoTrabajoActual === 'finalizado';
             const envioBloqueado = !puedeEnviarAProduccion(trabajo);
             let textoBoton;
@@ -1315,13 +1293,13 @@ export default function TrabajoScreen({ currentUser }) {
                     style={{
                       paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
                       borderRadius: 10,
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#F8FAFC',
+                      border: `1px solid ${estadoColor}66`,
+                      backgroundColor: estadoColor + '33',
                       fontSize: 13,
                       fontWeight: '600',
                       cursor: canChangeEstado ? 'pointer' : 'not-allowed',
                       width: '100%',
-                      color: '#0F172A',
+                      color: estadoColor,
                       outlineWidth: 0,
                       opacity: canChangeEstado ? 1 : 0.65,
                       pointerEvents: canChangeEstado ? 'auto' : 'none',
@@ -1337,32 +1315,7 @@ export default function TrabajoScreen({ currentUser }) {
                   </select>
                 </View>
                 <View style={[styles.tableCell, styles.colAcciones]}>
-                  <TouchableOpacity 
-                    style={styles.actionBtnReport}
-                    title="Crear Report"
-                  >
-                    <Text style={styles.actionBtnText}>Report</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionBtnTraping}
-                    title="Hacer Traping"
-                  >
-                    <Text style={styles.actionBtnText}>Traping</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionBtnRepet}
-                    title="Hacer Repetidora"
-                  >
-                    <Text style={styles.actionBtnText}>Repet.</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.actionBtnTroquel}
-                    title="Crear Troquel"
-                    onPress={() => alert('Crear Troquel: función pendiente')}
-                  >
-                    <Text style={styles.actionBtnText}>Troquel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
                     style={[
                       styles.actionBtnProduccion,
                       esFinalizado && { backgroundColor: ESTADO_FINALIZADO_COLOR },
