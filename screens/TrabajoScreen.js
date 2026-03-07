@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
   },
   chartStackRow: {
     flexDirection: 'row',
-    height: 16,
-    borderRadius: 7,
+    height: 12,
+    borderRadius: 6,
     overflow: 'visible',
     backgroundColor: '#E2E8F0',
     marginBottom: 12,
@@ -258,13 +258,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#94A3B8',
   },
   actionBtnText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: '#FFF',
   },
@@ -473,7 +473,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
+    flex: 1,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  modalCloseX: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#475569',
+    padding: 4,
   },
   maquinaItem: {
     paddingVertical: 10,
@@ -1442,7 +1454,12 @@ export default function TrabajoScreen({ currentUser }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Selecciona máquina de producción</Text>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Selecciona máquina de producción</Text>
+              <TouchableOpacity onPress={() => { setModalMaquinasVisible(false); setTrabajoParaProduccion(null); }}>
+                <Text style={styles.modalCloseX}>✕</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView style={{ maxHeight: 260 }}>
               {maquinas.map((maq) => (
                 (() => {
@@ -1469,17 +1486,6 @@ export default function TrabajoScreen({ currentUser }) {
                 })()
               ))}
             </ScrollView>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCloseBtn}
-                onPress={() => {
-                  setModalMaquinasVisible(false);
-                  setTrabajoParaProduccion(null);
-                }}
-              >
-                <Text style={styles.modalCloseText}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>

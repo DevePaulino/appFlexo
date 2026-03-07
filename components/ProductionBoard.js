@@ -402,13 +402,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    minHeight: 56,
+    minHeight: 40,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',

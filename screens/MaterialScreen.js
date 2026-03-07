@@ -1494,7 +1494,11 @@ export default function MaterialScreen({ currentUser }) {
   return (
     <View style={styles.container}>
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Materiales</Text>
+        <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
+          <Text style={styles.pageTitle}>Materiales</Text>
+          <View style={{ width: 38 }} />
+        </View>
       </View>
 
       {/* Tab bar */}
@@ -1536,22 +1540,44 @@ export default function MaterialScreen({ currentUser }) {
 // STYLES
 // ═══════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
   pageHeader: {
-    backgroundColor: '#FFF',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#334155',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  pageTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A2E' },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 38,
+  },
+  pageTitle: {
+    flex: 1,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '900',
+    color: '#F8FAFC',
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    textAlign: 'center',
+  },
 
   // Tab bar
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingTop: 6,
     gap: 4,
@@ -1608,12 +1634,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 2,
   },
-  th: { fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
+  th: { fontSize: 12, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    paddingVertical: 9,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
@@ -1801,7 +1827,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 18 },
+  chartTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 18 },
   resumenSectionHeader: {
     fontSize: 13,
     fontWeight: '700',

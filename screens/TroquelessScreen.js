@@ -264,13 +264,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -467,7 +467,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  modalCloseX: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#475569',
+    padding: 4,
   },
   modalActions: {
     flexDirection: 'row',
@@ -485,7 +496,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
   },
@@ -1109,7 +1120,12 @@ export default function TroquelessScreen({ currentUser }) {
       <Modal visible={modalDetalleVisible} transparent animationType="fade" onRequestClose={cerrarDetalle}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Detalle de troquel</Text>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Detalle de troquel</Text>
+              <TouchableOpacity onPress={cerrarDetalle}>
+                <Text style={styles.modalCloseX}>✕</Text>
+              </TouchableOpacity>
+            </View>
             {troquelSeleccionado && (
               <>
                 <View style={styles.detailHeadRow}>
@@ -1124,9 +1140,6 @@ export default function TroquelessScreen({ currentUser }) {
             )}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={cerrarDetalle}>
-                <Text style={styles.btnText}>Cerrar</Text>
-              </TouchableOpacity>
               {troquelSeleccionado && puedeEditarTroqueles && (
                 <TouchableOpacity style={[styles.btn, styles.btnNew]} onPress={() => abrirEdicionTroquel(troquelSeleccionado)}>
                   <Text style={[styles.btnText, styles.btnNewText]}>Editar</Text>

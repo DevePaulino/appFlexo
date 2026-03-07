@@ -94,7 +94,7 @@ export default function NuevaMaquinaModal({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{modoEdicion ? 'Ficha de máquina' : 'Nueva máquina'}</Text>
             <TouchableOpacity onPress={handleClose}>
-              <Text style={styles.headerClose}>Cerrar</Text>
+              <Text style={styles.headerClose}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: { fontSize: 17, fontWeight: '800', color: '#F8FAFC' },
-  headerClose: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+  headerClose: { color: '#F8FAFC', fontSize: 20, fontWeight: '900', padding: 4 },
   body: { padding: 20 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   field: { flex: 1, minWidth: 140 },

@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 10,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   headerText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     color: '#475569',
   },
@@ -267,12 +267,12 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-    marginBottom: 2,
+    marginBottom: 1,
     alignItems: 'center',
   },
   rowAlternate: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cellText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: '#0F172A',
   },

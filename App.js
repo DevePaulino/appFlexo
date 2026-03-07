@@ -346,7 +346,7 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRole
         initialParams={{ section: 'usuarios-roles' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
         options={{
-          tabBarLabel: 'Setting',
+          tabBarLabel: 'Ajustes',
         }}
       />
     </Tab.Navigator>

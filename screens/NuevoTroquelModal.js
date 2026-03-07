@@ -119,9 +119,14 @@ export default function NuevoTroquelModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={resetAndClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Text style={styles.title}>
-            {modoEdicion ? 'Editar Troquel' : 'Nuevo Troquel'}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>
+              {modoEdicion ? 'Editar Troquel' : 'Nuevo Troquel'}
+            </Text>
+            <TouchableOpacity onPress={resetAndClose}>
+              <Text style={styles.closeX}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Referencia */}
@@ -247,7 +252,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#1D2939',
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  closeX: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#475569',
+    padding: 4,
   },
   label: {
     fontSize: 13,

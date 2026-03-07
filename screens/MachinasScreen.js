@@ -131,13 +131,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',

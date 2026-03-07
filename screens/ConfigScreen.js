@@ -41,7 +41,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
-    minHeight: 96,
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
     shadowColor: '#0F172A',
@@ -53,10 +52,10 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     minHeight: 38,
   },
   title: {
+    flex: 1,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
@@ -65,39 +64,23 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
-    marginLeft: 10,
-  },
-  logoutBtn: {
-    marginLeft: 'auto',
-    borderWidth: 1,
-    borderColor: '#98A2B3',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#1F2937',
-  },
-  logoutBtnText: {
-    color: '#F8FAFC',
-    fontSize: 12,
-    fontWeight: '800',
+    textAlign: 'center',
   },
   contentWrap: {
     padding: 12,
   },
   groupTitle: {
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 22,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#0F172A',
     marginBottom: 10,
     marginTop: 0,
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    minHeight: 34,
     letterSpacing: 0.2,
   },
   blockContainer: {
@@ -116,29 +99,20 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  pedidoStatesCard: {
-    borderColor: '#C7D7FE',
-    backgroundColor: '#F5F8FF',
-    borderWidth: 1.5,
-  },
-  pedidoRulesCard: {
-    borderColor: '#C7D7FE',
-    backgroundColor: '#F7F9FC',
-    borderWidth: 1.5,
-  },
-  pedidoRulesHeader: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#1D2939',
-    marginBottom: 10,
-    letterSpacing: 0.2,
-  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#111827',
-    marginBottom: 8,
-    letterSpacing: 0.2,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: -12,
+    marginTop: -12,
+    marginBottom: 12,
+    borderTopLeftRadius: 13,
+    borderTopRightRadius: 13,
   },
   row: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   input: {
@@ -146,7 +120,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: 10,
-    backgroundColor: '#FBFBFD',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -173,7 +147,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 999,
-    backgroundColor: '#FBFBFD',
+    backgroundColor: '#F8FAFC',
     paddingLeft: 10,
     paddingRight: 6,
     paddingVertical: 6,
@@ -190,12 +164,12 @@ const styles = StyleSheet.create({
   chipDeleteDisabled: {
     opacity: 0.35,
   },
-  chipDeleteText: { color: '#B42318', fontWeight: '900' },
+  chipDeleteText: { color: '#DC2626', fontWeight: '900' },
   chipEdit: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#EEF2F6',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 4,
@@ -267,13 +241,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modeBtnTextActive: {
-    color: '#F3F4F6',
+    color: '#F8FAFC',
   },
   codeTitle: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: '800',
-    color: '#1D2939',
+    color: '#0F172A',
   },
   codeBlock: {
     marginTop: 6,
@@ -285,7 +259,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontSize: 11,
-    color: '#1D2939',
+    color: '#0F172A',
     fontWeight: '600',
     lineHeight: 16,
   },
@@ -303,7 +277,7 @@ const styles = StyleSheet.create({
   },
   ruleHint: {
     fontSize: 12,
-    color: '#667085',
+    color: '#64748B',
     marginBottom: 6,
   },
   selectChip: {
@@ -340,69 +314,6 @@ const styles = StyleSheet.create({
   selectChipTextProtected: {
     color: '#FF9500',
   },
-  saveRulesBtn: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: '#3AB274',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  saveRulesBtnDisabled: {
-    opacity: 0.5,
-  },
-  saveRulesBtnText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  pedidoRuleGroup: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#DDE6F7',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 10,
-  },
-  pedidoRuleTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#1D2939',
-    marginBottom: 4,
-  },
-  pedidoRuleHint: {
-    fontSize: 12,
-    color: '#667085',
-    marginBottom: 8,
-  },
-  pedidoRuleChip: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#F8FAFC',
-  },
-  pedidoRuleChipActive: {
-    backgroundColor: '#475569',
-    borderColor: '#475569',
-  },
-  pedidoRuleChipText: {
-    color: '#374151',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  pedidoRuleChipTextActive: {
-    color: '#F8FAFC',
-  },
-  saveRulesBtnPedido: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    backgroundColor: '#475569',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-  },
   rulesHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -416,7 +327,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rulesToggleBtn: {
-    backgroundColor: '#EEF2F6',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 10,
@@ -430,20 +341,6 @@ const styles = StyleSheet.create({
   },
   usersRoleRow: {
     gap: 6,
-    marginBottom: 10,
-  },
-  usersHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 8,
-    marginBottom: 8,
-  },
-  usersBlockTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 8,
     marginBottom: 10,
   },
   usersBtnPlus: {
@@ -462,17 +359,9 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
   usersRoleLabel: {
-    color: '#444',
+    color: '#475569',
     fontSize: 13,
     fontWeight: '700',
-  },
-  usersFormCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    padding: 16,
-    marginBottom: 10,
   },
   usersFormTitle: {
     fontSize: 18,
@@ -482,12 +371,12 @@ const styles = StyleSheet.create({
   },
   usersFieldLabel: {
     fontSize: 13,
-    color: '#444',
+    color: '#475569',
     fontWeight: '700',
     marginBottom: 6,
   },
   usersFieldInput: {
-    backgroundColor: '#FBFBFD',
+    backgroundColor: '#F8FAFC',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -498,13 +387,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   usersFieldInputError: {
-    borderColor: '#D21820',
+    borderColor: '#DC2626',
   },
   usersSearchInput: {
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: 10,
-    backgroundColor: '#FBFBFD',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -586,7 +475,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   usersPaginationBtnDisabled: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
   },
   usersPaginationBtnText: {
     color: '#F8FAFC',
@@ -605,7 +494,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   usersActionBtnDelete: {
-    backgroundColor: '#B42318',
+    backgroundColor: '#DC2626',
   },
   usersActionBtnBilling: {
     backgroundColor: '#334155',
@@ -623,7 +512,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   usersBtn: {
-    backgroundColor: '#A8A8AA',
+    backgroundColor: '#94A3B8',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
@@ -650,14 +539,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     padding: 16,
   },
   inputError: {
-    borderColor: '#D21820',
+    borderColor: '#DC2626',
   },
   errorText: {
-    color: '#D21820',
+    color: '#DC2626',
     fontSize: 12,
     marginTop: -4,
     marginBottom: 8,
@@ -2136,12 +2025,15 @@ export default function ConfigScreen({ route, currentUser }) {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          {showTopUsersPlus && (
+          <View style={{ width: 38 }} />
+          <Text style={styles.title}>{pageTitle}</Text>
+          {showTopUsersPlus ? (
             <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
               <Text style={styles.usersBtnPlusText}>+</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={{ width: 38 }} />
           )}
-          <Text style={styles.title}>{pageTitle}</Text>
         </View>
       </View>
       <View style={styles.contentWrap}>
@@ -2283,7 +2175,7 @@ export default function ConfigScreen({ route, currentUser }) {
 
         <View style={styles.section}>
           <View style={styles.rulesHeaderRow}>
-            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Reglas de permisos por rol</Text>
+            <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 6, alignSelf: 'flex-start' }]}>Reglas de permisos por rol</Text>
             <TouchableOpacity style={styles.rulesToggleBtn} onPress={toggleRoleRulesExpanded}>
               <Text style={styles.rulesToggleBtnText}>{roleRulesExpanded ? 'Ocultar' : 'Expandir'}</Text>
             </TouchableOpacity>

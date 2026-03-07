@@ -223,13 +223,13 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 6,
+    marginBottom: 3,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
@@ -366,8 +366,9 @@ const styles = StyleSheet.create({
   },
   detailClose: {
     color: '#475569',
-    fontWeight: '700',
-    fontSize: 13,
+    fontWeight: '900',
+    fontSize: 20,
+    padding: 4,
   },
   detailBody: {
     padding: 16,
@@ -1124,7 +1125,7 @@ export default function PresupuestoScreen({ currentUser }) {
                 Presupuesto {presupuestoSeleccionado?.numero_presupuesto || ''}
               </Text>
               <TouchableOpacity onPress={() => setDetalleVisible(false)}>
-                <Text style={styles.detailClose}>Cerrar</Text>
+                <Text style={styles.detailClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.detailBody}>

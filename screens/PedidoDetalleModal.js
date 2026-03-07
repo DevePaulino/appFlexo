@@ -37,10 +37,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
     position: 'relative',
     marginBottom: 12,
+    borderRadius: 12,
   },
   title: {
     fontSize: 22,
@@ -51,17 +50,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     top: 14,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    padding: 4,
   },
   closeBtnText: {
-    fontSize: 15,
+    fontSize: 20,
     color: '#F8FAFC',
-    fontWeight: '800',
+    fontWeight: '900',
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
@@ -73,9 +67,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#334155',
-    letterSpacing: 1,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     backgroundColor: '#E2E8F0',
     paddingHorizontal: 12,
@@ -196,8 +190,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: -12,
+    marginTop: -12,
     marginBottom: 10,
-    marginTop: 4,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   fileUploadIconBtn: {
     width: 26,
@@ -351,17 +351,12 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 4,
   },
   lightboxCloseBtnText: {
     color: '#F8FAFC',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
   },
 
   // ── PDF preview ─────────────────────────────────────────────────────────
@@ -481,7 +476,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#475569',
+    backgroundColor: '#0369A1',
     alignItems: 'center',
   },
   eskoBtnText: {
@@ -510,25 +505,40 @@ const styles = StyleSheet.create({
   // ── Tabs navegación ──────────────────────────────────────────────────
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     marginBottom: 10,
+    paddingHorizontal: 8,
+    paddingTop: 6,
+    gap: 4,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   tabBtnActive: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: '#E2E8F0',
+    borderLeftColor: '#E2E8F0',
+    borderRightColor: '#E2E8F0',
+    borderBottomColor: '#FFFFFF',
+    marginBottom: -1,
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
   tabText: {
     fontSize: 13,
@@ -538,7 +548,7 @@ const styles = StyleSheet.create({
   tabTextActive: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#1E293B',
   },
   filesSectionLabel: {
     fontSize: 11,
@@ -1085,6 +1095,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
               {activeTab === 'archivos' && (
+                <>
                 <View style={styles.sectionCard}>
 
                   {/* ── Artes Finales del Cliente ── */}
@@ -1158,10 +1169,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     })
                   ))}
 
-                  {/* ── Separador ── */}
-                  <View style={styles.filesSeparator} />
+                </View>
 
-                  {/* ── Unitario ── */}
+                {/* ── Unitario ── */}
+                <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>Unitario</Text>
                     {uploadingUnitario
@@ -1271,7 +1282,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       <iframe
                                         key={selected.id}
                                         src={`${inlineUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-                                        style={{ border: 'none', outline: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%' }}
+                                        style={{ border: 'none', outline: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%', colorScheme: 'light', backgroundColor: '#FFFFFF' }}
                                         title={`Unitario v${selected.version}`}
                                       />
                                       <div
@@ -1364,6 +1375,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   )}
 
                 </View>
+                </>
               )}
 
               </ScrollView>
@@ -1435,7 +1447,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {Platform.OS === 'web' && (
                 <iframe
                   src={pdfLightboxUrl}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{ width: '100%', height: '100%', border: 'none', colorScheme: 'light', backgroundColor: '#FFFFFF' }}
                   title="Vista previa PDF"
                 />
               )}
