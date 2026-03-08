@@ -488,10 +488,23 @@ export default function ProduccionScreen() {
     return { cargas };
   };
 
-  const getMachineTone = (maquinaId) => {
-    const palette = ['#E55A2B', '#2E86DE', '#8E44AD', '#F39C12', '#E67E22', '#16A085', '#D64541', '#6C5CE7'];
-    const index = Math.abs(Number(maquinaId) || 0) % palette.length;
-    return palette[index];
+  const getWorkloadColor = (cantidad, maxCarga) => {
+    if (cantidad === 0) return '#94A3B8'; // sin carga → gris
+    const ratio = maxCarga > 0 ? cantidad / maxCarga : 0;
+    // Interpolación 3 paradas: verde → amarillo → rojo
+    let r, g, b;
+    if (ratio <= 0.5) {
+      const t = ratio / 0.5;
+      r = Math.round(22  + (245 - 22)  * t); // #16A34A → #F59E0B
+      g = Math.round(163 + (158 - 163) * t);
+      b = Math.round(74  + (11  - 74)  * t);
+    } else {
+      const t = (ratio - 0.5) / 0.5;
+      r = Math.round(245 + (220 - 245) * t); // #F59E0B → #DC2626
+      g = Math.round(158 + (38  - 158) * t);
+      b = Math.round(11  + (38  - 11)  * t);
+    }
+    return `rgb(${r}, ${g}, ${b})`;
   };
 
   const slugifyEstado = (texto) => {
@@ -892,7 +905,7 @@ export default function ProduccionScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.verticalChartContent}>
                   {cargas.map((carga) => {
                     const heightPct = Math.max(6, (carga.cantidad / maxCarga) * 100);
-                    const tone = getMachineTone(carga.id);
+                    const tone = getWorkloadColor(carga.cantidad, maxCarga);
                     const activa = maquinasFiltroIds.includes(String(carga.id));
                     const hayFiltroActivo = maquinasFiltroIds.length > 0;
                     return (
@@ -901,7 +914,7 @@ export default function ProduccionScreen() {
                         style={[
                           styles.verticalBarItem,
                           activa && styles.verticalBarItemActive,
-                          activa ? { borderWidth: 2, borderColor: getMachineTone(carga.id) } : null,
+                          activa ? { borderWidth: 2, borderColor: tone } : null,
                           hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
                         ]}
                         onPress={() => toggleMaquinaFiltro(carga.id)}

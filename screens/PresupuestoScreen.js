@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    textAlign: 'left',
+    textAlign: 'center',
   },
   headerSearchRow: {
     marginTop: 6,
@@ -951,8 +951,9 @@ export default function PresupuestoScreen({ currentUser }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
+          <View style={{ width: 38 }} />
           <Text style={styles.headerTitle}>Presupuestos</Text>
-          {modoCreacion !== 'automatico' && (
+          {modoCreacion !== 'automatico' ? (
             <Pressable
               style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
               onPress={() => puedeCrear && setModalVisible(true)}
@@ -960,17 +961,17 @@ export default function PresupuestoScreen({ currentUser }) {
             >
               <Text style={styles.btnPlusText}>+ Nuevo presupuesto</Text>
             </Pressable>
+          ) : (
+            <View style={{ width: 38 }} />
           )}
         </View>
-        <View style={styles.headerSearchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por cualquier campo..."
-            value={busqueda}
-            onChangeText={setBusqueda}
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por cualquier campo..."
+          value={busqueda}
+          onChangeText={setBusqueda}
+          placeholderTextColor="#94A3B8"
+        />
       </View>
 
       <View style={styles.content}>

@@ -22,13 +22,18 @@ export const usePermission = (permission) => {
       return;
     }
 
+    const empresaId = typeof window !== 'undefined' && window.localStorage
+      ? window.localStorage.getItem('PFP_EMPRESA_ID')
+      : null;
+
     // Preguntar al backend si el rol tiene permiso
     fetch('http://localhost:8080/api/auth/verify-role-permission', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         role: rolActual,
-        permission: permission
+        permission: permission,
+        ...(empresaId ? { empresa_id: empresaId } : {}),
       })
     })
       .then((res) => res.json())

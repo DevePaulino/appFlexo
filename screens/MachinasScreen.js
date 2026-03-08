@@ -53,24 +53,6 @@ const styles = StyleSheet.create({
     width: '62%',
     alignSelf: 'center',
   },
-  btn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  btnNew: {
-    backgroundColor: '#475569',
-  },
-  btnNewText: {
-    color: '#FFFFFF',
-  },
-  btnText: {
-    color: '#374151',
-    fontWeight: '700',
-    fontSize: 13,
-  },
   btnPlusWrap: {
     position: 'relative',
   },
@@ -104,11 +86,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  tableContainer: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
   mainBlock: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -118,76 +95,100 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginVertical: 12,
   },
+  tableContainer: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 10,
-    marginBottom: 6,
+    marginBottom: 4,
     borderRadius: 10,
-    minHeight: 44,
     alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    marginBottom: 3,
+    borderBottomColor: '#F1F5F9',
+    alignItems: 'center',
+    minHeight: 46,
   },
   rowAlternate: {
     backgroundColor: '#F8FAFC',
   },
   tableCell: {
     justifyContent: 'center',
+    paddingRight: 6,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#475569',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  cellText: {
+
+  // ── Columnas ──────────────────────────────────────────
+  colNombre:   { flex: 0.22 },  // Nombre + año
+  colColores:  { flex: 0.06, alignItems: 'center' },
+  colAnchos:   { flex: 0.14 },  // Mat / Imp mm
+  colRep:      { flex: 0.13 },  // Repetición mm
+  colPlancha:  { flex: 0.08, alignItems: 'center' },
+  colVeloc:    { flex: 0.14 },  // Velocidad
+  colCola:     { flex: 0.05, alignItems: 'center' },
+  colEstado:   { flex: 0.08 },
+  colAcciones: { flex: 0.10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+
+  // ── Texto ─────────────────────────────────────────────
+  cellName: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#0F172A',
+    marginBottom: 1,
   },
-  colNombre: {
-    flex: 0.24,
+  cellMeta: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
-  colTipo: {
-    flex: 0.2,
+  cellVal: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '500',
+    lineHeight: 17,
   },
-  colCapacidad: {
-    flex: 0.34,
+  cellValMuted: {
+    fontSize: 11,
+    color: '#94A3B8',
+    lineHeight: 15,
   },
-  colRendimiento: {
-    flex: 0.16,
+
+  // ── Estado badge ──────────────────────────────────────
+  estadoBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
   },
-  colCola: {
-    flex: 0.08,
-    alignItems: 'center',
+  estadoBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
-  colEstado: {
-    flex: 0.06,
-  },
-  colAcciones: {
-    flex: 0.14,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-  },
+
+  // ── Acciones ──────────────────────────────────────────
   actionBtn: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 6,
   },
   deleteBtn: {
@@ -202,6 +203,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#475569',
   },
+
+  // ── Cola ──────────────────────────────────────────────
+  colaText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  colaLink: {
+    color: '#334155',
+    textDecorationLine: 'underline',
+  },
+
+  // ── Vacío / paginación ────────────────────────────────
   emptyText: {
     fontSize: 16,
     color: '#94A3B8',
@@ -235,22 +249,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  btnCancel: {
-    backgroundColor: '#F1F5F9',
-  },
-  valueBlock: {
-    fontSize: 12,
-    color: '#0F172A',
-    lineHeight: 17,
-  },
-  colaLink: {
-    color: '#111111',
-    fontWeight: '800',
-  },
-  colaLinkDisabled: {
-    color: '#111111',
-    fontWeight: '800',
-  },
 });
 
 export default function MachinasScreen({ currentUser }) {
@@ -275,48 +273,32 @@ export default function MachinasScreen({ currentUser }) {
       .catch(() => setMaquinas([]));
   };
 
-  useEffect(() => {
-    cargarMaquinas();
-  }, []);
+  useEffect(() => { cargarMaquinas(); }, []);
 
   useEffect(() => {
     const query = (busqueda || '').trim().toLowerCase();
     const filtered = maquinas.filter((m) => {
       if (!query) return true;
-      const valoresBusqueda = [
-        m.id,
-        m.nombre,
-        m.anio_fabricacion,
-        m.tipo_maquina,
-        m.numero_colores,
-        m.ancho_max_material_mm,
-        m.ancho_max_impresion_mm,
-        m.repeticion_min_mm,
-        m.repeticion_max_mm,
-        m.velocidad_max_maquina_mmin,
-        m.velocidad_max_impresion_mmin,
-        m.espesor_planchas_mm,
-        m.sistemas_secado,
-        m.estado,
-      ]
-        .map((v) => String(v || '').toLowerCase())
-        .join(' ');
-      return valoresBusqueda.includes(query);
+      return [
+        m.id, m.nombre, m.anio_fabricacion, m.tipo_maquina,
+        m.numero_colores, m.ancho_max_material_mm, m.ancho_max_impresion_mm,
+        m.repeticion_min_mm, m.repeticion_max_mm, m.velocidad_max_maquina_mmin,
+        m.velocidad_max_impresion_mmin, m.espesor_planchas_mm, m.sistemas_secado, m.estado,
+      ].map((v) => String(v || '').toLowerCase()).join(' ').includes(query);
     });
     setFiltrados(filtered);
   }, [busqueda, maquinas]);
 
-  useEffect(() => {
-    setPaginaMaquinas(1);
-  }, [busqueda, maquinas]);
+  useEffect(() => { setPaginaMaquinas(1); }, [busqueda, maquinas]);
 
   const totalPaginasMaquinas = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
-  const maquinasPaginadas = filtrados.slice((paginaMaquinas - 1) * ITEMS_PER_PAGE, paginaMaquinas * ITEMS_PER_PAGE);
+  const maquinasPaginadas = filtrados.slice(
+    (paginaMaquinas - 1) * ITEMS_PER_PAGE,
+    paginaMaquinas * ITEMS_PER_PAGE,
+  );
 
   useEffect(() => {
-    if (paginaMaquinas > totalPaginasMaquinas) {
-      setPaginaMaquinas(totalPaginasMaquinas);
-    }
+    if (paginaMaquinas > totalPaginasMaquinas) setPaginaMaquinas(totalPaginasMaquinas);
   }, [paginaMaquinas, totalPaginasMaquinas]);
 
   const abrirNuevaMaquina = () => {
@@ -337,7 +319,6 @@ export default function MachinasScreen({ currentUser }) {
     const url = modoEdicion && maquinaEditandoId
       ? `http://localhost:8080/api/maquinas/${maquinaEditandoId}`
       : 'http://localhost:8080/api/maquinas';
-
     fetch(url, {
       method: modoEdicion ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,32 +332,24 @@ export default function MachinasScreen({ currentUser }) {
       .catch(() => alert('No se pudo guardar la máquina'));
   };
 
-  const texto = (v) => (v === null || v === undefined || v === '' ? '-' : String(v));
+  const t = (v) => (v === null || v === undefined || v === '' ? '–' : String(v));
 
   const handleEliminarMaquina = async (maquina) => {
-    const mensaje = `¿Eliminar la máquina "${maquina.nombre}"?`;
-    const confirmar = typeof globalThis.confirm === 'function' ? globalThis.confirm(mensaje) : true;
+    const confirmar = typeof globalThis.confirm === 'function'
+      ? globalThis.confirm(`¿Eliminar la máquina "${maquina.nombre}"?`)
+      : true;
     if (!confirmar) return;
-
     try {
-      const res = await fetch(`http://localhost:8080/api/maquinas/${maquina.id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`http://localhost:8080/api/maquinas/${maquina.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || 'No se pudo eliminar la máquina');
-        return;
-      }
-
+      if (!res.ok) { alert(data?.error || 'No se pudo eliminar la máquina'); return; }
       if (modoEdicion && maquinaEditandoId === maquina.id) {
         setModalVisible(false);
         setModoEdicion(false);
         setMaquinaEditandoId(null);
-        setForm({ ...emptyForm });
       }
-
       cargarMaquinas();
-    } catch (e) {
+    } catch {
       alert('No se pudo eliminar la máquina');
     }
   };
@@ -385,17 +358,13 @@ export default function MachinasScreen({ currentUser }) {
     if (hoverNuevoTimerRef.current) clearTimeout(hoverNuevoTimerRef.current);
     hoverNuevoTimerRef.current = setTimeout(() => setHoverNuevo(true), 2000);
   };
-
   const handleHoverNuevoOut = () => {
     if (hoverNuevoTimerRef.current) clearTimeout(hoverNuevoTimerRef.current);
     hoverNuevoTimerRef.current = null;
     setHoverNuevo(false);
   };
-
-  useEffect(() => {
-    return () => {
-      if (hoverNuevoTimerRef.current) clearTimeout(hoverNuevoTimerRef.current);
-    };
+  useEffect(() => () => {
+    if (hoverNuevoTimerRef.current) clearTimeout(hoverNuevoTimerRef.current);
   }, []);
 
   const puedeCrear = usePermission('edit_maquinas');
@@ -418,7 +387,9 @@ export default function MachinasScreen({ currentUser }) {
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nueva máquina'}</Text>
+                <Text style={styles.hoverHintText}>
+                  {!puedeCrear ? 'Permiso denegado' : 'Nueva máquina'}
+                </Text>
               </View>
             )}
           </View>
@@ -441,94 +412,153 @@ export default function MachinasScreen({ currentUser }) {
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
+
+            {/* ── Cabecera ── */}
             <View style={styles.tableHeader}>
-            <View style={[styles.tableCell, styles.colNombre]}>
-              <Text style={styles.headerText}>Marca y modelo</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colTipo]}>
-              <Text style={styles.headerText}>Año y tipo</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colCapacidad]}>
-              <Text style={styles.headerText}>Capacidad técnica</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colRendimiento]}>
-              <Text style={styles.headerText}>Velocidad</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colCola]}>
-              <Text style={styles.headerText}>Cola</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colEstado]}>
-              <Text style={styles.headerText}>Estado</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>Acciones</Text>
-            </View>
-          </View>
-            {maquinasPaginadas.map((maquina, idx) => (
-              <View key={maquina.id} style={[styles.tableRow, (idx + (paginaMaquinas - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
               <View style={[styles.tableCell, styles.colNombre]}>
-                <Text style={styles.cellText} numberOfLines={2}>{maquina.nombre}</Text>
+                <Text style={styles.headerText}>Máquina</Text>
               </View>
-              <View style={[styles.tableCell, styles.colTipo]}>
-                <Text style={styles.valueBlock}>
-                  {`Año: ${texto(maquina.anio_fabricacion)}\nTipo: ${texto(maquina.tipo_maquina)}`}
-                </Text>
+              <View style={[styles.tableCell, styles.colColores]}>
+                <Text style={styles.headerText}>Col.</Text>
               </View>
-              <View style={[styles.tableCell, styles.colCapacidad]}>
-                <Text style={styles.valueBlock}>
-                  {`Colores: ${texto(maquina.numero_colores)}\nMat/Imp: ${texto(maquina.ancho_max_material_mm)}/${texto(maquina.ancho_max_impresion_mm)} mm\nRep: ${texto(maquina.repeticion_min_mm)}-${texto(maquina.repeticion_max_mm)} mm\nPlancha: ${texto(maquina.espesor_planchas_mm)} mm\nSecado: ${texto(maquina.sistemas_secado)}`}
-                </Text>
+              <View style={[styles.tableCell, styles.colAnchos]}>
+                <Text style={styles.headerText}>Mat / Imp</Text>
               </View>
-              <View style={[styles.tableCell, styles.colRendimiento]}>
-                <Text style={styles.valueBlock}>
-                  {`Máq: ${texto(maquina.velocidad_max_maquina_mmin)} m/min\nImp: ${texto(maquina.velocidad_max_impresion_mmin)} m/min`}
-                </Text>
+              <View style={[styles.tableCell, styles.colRep]}>
+                <Text style={styles.headerText}>Repetición</Text>
+              </View>
+              <View style={[styles.tableCell, styles.colPlancha]}>
+                <Text style={styles.headerText}>Plancha</Text>
+              </View>
+              <View style={[styles.tableCell, styles.colVeloc]}>
+                <Text style={styles.headerText}>Velocidad</Text>
               </View>
               <View style={[styles.tableCell, styles.colCola]}>
-                <TouchableOpacity
-                  disabled={!maquina.trabajos_en_cola}
-                  onPress={() => maquina.trabajos_en_cola > 0 && navigation.navigate('Producción', { maquinaId: maquina.id })}
-                >
-                  <Text
-                    style={[styles.cellText, maquina.trabajos_en_cola > 0 ? styles.colaLink : styles.colaLinkDisabled]}
-                    numberOfLines={1}
-                  >
-                    {texto(maquina.trabajos_en_cola || 0)}
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.headerText}>Cola</Text>
               </View>
               <View style={[styles.tableCell, styles.colEstado]}>
-                <Text style={[styles.cellText, { color: (maquina.estado || 'Activa') === 'Activa' ? '#2E7D32' : '#F57C00' }]} numberOfLines={1}>
-                  {maquina.estado || 'Activa'}
-                </Text>
+                <Text style={styles.headerText}>Estado</Text>
               </View>
-              <View style={[styles.tableCell, styles.colAcciones]}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(maquina)}>
-                  <Text style={styles.actionBtnText}>Ver</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.actionBtn, styles.deleteBtn, maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled]} 
-                  disabled={maquina.trabajos_en_cola > 0}
-                  onPress={() => handleEliminarMaquina(maquina)}
+              <View style={[styles.tableCell, styles.colAcciones]} />
+            </View>
+
+            {/* ── Filas ── */}
+            {maquinasPaginadas.map((maquina, idx) => {
+              const estado = maquina.estado || 'Activa';
+              const esActiva = estado === 'Activa';
+              return (
+                <View
+                  key={maquina.id}
+                  style={[styles.tableRow, idx % 2 === 1 && styles.rowAlternate]}
                 >
-                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
-              </View>
-            ))}
+                  {/* Nombre + año */}
+                  <View style={[styles.tableCell, styles.colNombre]}>
+                    <Text style={styles.cellName} numberOfLines={1}>{maquina.nombre}</Text>
+                    {maquina.anio_fabricacion ? (
+                      <Text style={styles.cellMeta}>{maquina.anio_fabricacion}</Text>
+                    ) : null}
+                  </View>
+
+                  {/* Colores */}
+                  <View style={[styles.tableCell, styles.colColores]}>
+                    <Text style={styles.cellVal}>{t(maquina.numero_colores)}</Text>
+                  </View>
+
+                  {/* Anchos Mat / Imp */}
+                  <View style={[styles.tableCell, styles.colAnchos]}>
+                    <Text style={styles.cellVal} numberOfLines={1}>
+                      {t(maquina.ancho_max_material_mm)} mm
+                    </Text>
+                    <Text style={styles.cellValMuted} numberOfLines={1}>
+                      {t(maquina.ancho_max_impresion_mm)} mm imp
+                    </Text>
+                  </View>
+
+                  {/* Repetición */}
+                  <View style={[styles.tableCell, styles.colRep]}>
+                    <Text style={styles.cellVal} numberOfLines={1}>
+                      {t(maquina.repeticion_min_mm)}–{t(maquina.repeticion_max_mm)} mm
+                    </Text>
+                  </View>
+
+                  {/* Plancha */}
+                  <View style={[styles.tableCell, styles.colPlancha]}>
+                    <Text style={styles.cellVal}>{t(maquina.espesor_planchas_mm)} mm</Text>
+                  </View>
+
+                  {/* Velocidad máq / imp */}
+                  <View style={[styles.tableCell, styles.colVeloc]}>
+                    <Text style={styles.cellVal} numberOfLines={1}>
+                      {t(maquina.velocidad_max_maquina_mmin)} m/min
+                    </Text>
+                    <Text style={styles.cellValMuted} numberOfLines={1}>
+                      {t(maquina.velocidad_max_impresion_mmin)} imp
+                    </Text>
+                  </View>
+
+                  {/* Cola */}
+                  <View style={[styles.tableCell, styles.colCola]}>
+                    <TouchableOpacity
+                      disabled={!maquina.trabajos_en_cola}
+                      onPress={() =>
+                        maquina.trabajos_en_cola > 0 &&
+                        navigation.navigate('Producción', { maquinaId: maquina.id })
+                      }
+                    >
+                      <Text style={[styles.colaText, maquina.trabajos_en_cola > 0 && styles.colaLink]}>
+                        {t(maquina.trabajos_en_cola || 0)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Estado */}
+                  <View style={[styles.tableCell, styles.colEstado]}>
+                    <View style={[styles.estadoBadge, { backgroundColor: esActiva ? '#F0FDF4' : '#FFFBEB' }]}>
+                      <Text style={[styles.estadoBadgeText, { color: esActiva ? '#16A34A' : '#D97706' }]}>
+                        {estado}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Acciones */}
+                  <View style={[styles.tableCell, styles.colAcciones]}>
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => abrirDetalleEdicion(maquina)}
+                    >
+                      <Text style={styles.actionBtnText}>Ver</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtn,
+                        styles.deleteBtn,
+                        maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled,
+                      ]}
+                      disabled={maquina.trabajos_en_cola > 0}
+                      onPress={() => handleEliminarMaquina(maquina)}
+                    >
+                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+
             {totalPaginasMaquinas > 1 && (
               <View style={styles.paginationRow}>
                 <TouchableOpacity
                   style={[styles.paginationBtn, paginaMaquinas === 1 && styles.paginationBtnDisabled]}
-                  onPress={() => setPaginaMaquinas((prev) => Math.max(1, prev - 1))}
+                  onPress={() => setPaginaMaquinas((p) => Math.max(1, p - 1))}
                   disabled={paginaMaquinas === 1}
                 >
                   <Text style={styles.paginationBtnText}>Anterior</Text>
                 </TouchableOpacity>
-                <Text style={styles.paginationInfo}>Página {paginaMaquinas} de {totalPaginasMaquinas}</Text>
+                <Text style={styles.paginationInfo}>
+                  Página {paginaMaquinas} de {totalPaginasMaquinas}
+                </Text>
                 <TouchableOpacity
                   style={[styles.paginationBtn, paginaMaquinas === totalPaginasMaquinas && styles.paginationBtnDisabled]}
-                  onPress={() => setPaginaMaquinas((prev) => Math.min(totalPaginasMaquinas, prev + 1))}
+                  onPress={() => setPaginaMaquinas((p) => Math.min(totalPaginasMaquinas, p + 1))}
                   disabled={paginaMaquinas === totalPaginasMaquinas}
                 >
                   <Text style={styles.paginationBtnText}>Siguiente</Text>
@@ -541,7 +571,12 @@ export default function MachinasScreen({ currentUser }) {
 
       <NuevaMaquinaModal
         visible={modalVisible}
-        onClose={() => { setModalVisible(false); setModoEdicion(false); setMaquinaEditandoId(null); setInitialMaquina(null); }}
+        onClose={() => {
+          setModalVisible(false);
+          setModoEdicion(false);
+          setMaquinaEditandoId(null);
+          setInitialMaquina(null);
+        }}
         modoEdicion={modoEdicion}
         initialMaquina={initialMaquina}
         onSave={handleGuardarMaquina}

@@ -748,18 +748,14 @@ export default function App() {
           }
         }
 
-        // Si el usuario existe, aplicar el rol seleccionado en el desplegable
+        // Al arrancar, sincronizar PFP_SELECTED_ROLE y PFP_EMPRESA_ID al usuario real autenticado
+        // (no aplicar el rol simulado guardado — la simulación es solo de sesión)
         try {
-          const selectedRole = (typeof window !== 'undefined' && window.localStorage)
-            ? window.localStorage.getItem('PFP_SELECTED_ROLE')
-            : null;
-          if (selectedRole && nextUser) {
-            nextUser = { ...(nextUser || {}), rol: selectedRole };
-            try {
-              await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
-            } catch (e) {
-              // ignore AsyncStorage write errors
-            }
+          const realRole = String(nextUser?.rol || nextUser?.role || '').trim();
+          const realEmpresaId = String(nextUser?.empresa_id || '').trim();
+          if (typeof window !== 'undefined' && window.localStorage) {
+            if (realRole) window.localStorage.setItem('PFP_SELECTED_ROLE', realRole);
+            if (realEmpresaId) window.localStorage.setItem('PFP_EMPRESA_ID', realEmpresaId);
           }
         } catch (e) {
           // ignore localStorage errors
@@ -807,16 +803,15 @@ export default function App() {
     try {
       if (!nextRole) return;
       const baseUser = authUser || { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 };
+      // El cambio de rol es solo de sesión — no se persiste a AsyncStorage
+      // para que al recargar el usuario vuelva a su rol real autenticado
       const nextUser = { ...baseUser, rol: nextRole };
       setAuthUser(nextUser);
       try {
-        await AsyncStorage.setItem('authUser', JSON.stringify(nextUser));
-      } catch (e) {
-        // ignore
-      }
-      try {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem('PFP_SELECTED_ROLE', String(nextRole || '').trim());
+          const empresaId = String(baseUser?.empresa_id || '').trim();
+          if (empresaId) window.localStorage.setItem('PFP_EMPRESA_ID', empresaId);
         }
       } catch (e) {
         // ignore storage errors

@@ -25,6 +25,7 @@ const ROLE_RULES_EXPANDED_KEY = 'config_role_rules_expanded';
 const ROLE_PERMISSION_CONFIG = [
   { key: 'manage_app_settings', title: 'Editar configuración de la app', hint: 'Permite modificar catálogos y reglas globales.' },
   { key: 'manage_roles_permissions', title: 'Editar roles y permisos', hint: 'Permite cambiar el rol activo y la matriz de permisos.' },
+  { key: 'manage_usuarios', title: 'Gestionar usuarios', hint: 'Permite añadir, editar y eliminar usuarios del sistema.' },
   { key: 'manage_estados_pedido', title: 'Editar estados de pedidos', hint: 'Permite crear, modificar y eliminar estados disponibles.' },
   { key: 'edit_clientes', title: 'Editar clientes', hint: 'Alta, edición y eliminación de clientes.' },
   { key: 'edit_maquinas', title: 'Editar máquinas', hint: 'Alta, edición y eliminación de máquinas.' },
@@ -1058,7 +1059,8 @@ export default function ConfigScreen({ route, currentUser }) {
   }, []);
 
   const emailValido = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
-  const currentUserRole = String(currentUser?.rol || '').toLowerCase();
+  const currentUserRole = slugifyEstado(String(currentUser?.rol || currentUser?.role || ''));
+  const displayedRole = currentUserRole;
   const currentUserPermissionValue = (() => {
     const raw = currentUser?.permissions;
     if (Array.isArray(raw)) {
@@ -1086,25 +1088,32 @@ export default function ConfigScreen({ route, currentUser }) {
   })();
   // Determinamos en cliente si el usuario actual puede administrar usuarios.
   // El backend sigue validando la operación final; esto solo habilita/inhabilita la UI.
+  const manageUsuariosRoleValue = (() => {
+    const rolePerms = rolePermissions[currentUserRole] || {};
+    if (typeof rolePerms.manage_usuarios === 'boolean') return rolePerms.manage_usuarios;
+    if (rolePerms.manage_usuarios != null) return !!rolePerms.manage_usuarios;
+    return null;
+  })();
   const puedeAdministrarUsuarios = Boolean(
     currentUserRole === 'root'
     || currentUserRole === 'administrador'
     || currentUserRole === 'admin'
     || currentUserPermissionValue === true
     || rolePermissionValue === true
+    || manageUsuariosRoleValue === true
   );
   // Sincronizar PFP_SELECTED_ROLE con el rol del usuario actual para que usePermission siempre use el rol correcto
   useEffect(() => {
-    if (currentUserRole && typeof window !== 'undefined' && window.localStorage) {
+    if (displayedRole && typeof window !== 'undefined' && window.localStorage) {
       const stored = window.localStorage.getItem('PFP_SELECTED_ROLE');
-      if (stored !== currentUserRole) {
-        window.localStorage.setItem('PFP_SELECTED_ROLE', currentUserRole);
+      if (stored !== displayedRole) {
+        window.localStorage.setItem('PFP_SELECTED_ROLE', displayedRole);
         if (typeof window.dispatchEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: currentUserRole }));
+          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: displayedRole }));
         }
       }
     }
-  }, [currentUserRole]);
+  }, [displayedRole]);
 
   // Usar permiso dinámico desde el backend
   const puedeEditarSessionTimeout = usePermission('manage_app_settings');
