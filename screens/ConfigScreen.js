@@ -1088,6 +1088,7 @@ export default function ConfigScreen({ route, currentUser }) {
   })();
   // Determinamos en cliente si el usuario actual puede administrar usuarios.
   // El backend sigue validando la operación final; esto solo habilita/inhabilita la UI.
+  const puedeAdministrarUsuariosHook = usePermission('manage_usuarios');
   const manageUsuariosRoleValue = (() => {
     const rolePerms = rolePermissions[currentUserRole] || {};
     if (typeof rolePerms.manage_usuarios === 'boolean') return rolePerms.manage_usuarios;
@@ -1101,6 +1102,7 @@ export default function ConfigScreen({ route, currentUser }) {
     || currentUserPermissionValue === true
     || rolePermissionValue === true
     || manageUsuariosRoleValue === true
+    || puedeAdministrarUsuariosHook
   );
   // Sincronizar PFP_SELECTED_ROLE con el rol del usuario actual para que usePermission siempre use el rol correcto
   useEffect(() => {
@@ -1841,7 +1843,16 @@ export default function ConfigScreen({ route, currentUser }) {
         return;
       }
       setRolePermissions(data.permissions || newPermissions);
-      
+
+      // Notificar a todos los hooks usePermission para que re-consulten el backend
+      // con los nuevos permisos guardados
+      try {
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          const currentRole = window.localStorage?.getItem('PFP_SELECTED_ROLE') || displayedRole;
+          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: currentRole }));
+        }
+      } catch (e) { /* ignorar */ }
+
       // Si el usuario quitó el permiso 'manage_roles_permissions' a su propio rol, actualizar estado local
       if (roleKey === currentUserRole && permissionKey === 'manage_roles_permissions' && newValue === false) {
         setPuedeEditarRolesPermisosLocal(false);
@@ -2179,6 +2190,9 @@ export default function ConfigScreen({ route, currentUser }) {
                     </View>
 
                     <View style={styles.usersFormActions}>
+                      <TouchableOpacity style={styles.usersBtn} onPress={cerrarModalUsuario}>
+                        <Text style={styles.usersBtnText}>Cancelar</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={guardarUsuario}>
                         <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{usuarioEditandoId ? 'Guardar cambios' : 'Guardar'}</Text>
                       </TouchableOpacity>

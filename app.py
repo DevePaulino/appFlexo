@@ -95,7 +95,7 @@ ALLOWED_EXTENSIONS_UNITARIO = {'pdf'}
 # Simple JWT helpers (lightweight, enabled via ENABLE_JWT=1)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-jwt-secret')
 JWT_TTL_SECONDS = int(os.environ.get('JWT_TTL_SECONDS', '3600') or 3600)
-ENABLE_JWT = str(os.environ.get('ENABLE_JWT', '0')).strip().lower() in {'1', 'true', 'yes'}
+ENABLE_JWT = str(os.environ.get('ENABLE_JWT', '1')).strip().lower() in {'1', 'true', 'yes'}
 
 def _b64url_encode(data_bytes):
     return base64.urlsafe_b64encode(data_bytes).rstrip(b"=").decode('ascii')
@@ -279,6 +279,7 @@ except Exception:
 PERMISSION_KEYS = [
     'manage_app_settings',
     'manage_roles_permissions',
+    'manage_usuarios',
     'manage_estados_pedido',
     'edit_clientes',
     'edit_maquinas',
@@ -291,6 +292,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -302,6 +304,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'administrador': {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
+        'manage_usuarios': True,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
@@ -313,6 +316,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'root': {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
+        'manage_usuarios': True,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
@@ -325,6 +329,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'comercial': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': False,
         'edit_clientes': True,
         'edit_maquinas': False,
@@ -336,6 +341,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'diseno': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -347,6 +353,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'impresion': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': True,
@@ -358,6 +365,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'post-impresion': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -369,6 +377,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     'oficina': {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
+        'manage_usuarios': False,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': False,
@@ -890,7 +899,7 @@ def apply_security_headers(response):
 @app.before_request
 def enforce_role_permissions():
     if request.method == 'OPTIONS':
-        return None
+        return make_response('', 200)
 
     path = str(request.path or '')
     method_upper = (request.method or '').upper()
@@ -1622,6 +1631,68 @@ def auth_token_info():
     return jsonify({'payload': payload}), 200
 
 
+@app.route('/api/auth/login', methods=['POST'])
+def login_public_user():
+    """Autenticar un usuario con email y contraseña."""
+    try:
+        data = request.get_json() or {}
+        email = str(data.get('email') or '').strip().lower()
+        password = str(data.get('password') or '').strip()
+
+        if not email:
+            return jsonify({'error': 'Email requerido'}), 400
+        if not password:
+            return jsonify({'error': 'Contraseña requerida'}), 400
+
+        col = get_empresa_collection('usuarios', None)
+        user = col.find_one({'email': email})
+        if not user:
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+        if not verify_password(password, user.get('password_hash', '')):
+            return jsonify({'error': 'Credenciales inválidas'}), 401
+
+        user = fix_id(user)
+        usuario_id = str(user.get('id') or '')
+        rol = str(user.get('rol') or 'operario').strip()
+        empresa_id = normalize_empresa_id(user.get('empresa_id'))
+
+        now_sec = int(time.time())
+        access_ttl = 60 * 60 * 24  # 24 horas
+        access_expires_at = now_sec + access_ttl
+
+        access_token = None
+        if ENABLE_JWT:
+            access_token = create_jwt({
+                'usuario_id': usuario_id,
+                'email': email,
+                'rol': rol,
+                'empresa_id': empresa_id,
+            }, ttl_seconds=access_ttl)
+
+        usuario_out = {
+            'id': usuario_id,
+            'nombre': user.get('nombre', ''),
+            'email': email,
+            'rol': rol,
+            'empresa_id': empresa_id,
+            'empresa_nombre': user.get('empresa_nombre', ''),
+        }
+
+        try:
+            log_audit('login', usuario_out, {'email': email, 'rol': rol})
+        except Exception:
+            pass
+
+        return jsonify({
+            'usuario': usuario_out,
+            'access_token': access_token,
+            'refresh_token': access_token,
+            'access_expires_at': access_expires_at,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/auth/verify-role-permission', methods=['POST'])
 def verify_role_permission():
     """Verifica si un rol específico tiene un permiso sin requerir autenticación"""
@@ -1893,7 +1964,7 @@ def register_public_user():
             pass
 
         # Issue token if JWT enabled
-        token = create_jwt({'usuario_id': usuario_id, 'email': email}) if ENABLE_JWT else None
+        token = create_jwt({'usuario_id': usuario_id, 'email': email, 'rol': rol, 'empresa_id': str(empresa_id)}, ttl_seconds=60 * 60 * 24) if ENABLE_JWT else None
 
         return jsonify({
             'success': True,
@@ -2081,10 +2152,59 @@ def refresh_public_user_session():
         if not refresh_token:
             return jsonify({'error': 'refresh_token requerido'}), 400
 
-        now = int(time.time())
-        # SQL legacy eliminado por migración a MongoDB
-        # TODO: Implementar refresh de sesión con MongoDB
-        return jsonify({'error': 'No implementado: migrar refresh de sesión a MongoDB'}), 501
+        # Verificar firma del token (ignorar expiración — es el refresh token)
+        parts = refresh_token.split('.')
+        if len(parts) != 3:
+            return jsonify({'error': 'Token inválido'}), 401
+        try:
+            signing_input = (parts[0] + '.' + parts[1]).encode('utf-8')
+            sig = _b64url_decode(parts[2])
+            expected = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+            if not hmac.compare_digest(expected, sig):
+                return jsonify({'error': 'Token inválido'}), 401
+            old_payload = json.loads(_b64url_decode(parts[1]).decode('utf-8'))
+        except Exception:
+            return jsonify({'error': 'Token inválido'}), 401
+
+        email = old_payload.get('email', '')
+        # Buscar usuario actualizado en MongoDB
+        col = get_empresa_collection('usuarios', None)
+        user = col.find_one({'email': email})
+        if not user:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+
+        user = fix_id(user)
+        usuario_id = str(user.get('id') or old_payload.get('usuario_id', ''))
+        rol = str(user.get('rol') or old_payload.get('rol', 'operario')).strip()
+        empresa_id = normalize_empresa_id(user.get('empresa_id') or old_payload.get('empresa_id'))
+
+        now_sec = int(time.time())
+        access_ttl = 60 * 60 * 24  # 24 horas
+        access_expires_at = now_sec + access_ttl
+
+        new_access_token = create_jwt({
+            'usuario_id': usuario_id,
+            'email': email,
+            'rol': rol,
+            'empresa_id': empresa_id,
+        }, ttl_seconds=access_ttl)
+
+        usuario_out = {
+            'id': usuario_id,
+            'nombre': user.get('nombre', ''),
+            'email': email,
+            'rol': rol,
+            'empresa_id': empresa_id,
+            'empresa_nombre': user.get('empresa_nombre', ''),
+            'avatar_url': user.get('avatar_url'),
+        }
+
+        return jsonify({
+            'usuario': usuario_out,
+            'access_token': new_access_token,
+            'refresh_token': new_access_token,
+            'access_expires_at': access_expires_at,
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2166,6 +2286,58 @@ def actualizar_usuario(usuario_id):
         except Exception:
             pass
         return jsonify(fix_id(usuario)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+ALLOWED_AVATAR_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
+
+@app.route('/api/usuarios/<usuario_id>/avatar', methods=['POST'])
+def upload_usuario_avatar(usuario_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        request_user_id = str(request_user.get('id') or request_user.get('_id') or '')
+        if request_user_id != str(usuario_id) and request_user.get('rol') not in ('root', 'administrador'):
+            return jsonify({'error': 'Sin permisos'}), 403
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se recibió archivo'}), 400
+        file = request.files['file']
+        if not file or not file.filename:
+            return jsonify({'error': 'Archivo inválido'}), 400
+        if not _allowed_file(file.filename, ALLOWED_AVATAR_EXTENSIONS):
+            return jsonify({'error': 'Formato no permitido. Use JPG, PNG o WebP'}), 400
+        avatar_dir = os.path.join(UPLOAD_BASE_DIR, 'avatars', str(empresa_id))
+        os.makedirs(avatar_dir, exist_ok=True)
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(avatar_dir, filename)
+        file.save(filepath)
+        avatar_url = f"/api/avatars/{empresa_id}/{filename}"
+        col = get_empresa_collection('usuarios', empresa_id)
+        try:
+            oid = ObjectId(usuario_id)
+        except Exception:
+            oid = usuario_id
+        col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': {'avatar_url': avatar_url}})
+        try:
+            log_audit('update_avatar', request_user, {'updated_user_id': str(usuario_id)})
+        except Exception:
+            pass
+        return jsonify({'avatar_url': avatar_url}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/avatars/<path:filename>', methods=['GET'])
+def serve_avatar(filename):
+    try:
+        filepath = os.path.join(UPLOAD_BASE_DIR, 'avatars', filename)
+        if not os.path.isfile(filepath):
+            return jsonify({'error': 'No encontrado'}), 404
+        return send_file(filepath)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

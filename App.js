@@ -3,8 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { Alert, AppState, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PedidosProvider } from './PedidosContext';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { C, paperThemeColors } from './screens/theme';
@@ -92,7 +91,225 @@ function normalizeTabName(tabName) {
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
-function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onRoleChange }) {
+function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
+  const [open, setOpen] = React.useState(false);
+  const [confirmingLogout, setConfirmingLogout] = React.useState(false);
+  const [panelPos, setPanelPos] = React.useState({ top: 50, right: 8 });
+  const [uploading, setUploading] = React.useState(false);
+  const badgeRef = React.useRef(null);
+  const fileInputRef = React.useRef(null);
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  const getAvatarColors = (name) => {
+    const palettes = [
+      ['#6366F1', '#8B5CF6'],
+      ['#0EA5E9', '#6366F1'],
+      ['#10B981', '#0EA5E9'],
+      ['#F59E0B', '#EF4444'],
+      ['#EC4899', '#8B5CF6'],
+      ['#14B8A6', '#6366F1'],
+    ];
+    if (!name) return palettes[0];
+    return palettes[name.charCodeAt(0) % palettes.length];
+  };
+
+  const initials = getInitials(currentUser?.nombre);
+  const [c1, c2] = getAvatarColors(currentUser?.nombre);
+  const avatarBg = Platform.OS === 'web'
+    ? { background: `linear-gradient(135deg, ${c1}, ${c2})` }
+    : { backgroundColor: c1 };
+  const avatarUrl = currentUser?.avatar_url ? `${API_BASE}${currentUser.avatar_url}` : null;
+
+  const handleOpen = () => {
+    badgeRef.current?.measureInWindow?.((x, y, w, h) => {
+      setPanelPos({ top: y + h + 8, right: 8 });
+      setOpen(true);
+    });
+  };
+
+  const uploadAvatar = async (fileOrUri, filename, mimeType) => {
+    if (!currentUser?.id) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      if (Platform.OS === 'web') {
+        formData.append('file', fileOrUri);
+      } else {
+        formData.append('file', { uri: fileOrUri, name: filename || 'avatar.jpg', type: mimeType || 'image/jpeg' });
+      }
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const res = await fetch(`${API_BASE}/api/usuarios/${currentUser.id}/avatar`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.avatar_url) {
+        if (typeof onAvatarUpdate === 'function') onAvatarUpdate(data.avatar_url);
+      } else {
+        Alert.alert('Error', data.error || 'No se pudo subir la imagen');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo subir la imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    if (Platform.OS === 'web') {
+      fileInputRef.current?.click();
+      return;
+    }
+    try {
+      const { launchImageLibraryAsync } = await import('expo-image-picker');
+      const result = await launchImageLibraryAsync({ mediaTypes: 'Images', quality: 0.8 });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        await uploadAvatar(asset.uri, asset.fileName || 'avatar.jpg', asset.mimeType || 'image/jpeg');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo abrir el selector de imágenes');
+    }
+  };
+
+  const confirmLogout = () => {
+    if (!onLogout) return;
+    setConfirmingLogout(true);
+  };
+
+  const AvatarCircle = ({ size, textSize, style }) => {
+    const circleStyle = { width: size, height: size, borderRadius: size / 2 };
+    if (avatarUrl) {
+      return (
+        <Image
+          source={{ uri: avatarUrl }}
+          style={[circleStyle, { overflow: 'hidden' }, style]}
+          resizeMode="cover"
+        />
+      );
+    }
+    return (
+      <View style={[circleStyle, avatarBg, { alignItems: 'center', justifyContent: 'center' }, style]}>
+        <Text style={{ color: '#FFF', fontSize: textSize, fontWeight: '700', letterSpacing: 0.5 }}>{initials}</Text>
+      </View>
+    );
+  };
+
+  return (
+    <>
+      {Platform.OS === 'web' && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadAvatar(file);
+            e.target.value = '';
+          }}
+        />
+      )}
+
+      <Pressable
+        ref={badgeRef}
+        onPress={handleOpen}
+        style={({ pressed }) => [styles.userBadge, pressed && { opacity: 0.8 }]}
+      >
+        <AvatarCircle
+          size={34}
+          textSize={13}
+          style={styles.userAvatarSmall}
+        />
+        <View style={styles.userOnlineDot} />
+      </Pressable>
+
+      {open && (
+        <Modal transparent visible={open} animationType="fade" onRequestClose={() => { setOpen(false); setConfirmingLogout(false); }}>
+          <View style={StyleSheet.absoluteFill}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => { setOpen(false); setConfirmingLogout(false); }} />
+            <View style={[styles.userPanel, { top: panelPos.top, right: panelPos.right }]}>
+              <View style={styles.userPanelHeader}>
+                <Pressable onPress={handlePickAvatar} style={styles.userPanelAvatarWrap}>
+                  <AvatarCircle size={50} textSize={19} />
+                  <View style={styles.userPanelAvatarEdit}>
+                    <Text style={styles.userPanelAvatarEditText}>
+                      {uploading ? '...' : '✎'}
+                    </Text>
+                  </View>
+                </Pressable>
+                <View style={styles.userPanelMeta}>
+                  <Text style={styles.userPanelName} numberOfLines={1}>
+                    {currentUser?.nombre || 'Usuario'}
+                  </Text>
+                  {!!currentUser?.email && (
+                    <Text style={styles.userPanelEmail} numberOfLines={1}>{currentUser.email}</Text>
+                  )}
+                  <View style={styles.userPanelRolePill}>
+                    <Text style={styles.userPanelRolePillText}>
+                      {currentUser?.rol || 'Invitado'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.userPanelDivider} />
+
+              <Pressable
+                onPress={handlePickAvatar}
+                style={({ pressed }) => [styles.userPanelAction, pressed && { backgroundColor: C.surfaceAlt }]}
+              >
+                <Text style={styles.userPanelActionText}>
+                  {uploading ? 'Subiendo...' : 'Cambiar foto de perfil'}
+                </Text>
+              </Pressable>
+
+              <View style={styles.userPanelDivider} />
+
+              {!!onLogout && !confirmingLogout && (
+                <Pressable
+                  onPress={confirmLogout}
+                  style={({ pressed }) => [styles.userPanelLogout, pressed && { backgroundColor: '#FEF2F2' }]}
+                >
+                  <Text style={styles.userPanelLogoutText}>Cerrar sesión</Text>
+                </Pressable>
+              )}
+
+              {!!onLogout && confirmingLogout && (
+                <View style={styles.userPanelLogoutConfirm}>
+                  <Text style={styles.userPanelLogoutConfirmText}>¿Cerrar la sesión?</Text>
+                  <View style={styles.userPanelLogoutConfirmActions}>
+                    <Pressable
+                      onPress={() => setConfirmingLogout(false)}
+                      style={({ pressed }) => [styles.userPanelLogoutConfirmBtn, pressed && { opacity: 0.7 }]}
+                    >
+                      <Text style={styles.userPanelLogoutConfirmCancelText}>Cancelar</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { setOpen(false); setConfirmingLogout(false); onLogout(); }}
+                      style={({ pressed }) => [styles.userPanelLogoutConfirmBtn, styles.userPanelLogoutConfirmBtnDanger, pressed && { opacity: 0.8 }]}
+                    >
+                      <Text style={styles.userPanelLogoutConfirmDangerText}>Cerrar sesión</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onAvatarUpdate }) {
   const [submenuOpen, setSubmenuOpen] = React.useState(false);
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
@@ -101,28 +318,6 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const activeSettingSection = activeRouteName === 'Setting'
     ? String(activeRoute?.params?.section || 'usuarios-roles')
     : null;
-  const [rolesList, setRolesList] = React.useState([]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await fetch(`${API_BASE}/api/settings?categoria=roles`);
-        const data = await resp.json().catch(() => ({}));
-        if (resp.ok && !cancelled) {
-          const items = data.items || [];
-          const list = (items || []).map((it) => {
-            const valor = String(it?.valor || it?.label || it?.key || '').trim();
-            return { key: String(valor).toLowerCase(), label: valor };
-          }).filter((r) => r.key);
-          setRolesList(list);
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   const handleTabPress = (route, isFocused) => {
     const isSetting = route.name === 'Setting';
@@ -155,80 +350,9 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
 
   const isSubmenuTargetActive = (_target) => false;
 
-  const confirmLogout = () => {
-    if (!onLogout) return;
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
-      const accepted = window.confirm('¿Quieres cerrar la sesión actual?');
-      if (accepted) {
-        onLogout();
-      }
-      return;
-    }
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Quieres cerrar la sesión actual?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar sesión', style: 'destructive', onPress: () => onLogout() },
-      ]
-    );
-  };
-
   return (
     <View>
       <View style={styles.tabsBar}>
-        <View style={styles.userInfoContainer}>
-          {Platform.OS === 'web' ? (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <select
-                value={String(currentUser?.rol || '').toLowerCase()}
-                onChange={(e) => {
-                  try {
-                    const next = String(e.target.value || '').trim();
-                    if (typeof onRoleChange === 'function') onRoleChange(next);
-                    if (typeof window !== 'undefined' && window.localStorage) {
-                      window.localStorage.setItem('PFP_SELECTED_ROLE', next);
-                    }
-                  } catch (err) {
-                    // ignore
-                  }
-                }}
-                style={{ fontSize: 13, fontWeight: 700, padding: '4px 8px', borderRadius: 10, border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outline: 'none' }}
-              >
-                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
-                  <option key={r.key} value={r.key}>{r.label}</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <View style={{ width: 180 }}>
-              <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#F8FAFC', overflow: 'hidden' }}>
-              <Picker
-                selectedValue={String(currentUser?.rol || '').toLowerCase()}
-                onValueChange={async (next) => {
-                  try {
-                    const nextVal = String(next || '').trim();
-                    if (typeof onRoleChange === 'function') onRoleChange(nextVal);
-                    try {
-                      await AsyncStorage.setItem('PFP_SELECTED_ROLE', nextVal);
-                    } catch (e) {
-                      // ignore storage errors
-                    }
-                  } catch (err) {
-                    // ignore
-                  }
-                }}
-                mode="dropdown"
-                style={{ height: 36, color: '#0F172A', fontSize: 12, backgroundColor: 'transparent', borderWidth: 0, cursor: 'pointer', outline: 'none' }}
-              >
-                {(rolesList && rolesList.length > 0 ? rolesList : [{ key: String(currentUser?.rol || '').toLowerCase(), label: currentUser?.rol || 'Invitado' }]).map((r) => (
-                  <Picker.Item key={r.key} label={r.label} value={r.key} />
-                ))}
-              </Picker>
-              </View>
-            </View>
-          )}
-        </View>
         <View style={styles.tabsList}>
           {state.routes
             .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
@@ -252,11 +376,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
           );
           })}
         </View>
-        {!!onLogout && (
-          <Pressable onPress={confirmLogout} style={styles.topLogoutBtn}>
-            <Text style={styles.topLogoutBtnText}>Cerrar sesión</Text>
-          </Pressable>
-        )}
+        <UserProfileBadge currentUser={currentUser} onLogout={onLogout} onAvatarUpdate={onAvatarUpdate} />
       </View>
 
       {submenuOpen && (
@@ -327,10 +447,10 @@ function SettingsNavigator({ currentUser }) {
   );
 }
 
-function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onRoleChange }) {
+function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvatarUpdate }) {
   return (
     <Tab.Navigator
-      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onRoleChange={onRoleChange} />}
+      tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onAvatarUpdate={onAvatarUpdate} />}
       screenOptions={{
         tabBarStyle: { display: 'none' },
         animationEnabled: false,
@@ -428,21 +548,191 @@ const styles = StyleSheet.create({
     color: C.text,
     fontWeight: '700',
   },
-  topLogoutBtn: {
+  userBadge: {
+    position: 'relative',
+    marginLeft: 10,
+    marginRight: 4,
+    marginBottom: 6,
+    alignSelf: 'center',
+    padding: 2,
+  },
+  userAvatarSmall: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  userAvatarInitials: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  userOnlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 1.5,
+    borderColor: C.bg,
+  },
+  userPanel: {
+    position: 'absolute',
+    width: 248,
+    backgroundColor: C.surface,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: C.surface,
-    marginLeft: 6,
-    alignSelf: 'center',
-    marginBottom: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 14,
+    overflow: 'hidden',
+    zIndex: 100,
   },
-  topLogoutBtnText: {
-    fontSize: 12,
+  userPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  userPanelAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  userPanelAvatarWrap: {
+    position: 'relative',
+    flexShrink: 0,
+  },
+  userPanelAvatarEdit: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: C.action,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: C.surface,
+  },
+  userPanelAvatarEditText: {
+    color: '#FFF',
+    fontSize: 10,
     fontWeight: '700',
-    color: C.secondary,
+  },
+  userPanelAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  userPanelAction: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  userPanelActionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: C.primary,
+  },
+  userPanelMeta: {
+    flex: 1,
+    gap: 2,
+  },
+  userPanelName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.text,
+  },
+  userPanelEmail: {
+    fontSize: 11,
+    color: C.textMuted,
+    marginTop: 1,
+  },
+  userPanelRolePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  userPanelRolePillText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: C.primary,
+    textTransform: 'capitalize',
+  },
+  userPanelDivider: {
+    height: 1,
+    backgroundColor: C.border,
+  },
+  userPanelLogout: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  userPanelLogoutText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  userPanelLogoutConfirm: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  userPanelLogoutConfirmText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.textMuted,
+    textAlign: 'center',
+  },
+  userPanelLogoutConfirmActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  userPanelLogoutConfirmBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: C.surfaceAlt,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  userPanelLogoutConfirmBtnDanger: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  userPanelLogoutConfirmCancelText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: C.text,
+  },
+  userPanelLogoutConfirmDangerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
   },
   userInfoContainer: {
     paddingHorizontal: 10,
@@ -504,9 +794,8 @@ const styles = StyleSheet.create({
 export default function App() {
   const [initialTab, setInitialTab] = React.useState('Pedidos');
   const [loading, setLoading] = React.useState(true);
-  // BYPASS AUTH PARA DESARROLLO
-  const [authUser, setAuthUser] = React.useState({ id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 });
-  const [authSession, setAuthSession] = React.useState({ access_token: 'dev', refresh_token: 'dev', usuario: { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 } });
+  const [authUser, setAuthUser] = React.useState(null);
+  const [authSession, setAuthSession] = React.useState(null);
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = React.useState(30);
   const lastActivityRef = React.useRef(Date.now());
   const autoLogoutTriggeredRef = React.useRef(false);
@@ -514,43 +803,6 @@ export default function App() {
   const markActivity = React.useCallback(() => {
     lastActivityRef.current = Date.now();
     autoLogoutTriggeredRef.current = false;
-  }, []);
-
-  // DEV TEMP: Forzar usuario `root` controlado por `localStorage.PFP_FORCE_ROOT`.
-  // - Para activar en el navegador: `localStorage.setItem('PFP_FORCE_ROOT','1')` y recarga.
-  // - Para desactivar: `localStorage.setItem('PFP_FORCE_ROOT','0')` y recarga (o eliminar la clave).
-  // Esto evita editar el código para activar/desactivar el forzado y facilita revertirlo.
-  React.useEffect(() => {
-    try {
-      const isWeb = typeof window !== 'undefined' && typeof window.location !== 'undefined';
-      if (!isWeb) return;
-
-      const flag = String(window.localStorage.getItem('PFP_FORCE_ROOT') || '').trim();
-      if (flag !== '1') {
-        // Do nothing unless explicitly enabled
-        // eslint-disable-next-line no-console
-        console.log("DEV: PFP_FORCE_ROOT not set to '1' — skipping force-root");
-        return;
-      }
-
-      const rootUser = { id: 'root', nombre: 'Root', rol: 'root', empresa_id: 1 };
-      const nowSec = Math.floor(Date.now() / 1000);
-      const rootSession = {
-        usuario: rootUser,
-        access_token: 'dev-access',
-        refresh_token: 'dev-refresh',
-        access_expires_at: nowSec + 3600 * 24,
-      };
-
-      setAuthUser(rootUser);
-      setAuthSession(rootSession);
-      AsyncStorage.setItem('authUser', JSON.stringify(rootUser)).catch(() => {});
-      AsyncStorage.setItem('authSession', JSON.stringify(rootSession)).catch(() => {});
-      // eslint-disable-next-line no-console
-      console.log('DEV: authUser/authSession forzados a root (controlado por PFP_FORCE_ROOT)');
-    } catch (e) {
-      // ignore
-    }
   }, []);
 
   React.useEffect(() => {
@@ -748,6 +1000,30 @@ export default function App() {
           }
         }
 
+        // Si el token sigue válido (sin refresh), authUser en AsyncStorage puede tener
+        // un rol simulado de una sesión anterior. Recuperar el rol real desde:
+        // 1) nextSession.usuario.rol  (guardado al hacer refresh o login reciente)
+        // 2) payload del JWT           (decodificado sin verificar firma, solo lectura)
+        if (nextSession && nextUser) {
+          let realRolFromSession = nextSession?.usuario?.rol || null;
+          if (!realRolFromSession && nextSession?.access_token) {
+            try {
+              const parts = String(nextSession.access_token).split('.');
+              if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                realRolFromSession = payload?.rol || payload?.role || null;
+              }
+            } catch (e) { /* JWT malformado, ignorar */ }
+          }
+          if (!realRolFromSession && typeof window !== 'undefined') {
+            realRolFromSession = window.localStorage?.getItem('PFP_REAL_ROLE') || null;
+          }
+          if (realRolFromSession) {
+            nextUser = { ...nextUser, rol: realRolFromSession };
+            try { await AsyncStorage.setItem('authUser', JSON.stringify(nextUser)); } catch (e) {}
+          }
+        }
+
         // Al arrancar, sincronizar PFP_SELECTED_ROLE y PFP_EMPRESA_ID al usuario real autenticado
         // (no aplicar el rol simulado guardado — la simulación es solo de sesión)
         try {
@@ -761,6 +1037,7 @@ export default function App() {
           // ignore localStorage errors
         }
 
+        global.__MIAPP_ACCESS_TOKEN = nextSession?.access_token || null;
         setAuthSession(nextSession || null);
         setAuthUser(nextUser || null);
       } catch (error) {
@@ -783,6 +1060,8 @@ export default function App() {
 
   const handleAuthSuccess = async (session) => {
     const usuario = session?.usuario || null;
+    // Establecer token ANTES del render para evitar race condition con useFocusEffect
+    global.__MIAPP_ACCESS_TOKEN = session?.access_token || null;
     setAuthUser(usuario);
     setAuthSession(session || null);
     markActivity();
@@ -797,36 +1076,30 @@ export default function App() {
     } catch (error) {
       console.error('Error saving auth user:', error);
     }
+    try {
+      const realRol = String(usuario?.rol || '').trim();
+      const realEmpresaId = String(usuario?.empresa_id || '').trim();
+      if (typeof window !== 'undefined' && window.localStorage) {
+        if (realRol) {
+          window.localStorage.setItem('PFP_REAL_ROLE', realRol);
+          window.localStorage.setItem('PFP_SELECTED_ROLE', realRol);
+        }
+        if (realEmpresaId) window.localStorage.setItem('PFP_EMPRESA_ID', realEmpresaId);
+      }
+    } catch (e) { /* ignore */ }
   };
 
-  const handleRoleChange = async (nextRole) => {
+
+  const handleAvatarUpdate = React.useCallback(async (avatarUrl) => {
     try {
-      if (!nextRole) return;
-      const baseUser = authUser || { id: 1, nombre: 'DevUser', rol: 'root', empresa_id: 1 };
-      // El cambio de rol es solo de sesión — no se persiste a AsyncStorage
-      // para que al recargar el usuario vuelva a su rol real autenticado
-      const nextUser = { ...baseUser, rol: nextRole };
-      setAuthUser(nextUser);
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem('PFP_SELECTED_ROLE', String(nextRole || '').trim());
-          const empresaId = String(baseUser?.empresa_id || '').trim();
-          if (empresaId) window.localStorage.setItem('PFP_EMPRESA_ID', empresaId);
-        }
-      } catch (e) {
-        // ignore storage errors
-      }
-      try {
-        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('pfp-role-changed', { detail: nextRole }));
-        }
-      } catch (e) {
-        // ignore event errors
-      }
-    } catch (e) {
-      // ignore
-    }
-  };
+      const updatedUser = { ...authUser, avatar_url: avatarUrl };
+      setAuthUser(updatedUser);
+      const updatedSession = authSession ? { ...authSession, usuario: { ...authSession.usuario, avatar_url: avatarUrl } } : null;
+      if (updatedSession) setAuthSession(updatedSession);
+      await AsyncStorage.setItem('authUser', JSON.stringify(updatedUser));
+      if (updatedSession) await AsyncStorage.setItem('authSession', JSON.stringify(updatedSession));
+    } catch (e) { /* ignore */ }
+  }, [authUser, authSession]);
 
   const handleLogout = React.useCallback(async (options = {}) => {
     const timeoutExpired = !!options.timeoutExpired;
@@ -853,6 +1126,13 @@ export default function App() {
     } catch (error) {
       console.error('Error clearing auth user:', error);
     }
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('PFP_REAL_ROLE');
+        window.localStorage.removeItem('PFP_SELECTED_ROLE');
+        window.localStorage.removeItem('PFP_EMPRESA_ID');
+      }
+    } catch (e) { /* ignore */ }
     if (timeoutExpired) {
       Alert.alert('Sesión cerrada', 'Tu sesión se cerró por inactividad.');
     }
@@ -918,22 +1198,27 @@ export default function App() {
     <PedidosProvider>
       {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
       <NavigationContainer linking={linking}>
-        <Stack.Navigator
-          screenOptions={{
-            animation: 'none',
-          }}
-        >
-          {/* BYPASS AUTH PARA DESARROLLO */}
-          <Stack.Screen
-            name="Home"
-            children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} onRoleChange={handleRoleChange} />}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Nueva Cotización"
-            component={NewQuoteScreen}
-            options={{ headerShown: true }}
-          />
+        <Stack.Navigator screenOptions={{ animation: 'none' }}>
+          {!authUser ? (
+            <Stack.Screen
+              name="Auth"
+              children={() => <AuthHomeScreen onAuthSuccess={handleAuthSuccess} />}
+              options={{ headerShown: false }}
+            />
+          ) : (
+            <>
+              <Stack.Screen
+                name="Home"
+                children={(props) => <HomeTabs {...props} initialRouteName={initialTab} onTabChange={handleTabChange} onLogout={handleLogout} currentUser={authUser} onAvatarUpdate={handleAvatarUpdate} />}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Nueva Cotización"
+                component={NewQuoteScreen}
+                options={{ headerShown: true }}
+              />
+            </>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </PedidosProvider>

@@ -21,7 +21,7 @@ function borderColorState(value, isRequired, isNumeric = false, submitted = fals
     if ((value === undefined || value === null || value === '') && submitted) return '#D21820';
     if (isNumeric && value !== '' && !/^[0-9]+$/.test(value)) return '#D21820';
     if ((typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return submitted ? '#D21820' : '#CCC';
-    return '#E55A2B';
+    return '#CBD5E1';
 }
 
 function isValidEmail(value) {
