@@ -7,6 +7,8 @@ import { Alert, AppState, Image, Modal, Platform, Pressable, StyleSheet, Text, V
 import { PedidosProvider } from './PedidosContext';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { C, paperThemeColors } from './screens/theme';
+import { useTranslation } from 'react-i18next';
+import { initI18n, changeLanguage, LANGUAGES } from './i18n/index';
 
 import TrabajoScreen from './screens/TrabajoScreen';
 import MachinasScreen from './screens/MachinasScreen';
@@ -40,20 +42,26 @@ const AUTH_EXCLUDED_PATHS = [
 
 const Stack = createNativeStackNavigator();
 const SettingsStack = createNativeStackNavigator();
+const ActivosStack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
-const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Clientes', 'Setting'];
+const VALID_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Activos', 'Setting'];
+const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Activos', 'Setting'];
+const DROPDOWN_TABS = ['Setting', 'Activos'];
 
-// Tabs que existían antes y ahora viven en Ajustes → redirigir a Setting
-const MIGRATED_TABS = ['Máquinas', 'Troqueles', 'Materiales'];
+// Tabs que ya no existen como pestaña general → redirigir
+const MIGRATED_TO_ACTIVOS = ['Clientes', 'Máquinas', 'Troqueles', 'Materiales'];
 
-const SETTINGS_SUBMENU = [
-  { key: 'settings-usuarios-roles', label: 'Usuarios y roles', target: { type: 'stack', route: 'SettingsUsuariosRoles' } },
-  { key: 'settings-impresion', label: 'Impresión', target: { type: 'stack', route: 'SettingsImpresion' } },
-  { key: 'settings-maquinas', label: 'Máquinas', target: { type: 'stack', route: 'SettingsMaquinas' } },
-  { key: 'settings-troqueles', label: 'Troqueles', target: { type: 'stack', route: 'SettingsTroqueles' } },
-  { key: 'settings-materiales', label: 'Materiales', target: { type: 'stack', route: 'SettingsMateriales' } },
-  { key: 'settings-funcionalidades', label: 'Funcionalidades web', target: { type: 'stack', route: 'SettingsFuncionalidades' } },
+const buildSettingsSubmenu = (t) => [
+  { key: 'settings-impresion', label: t('nav.impresion'), target: { type: 'stack', tab: 'Setting', route: 'SettingsImpresion' } },
+  { key: 'settings-funcionalidades', label: t('nav.pedidosConfig'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFuncionalidades' } },
+];
+
+const buildActivosSubmenu = (t) => [
+  { key: 'activos-clientes', label: t('nav.clientes'), target: { type: 'stack', tab: 'Activos', route: 'ActivosClientes' } },
+  { key: 'activos-maquinas', label: t('nav.maquinas'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMaquinas' } },
+  { key: 'activos-materiales', label: t('nav.materiales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMateriales' } },
+  { key: 'activos-troqueles', label: t('nav.troqueles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosTroqueles' } },
+  { key: 'activos-usuarios-roles', label: t('nav.usuariosRoles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosUsuariosRoles' } },
 ];
 
 const linking = {
@@ -65,16 +73,20 @@ const linking = {
           Pedidos: 'pedidos',
           Presupuesto: 'presupuestos',
           Producción: 'produccion',
-          Clientes: 'clientes',
+          Activos: {
+            screens: {
+              ActivosClientes: 'activos/clientes',
+              ActivosMaquinas: 'activos/maquinas',
+              ActivosMateriales: 'activos/materiales',
+              ActivosTroqueles: 'activos/troqueles',
+              ActivosUsuariosRoles: 'activos/usuarios-roles',
+            },
+          },
           Setting: {
             screens: {
               SettingsMenu: 'setting',
-              SettingsUsuariosRoles: 'setting/usuarios-roles',
               SettingsFuncionalidades: 'setting/funcionalidades',
               SettingsImpresion: 'setting/impresion',
-              SettingsMaquinas: 'setting/maquinas',
-              SettingsTroqueles: 'setting/troqueles',
-              SettingsMateriales: 'setting/materiales',
             },
           },
         },
@@ -87,11 +99,12 @@ const linking = {
 function normalizeTabName(tabName) {
   if (!tabName) return 'Pedidos';
   if (tabName === 'Settings') return 'Pedidos'; // old route name, no longer exists
-  if (MIGRATED_TABS.includes(tabName)) return 'Setting';
+  if (MIGRATED_TO_ACTIVOS.includes(tabName)) return 'Activos';
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
 
 function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
   const [confirmingLogout, setConfirmingLogout] = React.useState(false);
   const [panelPos, setPanelPos] = React.useState({ top: 50, right: 8 });
@@ -267,9 +280,33 @@ function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
                 style={({ pressed }) => [styles.userPanelAction, pressed && { backgroundColor: C.surfaceAlt }]}
               >
                 <Text style={styles.userPanelActionText}>
-                  {uploading ? 'Subiendo...' : 'Cambiar foto de perfil'}
+                  {uploading ? t('user.uploading') : t('user.changePhoto')}
                 </Text>
               </Pressable>
+
+              <View style={styles.userPanelDivider} />
+
+              {/* ── Selector de idioma ── */}
+              <View style={styles.userPanelLangSection}>
+                <Text style={styles.userPanelLangTitle}>{t('user.language')}</Text>
+                <View style={styles.userPanelLangRow}>
+                  {LANGUAGES.map((lang) => {
+                    const active = i18n.language === lang.code;
+                    return (
+                      <Pressable
+                        key={lang.code}
+                        onPress={() => changeLanguage(lang.code)}
+                        style={[styles.userPanelLangBtn, active && styles.userPanelLangBtnActive]}
+                      >
+                        <Text style={styles.userPanelLangFlag}>{lang.flag}</Text>
+                        <Text style={[styles.userPanelLangCode, active && styles.userPanelLangCodeActive]}>
+                          {lang.code.toUpperCase()}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
 
               <View style={styles.userPanelDivider} />
 
@@ -278,25 +315,25 @@ function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
                   onPress={confirmLogout}
                   style={({ pressed }) => [styles.userPanelLogout, pressed && { backgroundColor: '#FEF2F2' }]}
                 >
-                  <Text style={styles.userPanelLogoutText}>Cerrar sesión</Text>
+                  <Text style={styles.userPanelLogoutText}>{t('user.logout')}</Text>
                 </Pressable>
               )}
 
               {!!onLogout && confirmingLogout && (
                 <View style={styles.userPanelLogoutConfirm}>
-                  <Text style={styles.userPanelLogoutConfirmText}>¿Cerrar la sesión?</Text>
+                  <Text style={styles.userPanelLogoutConfirmText}>{t('user.confirmLogout')}</Text>
                   <View style={styles.userPanelLogoutConfirmActions}>
                     <Pressable
                       onPress={() => setConfirmingLogout(false)}
                       style={({ pressed }) => [styles.userPanelLogoutConfirmBtn, pressed && { opacity: 0.7 }]}
                     >
-                      <Text style={styles.userPanelLogoutConfirmCancelText}>Cancelar</Text>
+                      <Text style={styles.userPanelLogoutConfirmCancelText}>{t('user.cancel')}</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => { setOpen(false); setConfirmingLogout(false); onLogout(); }}
                       style={({ pressed }) => [styles.userPanelLogoutConfirmBtn, styles.userPanelLogoutConfirmBtnDanger, pressed && { opacity: 0.8 }]}
                     >
-                      <Text style={styles.userPanelLogoutConfirmDangerText}>Cerrar sesión</Text>
+                      <Text style={styles.userPanelLogoutConfirmDangerText}>{t('user.logout')}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -310,30 +347,30 @@ function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
 }
 
 function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onAvatarUpdate }) {
-  const [submenuOpen, setSubmenuOpen] = React.useState(false);
+  const { t } = useTranslation();
+  const [openSubmenu, setOpenSubmenu] = React.useState(null); // null | 'Setting' | 'Activos'
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
+  const activosTabRef = React.useRef(null);
   const activeRoute = state.routes[state.index];
   const activeRouteName = activeRoute?.name;
-  const activeSettingSection = activeRouteName === 'Setting'
-    ? String(activeRoute?.params?.section || 'usuarios-roles')
-    : null;
 
   const handleTabPress = (route, isFocused) => {
-    const isSetting = route.name === 'Setting';
-    if (isSetting) {
-      if (submenuOpen) {
-        setSubmenuOpen(false);
+    const isDropdown = DROPDOWN_TABS.includes(route.name);
+    if (isDropdown) {
+      if (openSubmenu === route.name) {
+        setOpenSubmenu(null);
         return;
       }
-      settingTabRef.current?.measureInWindow?.((x, y, width, height) => {
+      const ref = route.name === 'Setting' ? settingTabRef : activosTabRef;
+      ref.current?.measureInWindow?.((x, y, _w, height) => {
         setSubmenuPosition({ top: y + height, left: x });
-        setSubmenuOpen(true);
+        setOpenSubmenu(route.name);
       });
       return;
     }
 
-    setSubmenuOpen(false);
+    setOpenSubmenu(null);
     if (!isFocused) {
       navigation.navigate(route.name);
     }
@@ -341,14 +378,15 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   };
 
   const goToSubmenuTarget = (target) => {
-    setSubmenuOpen(false);
+    setOpenSubmenu(null);
     if (target?.type === 'stack' && target.route) {
-      navigation.navigate('Setting', { screen: target.route });
-      onTabChange('Setting');
+      const tab = target.tab || 'Setting';
+      navigation.navigate(tab, { screen: target.route });
+      onTabChange(tab);
     }
   };
 
-  const isSubmenuTargetActive = (_target) => false;
+  const currentSubmenuItems = openSubmenu === 'Setting' ? buildSettingsSubmenu(t) : openSubmenu === 'Activos' ? buildActivosSubmenu(t) : [];
 
   return (
     <View>
@@ -357,48 +395,40 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
           {state.routes
             .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
             .map((route) => {
-          const options = descriptors[route.key]?.options || {};
-          const label = options.tabBarLabel || options.title || route.name;
-          const isFocused = activeRouteName === route.name;
-          const isSetting = route.name === 'Setting';
-          const settingContext = activeRouteName === 'Setting';
-          const isActive = isFocused || (isSetting && (submenuOpen || settingContext));
+              const options = descriptors[route.key]?.options || {};
+              const label = options.tabBarLabel || options.title || route.name;
+              const isFocused = activeRouteName === route.name;
+              const isDropdown = DROPDOWN_TABS.includes(route.name);
+              const isActive = isFocused || (isDropdown && (openSubmenu === route.name || activeRouteName === route.name));
+              const tabRef = route.name === 'Setting' ? settingTabRef : route.name === 'Activos' ? activosTabRef : undefined;
 
-          return (
-            <Pressable
-              key={route.key}
-              ref={isSetting ? settingTabRef : undefined}
-              onPress={() => handleTabPress(route, isFocused)}
-              style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-            >
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
-            </Pressable>
-          );
-          })}
+              return (
+                <Pressable
+                  key={route.key}
+                  ref={tabRef}
+                  onPress={() => handleTabPress(route, isFocused)}
+                  style={[styles.tabBtn, isActive && styles.tabBtnActive]}
+                >
+                  <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
         </View>
         <UserProfileBadge currentUser={currentUser} onLogout={onLogout} onAvatarUpdate={onAvatarUpdate} />
       </View>
 
-      {submenuOpen && (
-        <Modal transparent visible={submenuOpen} animationType="none" onRequestClose={() => setSubmenuOpen(false)}>
+      {openSubmenu && (
+        <Modal transparent visible={!!openSubmenu} animationType="none" onRequestClose={() => setOpenSubmenu(null)}>
           <View style={StyleSheet.absoluteFill}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSubmenuOpen(false)} />
-            <View
-              style={[
-                styles.settingsSubmenuWrap,
-                {
-                  top: submenuPosition.top,
-                  left: submenuPosition.left,
-                },
-              ]}
-            >
-              {SETTINGS_SUBMENU.map((item) => (
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpenSubmenu(null)} />
+            <View style={[styles.settingsSubmenuWrap, { top: submenuPosition.top, left: submenuPosition.left }]}>
+              {currentSubmenuItems.map((item) => (
                 <Pressable
                   key={item.key}
                   onPress={() => goToSubmenuTarget(item.target)}
-                  style={[styles.settingsSubmenuItem, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemActive]}
+                  style={styles.settingsSubmenuItem}
                 >
-                  <Text style={[styles.settingsSubmenuItemText, isSubmenuTargetActive(item.target) && styles.settingsSubmenuItemTextActive]}>{item.label}</Text>
+                  <Text style={styles.settingsSubmenuItemText}>{item.label}</Text>
                 </Pressable>
               ))}
             </View>
@@ -417,11 +447,6 @@ function SettingsNavigator({ currentUser }) {
         children={(props) => <SettingMenuScreen {...props} currentUser={currentUser} />}
       />
       <SettingsStack.Screen
-        name="SettingsUsuariosRoles"
-        initialParams={{ section: 'usuarios-roles' }}
-        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
-      />
-      <SettingsStack.Screen
         name="SettingsFuncionalidades"
         initialParams={{ section: 'funcionalidades' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
@@ -431,23 +456,40 @@ function SettingsNavigator({ currentUser }) {
         initialParams={{ section: 'impresion' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
       />
-      <SettingsStack.Screen
-        name="SettingsMaquinas"
-        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
-      />
-      <SettingsStack.Screen
-        name="SettingsTroqueles"
-        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
-      />
-      <SettingsStack.Screen
-        name="SettingsMateriales"
-        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
-      />
     </SettingsStack.Navigator>
   );
 }
 
+function ActivosNavigator({ currentUser }) {
+  return (
+    <ActivosStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <ActivosStack.Screen
+        name="ActivosClientes"
+        children={(props) => <ClientesScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
+        name="ActivosMaquinas"
+        children={(props) => <MachinasScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
+        name="ActivosMateriales"
+        children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
+        name="ActivosTroqueles"
+        children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
+        name="ActivosUsuariosRoles"
+        initialParams={{ section: 'usuarios-roles' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+      />
+    </ActivosStack.Navigator>
+  );
+}
+
 function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvatarUpdate }) {
+  const { t } = useTranslation();
   return (
     <Tab.Navigator
       tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onAvatarUpdate={onAvatarUpdate} />}
@@ -460,28 +502,28 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvat
     >
       <Tab.Screen
         name="Pedidos"
-        options={{ tabBarLabel: 'Pedidos' }}
+        options={{ tabBarLabel: t('nav.pedidos') }}
         children={(props) => <TrabajoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Presupuesto"
-        options={{ tabBarLabel: 'Presupuestos' }}
+        options={{ tabBarLabel: t('nav.presupuestos') }}
         children={(props) => <PresupuestoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Producción"
-        options={{ tabBarLabel: 'Producción' }}
+        options={{ tabBarLabel: t('nav.produccion') }}
         children={(props) => <ProduccionScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
-        name="Clientes"
-        options={{ tabBarLabel: 'Clientes' }}
-        children={(props) => <ClientesScreen {...props} currentUser={currentUser} />}
+        name="Activos"
+        children={(props) => <ActivosNavigator {...props} currentUser={currentUser} />}
+        options={{ tabBarLabel: t('nav.activos') }}
       />
       <Tab.Screen
         name="Setting"
         children={(props) => <SettingsNavigator {...props} currentUser={currentUser} />}
-        options={{ tabBarLabel: 'Ajustes' }}
+        options={{ tabBarLabel: t('nav.ajustes') }}
       />
     </Tab.Navigator>
   );
@@ -734,6 +776,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
   },
+  userPanelLangSection: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  userPanelLangTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  userPanelLangRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  userPanelLangBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  userPanelLangBtnActive: {
+    borderColor: C.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  userPanelLangFlag: {
+    fontSize: 14,
+  },
+  userPanelLangCode: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  userPanelLangCodeActive: {
+    color: C.primary,
+  },
   userInfoContainer: {
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -794,6 +879,11 @@ const styles = StyleSheet.create({
 export default function App() {
   const [initialTab, setInitialTab] = React.useState('Pedidos');
   const [loading, setLoading] = React.useState(true);
+  const [i18nReady, setI18nReady] = React.useState(false);
+
+  React.useEffect(() => {
+    initI18n().then(() => setI18nReady(true));
+  }, []);
   const [authUser, setAuthUser] = React.useState(null);
   const [authSession, setAuthSession] = React.useState(null);
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = React.useState(30);
@@ -1062,6 +1152,7 @@ export default function App() {
     const usuario = session?.usuario || null;
     // Establecer token ANTES del render para evitar race condition con useFocusEffect
     global.__MIAPP_ACCESS_TOKEN = session?.access_token || null;
+    setInitialTab('Pedidos'); // Siempre redirigir a Pedidos tras login
     setAuthUser(usuario);
     setAuthSession(session || null);
     markActivity();
@@ -1187,8 +1278,8 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [authUser, sessionTimeoutMinutes, handleLogout]);
 
-  if (loading) {
-    return null; // o un loading screen
+  if (loading || !i18nReady) {
+    return null;
   }
 
   const paperTheme = { ...MD3LightTheme, colors: { ...MD3LightTheme.colors, ...paperThemeColors } };

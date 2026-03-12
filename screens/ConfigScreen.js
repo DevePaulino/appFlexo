@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { useFocusEffect } from '@react-navigation/native';
+import EmptyState from '../components/EmptyState';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePermission } from './usePermission';
 
@@ -33,6 +35,7 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'edit_presupuestos', title: 'Editar presupuestos', hint: 'Creación, edición y aprobación de presupuestos.' },
   { key: 'edit_produccion', title: 'Editar producción', hint: 'Enviar, mover, reordenar y cambiar estado en producción.' },
   { key: 'eliminar_archivos', title: 'Eliminar archivos de pedidos', hint: 'Permite borrar artes y versiones unitario en el detalle de un pedido.' },
+  { key: 'edit_modo_creacion', title: 'Cambiar modo de creación de pedidos', hint: 'Permite alternar entre modo manual y automático en la configuración.' },
 ];
 
 const styles = StyleSheet.create({
@@ -544,6 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
   },
   usersModalCard: {
@@ -552,6 +556,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 16,
+    maxWidth: 480,
+    width: '100%',
   },
   inputError: {
     borderColor: '#DC2626',
@@ -575,7 +581,7 @@ const ESTADO_RULE_DEFAULTS = {
 
 const ESTADO_RULE_CONFIG = [
   { key: 'bloqueados_produccion', title: 'Bloquean envío a producción', hint: 'No permite enviar desde Pedidos a producción.' },
-  { key: 'en_cola_produccion', title: 'Estados en cola de producción', hint: 'Se muestran como “en cola”.' },
+  { key: 'en_cola_produccion', title: 'Estados en cola de producción', hint: 'Se muestran como "en cola".' },
   { key: 'preimpresion', title: 'Estados de preimpresión', hint: 'Al volver a estos, se quita de la cola.' },
   { key: 'estados_finalizados', title: 'Estados finalizados', hint: 'Usados para lógica de cierre y limpieza.' },
   { key: 'ocultar_timeline', title: 'Ocultar en timeline', hint: 'No se muestran en los círculos de fase.' },
@@ -668,6 +674,7 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
 }
 
 export default function ConfigScreen({ route, currentUser }) {
+  const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
   const [settings, setSettings] = useState({
     roles: [],
@@ -733,11 +740,11 @@ export default function ConfigScreen({ route, currentUser }) {
   const showImpresion = section === 'all' || section === 'impresion';
 
   const titleBySection = {
-    'usuarios-roles': 'Usuarios',
-    creditos: 'Créditos',
-    impresion: 'Impresión',
+    'usuarios-roles': t('screens.config.usuariosTitle'),
+    creditos: t('screens.config.creditosTitle'),
+    impresion: t('screens.config.impresionTitle'),
   };
-  const pageTitle = titleBySection[section] || 'Configuración';
+  const pageTitle = titleBySection[section] || t('nav.configuracion');
   const showBlockTitles = section === 'all';
   const showTopUsersPlus = section === 'usuarios-roles';
 
@@ -875,11 +882,13 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const cargarModoCreacion = () => {
     try {
-      fetch(API_MODO_URL)
+      const headers = {};
+      if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
+      fetch(API_MODO_URL, { headers })
         .then((r) => r.json().catch(() => ({})))
         .then((data) => {
-          if (data && data.modo) {
-            setModoCreacion(String(data.modo || 'manual'));
+          if (data && data.modo_creacion) {
+            setModoCreacion(String(data.modo_creacion));
           }
         })
         .catch(() => setModoCreacion('manual'));
@@ -891,9 +900,11 @@ export default function ConfigScreen({ route, currentUser }) {
   const actualizarModoCreacion = async (modo) => {
     try {
       setGuardandoModoCreacion(true);
+      const headers = { 'Content-Type': 'application/json' };
+      if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
       await fetch(API_MODO_URL, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ modo }),
       });
       setModoCreacion(modo);
@@ -1027,7 +1038,7 @@ export default function ConfigScreen({ route, currentUser }) {
 
       if (billingState === 'cancel') {
         clearQuery();
-        Alert.alert('Pago cancelado', 'No se realizó ningún cargo.');
+        Alert.alert(t('screens.config.okPagoCancelado'), t('screens.config.okNoCargo'));
         return;
       }
 
@@ -1041,12 +1052,12 @@ export default function ConfigScreen({ route, currentUser }) {
           const data = await response.json().catch(() => ({}));
           clearQuery();
           if (!response.ok) {
-            Alert.alert('Pago pendiente', data.error || 'No se pudo confirmar el pago aún.');
+            Alert.alert(t('screens.config.okPagoPendiente'), data.error || t('screens.config.okPagoNoConfirmado'));
             return;
           }
           const agregados = Number(data.creditos_agregados || 0);
           const saldo = Number(data.creditos || 0);
-          Alert.alert('Recarga confirmada', `Se añadieron ${agregados} créditos. Saldo actual: ${saldo}.`);
+          Alert.alert(t('screens.config.okRecargaConfirmada'), t('screens.config.okCreditosAgregados', { count: agregados, saldo }));
           await cargarUsuarios();
         } catch (e) {
           clearQuery();
@@ -1188,19 +1199,19 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const mostrarPermisoRecargasDenegado = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert('Permiso denegado: Tu rol no tiene permiso para gestionar recargas');
+      window.alert(t('screens.config.errPermisoDenegadoRecargas'));
       return;
     }
-    Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para gestionar recargas');
+    Alert.alert(t('screens.config.errPermisoDenegadoRecargas'));
   };
 
   const mostrarPermisoUsuariosDenegado = () => {
     const roleInfo = `rol=${currentUserRole} manage_app_settings=${String(currentUserPermissionValue)} rolePerm=${String(rolePermissionValue)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(`Permiso denegado: Tu rol no tiene permiso para gestionar usuarios. (${roleInfo})`);
+      window.alert(t('screens.config.errPermisoDenegadoUsuarios'));
       return;
     }
-    Alert.alert('Permiso denegado', `Tu rol no tiene permiso para gestionar usuarios. (${roleInfo})`);
+    Alert.alert(t('screens.config.errPermisoDenegadoUsuarios'));
   };
 
   const abrirModalNuevoUsuario = () => {
@@ -1214,7 +1225,6 @@ export default function ConfigScreen({ route, currentUser }) {
   };
 
   const guardarUsuario = async () => {
-    console.log('guardarUsuario invoked', { nuevoUsuarioNombre, nuevoUsuarioEmail, nuevoUsuarioRol, puedeAdministrarUsuarios });
     if (!puedeAdministrarUsuarios) {
       mostrarPermisoUsuariosDenegado();
       return;
@@ -1226,17 +1236,17 @@ export default function ConfigScreen({ route, currentUser }) {
     const rol = String(nuevoUsuarioRol || '').trim().toLowerCase();
 
     if (!nombre || !email) {
-      Alert.alert('Error', 'Nombre y email son obligatorios');
+      Alert.alert('Error', t('screens.config.errNombreEmailRequired'));
       return;
     }
 
     if (!rol) {
-      Alert.alert('Error', 'Debes seleccionar un rol');
+      Alert.alert('Error', t('screens.config.errSelectRol'));
       return;
     }
 
     if (!emailValido(email)) {
-      Alert.alert('Error', 'Email no válido');
+      Alert.alert('Error', t('screens.config.errEmailInvalid'));
       return;
     }
 
@@ -1250,10 +1260,8 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
 
-      // Debug: show status and response body to help diagnose web client issues
-      console.log('guardarUsuario response', response.status, data);
       if (!response.ok) {
-        Alert.alert('Error', `(${response.status}) ${data.error || 'No se pudo guardar el usuario'}`);
+        Alert.alert('Error', `(${response.status}) ${data.error || t('screens.config.errSaveUser')}`);
         return;
       }
 
@@ -1261,7 +1269,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const id = data.id || data._id || (data.usuario && data.usuario.id) || null;
       const temp = data._temp_password || (data.usuario && data.usuario._temp_password) || null;
       if (id) {
-        Alert.alert('Usuario creado', `ID: ${id}${temp ? `\nContraseña temporal: ${temp}` : ''}`);
+        Alert.alert(t('screens.config.okUserCreated'), `${t('screens.config.okUserId', { id })}${temp ? `\n${t('screens.config.okTempPassword', { temp })}` : ''}`);
       }
 
       limpiarFormularioUsuario();
@@ -1269,7 +1277,7 @@ export default function ConfigScreen({ route, currentUser }) {
       await cargarUsuarios();
     } catch (e) {
       console.error('guardarUsuario exception', e);
-      Alert.alert('Error', `No se pudo guardar el usuario: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errSaveUser')}: ${e.message}`);
     }
   };
 
@@ -1307,8 +1315,6 @@ export default function ConfigScreen({ route, currentUser }) {
         headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
       }
 
-      // eslint-disable-next-line no-console
-      console.log('Eliminar usuario request:', `${API_USERS_URL}/${id}`);
       const response = await fetch(`${API_USERS_URL}/${id}`, { method: 'DELETE', headers });
       let data = {};
       try {
@@ -1321,12 +1327,10 @@ export default function ConfigScreen({ route, currentUser }) {
       if (!response.ok) {
         // eslint-disable-next-line no-console
         console.error('Eliminar usuario failed', response.status, data);
-        Alert.alert('Error', data.error || `No se pudo eliminar el usuario (status ${response.status})`);
+        Alert.alert('Error', data.error || `${t('screens.config.errDeleteUser')} (status ${response.status})`);
         return;
       }
 
-      // eslint-disable-next-line no-console
-      console.log('Usuario eliminado:', id);
       if (usuarioEditandoId === id) {
         limpiarFormularioUsuario();
       }
@@ -1334,7 +1338,7 @@ export default function ConfigScreen({ route, currentUser }) {
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('Eliminar usuario exception', e);
-      Alert.alert('Error', `No se pudo eliminar el usuario: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errDeleteUser')}: ${e.message}`);
     } finally {
       setDeletingUserId(null);
     }
@@ -1351,9 +1355,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
       // On web, react-native Alert may not trigger the onPress handlers; use window.confirm instead.
       if (isWeb && typeof window.confirm === 'function') {
-        // eslint-disable-next-line no-console
-        console.log('confirmarEliminarUsuario (web)', usuario.id, usuario.nombre);
-        const accepted = window.confirm(`¿Seguro que quieres eliminar a ${usuario?.nombre || 'este usuario'}?`);
+        const accepted = window.confirm(t('screens.config.confirmDeleteUser', { nombre: usuario?.nombre || 'este usuario' }));
         if (accepted) {
           eliminarUsuario(usuario.id);
         }
@@ -1364,12 +1366,12 @@ export default function ConfigScreen({ route, currentUser }) {
     }
 
     Alert.alert(
-      'Confirmar eliminación',
-      `¿Seguro que quieres eliminar a ${usuario?.nombre || 'este usuario'}?`,
+      t('screens.config.confirmDeleteUserTitle'),
+      t('screens.config.confirmDeleteUser', { nombre: usuario?.nombre || 'este usuario' }),
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('screens.config.deleteUserBtn'),
           style: 'destructive',
           onPress: () => eliminarUsuario(usuario.id),
         },
@@ -1383,7 +1385,7 @@ export default function ConfigScreen({ route, currentUser }) {
       return;
     }
     if (!billingConfig.checkout_enabled) {
-      Alert.alert('Pasarela no configurada', 'Configura STRIPE_SECRET_KEY en el backend para habilitar cobros reales.');
+      Alert.alert(t('screens.config.errPagoNoConfigurado'), t('screens.config.errConfiguracionStripe'));
       return;
     }
 
@@ -1401,13 +1403,13 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const iniciarRecargaCheckout = async () => {
     if (!recargaUsuario?.id) {
-      Alert.alert('Error', 'Selecciona un usuario válido');
+      Alert.alert('Error', t('screens.config.errSelectValidUser'));
       return;
     }
 
     const creditos = Number(recargaCreditos);
     if (!Number.isFinite(creditos) || !Number.isInteger(creditos) || creditos <= 0) {
-      Alert.alert('Error', 'Introduce una cantidad de créditos válida');
+      Alert.alert('Error', t('screens.config.errInvalidCredits'));
       return;
     }
 
@@ -1433,13 +1435,13 @@ export default function ConfigScreen({ route, currentUser }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo iniciar el checkout');
+        Alert.alert('Error', data.error || t('screens.config.errCheckoutFailed'));
         return;
       }
 
       const checkoutUrl = String(data.checkout_url || '').trim();
       if (!checkoutUrl) {
-        Alert.alert('Error', 'No se recibió URL de checkout');
+        Alert.alert('Error', t('screens.config.errNoCheckoutUrl'));
         return;
       }
 
@@ -1450,13 +1452,13 @@ export default function ConfigScreen({ route, currentUser }) {
 
       const canOpen = await Linking.canOpenURL(checkoutUrl);
       if (!canOpen) {
-        Alert.alert('Error', 'No se pudo abrir el checkout en este dispositivo.');
+        Alert.alert('Error', t('screens.config.errCantOpenCheckout'));
         return;
       }
       await Linking.openURL(checkoutUrl);
       cerrarModalRecarga();
     } catch (e) {
-      Alert.alert('Error', `No se pudo iniciar el checkout: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errCheckoutFailed')}: ${e.message}`);
     } finally {
       setProcesandoRecarga(false);
     }
@@ -1518,7 +1520,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo guardar el valor');
+        Alert.alert('Error', data.error || t('screens.config.errSaveValue'));
         return;
       }
 
@@ -1532,7 +1534,7 @@ export default function ConfigScreen({ route, currentUser }) {
         window.location.reload();
       }
     } catch (e) {
-      Alert.alert('Error', `No se pudo guardar: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errSaveValue')}: ${e.message}`);
     }
   };
 
@@ -1543,7 +1545,7 @@ export default function ConfigScreen({ route, currentUser }) {
     // Validar rol protegido
     const rolItem = (settings.roles || []).find((item) => item.id === id);
     if (rolItem && (rolItem.internal === true || slugifyEstado(String(rolItem?.valor || '')) === 'administrador')) {
-      Alert.alert('Acción no permitida', 'No se puede eliminar este rol protegido del sistema.');
+      Alert.alert('Acción no permitida', t('screens.config.errRolProtected'));
       return;
     }
 
@@ -1555,14 +1557,13 @@ export default function ConfigScreen({ route, currentUser }) {
         
         if (data.in_use) {
           Alert.alert(
-            'No se puede eliminar',
-            `Este rol está siendo utilizado por ${data.count} usuario(s). Cambia los usuarios a otro rol antes de eliminar este.`
+            t('screens.config.errCantDelete'),
+            t('screens.config.errRolInUse', { count: data.count })
           );
           return;
         }
       } catch (e) {
         // Si hay error verificando, permitir continuar con la eliminación
-        console.log('Error validating rol usage:', e.message);
       }
     }
 
@@ -1575,7 +1576,7 @@ export default function ConfigScreen({ route, currentUser }) {
       ]);
       
       if (estadosProtegidos.has(estadoKey)) {
-        Alert.alert('Acción no permitida', 'No se puede eliminar este estado (protegido del sistema).');
+        Alert.alert('Acción no permitida', t('screens.config.errStatusProtected'));
         return;
       }
 
@@ -1596,7 +1597,6 @@ export default function ConfigScreen({ route, currentUser }) {
         }
       } catch (e) {
         // Si hay error verificando, permitir continuar con la eliminación
-        console.log('Error validating estado usage:', e.message);
       }
     }
 
@@ -1607,7 +1607,7 @@ export default function ConfigScreen({ route, currentUser }) {
         if (response.status === 404) {
           await cargarSettings();
         }
-        Alert.alert('Error', data.error || 'No se pudo eliminar');
+        Alert.alert('Error', data.error || t('screens.config.errCantDelete'));
         return;
       }
       await cargarSettings();
@@ -1620,13 +1620,13 @@ export default function ConfigScreen({ route, currentUser }) {
         window.location.reload();
       }
     } catch (e) {
-      Alert.alert('Error', `No se pudo eliminar: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errCantDelete')}: ${e.message}`);
     }
   };
 
   const migrarpedidosYEliminarEstado = async () => {
     if (!estadoAMigrar || !estadoDestinoMigracion) {
-      Alert.alert('Error', 'Debes seleccionar un estado destino');
+      Alert.alert('Error', t('screens.config.errSelectDestino'));
       return;
     }
 
@@ -1646,7 +1646,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        Alert.alert('Error en migración', data.error || 'No se pudo migrar los pedidos');
+        Alert.alert('Error en migración', data.error || t('screens.config.errMigrationFailed'));
         setMigrandoEstados(false);
         return;
       }
@@ -1661,7 +1661,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const deleteData = await deleteResponse.json().catch(() => ({}));
 
       if (!deleteResponse.ok) {
-        Alert.alert('Error', deleteData.error || 'No se pudo eliminar el estado');
+        Alert.alert('Error', deleteData.error || t('screens.config.errStatusDeleteFailed'));
         setMigrandoEstados(false);
         return;
       }
@@ -1675,8 +1675,8 @@ export default function ConfigScreen({ route, currentUser }) {
       await cargarEstadoRules();
 
       Alert.alert(
-        'Migración completada',
-        `Se migraron exitosamente ${migratedCount} pedido(s) a "${estadoDestinoMigracion.valor}" y se eliminó el estado.`,
+        t('screens.config.okMigrationCompleted'),
+        t('screens.config.okMigrationSuccess', { count: migratedCount, estado: estadoDestinoMigracion.valor }),
         [
           {
             text: 'OK',
@@ -1694,7 +1694,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const editarValor = async (item, categoria) => {
     // Prevent editing internal or protected roles (only 'administrador' protected)
     if (categoria === 'roles' && (item?.internal === true || slugifyEstado(String(item?.valor || '')) === 'administrador')) {
-      Alert.alert('Acción no permitida', 'No se puede editar este rol.');
+      Alert.alert('Acción no permitida', t('screens.config.errCantEditRole'));
       return;
     }
 
@@ -1728,7 +1728,7 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo editar el valor');
+        Alert.alert('Error', data.error || t('screens.config.errEditValueFailed'));
         return;
       }
       await cargarSettings();
@@ -1739,7 +1739,7 @@ export default function ConfigScreen({ route, currentUser }) {
         window.location.reload();
       }
     } catch (e) {
-      Alert.alert('Error', `No se pudo editar: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errEditValueFailed')}: ${e.message}`);
     } finally {
       setEditing({ category: null, id: null, text: '', color: '' });
     }
@@ -1766,13 +1766,13 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudieron guardar las reglas');
+        Alert.alert('Error', data.error || t('screens.config.errSaveRulesFailed'));
         return;
       }
-      Alert.alert('OK', 'Reglas de estados guardadas');
+      Alert.alert('OK', t('screens.config.okReglasGuardadas'));
       await cargarEstadoRules();
     } catch (e) {
-      Alert.alert('Error', `No se pudieron guardar las reglas: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errSaveRulesFailed')}: ${e.message}`);
     } finally {
       setGuardandoRules(false);
     }
@@ -1788,13 +1788,13 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo actualizar el rol activo');
+        Alert.alert('Error', data.error || t('screens.config.errUpdateActiveRole'));
         return;
       }
       setActiveRole((data.active_role || nextRole || 'root').toLowerCase());
-      Alert.alert('OK', `Rol activo actualizado: ${data.active_role_label || nextRole}`);
+      Alert.alert('OK', t('screens.config.okRolActualizado', { label: data.active_role_label || nextRole }));
     } catch (e) {
-      Alert.alert('Error', `No se pudo actualizar el rol activo: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errUpdateActiveRole')}: ${e.message}`);
     } finally {
       setGuardandoRole(false);
     }
@@ -1803,13 +1803,13 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const toggleRolePermission = async (roleKey, permissionKey) => {
     if (!puedeEditarRolesPermisos) {
-      Alert.alert('Permiso denegado', 'Solo administrador y root pueden editar reglas de permisos');
+      Alert.alert('Permiso denegado', t('screens.config.errPermisoDenegadoEditarReglas'));
       return;
     }
-    
+
     // El administrador nunca puede ser desactivado
     if (roleKey === 'administrador') {
-      Alert.alert('Permiso protegido', 'El rol administrador no puede perder permisos');
+      Alert.alert('Permiso protegido', t('screens.config.errAdminNoPerderPermisos'));
       return;
     }
     
@@ -1837,7 +1837,7 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudieron guardar los permisos');
+        Alert.alert('Error', data.error || t('screens.config.errSavePermsFailed'));
         // Revertir cambio local
         setRolePermissions(rolePermissions);
         return;
@@ -1858,7 +1858,7 @@ export default function ConfigScreen({ route, currentUser }) {
         setPuedeEditarRolesPermisosLocal(false);
       }
     } catch (e) {
-      Alert.alert('Error', `No se pudieron guardar los permisos: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errSavePermsFailed')}: ${e.message}`);
       // Revertir cambio local
       setRolePermissions(rolePermissions);
     } finally {
@@ -1870,17 +1870,17 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const guardarSessionTimeout = async () => {
     if (!puedeEditarSessionTimeout) {
-      Alert.alert('Permiso denegado', 'Solo administrador y root pueden editar este valor');
+      Alert.alert('Permiso denegado', t('screens.config.errPermisoDenegadoEditarValor'));
       return;
     }
 
     const minutes = Number(sessionTimeoutMinutes);
     if (!Number.isFinite(minutes) || !Number.isInteger(minutes)) {
-      Alert.alert('Error', 'El tiempo debe ser un número entero');
+      Alert.alert('Error', t('screens.config.errTimeInteger'));
       return;
     }
     if (minutes < sessionTimeoutMin || minutes > sessionTimeoutMax) {
-      Alert.alert('Error', `El tiempo debe estar entre ${sessionTimeoutMin} y ${sessionTimeoutMax} minutos`);
+      Alert.alert('Error', t('screens.config.errTimeRange', { min: sessionTimeoutMin, max: sessionTimeoutMax }));
       return;
     }
 
@@ -1893,13 +1893,13 @@ export default function ConfigScreen({ route, currentUser }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo guardar el tiempo de cierre de sesión');
+        Alert.alert('Error', data.error || t('screens.config.errSaveSessionTimeout'));
         return;
       }
       setSessionTimeoutMinutes(String(data.session_timeout_minutes || minutes));
-      Alert.alert('OK', 'Tiempo de cierre de sesión actualizado');
+      Alert.alert('OK', t('screens.config.okSessionTimeoutUpdated'));
     } catch (e) {
-      Alert.alert('Error', `No se pudo guardar el tiempo de cierre de sesión: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errSaveSessionTimeout')}: ${e.message}`);
     } finally {
       setGuardandoSessionTimeout(false);
     }
@@ -1913,7 +1913,7 @@ export default function ConfigScreen({ route, currentUser }) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.error || 'No se pudo reordenar');
+      throw new Error(data.error || t('screens.config.errReorderFailed'));
     }
   };
 
@@ -1930,7 +1930,7 @@ export default function ConfigScreen({ route, currentUser }) {
       await cargarSettings();
     } catch (e) {
       await cargarSettings();
-      Alert.alert('Error', `No se pudo reordenar estados: ${e.message}`);
+      Alert.alert('Error', `${t('screens.config.errReorderFailed')}: ${e.message}`);
     }
   };
 
@@ -1951,11 +1951,11 @@ export default function ConfigScreen({ route, currentUser }) {
             style={[styles.input, styles.submenuAddInput]}
             value={inputs[categoryKey]}
             onChangeText={(text) => setInputs((prev) => ({ ...prev, [categoryKey]: text }))}
-            placeholder={`Añadir ${categoryTitle.toLowerCase()}`}
+            placeholder={t('screens.config.addItemPlaceholder', { category: categoryTitle.toLowerCase() })}
             placeholderTextColor="#94A3B8"
           />
           <TouchableOpacity style={styles.addBtn} onPress={() => agregarValor(categoryKey)}>
-            <Text style={styles.addBtnText}>+ Añadir</Text>
+            <Text style={styles.addBtnText}>{t('screens.config.addBtn')}</Text>
           </TouchableOpacity>
         </View>
         {categoryKey === 'estados_pedido' && (
@@ -1976,14 +1976,14 @@ export default function ConfigScreen({ route, currentUser }) {
             {inputs.estados_pedido ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
                 <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newEstadoColor || generateColorFromHash(inputs.estados_pedido), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
-                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>Vista previa</Text>
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>{t('screens.config.preview')}</Text>
               </View>
             ) : null}
           </View>
         )}
 
         {items.length === 0 ? (
-          <Text style={styles.muted}>No hay valores configurados</Text>
+          <EmptyState variant="inline" icon="⚙️" title={t('screens.config.sinValores')} message={t('screens.config.noValoresConfigurados')} />
         ) : categoryKey === 'estados_pedido' ? (
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleEstadosDragEnd}>
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
@@ -2059,7 +2059,7 @@ export default function ConfigScreen({ route, currentUser }) {
           <Text style={styles.title}>{pageTitle}</Text>
           {showTopUsersPlus ? (
             <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
-              <Text style={styles.usersBtnPlusText}>+ Nuevo usuario</Text>
+              <Text style={styles.usersBtnPlusText}>{t('screens.config.newUserBtn')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 38 }} />
@@ -2070,7 +2070,7 @@ export default function ConfigScreen({ route, currentUser }) {
 
       {showUsuariosRoles && (
       <View style={styles.blockContainer}>
-        {showBlockTitles && <Text style={styles.groupTitle}>Usuarios</Text>}
+        {showBlockTitles && <Text style={styles.groupTitle}>{t('screens.config.usuariosTitle')}</Text>}
 
         {/* Active-role UI removed: app no longer depends on configurable active_role */}
 
@@ -2080,20 +2080,20 @@ export default function ConfigScreen({ route, currentUser }) {
                 style={styles.usersSearchInput}
                 value={busquedaUsuarios}
                 onChangeText={setBusquedaUsuarios}
-                placeholder="Buscar por nombre, email o rol..."
+                placeholder={t('screens.config.searchUsersPlaceholder')}
                 placeholderTextColor="#94A3B8"
               />
 
               {usuariosFiltrados.length === 0 ? (
-                <Text style={styles.muted}>No hay usuarios para mostrar</Text>
+                <EmptyState variant="inline" icon="👥" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
               ) : (
                 <>
                   <View style={styles.usersTableWrap}>
                     <View style={styles.usersTableHeader}>
-                      <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>Nombre</Text></View>
-                      <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>Email</Text></View>
-                      <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>Rol</Text></View>
-                      <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>Acciones</Text></View>
+                      <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
+                      <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>{t('screens.config.colEmail')}</Text></View>
+                      <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>{t('screens.config.colRol')}</Text></View>
+                      <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>{t('screens.config.colAcciones')}</Text></View>
                     </View>
                     <ScrollView>
                       {usuariosPaginados.map((usuario, idx) => (
@@ -2107,14 +2107,14 @@ export default function ConfigScreen({ route, currentUser }) {
                               onPress={() => iniciarEdicionUsuario(usuario)}
                               disabled={!puedeAdministrarUsuarios}
                             >
-                              <Text style={styles.usersActionBtnText}>Editar</Text>
+                              <Text style={styles.usersActionBtnText}>{t('screens.config.editUserBtn')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={[styles.usersActionBtn, styles.usersActionBtnDelete, (!puedeAdministrarUsuarios || deletingUserId === usuario.id) && { opacity: 0.5 }]}
                               onPress={() => confirmarEliminarUsuario(usuario)}
                               disabled={!puedeAdministrarUsuarios || deletingUserId === usuario.id}
                             >
-                              <Text style={[styles.usersActionBtnText, { color: '#DC2626' }]}>{deletingUserId === usuario.id ? 'Eliminando...' : 'Eliminar'}</Text>
+                              <Text style={[styles.usersActionBtnText, { color: '#DC2626' }]}>{deletingUserId === usuario.id ? t('screens.config.deletingUserBtn') : t('screens.config.deleteUserBtn')}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -2128,15 +2128,15 @@ export default function ConfigScreen({ route, currentUser }) {
                         onPress={() => setPaginaUsuarios((prev) => Math.max(1, prev - 1))}
                         disabled={paginaUsuarios === 1}
                       >
-                        <Text style={styles.usersPaginationBtnText}>Anterior</Text>
+                        <Text style={styles.usersPaginationBtnText}>{t('common.prev')}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.usersPaginationInfo}>Página {paginaUsuarios} de {totalPaginasUsuarios}</Text>
+                      <Text style={styles.usersPaginationInfo}>{t('common.pageOf', { current: paginaUsuarios, total: totalPaginasUsuarios })}</Text>
                       <TouchableOpacity
                         style={[styles.usersPaginationBtn, paginaUsuarios === totalPaginasUsuarios && styles.usersPaginationBtnDisabled]}
                         onPress={() => setPaginaUsuarios((prev) => Math.min(totalPaginasUsuarios, prev + 1))}
                         disabled={paginaUsuarios === totalPaginasUsuarios}
                       >
-                        <Text style={styles.usersPaginationBtnText}>Siguiente</Text>
+                        <Text style={styles.usersPaginationBtnText}>{t('common.next')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -2146,33 +2146,33 @@ export default function ConfigScreen({ route, currentUser }) {
               <Modal visible={modalUsuarioVisible} transparent animationType="fade" onRequestClose={cerrarModalUsuario}>
                 <View style={styles.usersModalBackdrop}>
                   <View style={styles.usersModalCard}>
-                    <Text style={styles.usersFormTitle}>{usuarioEditandoId ? 'Detalle / Editar usuario' : 'Nuevo usuario'}</Text>
+                    <Text style={styles.usersFormTitle}>{usuarioEditandoId ? t('screens.config.editUserTitle') : t('screens.config.newUserTitle')}</Text>
 
-                    <Text style={styles.usersFieldLabel}>Nombre *</Text>
+                    <Text style={styles.usersFieldLabel}>{t('screens.config.userNombreLabel')}</Text>
                     <TextInput
                       style={[styles.usersFieldInput, nombreUsuarioVacio && styles.usersFieldInputError]}
                       value={nuevoUsuarioNombre}
                       onChangeText={setNuevoUsuarioNombre}
-                      placeholder="Nombre usuario"
+                      placeholder={t('screens.config.userNombrePlaceholder')}
                       placeholderTextColor="#94A3B8"
                     />
-                    {nombreUsuarioVacio && <Text style={styles.errorText}>El nombre es obligatorio</Text>}
+                    {nombreUsuarioVacio && <Text style={styles.errorText}>{t('screens.config.userNombreRequired')}</Text>}
 
-                    <Text style={styles.usersFieldLabel}>Email *</Text>
+                    <Text style={styles.usersFieldLabel}>{t('screens.config.userEmailLabel')}</Text>
                     <TextInput
                       style={[styles.usersFieldInput, (emailUsuarioVacio || emailUsuarioInvalido) && styles.usersFieldInputError]}
                       value={nuevoUsuarioEmail}
                       onChangeText={setNuevoUsuarioEmail}
-                      placeholder="email@dominio.com"
+                      placeholder={t('screens.config.userEmailPlaceholder')}
                       autoCapitalize="none"
                       keyboardType="email-address"
                       placeholderTextColor="#94A3B8"
                     />
-                    {emailUsuarioVacio && <Text style={styles.errorText}>El email es obligatorio</Text>}
-                    {emailUsuarioInvalido && <Text style={styles.errorText}>Introduce un email válido (ej: usuario@dominio.com)</Text>}
+                    {emailUsuarioVacio && <Text style={styles.errorText}>{t('screens.config.userEmailRequired')}</Text>}
+                    {emailUsuarioInvalido && <Text style={styles.errorText}>{t('screens.config.userEmailInvalid')}</Text>}
 
                     <View style={styles.usersRoleRow}>
-                      <Text style={styles.usersRoleLabel}>Rol *</Text>
+                      <Text style={styles.usersRoleLabel}>{t('screens.config.userRolLabel')}</Text>
                       <View style={styles.chipList}>
                         {rolesDisponibles.map((role) => {
                           const active = role.key === nuevoUsuarioRol;
@@ -2191,10 +2191,10 @@ export default function ConfigScreen({ route, currentUser }) {
 
                     <View style={styles.usersFormActions}>
                       <TouchableOpacity style={styles.usersBtn} onPress={cerrarModalUsuario}>
-                        <Text style={styles.usersBtnText}>Cancelar</Text>
+                        <Text style={styles.usersBtnText}>{t('common.cancel')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={guardarUsuario}>
-                        <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{usuarioEditandoId ? 'Guardar cambios' : 'Guardar'}</Text>
+                        <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{t('common.save')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2203,23 +2203,23 @@ export default function ConfigScreen({ route, currentUser }) {
 
         <View>
           {renderCategoria('roles', 'Roles')}
-          <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>Los roles base Administrador y Root están protegidos.</Text>
+          <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>{t('screens.config.rolesProtegidos')}</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.rulesHeaderRow}>
-            <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 6, alignSelf: 'flex-start' }]}>Reglas de permisos por rol</Text>
+            <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 6, alignSelf: 'flex-start' }]}>{t('screens.config.permisosTitle')}</Text>
             <TouchableOpacity style={styles.rulesToggleBtn} onPress={toggleRoleRulesExpanded}>
-              <Text style={styles.rulesToggleBtnText}>{roleRulesExpanded ? 'Ocultar' : 'Expandir'}</Text>
+              <Text style={styles.rulesToggleBtnText}>{roleRulesExpanded ? t('screens.config.ocultar') : t('screens.config.expandir')}</Text>
             </TouchableOpacity>
           </View>
           {!puedeEditarRolesPermisos && (
-            <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>Permiso denegado: Solo administrador y root pueden editar reglas de permisos.</Text>
+            <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>{t('screens.config.errPermisoDenegadoEditarReglas')}</Text>
           )}
           {!roleRulesExpanded ? (
-            <Text style={styles.muted}>Pulsa "Expandir" para ver y editar reglas.</Text>
+            <Text style={styles.muted}>{t('screens.config.clickExpandir')}</Text>
           ) : (availableRoles || []).length === 0 ? (
-            <Text style={styles.muted}>Primero añade roles en "Roles".</Text>
+            <EmptyState variant="inline" icon="📌" title={t('screens.config.sinRoles')} message={t('screens.config.addRolesFirst')} />
           ) : (
             <>
               {ROLE_PERMISSION_CONFIG.map((perm) => {
@@ -2269,9 +2269,9 @@ export default function ConfigScreen({ route, currentUser }) {
 
       {section && (section === 'all' || section === 'funcionalidades') && (
         <View style={styles.blockContainer}>
-          {showBlockTitles && <Text style={styles.groupTitle}>Funcionalidades web</Text>}
+          {showBlockTitles && <Text style={styles.groupTitle}>{t('nav.pedidos')}</Text>}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Modo de creación</Text>
+            <Text style={styles.sectionTitle}>{t('screens.config.modoCreacionTitle')}</Text>
             <View style={styles.modeRow}>
               <View style={styles.modeButtonsWrap}>
                 <TouchableOpacity
@@ -2279,18 +2279,18 @@ export default function ConfigScreen({ route, currentUser }) {
                   onPress={() => actualizarModoCreacion('manual')}
                   disabled={guardandoModoCreacion}
                 >
-                  <Text style={[styles.modeBtnText, modoCreacion === 'manual' && styles.modeBtnTextActive]}>Manual</Text>
+                  <Text style={[styles.modeBtnText, modoCreacion === 'manual' && styles.modeBtnTextActive]}>{t('screens.config.manual')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeBtn, modoCreacion === 'automatico' && styles.modeBtnActive]}
                   onPress={() => actualizarModoCreacion('automatico')}
                   disabled={guardandoModoCreacion}
                 >
-                  <Text style={[styles.modeBtnText, modoCreacion === 'automatico' && styles.modeBtnTextActive]}>Automático</Text>
+                  <Text style={[styles.modeBtnText, modoCreacion === 'automatico' && styles.modeBtnTextActive]}>{t('screens.config.automatico')}</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.rulesToggleBtn} onPress={() => setApiExamplesExpanded((v) => !v)}>
-                <Text style={styles.rulesToggleBtnText}>{apiExamplesExpanded ? 'Ocultar ejemplos API' : 'Ver ejemplos API'}</Text>
+                <Text style={styles.rulesToggleBtnText}>{apiExamplesExpanded ? t('screens.config.ocultarEjemplosApi') : t('screens.config.verEjemplosApi')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -2370,35 +2370,35 @@ export default function ConfigScreen({ route, currentUser }) {
             )}
           </View>
 
-          {renderCategoria('estados_pedido', 'Estados de pedido')}
+          {renderCategoria('estados_pedido', t('screens.config.estadosPedidoTitle'))}
         </View>
       )}
 
       {showCreditos && (
       <View style={styles.blockContainer}>
-        {showBlockTitles && <Text style={styles.groupTitle}>Créditos</Text>}
+        {showBlockTitles && <Text style={styles.groupTitle}>{t('screens.config.creditosTitle')}</Text>}
 
         <View style={styles.section}>
-          {!puedeAdministrarUsuarios && <Text style={styles.muted}>Tu rol no tiene permiso para gestionar recargas.</Text>}
+          {!puedeAdministrarUsuarios && <Text style={styles.muted}>{t('screens.config.sinPermisoCreditosMsg')}</Text>}
 
           <TextInput
             style={styles.usersSearchInput}
             value={busquedaUsuarios}
             onChangeText={setBusquedaUsuarios}
-            placeholder="Buscar por nombre, email o rol..."
+            placeholder={t('screens.config.searchUsersPlaceholder')}
             placeholderTextColor="#94A3B8"
           />
 
           {usuariosFiltrados.length === 0 ? (
-            <Text style={styles.muted}>No hay usuarios para mostrar</Text>
+            <EmptyState variant="inline" icon="👥" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
           ) : (
             <>
               <View style={styles.usersTableWrap}>
                 <View style={styles.usersTableHeader}>
-                  <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>Nombre</Text></View>
-                  <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>Email</Text></View>
-                  <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>Créditos</Text></View>
-                  <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>Acciones</Text></View>
+                  <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
+                  <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>{t('screens.config.colEmail')}</Text></View>
+                  <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>{t('screens.config.colCreditos')}</Text></View>
+                  <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>{t('screens.config.colAcciones')}</Text></View>
                 </View>
                 <ScrollView>
                   {usuariosPaginados.map((usuario, idx) => (
@@ -2412,7 +2412,7 @@ export default function ConfigScreen({ route, currentUser }) {
                           onPress={() => abrirModalRecarga(usuario)}
                           disabled={!puedeAdministrarUsuarios}
                         >
-                          <Text style={styles.usersActionBtnText}>Recargar</Text>
+                          <Text style={styles.usersActionBtnText}>{t('screens.config.recargarBtn')}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -2426,15 +2426,15 @@ export default function ConfigScreen({ route, currentUser }) {
                     onPress={() => setPaginaUsuarios((prev) => Math.max(1, prev - 1))}
                     disabled={paginaUsuarios === 1}
                   >
-                    <Text style={styles.usersPaginationBtnText}>Anterior</Text>
+                    <Text style={styles.usersPaginationBtnText}>{t('common.prev')}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.usersPaginationInfo}>Página {paginaUsuarios} de {totalPaginasUsuarios}</Text>
+                  <Text style={styles.usersPaginationInfo}>{t('common.pageOf', { current: paginaUsuarios, total: totalPaginasUsuarios })}</Text>
                   <TouchableOpacity
                     style={[styles.usersPaginationBtn, paginaUsuarios === totalPaginasUsuarios && styles.usersPaginationBtnDisabled]}
                     onPress={() => setPaginaUsuarios((prev) => Math.min(totalPaginasUsuarios, prev + 1))}
                     disabled={paginaUsuarios === totalPaginasUsuarios}
                   >
-                    <Text style={styles.usersPaginationBtnText}>Siguiente</Text>
+                    <Text style={styles.usersPaginationBtnText}>{t('common.next')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -2448,9 +2448,9 @@ export default function ConfigScreen({ route, currentUser }) {
 
       {showImpresion && (
       <View style={styles.blockContainer}>
-        {showBlockTitles && <Text style={styles.groupTitle}>Impresión</Text>}
-        {renderCategoria('acabados', 'Acabados / Post impresión')}
-        {renderCategoria('tintas_especiales', 'Tintas especiales')}
+        {showBlockTitles && <Text style={styles.groupTitle}>{t('screens.config.impresionTitle')}</Text>}
+        {renderCategoria('acabados', t('screens.config.acabadosTitle'))}
+        {renderCategoria('tintas_especiales', t('screens.config.tintasEspecialesTitle'))}
 
       </View>
       )}
@@ -2458,20 +2458,20 @@ export default function ConfigScreen({ route, currentUser }) {
       <Modal visible={modalRecargaVisible} transparent animationType="fade" onRequestClose={cerrarModalRecarga}>
         <View style={styles.usersModalBackdrop}>
           <View style={styles.usersModalCard}>
-            <Text style={styles.usersFormTitle}>Recargar créditos</Text>
-            <Text style={styles.muted}>Usuario: {recargaUsuario?.nombre || '-'} ({recargaUsuario?.email || '-'})</Text>
+            <Text style={styles.usersFormTitle}>{t('screens.config.recargarCreditosTitle')}</Text>
+            <Text style={styles.muted}>{t('screens.config.recargarUsuario', { nombre: recargaUsuario?.nombre || '-', email: recargaUsuario?.email || '-' })}</Text>
 
-            <Text style={styles.usersFieldLabel}>Créditos *</Text>
+            <Text style={styles.usersFieldLabel}>{t('screens.config.creditosLabel')}</Text>
             <TextInput
               style={styles.usersFieldInput}
               value={recargaCreditos}
               onChangeText={(text) => setRecargaCreditos(String(text || '').replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
-              placeholder="Ej: 50"
+              placeholder={t('screens.config.creditosEjemplo')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.usersFieldLabel}>Método de pago</Text>
+            <Text style={styles.usersFieldLabel}>{t('screens.config.metodoPagoLabel')}</Text>
             <View style={styles.chipList}>
               {(billingConfig.payment_methods || []).map((method) => {
                 const key = String(method?.key || '').toLowerCase();
@@ -2490,10 +2490,10 @@ export default function ConfigScreen({ route, currentUser }) {
 
             <View style={styles.usersFormActions}>
               <TouchableOpacity style={styles.usersBtn} onPress={cerrarModalRecarga} disabled={procesandoRecarga}>
-                <Text style={styles.usersBtnText}>Cancelar</Text>
+                <Text style={styles.usersBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={iniciarRecargaCheckout} disabled={procesandoRecarga}>
-                <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{procesandoRecarga ? 'Procesando...' : 'Ir al pago'}</Text>
+                <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{procesandoRecarga ? t('screens.config.procesandoBtn') : t('screens.config.irPagoBtn')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2503,14 +2503,14 @@ export default function ConfigScreen({ route, currentUser }) {
       <Modal visible={migrarEstadoModal} transparent animationType="fade" onRequestClose={() => setMigrarEstadoModal(false)}>
         <View style={styles.usersModalBackdrop}>
           <View style={styles.usersModalCard}>
-            <Text style={styles.usersFormTitle}>Migrar pedidos</Text>
+            <Text style={styles.usersFormTitle}>{t('screens.config.migrarTitle')}</Text>
             {estadoAMigrar && (
               <Text style={styles.muted}>
-                Se migrarán {estadoAMigrar.count} pedido(s) del estado "{estadoAMigrar.valor}" a otro estado.
+                {t('screens.config.migrarInfo', { count: estadoAMigrar.count, estado: estadoAMigrar.valor })}
               </Text>
             )}
 
-            <Text style={styles.usersFieldLabel}>Selecciona el estado destino *</Text>
+            <Text style={styles.usersFieldLabel}>{t('screens.config.migrarSelectDestino')}</Text>
             <ScrollView style={styles.estadoSelectContainer} nestedScrollEnabled>
               {(settings.estados_pedido || [])
                 .filter((estado) => estado.id !== estadoAMigrar?.id)
@@ -2545,7 +2545,7 @@ export default function ConfigScreen({ route, currentUser }) {
                 onPress={() => setMigrarEstadoModal(false)}
                 disabled={migrandoEstados}
               >
-                <Text style={styles.usersBtnText}>Cancelar</Text>
+                <Text style={styles.usersBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.usersBtn, styles.usersBtnPrimary]}
@@ -2553,7 +2553,7 @@ export default function ConfigScreen({ route, currentUser }) {
                 disabled={!estadoDestinoMigracion || migrandoEstados}
               >
                 <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>
-                  {migrandoEstados ? 'Migrando...' : 'Migrar y eliminar'}
+                  {migrandoEstados ? t('screens.config.migrandoBtn') : t('screens.config.migrarEliminarBtn')}
                 </Text>
               </TouchableOpacity>
             </View>

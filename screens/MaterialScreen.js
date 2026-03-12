@@ -9,8 +9,10 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import EmptyState from '../components/EmptyState';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 // Color palette for per-material chart bars
 const MATERIAL_COLORS = [
@@ -21,6 +23,7 @@ const MATERIAL_COLORS = [
 const API_BASE = 'http://localhost:8080';
 
 export default function MaterialScreen({ currentUser, navigation }) {
+  const { t } = useTranslation();
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('catalogo'); // 'catalogo' | 'stock' | 'historial'
 
@@ -265,7 +268,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
   const saveCatalogo = async () => {
     const nombre = catNombre.trim();
-    if (!nombre) return alert('El nombre del material es obligatorio.');
+    if (!nombre) return alert(t('screens.materiales.errNombreRequired'));
     const body = { nombre, fabricantes: catFabricantes };
     try {
       let resp;
@@ -279,16 +282,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
         });
       }
       const data = await resp.json();
-      if (!resp.ok) return alert(data.error || 'Error guardando material');
+      if (!resp.ok) return alert(data.error || t('screens.materiales.errGuardando'));
       setCatModal({ visible: false, editing: null });
       loadCatalogo();
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
   const deleteCatalogo = async (mat) => {
-    if (!window.confirm(`¿Eliminar el material "${mat.nombre}"?`)) return;
+    if (!window.confirm(t('screens.materiales.confirmDeleteMaterial', { nombre: mat.nombre }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/catalogo/${mat._id || mat.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -296,10 +299,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
       if (resp.ok) loadCatalogo();
       else {
         const d = await resp.json();
-        alert(d.error || 'Error eliminando');
+        alert(d.error || t('screens.materiales.errEliminar'));
       }
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
@@ -337,9 +340,9 @@ export default function MaterialScreen({ currentUser, navigation }) {
         const nombre = stockForm.material_nombre.trim();
         const ancho = parseFloat(stockForm.ancho_cm);
         const metros = parseFloat(stockForm.metros_total);
-        if (!nombre) return alert('El nombre del material es obligatorio');
-        if (isNaN(ancho) || ancho <= 0) return alert('Ancho inválido');
-        if (isNaN(metros) || metros <= 0) return alert('Metros debe ser > 0');
+        if (!nombre) return alert(t('screens.materiales.errNombreRequired2'));
+        if (isNaN(ancho) || ancho <= 0) return alert(t('screens.materiales.errAnchoInvalido'));
+        if (isNaN(metros) || metros <= 0) return alert(t('screens.materiales.errMetrosPositivos'));
         try {
           const resp = await fetch(`${API_BASE}/api/materiales/stock/${stockModal.editing._id || stockModal.editing.id}`, {
             method: 'PUT',
@@ -356,11 +359,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
             }),
           });
           const data = await resp.json();
-          if (!resp.ok) return alert(data.error || 'Error actualizando stock');
+          if (!resp.ok) return alert(data.error || t('screens.materiales.errActualizandoStock'));
           setStockModal({ visible: false, editing: null });
           loadStock();
         } catch (e) {
-          alert('Error de conexión');
+          alert(t('screens.materiales.errConexion'));
         }
       } else {
         // Consumed roll: only notas is editable
@@ -371,11 +374,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
             body: JSON.stringify({ notas: stockEditNotas }),
           });
           const data = await resp.json();
-          if (!resp.ok) return alert(data.error || 'Error actualizando stock');
+          if (!resp.ok) return alert(data.error || t('screens.materiales.errActualizandoStock'));
           setStockModal({ visible: false, editing: null });
           loadStock();
         } catch (e) {
-          alert('Error de conexión');
+          alert(t('screens.materiales.errConexion'));
         }
       }
     } else {
@@ -384,9 +387,9 @@ export default function MaterialScreen({ currentUser, navigation }) {
       const ancho = parseFloat(stockForm.ancho_cm);
       const metros = parseFloat(stockForm.metros_total);
       const cantidad = Math.max(1, Math.min(50, parseInt(stockForm.cantidad) || 1));
-      if (!nombre) return alert('El material es obligatorio');
-      if (isNaN(ancho) || ancho <= 0) return alert('Ancho inválido');
-      if (isNaN(metros) || metros <= 0) return alert('Metros debe ser > 0');
+      if (!nombre) return alert(t('screens.materiales.errMaterialRequired'));
+      if (isNaN(ancho) || ancho <= 0) return alert(t('screens.materiales.errAnchoInvalido'));
+      if (isNaN(metros) || metros <= 0) return alert(t('screens.materiales.errMetrosPositivos'));
       try {
         for (let i = 0; i < cantidad; i++) {
           const resp = await fetch(`${API_BASE}/api/materiales/stock`, {
@@ -403,18 +406,18 @@ export default function MaterialScreen({ currentUser, navigation }) {
             }),
           });
           const data = await resp.json();
-          if (!resp.ok) return alert(data.error || `Error creando material ${i + 1}`);
+          if (!resp.ok) return alert(data.error || t('screens.materiales.errConexion'));
         }
         setStockModal({ visible: false, editing: null });
         loadStock();
       } catch (e) {
-        alert('Error de conexión');
+        alert(t('screens.materiales.errConexion'));
       }
     }
   };
 
   const deleteStock = async (entry) => {
-    if (!window.confirm(`¿Eliminar esta entrada de stock (${entry.material_nombre} · ${entry.fabricante} · ${entry.ancho_cm} cm)?`)) return;
+    if (!window.confirm(t('screens.materiales.confirmDeleteStock', { nombre: entry.material_nombre, fabricante: entry.fabricante, ancho: entry.ancho_cm }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/stock/${entry._id || entry.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -422,10 +425,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
       if (resp.ok) loadStock();
       else {
         const d = await resp.json();
-        alert(d.error || 'Error eliminando');
+        alert(d.error || t('screens.materiales.errEliminar'));
       }
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
@@ -449,7 +452,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
   const saveProveedor = async () => {
     const nombre = provForm.nombre.trim();
-    if (!nombre) return alert('El nombre del proveedor es obligatorio');
+    if (!nombre) return alert(t('screens.materiales.errProveedorRequired'));
     try {
       let resp;
       if (provModal.editing) {
@@ -462,16 +465,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
         });
       }
       const data = await resp.json();
-      if (!resp.ok) return alert(data.error || 'Error guardando proveedor');
+      if (!resp.ok) return alert(data.error || t('screens.materiales.errGuardandoProveedor'));
       setProvModal({ visible: false, editing: null });
       loadProveedores();
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
   const deleteProveedor = async (prov) => {
-    if (!window.confirm(`¿Eliminar el proveedor "${prov.nombre}"?`)) return;
+    if (!window.confirm(t('screens.materiales.confirmDeleteProveedor', { nombre: prov.nombre }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/proveedores/${prov._id || prov.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -479,10 +482,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
       if (resp.ok) loadProveedores();
       else {
         const d = await resp.json();
-        alert(d.error || 'Error eliminando');
+        alert(d.error || t('screens.materiales.errEliminar'));
       }
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
@@ -492,11 +495,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
     const { stock_id, pedido_ref, ancho_trabajo_cm, largo_trabajo_m, crear_retal } = consumoForm;
     const ancho = parseFloat(ancho_trabajo_cm);
     const largo = parseFloat(largo_trabajo_m);
-    if (!stock_id) return alert('Selecciona una entrada de stock');
-    if (isNaN(ancho) || ancho <= 0) return alert('El ancho del trabajo debe ser > 0');
-    if (isNaN(largo) || largo <= 0) return alert('El largo del trabajo debe ser > 0');
+    if (!stock_id) return alert(t('screens.materiales.errSeleccionaStock'));
+    if (isNaN(ancho) || ancho <= 0) return alert(t('screens.materiales.errAnchoTrabajo'));
+    if (isNaN(largo) || largo <= 0) return alert(t('screens.materiales.errLargoTrabajo'));
     const entry = stock.find(e => (e._id || e.id) === stock_id);
-    if (entry && ancho > entry.ancho_cm) return alert(`El ancho (${ancho} cm) supera el del material (${entry.ancho_cm} cm)`);
+    if (entry && ancho > entry.ancho_cm) return alert(t('screens.materiales.errAnchoSuperaMaterial', { ancho, max: entry.ancho_cm }));
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/consumos`, {
         method: 'POST',
@@ -512,13 +515,13 @@ export default function MaterialScreen({ currentUser, navigation }) {
         }),
       });
       const data = await resp.json();
-      if (!resp.ok) return alert(data.error || 'Error registrando consumo');
+      if (!resp.ok) return alert(data.error || t('screens.materiales.errConsumo'));
       setConsumoModal({ visible: false });
       setConsumoForm({ stock_id: '', pedido_ref: '', ancho_trabajo_cm: '', largo_trabajo_m: '', crear_retal: false });
       loadStock();
       if (activeTab === 'historial') loadConsumos(1);
     } catch (e) {
-      alert('Error de conexión');
+      alert(t('screens.materiales.errConexion'));
     }
   };
 
@@ -549,18 +552,18 @@ export default function MaterialScreen({ currentUser, navigation }) {
     return (
       <ScrollView style={styles.tabContent}>
         <View style={styles.headerRow}>
-          <Text style={styles.sectionTitle}>Resumen de stock</Text>
+          <Text style={styles.sectionTitle}>{t('screens.materiales.tabResumen')}</Text>
           <TouchableOpacity style={styles.btnPrimary} onPress={() => setConsumoModal({ visible: true })}>
-            <Text style={styles.btnPrimaryText}>+ Registrar consumo</Text>
+            <Text style={styles.btnPrimaryText}>{t('screens.materiales.registrarConsumo')}</Text>
           </TouchableOpacity>
         </View>
 
-        {loadingStock && <Text style={styles.loadingText}>Cargando...</Text>}
+        {loadingStock && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
         {/* ── Material stock chart ──────────────────────── */}
         {chartData.length > 0 && Platform.OS === 'web' && (
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Metros por material</Text>
+            <Text style={styles.chartTitle}>{t('screens.materiales.metrosPorMaterial')}</Text>
             {chartData.map((entry) => {
               const total = entry.disponible + entry.consumido + entry.retales;
               if (total === 0) return null;
@@ -574,7 +577,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color, marginRight: 8 }} />
                       <Text style={{ fontWeight: '700', fontSize: 14, color: '#111827' }}>{entry.name}</Text>
                     </View>
-                    <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>{total.toFixed(0)} m total</Text>
+                    <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>{total.toFixed(0)} {t('screens.materiales.mTotal')}</Text>
                   </View>
                   <View style={{ height: 12, borderRadius: 6, backgroundColor: '#E9EDF2', overflow: 'hidden', flexDirection: 'row' }}>
                     {pctDisp > 0 && (
@@ -587,17 +590,17 @@ export default function MaterialScreen({ currentUser, navigation }) {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 7, gap: 14 }}>
                     <Text style={{ fontSize: 12, color: '#374151' }}>
                       <Text style={{ color, fontWeight: '700' }}>{entry.disponible.toFixed(0)} m</Text>
-                      {'  disponible'}
+                      {'  '}{t('screens.materiales.disponibleLabel')}
                     </Text>
                     {entry.retales > 0 && (
                       <Text style={{ fontSize: 12, color: '#374151' }}>
                         <Text style={{ color: '#F59E0B', fontWeight: '700' }}>{entry.retales.toFixed(0)} m</Text>
-                        {'  retales'}
+                        {'  '}{t('screens.materiales.retalesLabel')}
                       </Text>
                     )}
                     <Text style={{ fontSize: 12, color: '#374151' }}>
                       <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>{entry.consumido.toFixed(0)} m</Text>
-                      {'  consumido'}
+                      {'  '}{t('screens.materiales.consumidoLabel')}
                     </Text>
                   </View>
                 </View>
@@ -606,15 +609,15 @@ export default function MaterialScreen({ currentUser, navigation }) {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F2F5' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#1976D2', marginRight: 5 }} />
-                <Text style={{ fontSize: 11, color: '#6B7280' }}>Disponible</Text>
+                <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.disponibleCap')}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#FFB300', marginRight: 5 }} />
-                <Text style={{ fontSize: 11, color: '#6B7280' }}>Retales</Text>
+                <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.retalesCap')}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#E9EDF2', borderWidth: 1, borderColor: '#CBD5E0', marginRight: 5 }} />
-                <Text style={{ fontSize: 11, color: '#6B7280' }}>Consumido</Text>
+                <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.consumidoCap')}</Text>
               </View>
             </View>
           </View>
@@ -622,10 +625,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
         {/* ── Materiales activos ──────────────────────────────── */}
         <Text style={styles.resumenSectionHeader}>
-          Materiales activos ({materialesActivos.length})
+          {t('screens.materiales.materialesActivos', { count: materialesActivos.length })}
         </Text>
         {materialesActivos.length === 0 && !loadingStock && (
-          <Text style={styles.emptyText}>Sin materiales en stock.</Text>
+          <EmptyState variant="inline" icon="📦" title={t('screens.materiales.sinMateriales')} message={t('screens.materiales.noMateriales')} />
         )}
         {materialesActivos.map((entry, idx) => {
           const pct = entry.metros_total > 0 ? (entry.metros_disponibles / entry.metros_total) : 0;
@@ -662,10 +665,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
         {/* ── Retales ─────────────────────────────────────── */}
         <Text style={[styles.resumenSectionHeader, { marginTop: 20 }]}>
-          Retales disponibles ({retales.length})
+          {t('screens.materiales.retalesDisponibles', { count: retales.length })}
         </Text>
         {retales.length === 0 && (
-          <Text style={styles.emptyText}>Sin retales guardados.</Text>
+          <EmptyState variant="inline" icon="🧵" title={t('screens.materiales.sinRetales')} message={t('screens.materiales.noRetalesSaved')} />
         )}
         <View style={styles.retalesGrid}>
           {retales.map((entry, idx) => {
@@ -673,11 +676,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
             const color = stockColor(entry);
             return (
               <View key={entry._id || entry.id || idx} style={styles.retalCard}>
-                <View style={styles.retalBadge}><Text style={styles.retalBadgeText}>RETAL</Text></View>
+                <View style={styles.retalBadge}><Text style={styles.retalBadgeText}>{t('screens.materiales.retalBadge')}</Text></View>
                 <Text style={styles.retalMaterial}>{entry.material_nombre}</Text>
                 <Text style={styles.retalDimensions}>{entry.ancho_cm} cm × {entry.metros_disponibles?.toFixed(1)} m</Text>
                 {entry.retal_origen_pedido ? (
-                  <Text style={styles.retalOrigen}>Ped. {entry.retal_origen_pedido.slice(0, 8)}</Text>
+                  <Text style={styles.retalOrigen}>{t('screens.materiales.pedShort')} {entry.retal_origen_pedido.slice(0, 8)}</Text>
                 ) : null}
                 <View style={[styles.progressBarBg, { marginTop: 6 }]}>
                   <View style={[styles.progressBarFill, { width: `${pct}%`, backgroundColor: color }]} />
@@ -694,23 +697,23 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const renderCatalogoTab = () => (
     <ScrollView style={styles.tabContent}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Catálogo de Materiales</Text>
+        <Text style={styles.sectionTitle}>{t('screens.materiales.catalogoTitle')}</Text>
         <TouchableOpacity style={styles.btnPrimary} onPress={openCatCreate}>
-          <Text style={styles.btnPrimaryText}>+ Añadir material</Text>
+          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addMaterialBtn')}</Text>
         </TouchableOpacity>
       </View>
 
-      {loadingCatalogo && <Text style={styles.loadingText}>Cargando...</Text>}
+      {loadingCatalogo && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
-        <Text style={[styles.th, { flex: 2 }]}>Material</Text>
-        <Text style={[styles.th, { flex: 3 }]}>Fabricantes</Text>
-        <Text style={[styles.th, { width: 100 }]}>Acciones</Text>
+        <Text style={[styles.th, { flex: 2 }]}>{t('screens.materiales.colMaterial')}</Text>
+        <Text style={[styles.th, { flex: 3 }]}>{t('screens.materiales.colFabricantes')}</Text>
+        <Text style={[styles.th, { width: 100 }]}>{t('screens.materiales.colAcciones')}</Text>
       </View>
 
       {catalogo.length === 0 && !loadingCatalogo && (
-        <Text style={styles.emptyText}>No hay materiales configurados.</Text>
+        <EmptyState variant="inline" icon="🗂️" title={t('screens.materiales.sinCatalogoMateriales')} message={t('screens.materiales.noCatalogoMateriales')} />
       )}
 
       {catalogo.map((mat, matIdx) => (
@@ -722,7 +725,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
             <Text style={[styles.td, { flex: 2, fontWeight: '600' }]}>{mat.nombre}</Text>
             <Text style={[styles.td, { flex: 3, color: '#666' }]}>
               {(mat.fabricantes || []).length === 0
-                ? 'Sin fabricantes'
+                ? t('screens.materiales.sinFabricantes')
                 : (mat.fabricantes || []).map(f => f.nombre).join(', ')}
             </Text>
             <View style={[styles.tdActions, { width: 100 }]}>
@@ -739,14 +742,14 @@ export default function MaterialScreen({ currentUser, navigation }) {
           {expandedMat === mat._id && (
             <View style={styles.expandedRow}>
               {(mat.fabricantes || []).length === 0 ? (
-                <Text style={styles.expandedEmpty}>Sin fabricantes registrados. Edita el material para añadir.</Text>
+                <Text style={styles.expandedEmpty}>{t('screens.materiales.sinFabricantesMsg')}</Text>
               ) : (
                 (mat.fabricantes || []).map((fab, fabIdx) => (
                   <View key={fab.id || `fab-${matIdx}-${fabIdx}`} style={styles.fabRow}>
                     <Text style={styles.fabNombre}>{fab.nombre}</Text>
                     <View style={styles.anchosRow}>
                       {(fab.anchos_cm || []).length === 0
-                        ? <Text style={styles.anchosEmpty}>Sin anchos definidos</Text>
+                        ? <Text style={styles.anchosEmpty}>{t('screens.materiales.sinAnchosDefined')}</Text>
                         : (fab.anchos_cm || []).map((a, aIdx) => (
                             <View key={`${a}-${aIdx}`} style={styles.anchoChip}>
                               <Text style={styles.anchoChipText}>{a} cm</Text>
@@ -766,15 +769,15 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const renderStockTab = () => (
     <ScrollView style={styles.tabContent}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Stock de Materiales</Text>
+        <Text style={styles.sectionTitle}>{t('screens.materiales.stockTitle')}</Text>
         <TouchableOpacity style={styles.btnPrimary} onPress={openStockCreate}>
-          <Text style={styles.btnPrimaryText}>+ Añadir material</Text>
+          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addMaterialBtn')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Filter */}
       <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>Filtrar por material:</Text>
+        <Text style={styles.filterLabel}>{t('screens.materiales.filtrarPorMaterial')}</Text>
         <View style={styles.filterSelectWrap}>
           {Platform.OS === 'web' ? (
             <select
@@ -782,7 +785,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
               value={stockFilter}
               onChange={e => setStockFilter(e.target.value)}
             >
-              <option value="">Todos</option>
+              <option value="">{t('screens.materiales.todos')}</option>
               {catalogoNames.map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           ) : (
@@ -790,31 +793,31 @@ export default function MaterialScreen({ currentUser, navigation }) {
               style={styles.filterInput}
               value={stockFilter}
               onChangeText={setStockFilter}
-              placeholder="Nombre material..."
+              placeholder={t('screens.materiales.materialNamePlaceholder')}
               placeholderTextColor="#94A3B8"
             />
           )}
         </View>
       </View>
 
-      {loadingStock && <Text style={styles.loadingText}>Cargando...</Text>}
+      {loadingStock && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
-        <Text style={[styles.th, { flex: 2 }]}>Material</Text>
-        <Text style={[styles.th, { flex: 1.5 }]}>Fabricante</Text>
-        <Text style={[styles.th, { width: 70 }]}>Ancho</Text>
-        <Text style={[styles.th, { width: 65 }]}>g/m²</Text>
-        <Text style={[styles.th, { width: 80 }]}>Total (m)</Text>
-        <Text style={[styles.th, { width: 90 }]}>Disp. (m)</Text>
-        <Text style={[styles.th, { width: 40 }]}>%</Text>
-        <Text style={[styles.th, { flex: 1 }]}>Lote</Text>
-        <Text style={[styles.th, { width: 90 }]}>Entrada</Text>
-        <Text style={[styles.th, { width: 100 }]}>Acciones</Text>
+        <Text style={[styles.th, { flex: 2 }]}>{t('screens.materiales.colMaterial')}</Text>
+        <Text style={[styles.th, { flex: 1.5 }]}>{t('screens.materiales.colFabricante')}</Text>
+        <Text style={[styles.th, { width: 70 }]}>{t('screens.materiales.colAncho')}</Text>
+        <Text style={[styles.th, { width: 65 }]}>{t('screens.materiales.colGsm')}</Text>
+        <Text style={[styles.th, { width: 80 }]}>{t('screens.materiales.colTotalM')}</Text>
+        <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colDispM')}</Text>
+        <Text style={[styles.th, { width: 40 }]}>{t('screens.materiales.colPct')}</Text>
+        <Text style={[styles.th, { flex: 1 }]}>{t('screens.materiales.colLote')}</Text>
+        <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colEntrada')}</Text>
+        <Text style={[styles.th, { width: 100 }]}>{t('screens.materiales.colAcciones')}</Text>
       </View>
 
       {stock.length === 0 && !loadingStock && (
-        <Text style={styles.emptyText}>No hay entradas de stock. Añade un material para empezar.</Text>
+        <EmptyState variant="inline" icon="📦" title={t('screens.materiales.sinStockEntradas')} message={t('screens.materiales.addToStart')} />
       )}
 
       {stock.map((entry, idx) => {
@@ -852,22 +855,22 @@ export default function MaterialScreen({ currentUser, navigation }) {
     const totalPages = Math.max(1, Math.ceil(consumosTotal / 50));
     return (
       <ScrollView style={styles.tabContent}>
-        <Text style={styles.sectionTitle}>Historial de consumos</Text>
+        <Text style={styles.sectionTitle}>{t('screens.materiales.historialTitle')}</Text>
 
-        {loadingConsumos && <Text style={styles.loadingText}>Cargando...</Text>}
+        {loadingConsumos && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
         <View style={styles.tableHeader}>
-          <Text style={[styles.th, { width: 80 }]}>Pedido</Text>
-          <Text style={[styles.th, { flex: 2 }]}>Material</Text>
-          <Text style={[styles.th, { flex: 1.5 }]}>Fabricante</Text>
-          <Text style={[styles.th, { width: 70 }]}>Ancho</Text>
-          <Text style={[styles.th, { width: 90 }]}>Consumido</Text>
-          <Text style={[styles.th, { width: 90 }]}>Sobrante</Text>
-          <Text style={[styles.th, { width: 90 }]}>Fecha</Text>
+          <Text style={[styles.th, { width: 80 }]}>{t('screens.materiales.colPedido')}</Text>
+          <Text style={[styles.th, { flex: 2 }]}>{t('screens.materiales.colMaterial')}</Text>
+          <Text style={[styles.th, { flex: 1.5 }]}>{t('screens.materiales.colFabricante')}</Text>
+          <Text style={[styles.th, { width: 70 }]}>{t('screens.materiales.colAncho')}</Text>
+          <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colConsumido')}</Text>
+          <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colSobrante')}</Text>
+          <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colFecha')}</Text>
         </View>
 
         {consumos.length === 0 && !loadingConsumos && (
-          <Text style={styles.emptyText}>No hay consumos registrados.</Text>
+          <EmptyState variant="inline" icon="📊" title={t('screens.materiales.sinConsumos')} message={t('screens.materiales.noConsumos')} />
         )}
 
         {consumos.map((c, idx) => (
@@ -889,15 +892,15 @@ export default function MaterialScreen({ currentUser, navigation }) {
               disabled={consumosPage <= 1}
               onPress={() => loadConsumos(consumosPage - 1)}
             >
-              <Text style={styles.paginationBtnText}>← Anterior</Text>
+              <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
             </TouchableOpacity>
-            <Text style={styles.paginationInfo}>Página {consumosPage} de {totalPages}</Text>
+            <Text style={styles.paginationInfo}>{t('common.pageOf', { current: consumosPage, total: totalPages })}</Text>
             <TouchableOpacity
               style={[styles.paginationBtn, consumosPage >= totalPages && styles.paginationBtnDisabled]}
               disabled={consumosPage >= totalPages}
               onPress={() => loadConsumos(consumosPage + 1)}
             >
-              <Text style={styles.paginationBtnText}>Siguiente →</Text>
+              <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -908,16 +911,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const renderProveedoresTab = () => (
     <ScrollView style={styles.tabContent}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Proveedores</Text>
+        <Text style={styles.sectionTitle}>{t('screens.materiales.proveedoresTitle')}</Text>
         <TouchableOpacity style={styles.btnPrimary} onPress={openProvCreate}>
-          <Text style={styles.btnPrimaryText}>+ Añadir proveedor</Text>
+          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addProveedorBtn')}</Text>
         </TouchableOpacity>
       </View>
 
-      {loadingProveedores && <Text style={styles.loadingText}>Cargando...</Text>}
+      {loadingProveedores && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
       {proveedores.length === 0 && !loadingProveedores && (
-        <Text style={styles.emptyText}>No hay proveedores registrados.</Text>
+        <EmptyState variant="inline" icon="🏭" title={t('screens.materiales.sinProveedores')} message={t('screens.materiales.noProveedores')} />
       )}
 
       {proveedores.map((prov, idx) => (
@@ -925,7 +928,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
           <View style={styles.provCardMain}>
             <View style={{ flex: 1 }}>
               <Text style={styles.provCardNombre}>{prov.nombre}</Text>
-              {prov.contacto ? <Text style={styles.provCardMeta}>Contacto: {prov.contacto}</Text> : null}
+              {prov.contacto ? <Text style={styles.provCardMeta}>{t('screens.materiales.contactoLabel')} {prov.contacto}</Text> : null}
               <View style={styles.provCardRow}>
                 {prov.telefono ? <Text style={styles.provCardChip}>📞 {prov.telefono}</Text> : null}
                 {prov.email ? <Text style={styles.provCardChip}>✉ {prov.email}</Text> : null}
@@ -953,25 +956,25 @@ export default function MaterialScreen({ currentUser, navigation }) {
     <Modal visible={catModal.visible} transparent animationType="fade" onRequestClose={() => setCatModal({ visible: false, editing: null })}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>{catModal.editing ? 'Editar material' : 'Nuevo material'}</Text>
+          <Text style={styles.modalTitle}>{catModal.editing ? t('screens.materiales.editMaterialTitle') : t('screens.materiales.newMaterialTitle')}</Text>
 
-          <Text style={styles.fieldLabel}>Nombre del material *</Text>
+          <Text style={styles.fieldLabel}>{t('screens.materiales.nombreMaterialLabel')}</Text>
           <TextInput
             style={styles.fieldInput}
             value={catNombre}
             onChangeText={setCatNombre}
-            placeholder="Ej. Polipropileno"
+            placeholder={t('screens.materiales.nombreMaterialPlaceholder')}
             placeholderTextColor="#94A3B8"
             autoFocus
           />
 
-          <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Proveedores</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 14 }]}>{t('screens.materiales.fabricantesLabel')}</Text>
           {catFabricantes.map((fab, fabIdx) => (
             <View key={fab.id || `new-fab-${fabIdx}`} style={styles.fabEditRow}>
               <View style={styles.fabEditHeader}>
                 <Text style={styles.fabEditName}>{fab.nombre}</Text>
                 <TouchableOpacity onPress={() => removeFabricante(fab.id)}>
-                  <Text style={styles.removeText}>✕ Eliminar</Text>
+                  <Text style={styles.removeText}>{t('screens.materiales.deleteWidthBtn')}</Text>
                 </TouchableOpacity>
               </View>
               {/* Anchos */}
@@ -987,12 +990,12 @@ export default function MaterialScreen({ currentUser, navigation }) {
                   style={styles.anchoInput}
                   value={catAnchoInputs[fab.id] || ''}
                   onChangeText={v => setCatAnchoInputs(prev => ({ ...prev, [fab.id]: v }))}
-                  placeholder="Ancho cm"
+                  placeholder={t('screens.materiales.anchoCmPlaceholder')}
                   placeholderTextColor="#94A3B8"
                   keyboardType="decimal-pad"
                 />
                 <TouchableOpacity style={styles.btnSecondarySmall} onPress={() => addAncho(fab.id)}>
-                  <Text style={styles.btnSecondarySmallText}>+ Ancho</Text>
+                  <Text style={styles.btnSecondarySmallText}>{t('screens.materiales.addAnchoBtn')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1006,7 +1009,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 value={catFabInput}
                 onChange={e => setCatFabInput(e.target.value)}
               >
-                <option value="">Seleccionar proveedor...</option>
+                <option value="">{t('screens.materiales.selectProveedorPlaceholder')}</option>
                 {proveedores
                   .filter(p => !catFabricantes.some(f => f.nombre === p.nombre))
                   .map((p, i) => (
@@ -1018,24 +1021,24 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 style={[styles.anchoInput, { flex: 1 }]}
                 value={catFabInput}
                 onChangeText={setCatFabInput}
-                placeholder="Nombre proveedor"
+                placeholder={t('screens.materiales.nombreProvPlaceholder')}
                 placeholderTextColor="#94A3B8"
               />
             )}
             <TouchableOpacity style={styles.btnSecondarySmall} onPress={addFabricante}>
-              <Text style={styles.btnSecondarySmallText}>Añadir</Text>
+              <Text style={styles.btnSecondarySmallText}>{t('screens.materiales.addBtn')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btnSecondarySmall, { marginLeft: 6 }]} onPress={openProvCreate}>
-              <Text style={styles.btnSecondarySmallText}>+ Proveedor</Text>
+              <Text style={styles.btnSecondarySmallText}>{t('screens.materiales.addProveedorBtn2')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.modalActions}>
             <TouchableOpacity style={styles.btnCancel} onPress={() => setCatModal({ visible: false, editing: null })}>
-              <Text style={styles.btnCancelText}>Cancelar</Text>
+              <Text style={styles.btnCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.btnPrimary} onPress={saveCatalogo}>
-              <Text style={styles.btnPrimaryText}>Guardar</Text>
+              <Text style={styles.btnPrimaryText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1057,14 +1060,14 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
     const fullFormFields = (
       <>
-        <Text style={styles.fieldLabel}>Material *</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.colMaterial')}</Text>
         {Platform.OS === 'web' ? (
           <select
             style={styles.fieldSelect}
             value={stockForm.material_nombre}
             onChange={e => setStockForm(p => ({ ...p, material_nombre: e.target.value, fabricante: '' }))}
           >
-            <option value="">Seleccionar material...</option>
+            <option value="">{t('screens.materiales.selectMaterialPlaceholder')}</option>
             {catalogoNames.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
         ) : (
@@ -1072,19 +1075,19 @@ export default function MaterialScreen({ currentUser, navigation }) {
             style={styles.fieldInput}
             value={stockForm.material_nombre}
             onChangeText={v => setStockForm(p => ({ ...p, material_nombre: v }))}
-            placeholder="Nombre del material"
+            placeholder={t('screens.materiales.colMaterial')}
             placeholderTextColor="#94A3B8"
           />
         )}
 
-        <Text style={styles.fieldLabel}>Fabricante / Proveedor</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.fabricanteLabel')}</Text>
         {Platform.OS === 'web' && proveedores.length > 0 ? (
           <select
             style={styles.fieldSelect}
             value={stockForm.fabricante}
             onChange={e => setStockForm(p => ({ ...p, fabricante: e.target.value }))}
           >
-            <option value="">Sin especificar</option>
+            <option value="">{t('screens.materiales.sinEspecificar')}</option>
             {proveedores.map((p, i) => <option key={p._id || p.id || i} value={p.nombre}>{p.nombre}</option>)}
           </select>
         ) : Platform.OS === 'web' && fabriOptions.length > 0 ? (
@@ -1093,7 +1096,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
             value={stockForm.fabricante}
             onChange={e => setStockForm(p => ({ ...p, fabricante: e.target.value }))}
           >
-            <option value="">Sin especificar</option>
+            <option value="">{t('screens.materiales.sinEspecificar')}</option>
             {fabriOptions.map((f, fIdx) => <option key={f.id || f.nombre || fIdx} value={f.nombre}>{f.nombre}</option>)}
           </select>
         ) : (
@@ -1101,12 +1104,12 @@ export default function MaterialScreen({ currentUser, navigation }) {
             style={styles.fieldInput}
             value={stockForm.fabricante}
             onChangeText={v => setStockForm(p => ({ ...p, fabricante: v }))}
-            placeholder="Nombre del fabricante"
+            placeholder={t('screens.materiales.fabricanteLabel')}
             placeholderTextColor="#94A3B8"
           />
         )}
 
-        <Text style={styles.fieldLabel}>Ancho (cm) *</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.anchoLabel')}</Text>
         {Platform.OS === 'web' &&
           fabriOptions.length > 0 &&
           (catalogo.find(m => m.nombre === stockForm.material_nombre)?.fabricantes || [])
@@ -1116,7 +1119,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
             value={stockForm.ancho_cm}
             onChange={e => setStockForm(p => ({ ...p, ancho_cm: e.target.value }))}
           >
-            <option value="">Seleccionar ancho...</option>
+            <option value="">{t('screens.materiales.selectAnchoPlaceholder')}</option>
             {((catalogo.find(m => m.nombre === stockForm.material_nombre)?.fabricantes || [])
               .find(f => f.nombre === stockForm.fabricante)?.anchos_cm || [])
               .map((a, aIdx) => <option key={`${a}-${aIdx}`} value={a}>{a} cm</option>)}
@@ -1127,47 +1130,47 @@ export default function MaterialScreen({ currentUser, navigation }) {
             value={stockForm.ancho_cm}
             onChangeText={v => setStockForm(p => ({ ...p, ancho_cm: v }))}
             keyboardType="decimal-pad"
-            placeholder="Ej. 33"
+            placeholder={t('screens.materiales.anchoEjemplo')}
             placeholderTextColor="#94A3B8"
           />
         )}
 
-        <Text style={styles.fieldLabel}>Gramaje (g/m²)</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.gramajeLabel')}</Text>
         <TextInput
           style={styles.fieldInput}
           value={stockForm.gramaje}
           onChangeText={v => setStockForm(p => ({ ...p, gramaje: v }))}
           keyboardType="decimal-pad"
-          placeholder="Ej. 80"
+          placeholder={t('screens.materiales.gramajeEjemplo')}
           placeholderTextColor="#94A3B8"
         />
 
-        <Text style={styles.fieldLabel}>Metros totales *</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.metrosTotalesLabel')}</Text>
         <TextInput
           style={styles.fieldInput}
           value={stockForm.metros_total}
           onChangeText={v => setStockForm(p => ({ ...p, metros_total: v }))}
           keyboardType="decimal-pad"
-          placeholder="Ej. 5000"
+          placeholder={t('screens.materiales.metrosTotalesEjemplo')}
           placeholderTextColor="#94A3B8"
         />
 
-        <Text style={styles.fieldLabel}>Número de lote</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.loteLabel')}</Text>
         <TextInput
           style={styles.fieldInput}
           value={stockForm.numero_lote}
           onChangeText={v => setStockForm(p => ({ ...p, numero_lote: v }))}
-          placeholder="Ej. LOT-2026-001"
+          placeholder={t('screens.materiales.loteEjemplo')}
           placeholderTextColor="#94A3B8"
         />
 
-        <Text style={styles.fieldLabel}>Notas</Text>
+        <Text style={styles.fieldLabel}>{t('screens.materiales.notasLabel')}</Text>
         <TextInput
           style={[styles.fieldInput, { minHeight: 50 }]}
           value={stockForm.notas}
           onChangeText={v => setStockForm(p => ({ ...p, notas: v }))}
           multiline
-          placeholder="Observaciones..."
+          placeholder={t('screens.materiales.observacionesPlaceholder')}
           placeholderTextColor="#94A3B8"
         />
       </>
@@ -1178,7 +1181,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
-              {isEdit ? (isVirgin ? 'Editar material (sin consumo)' : 'Editar entrada de stock') : 'Añadir material al stock'}
+              {isEdit ? (isVirgin ? t('screens.materiales.editStockNoConsumo') : t('screens.materiales.editStockTitle')) : t('screens.materiales.addStockTitle')}
             </Text>
 
             {isEdit && !isVirgin ? (
@@ -1187,33 +1190,33 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 <Text style={styles.fieldLabel}>
                   {stockModal.editing?.material_nombre} · {stockModal.editing?.fabricante} · {stockModal.editing?.ancho_cm} cm
                 </Text>
-                <Text style={styles.fieldLabelSmall}>Lote: {stockModal.editing?.numero_lote || '—'}</Text>
+                <Text style={styles.fieldLabelSmall}>{t('screens.materiales.loteInfo')} {stockModal.editing?.numero_lote || '—'}</Text>
                 <View style={styles.stockInfoRow}>
                   <View style={styles.stockInfoItem}>
-                    <Text style={styles.stockInfoLabel}>Total (m)</Text>
+                    <Text style={styles.stockInfoLabel}>{t('screens.materiales.totalMetros')}</Text>
                     <Text style={styles.stockInfoValue}>{stockModal.editing?.metros_total?.toFixed(1)}</Text>
                   </View>
                   <View style={styles.stockInfoItem}>
-                    <Text style={styles.stockInfoLabel}>Disponible (m)</Text>
+                    <Text style={styles.stockInfoLabel}>{t('screens.materiales.disponibleMetros')}</Text>
                     <Text style={[styles.stockInfoValue, { color: stockColor(stockModal.editing || {}) }]}>
                       {stockModal.editing?.metros_disponibles?.toFixed(1)}
                     </Text>
                   </View>
                   <View style={styles.stockInfoItem}>
-                    <Text style={styles.stockInfoLabel}>Consumido (m)</Text>
+                    <Text style={styles.stockInfoLabel}>{t('screens.materiales.consumidoMetros')}</Text>
                     <Text style={styles.stockInfoValue}>
                       {((stockModal.editing?.metros_total || 0) - (stockModal.editing?.metros_disponibles || 0)).toFixed(1)}
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.stockInfoHint}>El stock disponible se actualiza automáticamente al registrar consumos en pedidos.</Text>
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Notas</Text>
+                <Text style={styles.stockInfoHint}>{t('screens.materiales.stockAutoInfo')}</Text>
+                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t('screens.materiales.notasLabel')}</Text>
                 <TextInput
                   style={[styles.fieldInput, { minHeight: 60 }]}
                   value={stockEditNotas}
                   onChangeText={setStockEditNotas}
                   multiline
-                  placeholder="Observaciones sobre este material..."
+                  placeholder={t('screens.materiales.observacionesMaterialPlaceholder')}
                   placeholderTextColor="#94A3B8"
                   autoFocus
                 />
@@ -1225,7 +1228,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 {/* Cantidad: only on create */}
                 {!isEdit && (
                   <View style={styles.cantidadRow}>
-                    <Text style={styles.cantidadLabel}>Cantidad de materiales iguales</Text>
+                    <Text style={styles.cantidadLabel}>{t('screens.materiales.cantidadLabel')}</Text>
                     <View style={styles.cantidadControls}>
                       <TouchableOpacity
                         style={styles.cantidadBtn}
@@ -1254,11 +1257,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.btnCancel} onPress={() => setStockModal({ visible: false, editing: null })}>
-                <Text style={styles.btnCancelText}>Cancelar</Text>
+                <Text style={styles.btnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnPrimary} onPress={saveStock}>
                 <Text style={styles.btnPrimaryText}>
-                  {!isEdit && cantidad > 1 ? `Añadir ${cantidad} materiales` : 'Guardar'}
+                  {!isEdit && cantidad > 1 ? t('screens.materiales.addMultipleBtn', { count: cantidad }) : t('common.save')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1286,16 +1289,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
       <Modal visible={consumoModal.visible} transparent animationType="fade" onRequestClose={() => setConsumoModal({ visible: false })}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Registrar consumo</Text>
+            <Text style={styles.modalTitle}>{t('screens.materiales.registrarConsumo')}</Text>
 
-            <Text style={styles.fieldLabel}>Material de stock *</Text>
+            <Text style={styles.fieldLabel}>{t('screens.materiales.stockMaterialLabel')}</Text>
             {Platform.OS === 'web' ? (
               <select
                 style={styles.fieldSelect}
                 value={consumoForm.stock_id}
                 onChange={e => setConsumoForm(p => ({ ...p, stock_id: e.target.value }))}
               >
-                <option value="">Seleccionar material...</option>
+                <option value="">{t('screens.materiales.selectMaterialPlaceholder')}</option>
                 {materialesActivos.map((e, i) => (
                   <option key={e._id || e.id || i} value={e._id || e.id}>
                     {e.material_nombre} · {e.fabricante || '—'} · {e.ancho_cm}cm{e.gramaje ? ` · ${e.gramaje}g/m²` : ''} · {e.metros_disponibles?.toFixed(0)}m disp.
@@ -1307,23 +1310,23 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 style={styles.fieldInput}
                 value={consumoForm.stock_id}
                 onChangeText={v => setConsumoForm(p => ({ ...p, stock_id: v }))}
-                placeholder="ID del stock"
+                placeholder={t('screens.materiales.stockMaterialLabel')}
                 placeholderTextColor="#94A3B8"
               />
             )}
 
-            <Text style={styles.fieldLabel}>Referencia pedido</Text>
+            <Text style={styles.fieldLabel}>{t('screens.materiales.referenciaPedidoLabel')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={consumoForm.pedido_ref}
               onChangeText={v => setConsumoForm(p => ({ ...p, pedido_ref: v }))}
-              placeholder="Ej. #2026-045 (opcional)"
+              placeholder={t('screens.materiales.referenciaPedidoEjemplo')}
               placeholderTextColor="#94A3B8"
             />
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Ancho trabajo (cm) *</Text>
+                <Text style={styles.fieldLabel}>{t('screens.materiales.anchoTrabajoLabel')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={consumoForm.ancho_trabajo_cm}
@@ -1334,13 +1337,13 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Largo trabajo (m) *</Text>
+                <Text style={styles.fieldLabel}>{t('screens.materiales.largoTrabajoLabel')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={consumoForm.largo_trabajo_m}
                   onChangeText={v => setConsumoForm(p => ({ ...p, largo_trabajo_m: v }))}
                   keyboardType="decimal-pad"
-                  placeholder="Ej. 10"
+                  placeholder={t('screens.materiales.largoTrabajoEjemplo')}
                   placeholderTextColor="#94A3B8"
                 />
               </View>
@@ -1351,13 +1354,13 @@ export default function MaterialScreen({ currentUser, navigation }) {
               <View style={styles.consumoPreview}>
                 <View style={styles.consumoPreviewRow}>
                   <View style={styles.consumoPreviewItem}>
-                    <Text style={styles.consumoPreviewLabel}>A descontar</Text>
+                    <Text style={styles.consumoPreviewLabel}>{t('screens.materiales.aDescontar')}</Text>
                     <Text style={[styles.consumoPreviewValue, { color: suficiente ? '#388E3C' : '#D32F2F' }]}>
                       {largo.toFixed(1)} m
                     </Text>
                   </View>
                   <View style={styles.consumoPreviewItem}>
-                    <Text style={styles.consumoPreviewLabel}>Aprovechamiento</Text>
+                    <Text style={styles.consumoPreviewLabel}>{t('screens.materiales.aprovechamiento')}</Text>
                     <Text style={[styles.consumoPreviewValue, {
                       color: aprovechamiento >= 70 ? '#388E3C' : aprovechamiento >= 40 ? '#F57C00' : '#D32F2F',
                     }]}>
@@ -1365,19 +1368,19 @@ export default function MaterialScreen({ currentUser, navigation }) {
                     </Text>
                   </View>
                   <View style={styles.consumoPreviewItem}>
-                    <Text style={styles.consumoPreviewLabel}>Sobrante ancho</Text>
+                    <Text style={styles.consumoPreviewLabel}>{t('screens.materiales.sobranteAncho')}</Text>
                     <Text style={styles.consumoPreviewValue}>{sobrante_cm.toFixed(0)} cm</Text>
                   </View>
                 </View>
                 {!suficiente && (
                   <Text style={styles.consumoPreviewWarning}>
-                    ⚠ Stock insuficiente: disponible {selEntry.metros_disponibles?.toFixed(1)} m
+                    ⚠ {t('screens.materiales.stockInsuficiente', { disponible: selEntry.metros_disponibles?.toFixed(1) })}
                   </Text>
                 )}
                 {showRetal && (
                   <View style={styles.consumoRetalToggle}>
                     <Text style={styles.consumoRetalLabel}>
-                      ¿Guardar retal ({sobrante_cm.toFixed(0)} cm × {largo.toFixed(1)} m)?
+                      {t('screens.materiales.guardarRetalPregunta', { sobrante: sobrante_cm.toFixed(0), largo: largo.toFixed(1) })}
                     </Text>
                     {Platform.OS === 'web' ? (
                       <input
@@ -1400,10 +1403,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.btnCancel} onPress={() => setConsumoModal({ visible: false })}>
-                <Text style={styles.btnCancelText}>Cancelar</Text>
+                <Text style={styles.btnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnPrimary} onPress={registrarConsumo}>
-                <Text style={styles.btnPrimaryText}>Registrar</Text>
+                <Text style={styles.btnPrimaryText}>{t('screens.materiales.registrarBtn')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1419,30 +1422,30 @@ export default function MaterialScreen({ currentUser, navigation }) {
     <Modal visible={provModal.visible} transparent animationType="fade" onRequestClose={() => setProvModal({ visible: false, editing: null })}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>{provModal.editing ? 'Editar proveedor' : 'Nuevo proveedor'}</Text>
+          <Text style={styles.modalTitle}>{provModal.editing ? t('screens.materiales.editProveedorTitle') : t('screens.materiales.newProveedorTitle')}</Text>
 
-          <Text style={styles.fieldLabel}>Nombre *</Text>
+          <Text style={styles.fieldLabel}>{t('screens.materiales.nombreProveedorLabel')}</Text>
           <TextInput
             style={styles.fieldInput}
             value={provForm.nombre}
             onChangeText={v => setProvForm(p => ({ ...p, nombre: v }))}
-            placeholder="Ej. Antalis, Sihl, HP..."
+            placeholder={t('screens.materiales.nombreProveedorEjemplo')}
             placeholderTextColor="#94A3B8"
             autoFocus
           />
 
-          <Text style={styles.fieldLabel}>Persona de contacto</Text>
+          <Text style={styles.fieldLabel}>{t('screens.materiales.personaContactoLabel')}</Text>
           <TextInput
             style={styles.fieldInput}
             value={provForm.contacto}
             onChangeText={v => setProvForm(p => ({ ...p, contacto: v }))}
-            placeholder="Nombre del comercial"
+            placeholder={t('screens.materiales.personaContactoPlaceholder')}
             placeholderTextColor="#94A3B8"
           />
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>Teléfono</Text>
+              <Text style={styles.fieldLabel}>{t('screens.materiales.telefonoLabel')}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={provForm.telefono}
@@ -1453,7 +1456,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel}>{t('screens.materiales.emailLabel')}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={provForm.email}
@@ -1465,22 +1468,22 @@ export default function MaterialScreen({ currentUser, navigation }) {
             </View>
           </View>
 
-          <Text style={styles.fieldLabel}>Notas</Text>
+          <Text style={styles.fieldLabel}>{t('screens.materiales.notasLabel')}</Text>
           <TextInput
             style={[styles.fieldInput, { minHeight: 50 }]}
             value={provForm.notas}
             onChangeText={v => setProvForm(p => ({ ...p, notas: v }))}
             multiline
-            placeholder="Condiciones, plazos de entrega..."
+            placeholder={t('screens.materiales.condicionesPlaceholder')}
             placeholderTextColor="#94A3B8"
           />
 
           <View style={styles.modalActions}>
             <TouchableOpacity style={styles.btnCancel} onPress={() => setProvModal({ visible: false, editing: null })}>
-              <Text style={styles.btnCancelText}>Cancelar</Text>
+              <Text style={styles.btnCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.btnPrimary} onPress={saveProveedor}>
-              <Text style={styles.btnPrimaryText}>Guardar</Text>
+              <Text style={styles.btnPrimaryText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1496,7 +1499,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
       <View style={styles.pageHeader}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.pageTitle}>Materiales</Text>
+          <Text style={styles.pageTitle}>{t('nav.materiales')}</Text>
           <View style={{ width: 38 }} />
         </View>
       </View>
@@ -1510,11 +1513,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
             onPress={() => changeTab(tab)}
           >
             <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
-              {tab === 'resumen' ? 'Resumen'
-                : tab === 'catalogo' ? 'Catálogo'
-                : tab === 'stock' ? 'Stock'
-                : tab === 'proveedores' ? 'Proveedores'
-                : 'Historial'}
+              {tab === 'resumen' ? t('screens.materiales.tabResumen')
+                : tab === 'catalogo' ? t('screens.materiales.tabCatalogo')
+                : tab === 'stock' ? t('screens.materiales.tabStock')
+                : tab === 'proveedores' ? t('screens.materiales.tabProveedores')
+                : t('screens.materiales.tabHistorial')}
             </Text>
           </TouchableOpacity>
         ))}

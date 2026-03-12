@@ -1,12 +1,13 @@
 import React from 'react';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 
 export default function NuevoPedidoModal({ visible, onClose, onSave, initialValues, currentUser, puedeCrear }) {
-  try { console.log('NuevoPedidoModal render -> visible:', visible, 'initialValues id:', initialValues && (initialValues.id || initialValues.pedido_id || initialValues._id)); } catch(e) {}
+  const { t } = useTranslation();
   const handleCrearPedidoDesdeFormulario = async (formulario) => {
     if (!puedeCrear) {
-      Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear pedidos.');
+      Alert.alert(t('forms.permisoDenegado'), t('forms.sinPermisoPed'));
       return;
     }
     const nombreTrabajo = formulario.nombre || formulario.referencia || `Trabajo ${formulario.numero}`;
@@ -51,14 +52,14 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            Alert.alert('Error', data.error || 'Error actualizando pedido');
+            Alert.alert(t('common.error'), data.error || t('common.error'));
             return;
           }
-          Alert.alert('Éxito', 'Pedido actualizado correctamente');
+          Alert.alert(t('common.success'), t('common.success'));
           onSave({ ...formulario, pedido_id: editingPedidoId });
           onClose();
         } catch (err) {
-          Alert.alert('Error', 'Error de conexión: ' + err.message);
+          Alert.alert(t('common.error'), t('common.error') + ': ' + err.message);
         }
         return;
       }
@@ -78,13 +79,13 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       });
       const dataTrabajo = await resTrabajo.json();
       if (!resTrabajo.ok) {
-        Alert.alert('Error', dataTrabajo.error || 'Error creando trabajo');
+        Alert.alert(t('common.error'), dataTrabajo.error || t('common.error'));
         return;
       }
 
       const trabajo_id = dataTrabajo.trabajo_id || dataTrabajo.id || null;
       if (!trabajo_id) {
-        Alert.alert('Error', 'Respuesta inválida al crear trabajo');
+        Alert.alert(t('common.error'), t('common.error'));
         return;
       }
 
@@ -128,7 +129,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       });
       const dataPedido = await respPedido.json();
       if (!respPedido.ok) {
-        Alert.alert('Error', dataPedido.error || 'Error creando pedido');
+        Alert.alert(t('common.error'), dataPedido.error || t('common.error'));
         return;
       }
 
@@ -140,7 +141,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       });
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Error de conexión: ' + error.message);
+      Alert.alert(t('common.error'), t('common.error') + ': ' + error.message);
     }
   };
 
@@ -150,13 +151,13 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       onClose={onClose}
       onSave={handleCrearPedidoDesdeFormulario}
       initialValues={initialValues}
-      modalTitle="Nuevo Pedido"
-      submitLabel="Guardar Pedido"
-      fechaLabel="Fecha de creación"
+      modalTitle={t('forms.newPedido')}
+      submitLabel={t('forms.savePedido')}
+      fechaLabel={t('forms.fechaCreacion')}
       showFechaEntrega={true}
-      fechaEntregaLabel="Fecha de entrega"
+      fechaEntregaLabel={t('forms.fechaEntrega')}
       showMaquinaField={true}
-      maquinaLabel="Máquina"
+      maquinaLabel={t('forms.maquina')}
       currentUser={currentUser}
     />
   );

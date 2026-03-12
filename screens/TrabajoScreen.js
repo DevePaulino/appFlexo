@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
 import { PedidosContext } from '../PedidosContext';
@@ -535,6 +536,7 @@ const styles = StyleSheet.create({
 });
 
 export default function TrabajoScreen({ currentUser }) {
+  const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
   const ESTADO_FINALIZADO_COLOR = '#1F9D55';
 
@@ -664,11 +666,13 @@ export default function TrabajoScreen({ currentUser }) {
   };
 
   const cargarModoCreacion = () => {
-    fetch('http://localhost:8080/api/settings/modo-creacion')
+    const headers = {};
+    if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
+    fetch('http://localhost:8080/api/settings/modo-creacion', { headers })
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.modo) {
-          setModoCreacion(data.modo);
+        if (data && data.modo_creacion) {
+          setModoCreacion(data.modo_creacion);
         }
       })
       .catch(() => setModoCreacion('manual'));
@@ -814,11 +818,11 @@ export default function TrabajoScreen({ currentUser }) {
         cargarPedidos();
       } else if (res && res.status === 403) {
         console.error('Permiso denegado al cambiar estado');
-        showToast('No tienes permiso para cambiar estados', 'error');
+        showToast(t('screens.trabajos.sinPermisoCambiarEstado'), 'error');
       } else {
         const text = res ? await res.text().catch(()=>null) : null;
         console.error('Error cambiando estado:', res ? res.statusText : 'no response', text);
-        showToast('Error al cambiar estado', 'error');
+        showToast(t('screens.trabajos.errorCambiarEstado'), 'error');
       }
     } catch (e) {
       console.error('Error cambiando estado:', e);
@@ -1008,7 +1012,7 @@ export default function TrabajoScreen({ currentUser }) {
     const { pedido, authHdrs, selectedStockId, metros } = stockModal;
     const metrosNum = parseFloat(metros);
     if (!selectedStockId || isNaN(metrosNum) || metrosNum <= 0) {
-      showToast('Selecciona un material e indica los metros a consumir.', 'warning');
+      showToast(t('screens.trabajos.seleccionarMaterial'), 'warning');
       return;
     }
     try {
@@ -1062,7 +1066,7 @@ export default function TrabajoScreen({ currentUser }) {
 
   const handleAbrirSelectorProduccion = (trabajo) => {
     if (!puedeEnviarAProduccion(trabajo)) {
-      showToast('Este pedido no se puede enviar a producción', 'warning');
+      showToast(t('screens.trabajos.noEnviarProduccion'), 'warning');
       return;
     }
     setTrabajoParaProduccion(trabajo);
@@ -1127,14 +1131,14 @@ export default function TrabajoScreen({ currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Pedidos</Text>
+          <Text style={styles.headerTitle}>{t('nav.pedidos')}</Text>
           {modoCreacion !== 'automatico' ? (
             <Pressable
               style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
               onPress={() => puedeCrear && setModalVisible(true)}
               disabled={!puedeCrear}
             >
-              <Text style={styles.btnPlusText}>+ Nuevo pedido</Text>
+              <Text style={styles.btnPlusText}>{t('screens.trabajos.newBtn')}</Text>
             </Pressable>
           ) : (
             <View style={{ width: 38 }} />
@@ -1142,7 +1146,7 @@ export default function TrabajoScreen({ currentUser }) {
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
+          placeholder={t('common.searchAny')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
@@ -1150,14 +1154,14 @@ export default function TrabajoScreen({ currentUser }) {
       </View>
 
       <View style={styles.chartsContainer}>
-        <Text style={styles.chartsTitle}>Distribución por estado (activos)</Text>
+        <Text style={styles.chartsTitle}>{t('screens.trabajos.distribucion')}</Text>
         {(() => {
           const { conteos } = getCargaEstados();
           const total = conteos.reduce((sum, item) => sum + item.cantidad, 0);
           const activos = conteos.filter((item) => item.cantidad > 0);
 
           if (total === 0) {
-            return <Text style={styles.chartEmpty}>No hay pedidos activos para mostrar.</Text>;
+            return <EmptyState variant="inline" icon="📊" title={t('screens.trabajos.sinPedidosActivos')} message={t('screens.trabajos.sinPedidosMsg')} />;
           }
 
           return (
@@ -1201,10 +1205,10 @@ export default function TrabajoScreen({ currentUser }) {
               {estadosFiltro.length > 0 && (
                 <View style={styles.filterRow}>
                   <Text style={styles.filterText}>
-                    Filtro activo: {estadosFiltro.map((estado) => getStatusLabel(estado)).join(', ')}
+                    {t('screens.trabajos.filtroActivo', { estados: estadosFiltro.map((estado) => getStatusLabel(estado)).join(', ') })}
                   </Text>
                   <TouchableOpacity style={styles.filterClearBtn} onPress={() => setEstadosFiltro([])}>
-                    <Text style={styles.filterClearText}>Quitar filtro</Text>
+                    <Text style={styles.filterClearText}>{t('screens.trabajos.quitarFiltro')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1217,9 +1221,9 @@ export default function TrabajoScreen({ currentUser }) {
         <View style={styles.tableContainer}>
           <EmptyState
             icon="📋"
-            title={busqueda ? 'Sin resultados' : 'No hay pedidos'}
-            message={busqueda ? 'Prueba con otro término de búsqueda.' : 'Crea el primer pedido para empezar a trabajar.'}
-            action={!busqueda && puedeCrear ? 'Nuevo pedido' : undefined}
+            title={busqueda ? t('common.noResults') : t('screens.trabajos.noPedidos')}
+            message={busqueda ? t('common.noResultsMsg') : t('screens.trabajos.noPedidosMsg')}
+            action={!busqueda && puedeCrear ? t('screens.trabajos.newBtn') : undefined}
             onAction={!busqueda && puedeCrear ? () => setModalVisible(true) : undefined}
           />
         </View>
@@ -1227,25 +1231,25 @@ export default function TrabajoScreen({ currentUser }) {
         <ScrollView style={styles.tableContainer}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumeroPedido]}>
-              <Text style={styles.headerText}>Nº Pedido</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colNumeroPedido')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colNombre]}>
-              <Text style={styles.headerText}>Nombre</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colNombre')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colCliente]}>
-              <Text style={styles.headerText}>Cliente</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colCliente')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colReferencia]}>
-              <Text style={styles.headerText}>Referencia</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colReferencia')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colFase]}>
-              <Text style={styles.headerText}>Fase</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colFase')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colEstado]}>
-              <Text style={styles.headerText}>Estado</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colEstado')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>Producción</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colProduccion')}</Text>
             </View>
           </View>
           {pedidosPaginados.map((trabajo, idx) => {
@@ -1257,7 +1261,7 @@ export default function TrabajoScreen({ currentUser }) {
             if (estadoTrabajoActual === 'parado' || estadoTrabajoActual === 'cancelado') {
               textoBoton = estadoTrabajoActual; // mostrar el nombre del estado tal cual (parado/cancelado)
             } else {
-              textoBoton = esFinalizado ? 'Finalizado' : (estaEnColaVisual(trabajo) ? 'En cola' : 'Producc.');
+              textoBoton = esFinalizado ? t('screens.trabajos.finalizado') : (estaEnColaVisual(trabajo) ? t('screens.trabajos.enCola') : t('screens.trabajos.produccion'));
             }
 
             return (
@@ -1353,15 +1357,15 @@ export default function TrabajoScreen({ currentUser }) {
                 onPress={() => setPaginaPedidos((prev) => Math.max(1, prev - 1))}
                 disabled={paginaPedidos === 1}
               >
-                <Text style={styles.paginationBtnText}>Anterior</Text>
+                <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
               </TouchableOpacity>
-              <Text style={styles.paginationInfo}>Página {paginaPedidos} de {totalPaginasPedidos}</Text>
+              <Text style={styles.paginationInfo}>{t('common.pageOf', { current: paginaPedidos, total: totalPaginasPedidos })}</Text>
               <TouchableOpacity
                 style={[styles.paginationBtn, paginaPedidos === totalPaginasPedidos && styles.paginationBtnDisabled]}
                 onPress={() => setPaginaPedidos((prev) => Math.min(totalPaginasPedidos, prev + 1))}
                 disabled={paginaPedidos === totalPaginasPedidos}
               >
-                <Text style={styles.paginationBtnText}>Siguiente</Text>
+                <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1373,9 +1377,9 @@ export default function TrabajoScreen({ currentUser }) {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 10, width: '90%', maxWidth: 520, maxHeight: '80%', overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>Deducir stock de material</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{t('screens.trabajos.deducirStock')}</Text>
               <TouchableOpacity onPress={() => setStockModal({ visible: false, pedido: null, authHdrs: null, stockEntries: [], selectedStockId: '', metros: '' })}>
-                <Text style={{ fontSize: 14, color: '#6B7280', fontWeight: '600' }}>Omitir</Text>
+                <Text style={{ fontSize: 14, color: '#6B7280', fontWeight: '600' }}>{t('screens.trabajos.omitir')}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={{ padding: 16 }}>
@@ -1387,7 +1391,7 @@ export default function TrabajoScreen({ currentUser }) {
                   {stockModal.metros ? `  ·  Metros necesarios: ${stockModal.metros} m` : ''}
                 </Text>
               )}
-              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>Selecciona el material:</Text>
+              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>{t('screens.trabajos.seleccionaMaterial')}</Text>
               {stockModal.stockEntries.map((entry) => (
                 <TouchableOpacity
                   key={entry.id}
@@ -1411,7 +1415,7 @@ export default function TrabajoScreen({ currentUser }) {
                   </Text>
                 </TouchableOpacity>
               ))}
-              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>Metros a consumir:</Text>
+              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>{t('screens.trabajos.metrosConsumir')}</Text>
               <TextInput
                 value={stockModal.metros}
                 onChangeText={(t) => setStockModal((prev) => ({ ...prev, metros: t }))}
@@ -1423,7 +1427,7 @@ export default function TrabajoScreen({ currentUser }) {
                 onPress={handleConfirmarConsumo}
                 style={{ backgroundColor: '#1565C0', borderRadius: 6, paddingVertical: 10, alignItems: 'center' }}
               >
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Registrar y continuar</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>{t('screens.trabajos.registrarContinuar')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1458,7 +1462,7 @@ export default function TrabajoScreen({ currentUser }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Selecciona máquina de producción</Text>
+              <Text style={styles.modalTitle}>{t('screens.trabajos.enviarProduccion')}</Text>
               <TouchableOpacity onPress={() => { setModalMaquinasVisible(false); setTrabajoParaProduccion(null); }}>
                 <Text style={styles.modalCloseX}>✕</Text>
               </TouchableOpacity>

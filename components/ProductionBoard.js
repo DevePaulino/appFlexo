@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import TrabajoRow from './TrabajoRow';
+import EmptyState from './EmptyState';
 
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
   const [maquinaActual, setMaquinaActual] = useState(0);
@@ -219,7 +220,14 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   };
 
   if (!maquinas || maquinas.length === 0) {
-    return <Text style={{ color: '#94A3B8', padding: 16 }}>No hay máquinas configuradas</Text>;
+    return (
+      <EmptyState
+        variant="inline"
+        icon="⚙️"
+        title="Sin máquinas"
+        message="No hay máquinas configuradas"
+      />
+    );
   }
 
   const filtro = (searchText || '').trim().toLowerCase();
@@ -239,11 +247,12 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
 
   const rowList = trabajosFiltrados.length === 0
     ? (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          {filtro ? 'Sin resultados para la búsqueda' : 'No hay trabajos para el filtro seleccionado'}
-        </Text>
-      </View>
+      <EmptyState
+        variant="inline"
+        icon="📋"
+        title={filtro ? 'Sin resultados' : 'Sin trabajos'}
+        message={filtro ? 'Sin resultados para la búsqueda' : 'No hay trabajos para el filtro seleccionado'}
+      />
     )
     : trabajosFiltrados.map((item, index) => (
       <TrabajoRow

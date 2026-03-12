@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import { usePermission } from './usePermission';
+import EmptyState from '../components/EmptyState';
 
 function calcularSiguienteNumeroTroquel(lista) {
   let maxNumero = 0;
@@ -511,6 +513,7 @@ const styles = StyleSheet.create({
 
 export default function TroquelessScreen({ currentUser, navigation }) {
   const ITEMS_PER_PAGE = 100;
+  const { t } = useTranslation();
   const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
   const [paginaTroqueles, setPaginaTroqueles] = useState(1);
@@ -622,7 +625,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
   }, []);
 
   const mostrarPermisoDenegado = () => {
-    Alert.alert('Permiso denegado', 'Solo los roles admin y producción pueden editar troqueles.');
+    Alert.alert(t('forms.permisoDenegado'), t('screens.troqueles.permisoDenegado'));
   };
 
   const abrirNuevoTroquel = () => {
@@ -676,10 +679,10 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       if (existeDuplicadoEdicion) {
         if (Platform.OS === 'web') {
           if (typeof window !== 'undefined') {
-            window.alert('Ya existe un troquel con ese número.');
+            window.alert(t('screens.troqueles.dupNumber'));
           }
         } else {
-          Alert.alert('Número duplicado', 'Ya existe un troquel con ese número.');
+          Alert.alert(t('common.error'), t('screens.troqueles.dupNumber'));
         }
         return;
       }
@@ -714,10 +717,10 @@ export default function TroquelessScreen({ currentUser, navigation }) {
     if (existe) {
       if (Platform.OS === 'web') {
         if (typeof window !== 'undefined') {
-          window.alert('Ya existe un troquel con ese número.');
+          window.alert(t('screens.troqueles.dupNumber'));
         }
       } else {
-        Alert.alert('Número duplicado', 'Ya existe un troquel con ese número.');
+        Alert.alert(t('common.error'), t('screens.troqueles.dupNumber'));
       }
       return;
     }
@@ -749,7 +752,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       .filter(Boolean);
 
     if (lineas.length < 2) {
-      Alert.alert('Importación CSV', 'El archivo no contiene datos suficientes.');
+      Alert.alert(t('common.import'), t('screens.troqueles.importNoData'));
       return;
     }
 
@@ -811,24 +814,24 @@ export default function TroquelessScreen({ currentUser, navigation }) {
     const previewErrores = errores.slice(0, 3).join('\n');
     const detalleErrores = previewErrores ? `\n\n${previewErrores}${errores.length > 3 ? '\n...' : ''}` : '';
     Alert.alert(
-      'Importación finalizada',
-      `Importados: ${importadosOk}${resumenErrores}${resumenApi}${detalleErrores}`
+      t('screens.troqueles.importFinish'),
+      `${t('screens.troqueles.importedCount', { count: importadosOk })}${resumenErrores}${resumenApi}${detalleErrores}`
     );
   };
 
   const handleImportarCsv = () => {
     if (!puedeImportarTroqueles) {
-      Alert.alert('Permiso denegado', 'Solo administrador y root pueden importar troqueles.');
+      Alert.alert(t('forms.permisoDenegado'), t('screens.troqueles.importPermiso'));
       return;
     }
 
     if (Platform.OS !== 'web') {
-      Alert.alert('Importar CSV', 'La importación por archivo CSV está disponible en la versión web.');
+      Alert.alert(t('common.import'), t('screens.troqueles.importWebOnly'));
       return;
     }
 
     if (typeof document === 'undefined') {
-      Alert.alert('Importar CSV', 'No se pudo abrir el selector de archivos.');
+      Alert.alert(t('common.import'), t('screens.troqueles.importNoFile'));
       return;
     }
 
@@ -880,17 +883,17 @@ export default function TroquelessScreen({ currentUser, navigation }) {
     };
 
     if (Platform.OS === 'web') {
-      const ok = typeof window !== 'undefined' ? window.confirm(`¿Eliminar troquel ${troquel.numero}?`) : true;
+      const ok = typeof window !== 'undefined' ? window.confirm(t('screens.troqueles.deleteConfirm', { numero: troquel.numero })) : true;
       if (ok) ejecutar();
       return;
     }
 
     Alert.alert(
-      'Eliminar troquel',
-      `¿Seguro que quieres eliminar ${troquel.numero}?`,
+      t('screens.troqueles.deleteTitle'),
+      t('screens.troqueles.deleteConfirm', { numero: troquel.numero }),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: ejecutar },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: ejecutar },
       ]
     );
   };
@@ -900,28 +903,28 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       return (
         <View style={styles.cardDetails}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Ancho Motivo:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.anchoMotivo')}</Text>
             <Text style={styles.detailValue}>{troquel.anchoMotivo} mm</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Alto Motivo:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.altoMotivo')}</Text>
             <Text style={styles.detailValue}>{troquel.altoMotivo} mm</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Motivos Ancho:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.motivosAncho')}</Text>
             <Text style={styles.detailValue}>{troquel.motivosAncho}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Separación:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.separacion')}</Text>
             <Text style={styles.detailValue}>{troquel.separacionAncho} mm</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Valor Z:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.valorZ')}</Text>
             <Text style={styles.detailValue}>{troquel.valorZ} mm</Text>
           </View>
           {troquel.tipo === 'corbata' && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Distancia Sesgado:</Text>
+              <Text style={styles.detailLabel}>{t('screens.troqueles.sesgadoLabel')}</Text>
               <Text style={styles.detailValue}>{troquel.distanciaSesgado} mm</Text>
             </View>
           )}
@@ -931,7 +934,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       return (
         <View style={styles.cardDetails}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Valor Z:</Text>
+            <Text style={styles.detailLabel}>{t('screens.troqueles.valorZ')}</Text>
             <Text style={styles.detailValue}>{troquel.valorZ} mm</Text>
           </View>
         </View>
@@ -963,14 +966,14 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Troqueles</Text>
+          <Text style={styles.headerTitle}>{t('nav.troqueles')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {puedeImportarTroqueles && (
               <TouchableOpacity
                 style={[styles.btn, styles.btnImport, styles.btnImportTop]}
                 onPress={handleImportarCsv}
               >
-                <Text style={styles.btnImportTopText}>Importar</Text>
+                <Text style={styles.btnImportTopText}>{t('screens.troqueles.importBtn')}</Text>
               </TouchableOpacity>
             )}
             <View style={styles.btnPlusWrap}>
@@ -981,11 +984,11 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                 onHoverIn={handleHoverNuevoIn}
                 onHoverOut={handleHoverNuevoOut}
               >
-                <Text style={styles.btnPlusText}>+ Nuevo troquel</Text>
+                <Text style={styles.btnPlusText}>{t('screens.troqueles.newBtn')}</Text>
               </Pressable>
               {hoverNuevo && (
                 <View style={styles.hoverHint}>
-                  <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo troquel'}</Text>
+                  <Text style={styles.hoverHintText}>{!puedeCrear ? t('forms.permisoDenegado') : t('nav.troqueles')}</Text>
                 </View>
               )}
             </View>
@@ -993,7 +996,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
+          placeholder={t('common.searchAny')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
@@ -1003,9 +1006,13 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       <View style={styles.mainBlock}>
         {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
-            <Text style={styles.emptyText}>
-              {busqueda ? 'No se encontraron resultados' : 'No hay troqueles'}
-            </Text>
+            <EmptyState
+              icon="✂️"
+              title={busqueda ? t('common.noResults') : t('screens.troqueles.noTroqueles')}
+              message={busqueda ? t('common.noResultsMsg') : t('screens.troqueles.noItems')}
+              action={!busqueda && puedeCrear ? t('screens.troqueles.newBtn') : undefined}
+              onAction={!busqueda && puedeCrear ? abrirNuevoTroquel : undefined}
+            />
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
@@ -1013,34 +1020,34 @@ export default function TroquelessScreen({ currentUser, navigation }) {
               <View style={styles.tableContent}>
                 <View style={styles.tableHeader}>
                 <View style={[styles.tableCell, styles.colNumero]}>
-                  <Text style={styles.headerText}>Número</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colNumero')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colTipo]}>
-                  <Text style={styles.headerText}>Tipo</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colTipo')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colAncho]}>
-                  <Text style={styles.headerText}>Ancho</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colAncho')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colAlto]}>
-                  <Text style={styles.headerText}>Alto</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colAlto')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colMotivos]}>
-                  <Text style={styles.headerText}>Motivos</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colMotivos')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colSeparacion]}>
-                  <Text style={styles.headerText}>Separación</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colSeparacion')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colValorZ]}>
-                  <Text style={styles.headerText}>Valor Z</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colValorZ')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colSesgado]}>
-                  <Text style={styles.headerText}>Sesgado</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colSesgado')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
-                  <Text style={styles.headerText}>Estado</Text>
+                  <Text style={styles.headerText}>{t('screens.troqueles.colEstado')}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.colAcciones]}>
-                  <Text style={styles.headerText}>Acciones</Text>
+                  <Text style={styles.headerText}>{t('common.actions')}</Text>
                 </View>
                 </View>
                 {troquelesPaginados.map((troquele, idx) => (
@@ -1079,10 +1086,10 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                       style={styles.actionBtn}
                       onPress={() => (puedeEditarTroqueles ? abrirEdicionTroquel(troquele) : abrirDetalle(troquele))}
                     >
-                      <Text style={styles.actionBtnText}>Ver</Text>
+                      <Text style={styles.actionBtnText}>{t('common.view')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => confirmarEliminarTroquel(troquele)}>
-                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
+                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   </View>
                   </View>
@@ -1094,15 +1101,15 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                       onPress={() => setPaginaTroqueles((prev) => Math.max(1, prev - 1))}
                       disabled={paginaTroqueles === 1}
                     >
-                      <Text style={styles.paginationBtnText}>Anterior</Text>
+                      <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.paginationInfo}>Página {paginaTroqueles} de {totalPaginasTroqueles}</Text>
+                    <Text style={styles.paginationInfo}>{t('common.pageOf', { current: paginaTroqueles, total: totalPaginasTroqueles })}</Text>
                     <TouchableOpacity
                       style={[styles.paginationBtn, paginaTroqueles === totalPaginasTroqueles && styles.paginationBtnDisabled]}
                       onPress={() => setPaginaTroqueles((prev) => Math.min(totalPaginasTroqueles, prev + 1))}
                       disabled={paginaTroqueles === totalPaginasTroqueles}
                     >
-                      <Text style={styles.paginationBtnText}>Siguiente</Text>
+                      <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1128,7 +1135,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Detalle de troquel</Text>
+              <Text style={styles.modalTitle}>{t('screens.troqueles.detailTitle')}</Text>
               <TouchableOpacity onPress={cerrarDetalle}>
                 <Text style={styles.modalCloseX}>✕</Text>
               </TouchableOpacity>
@@ -1141,7 +1148,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                     {troquelSeleccionado.estado}
                   </Text>
                 </View>
-                <Text style={styles.cardText}>Tipo: {troquelSeleccionado.tipo}</Text>
+                <Text style={styles.cardText}>{t('screens.troqueles.tipoLabel')} {troquelSeleccionado.tipo}</Text>
                 {renderDetalles(troquelSeleccionado)}
               </>
             )}
@@ -1149,12 +1156,12 @@ export default function TroquelessScreen({ currentUser, navigation }) {
             <View style={styles.modalActions}>
               {troquelSeleccionado && puedeEditarTroqueles && (
                 <TouchableOpacity style={[styles.btn, styles.btnNew]} onPress={() => abrirEdicionTroquel(troquelSeleccionado)}>
-                  <Text style={[styles.btnText, styles.btnNewText]}>Editar</Text>
+                  <Text style={[styles.btnText, styles.btnNewText]}>{t('common.edit')}</Text>
                 </TouchableOpacity>
               )}
               {troquelSeleccionado && (
                 <TouchableOpacity style={[styles.btn, styles.deleteBtn]} onPress={() => confirmarEliminarTroquel(troquelSeleccionado)}>
-                  <Text style={[styles.btnText, { color: '#DC2626' }]}>Eliminar</Text>
+                  <Text style={[styles.btnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
 import { PedidosContext } from '../PedidosContext';
 import { usePermission } from './usePermission';
@@ -433,6 +434,7 @@ const styles = StyleSheet.create({
 });
 
 export default function PresupuestoScreen({ currentUser }) {
+  const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
@@ -453,11 +455,13 @@ export default function PresupuestoScreen({ currentUser }) {
   const { notificarNuevoPedido } = React.useContext(PedidosContext);
 
   const cargarModoCreacion = () => {
-    fetch('http://localhost:8080/api/settings/modo-creacion')
+    const headers = {};
+    if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
+    fetch('http://localhost:8080/api/settings/modo-creacion', { headers })
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.modo) {
-          setModoCreacion(data.modo);
+        if (data && data.modo_creacion) {
+          setModoCreacion(data.modo_creacion);
         }
       })
       .catch(() => setModoCreacion('manual'));
@@ -480,7 +484,6 @@ export default function PresupuestoScreen({ currentUser }) {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log('Presupuestos recibidos:', data);
         if (data && data.presupuestos) {
           setPresupuestos(data.presupuestos);
         } else {
@@ -583,9 +586,6 @@ export default function PresupuestoScreen({ currentUser }) {
       'X-Role': currentUser?.role || 'administrador'
     };
     
-    console.log('Iniciando guardado de presupuesto...', presupuesto);
-    console.log('Headers:', authHeaders);
-    
     // Primero crear el trabajo
     fetch('http://localhost:8080/api/trabajos', {
       method: 'POST',
@@ -593,11 +593,9 @@ export default function PresupuestoScreen({ currentUser }) {
       body: JSON.stringify(trabajo)
     })
       .then((res) => {
-        console.log('Respuesta de crear trabajo:', res.status, res.statusText);
         return res.json();
       })
       .then((data) => {
-        console.log('Datos de trabajo creado:', data);
         if (data.trabajo_id) {
           // Ahora guardar el presupuesto con todos los datos
           const presupuestoCompleto = {
@@ -628,25 +626,20 @@ export default function PresupuestoScreen({ currentUser }) {
             observaciones: presupuesto.observaciones
           };
           
-          console.log('Enviando presupuesto completo:', presupuestoCompleto);
-          
           fetch('http://localhost:8080/api/presupuestos', {
             method: 'POST',
             headers: authHeaders,
             body: JSON.stringify(presupuestoCompleto)
           })
             .then((res) => {
-              console.log('Respuesta de guardar presupuesto:', res.status, res.statusText);
               return res.json();
             })
             .then((respData) => {
-              console.log('Datos de respuesta:', respData);
               if (respData.error) {
                 console.error('Error guardando presupuesto:', respData.error);
                 showToast(respData.error || 'Error al guardar presupuesto', 'error');
               } else {
-                console.log('✅ Presupuesto guardado exitosamente');
-                showToast('Presupuesto guardado', 'success');
+                showToast(t('screens.presupuesto.guardado'), 'success');
                 cargarPresupuestos();
               }
             })
@@ -702,9 +695,15 @@ export default function PresupuestoScreen({ currentUser }) {
 
       // Actualizar presupuesto localmente
       const updated = presupuestos.map((p) =>
-        p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data?.pedido ? data.pedido.fecha_pedido : p.fecha_aprobacion } : p
+        p.id === presupuesto.id ? { ...p, aprobado: true, fecha_aprobacion: data?.pedido ? data.pedido.fecha_pedido : new Date().toISOString() } : p
       );
       setPresupuestos(updated);
+
+      // Modo automático: queda registrado como aceptado, el pedido llega por endpoint externo
+      if (data && data.modo === 'automatico') {
+        showToast('Presupuesto aceptado. El pedido se generará automáticamente.', 'success');
+        return;
+      }
 
       if (data && data.pedido) {
         // Comprobar si hay stock disponible para el material del presupuesto
@@ -739,7 +738,6 @@ export default function PresupuestoScreen({ currentUser }) {
               return; // esperar acción del usuario en el modal
             }
           } catch (e) {
-            console.warn('Error comprobando stock de material:', e);
           }
         }
 
@@ -748,7 +746,6 @@ export default function PresupuestoScreen({ currentUser }) {
           notificarNuevoPedido();
           navigation.navigate('Pedidos', { newPedido: data.pedido });
         } catch (e) {
-          console.warn('Navigation error al enviar newPedido:', e);
           notificarNuevoPedido();
           navigation.navigate('Pedidos');
         }
@@ -787,7 +784,6 @@ export default function PresupuestoScreen({ currentUser }) {
         return;
       }
     } catch (e) {
-      console.warn('Error registrando consumo de stock:', e);
     }
     const pedidoRef = stockModal.pedido;
     setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
@@ -914,8 +910,8 @@ export default function PresupuestoScreen({ currentUser }) {
 
   const formatearValorDetalle = (valor, clave = '') => {
     if (valor === null || valor === undefined || valor === '') return '-';
-    if (clave === 'aprobado') return valor ? 'Aceptado' : 'Pendiente';
-    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (clave === 'aprobado') return valor ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente');
+    if (typeof valor === 'boolean') return valor ? t('common.yes') : t('common.no');
     if (Array.isArray(valor)) return valor.length ? valor.join(', ') : '-';
     if (typeof valor === 'object') return JSON.stringify(valor);
     return String(valor);
@@ -952,22 +948,18 @@ export default function PresupuestoScreen({ currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Presupuestos</Text>
-          {modoCreacion !== 'automatico' ? (
-            <Pressable
-              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-              onPress={() => puedeCrear && setModalVisible(true)}
-              disabled={!puedeCrear}
-            >
-              <Text style={styles.btnPlusText}>+ Nuevo presupuesto</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 38 }} />
-          )}
+          <Text style={styles.headerTitle}>{t('nav.presupuestos')}</Text>
+          <Pressable
+            style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+            onPress={() => puedeCrear && setModalVisible(true)}
+            disabled={!puedeCrear}
+          >
+            <Text style={styles.btnPlusText}>{t('screens.presupuesto.newBtn')}</Text>
+          </Pressable>
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
+          placeholder={t('common.searchAny')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
@@ -976,7 +968,7 @@ export default function PresupuestoScreen({ currentUser }) {
 
       <View style={styles.content}>
         <View style={styles.chartsContainer}>
-          <Text style={styles.chartsTitle}>Estado de presupuestos</Text>
+          <Text style={styles.chartsTitle}>{t('screens.presupuesto.estadoTitle')}</Text>
           <View style={styles.chartTrack}>
             <TouchableOpacity
               style={[
@@ -1007,23 +999,23 @@ export default function PresupuestoScreen({ currentUser }) {
               onPress={() => toggleEstadoFiltro('aprobado')}
             >
               <View style={[styles.chartLegendDot, { backgroundColor: '#16A34A' }]} />
-              <Text style={styles.chartLegendText}>Aprobados: {aprobadosCount}</Text>
+              <Text style={styles.chartLegendText}>{t('screens.presupuesto.aprobados', { count: aprobadosCount })}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.chartLegendItem, estadosFiltro.includes('pendiente') && styles.chartLegendItemActive]}
               onPress={() => toggleEstadoFiltro('pendiente')}
             >
               <View style={[styles.chartLegendDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={styles.chartLegendText}>Pendientes: {pendientesCount}</Text>
+              <Text style={styles.chartLegendText}>{t('screens.presupuesto.pendientes', { count: pendientesCount })}</Text>
             </TouchableOpacity>
           </View>
           {estadosFiltro.length > 0 && (
             <View style={styles.filterRow}>
               <Text style={styles.filterText}>
-                Filtro activo: {estadosFiltro.map((estado) => estado === 'aprobado' ? 'Aprobados' : 'Pendientes').join(', ')}
+                {t('screens.presupuesto.filtroActivo', { estados: estadosFiltro.map((estado) => estado === 'aprobado' ? t('screens.presupuesto.estadoAprobadoFilter') : t('screens.presupuesto.estadoPendienteFilter')).join(', ') })}
               </Text>
               <TouchableOpacity style={styles.filterClearBtn} onPress={() => setEstadosFiltro([])}>
-                <Text style={styles.filterClearText}>Quitar filtro</Text>
+                <Text style={styles.filterClearText}>{t('screens.presupuesto.quitarFiltro')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1034,9 +1026,9 @@ export default function PresupuestoScreen({ currentUser }) {
         <View style={styles.tableContainer}>
           <EmptyState
             icon="📄"
-            title={busqueda ? 'Sin resultados' : 'No hay presupuestos'}
-            message={busqueda ? 'Prueba con otro término de búsqueda.' : 'Crea el primer presupuesto para empezar.'}
-            action={!busqueda && puedeCrear ? 'Nuevo presupuesto' : undefined}
+            title={busqueda ? t('common.noResults') : t('screens.presupuesto.noPresupuestos')}
+            message={busqueda ? t('common.noResultsMsg') : t('screens.presupuesto.noItems')}
+            action={!busqueda && puedeCrear ? t('screens.presupuesto.newBtn') : undefined}
             onAction={!busqueda && puedeCrear ? () => setModalVisible(true) : undefined}
           />
         </View>
@@ -1044,19 +1036,19 @@ export default function PresupuestoScreen({ currentUser }) {
         <ScrollView style={styles.tableContainer}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumero]}>
-              <Text style={styles.headerText}>Número</Text>
+              <Text style={styles.headerText}>{t('screens.presupuesto.colNumero')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colCliente]}>
-              <Text style={styles.headerText}>Cliente</Text>
+              <Text style={styles.headerText}>{t('screens.presupuesto.colCliente')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colReferencia]}>
-              <Text style={styles.headerText}>Referencia</Text>
+              <Text style={styles.headerText}>{t('screens.presupuesto.colReferencia')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colFecha]}>
-              <Text style={styles.headerText}>Fecha</Text>
+              <Text style={styles.headerText}>{t('screens.presupuesto.colFecha')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colEstado]}>
-              <Text style={styles.headerText}>Estado</Text>
+              <Text style={styles.headerText}>{t('screens.presupuesto.colEstado')}</Text>
             </View>
           </View>
           {presupuestosPaginados.map((presupuesto, idx) => (
@@ -1084,11 +1076,11 @@ export default function PresupuestoScreen({ currentUser }) {
                     ]}
                     numberOfLines={1}
                   >
-                    {presupuesto.aprobado ? 'Aceptado' : 'Pendiente'}
+                    {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
                   </Text>
                   {!presupuesto.aprobado ? (
                     <TouchableOpacity style={styles.actionBtn} onPress={() => handleAceptarPresupuesto(presupuesto)}>
-                      <Text style={styles.actionBtnText}>Aceptar</Text>
+                      <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -1102,15 +1094,15 @@ export default function PresupuestoScreen({ currentUser }) {
                 onPress={() => setPaginaPresupuestos((prev) => Math.max(1, prev - 1))}
                 disabled={paginaPresupuestos === 1}
               >
-                <Text style={styles.paginationBtnText}>Anterior</Text>
+                <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
               </TouchableOpacity>
-              <Text style={styles.paginationInfo}>Página {paginaPresupuestos} de {totalPaginasPresupuestos}</Text>
+              <Text style={styles.paginationInfo}>{t('common.pageOf', { current: paginaPresupuestos, total: totalPaginasPresupuestos })}</Text>
               <TouchableOpacity
                 style={[styles.paginationBtn, paginaPresupuestos === totalPaginasPresupuestos && styles.paginationBtnDisabled]}
                 onPress={() => setPaginaPresupuestos((prev) => Math.min(totalPaginasPresupuestos, prev + 1))}
                 disabled={paginaPresupuestos === totalPaginasPresupuestos}
               >
-                <Text style={styles.paginationBtnText}>Siguiente</Text>
+                <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1127,7 +1119,7 @@ export default function PresupuestoScreen({ currentUser }) {
           <View style={styles.detailCard}>
             <View style={styles.detailHeader}>
               <Text style={styles.detailTitle}>
-                Presupuesto {presupuestoSeleccionado?.numero_presupuesto || ''}
+                {t('nav.presupuestos')} {presupuestoSeleccionado?.numero_presupuesto || ''}
               </Text>
               <TouchableOpacity onPress={() => setDetalleVisible(false)}>
                 <Text style={styles.detailClose}>✕</Text>
@@ -1163,7 +1155,7 @@ export default function PresupuestoScreen({ currentUser }) {
         <View style={styles.detailOverlay}>
           <View style={[styles.detailCard, { maxWidth: 520, maxHeight: '80%' }]}>
             <View style={styles.detailHeader}>
-              <Text style={styles.detailTitle}>Deducir stock de material</Text>
+              <Text style={styles.detailTitle}>{t('screens.presupuesto.deducirStock')}</Text>
               <TouchableOpacity onPress={() => {
                 const pedidoRef = stockModal.pedido;
                 setStockModal({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '' });
@@ -1171,7 +1163,7 @@ export default function PresupuestoScreen({ currentUser }) {
                 try { navigation.navigate('Pedidos', { newPedido: pedidoRef }); }
                 catch (e) { navigation.navigate('Pedidos'); }
               }}>
-                <Text style={styles.detailClose}>Omitir</Text>
+                <Text style={styles.detailClose}>{t('screens.presupuesto.omitir')}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={{ padding: 16 }}>
@@ -1183,7 +1175,7 @@ export default function PresupuestoScreen({ currentUser }) {
                   {stockModal.metros ? `  ·  Metros necesarios: ${stockModal.metros} m` : ''}
                 </Text>
               )}
-              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>Selecciona el material:</Text>
+              <Text style={{ fontWeight: '600', marginBottom: 8, color: '#344054' }}>{t('screens.presupuesto.seleccionaMaterial')}</Text>
               {stockModal.stockEntries.map((entry) => (
                 <TouchableOpacity
                   key={entry.id}
@@ -1207,7 +1199,7 @@ export default function PresupuestoScreen({ currentUser }) {
                   </Text>
                 </TouchableOpacity>
               ))}
-              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>Metros a consumir:</Text>
+              <Text style={{ fontWeight: '600', marginTop: 12, marginBottom: 6, color: '#344054' }}>{t('screens.presupuesto.metrosConsumir')}</Text>
               <TextInput
                 value={stockModal.metros}
                 onChangeText={(t) => setStockModal((prev) => ({ ...prev, metros: t }))}
@@ -1225,7 +1217,7 @@ export default function PresupuestoScreen({ currentUser }) {
                   paddingVertical: 10, alignItems: 'center'
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Registrar y continuar</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>{t('screens.presupuesto.registrarContinuar')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1274,11 +1266,11 @@ export default function PresupuestoScreen({ currentUser }) {
         }}
         initialValues={editingInitialValues}
         readOnly={!!(editingInitialValues && editingInitialValues.aprobado)}
-        modalTitle={editingInitialValues ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
-        submitLabel={editingInitialValues ? 'Guardar Cambios' : 'Guardar Presupuesto'}
-        fechaLabel="Fecha de creación"
+        modalTitle={editingInitialValues ? t('screens.presupuesto.editTitle') : t('forms.newPresupuesto')}
+        submitLabel={editingInitialValues ? t('common.saveChanges') : t('forms.savePresupuesto')}
+        fechaLabel={t('forms.fechaCreacion')}
         showFechaEntrega={true}
-        fechaEntregaLabel="Fecha de entrega"
+        fechaEntregaLabel={t('forms.fechaEntrega')}
         showMaquinaField={false}
         currentUser={currentUser}
         puedeCrear={puedeCrear}

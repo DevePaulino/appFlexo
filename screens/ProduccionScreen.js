@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -467,6 +468,7 @@ const getRetrasoTextStyle = (dias) => {
 };
 
 export default function ProduccionScreen() {
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const [maquinas, setMaquinas] = useState([]);
@@ -587,7 +589,6 @@ export default function ProduccionScreen() {
     }
     setError(null);
     try {
-      console.log('Conectando a http://localhost:8080/api/maquinas...');
       const maquinasRes = await fetch('http://localhost:8080/api/maquinas');
       const maquinasData = await maquinasRes.json();
       setMaquinas(maquinasData.maquinas || []);
@@ -634,25 +635,10 @@ export default function ProduccionScreen() {
           totalsObj[maq.id] = trabajosMaqFiltrados.length;
         }
 
-        // DEBUG: log per-machine counts to help reconcile frontend vs backend
-        try {
-          console.log(`PROD_DEBUG machine id=${maq.id} name=${maq.nombre} filtered_len=${trabajosMaqFiltrados.length} api_total=${trabajosData && typeof trabajosData.total !== 'undefined' ? trabajosData.total : 'NA'} maquina_trabajos_en_cola=${typeof maq.trabajos_en_cola !== 'undefined' ? maq.trabajos_en_cola : 'NA'}`);
-        } catch (e) {
-          console.log('PROD_DEBUG logging failed', e);
-        }
       }
       setTrabajosPorMaquina(trabajosObj);
       setTrabajosTotals(totalsObj);
 
-      // DEBUG: small summary to help debugging mismatched counts
-      try {
-        const resumen = Object.fromEntries(Object.entries(trabajosObj).map(([k, v]) => [k, v.length]));
-        console.log('PROD_DEBUG summary counts per maquina (filtered lengths):', resumen);
-        console.log('PROD_DEBUG totalsObj (API reported totals):', totalsObj);
-        console.log('PROD_DEBUG maquinas list (id,nombre,trabajos_en_cola):', (maquinasData.maquinas || []).map(m => ({ id: m.id, nombre: m.nombre, trabajos_en_cola: m.trabajos_en_cola })));
-      } catch (e) {
-        console.log('PROD_DEBUG summary logging failed', e);
-      }
     } catch (e) {
       console.error('Error cargando datos:', e);
       setError(e.message);
@@ -820,7 +806,6 @@ export default function ProduccionScreen() {
         }
       }
     } catch (e) {
-      console.warn('No se pudo leer filtro persistente:', e);
     }
   }, []);
 
@@ -833,7 +818,6 @@ export default function ProduccionScreen() {
         localStorage.removeItem(LOCALSTORAGE_KEY);
       }
     } catch (e) {
-      console.warn('No se pudo guardar filtro persistente:', e);
     }
   }, [maquinasFiltroIds]);
 
@@ -866,8 +850,8 @@ export default function ProduccionScreen() {
       <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
         <EmptyState
           icon="⚙️"
-          title="Sin máquinas configuradas"
-          message="Añade al menos una máquina de impresión en Ajustes → Máquinas para empezar a planificar producción."
+          title={t('screens.maquinas.noMaquinas')}
+          message={t('screens.produccion.sinMaquinas')}
         />
       </View>
     );
@@ -878,12 +862,12 @@ export default function ProduccionScreen() {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Producción</Text>
+          <Text style={styles.headerTitle}>{t('nav.produccion')}</Text>
           <View style={{ width: 38 }} />
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar en producción por cualquier campo..."
+          placeholder={t('screens.produccion.buscarPlaceholder')}
           value={busquedaProduccion}
           onChangeText={setBusquedaProduccion}
           placeholderTextColor="#94A3B8"
@@ -892,12 +876,12 @@ export default function ProduccionScreen() {
       <ScrollView style={styles.content}>
         <View style={styles.chartsContainer}>
           <Text style={styles.chartsTitle}>
-            Carga de trabajo por máquina ({Object.values(trabajosPorMaquina || {}).reduce((sum, trabajos) => sum + (Array.isArray(trabajos) ? trabajos.length : 0), 0)} trabajos asignados)
+            {t('screens.produccion.cargaPorMaquina', { count: Object.values(trabajosPorMaquina || {}).reduce((sum, trabajos) => sum + (Array.isArray(trabajos) ? trabajos.length : 0), 0) })}
           </Text>
           {(() => {
             const { cargas } = getCargaPorMaquina();
             if (cargas.length === 0) {
-              return <Text style={styles.chartEmpty}>No hay máquinas para mostrar.</Text>;
+              return <Text style={styles.chartEmpty}>{t('screens.produccion.sinMaquinas')}</Text>;
             }
             const maxCarga = Math.max(...cargas.map((c) => c.cantidad), 1);
             return (
@@ -934,13 +918,13 @@ export default function ProduccionScreen() {
           {maquinasFiltroIds.length > 0 && (
             <View style={styles.filterRow}>
                 <Text style={styles.filterText}>
-                Filtro activo: {maquinas
+                {t('screens.produccion.filtroActivo', { estados: maquinas
                   .filter((m) => maquinasFiltroIds.includes(String(m.id)))
                   .map((m) => m.nombre)
-                  .join('')}
+                  .join('') })}
               </Text>
               <TouchableOpacity style={styles.filterClearBtn} onPress={() => setMaquinasFiltroIds([])}>
-                <Text style={styles.filterClearText}>Quitar filtro</Text>
+                <Text style={styles.filterClearText}>{t('screens.produccion.quitarFiltro')}</Text>
               </TouchableOpacity>
             </View>
           )}

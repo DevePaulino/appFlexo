@@ -287,6 +287,7 @@ PERMISSION_KEYS = [
     'edit_presupuestos',
     'edit_produccion',
     'eliminar_archivos',
+    'edit_modo_creacion',
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
@@ -300,6 +301,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': False,
         'edit_produccion': True,
         'eliminar_archivos': False,
+        'edit_modo_creacion': False,
     },
     'administrador': {
         'manage_app_settings': True,
@@ -312,6 +314,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': True,
         'edit_produccion': True,
         'eliminar_archivos': True,
+        'edit_modo_creacion': True,
     },
     'root': {
         'manage_app_settings': True,
@@ -324,6 +327,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': True,
         'edit_produccion': True,
         'eliminar_archivos': True,
+        'edit_modo_creacion': True,
     },
     # Department roles
     'comercial': {
@@ -337,6 +341,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': True,
         'edit_produccion': False,
         'eliminar_archivos': True,
+        'edit_modo_creacion': False,
     },
     'diseno': {
         'manage_app_settings': False,
@@ -349,6 +354,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': True,
         'edit_produccion': False,
         'eliminar_archivos': True,
+        'edit_modo_creacion': False,
     },
     'impresion': {
         'manage_app_settings': False,
@@ -361,6 +367,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': False,
         'edit_produccion': True,
         'eliminar_archivos': False,
+        'edit_modo_creacion': False,
     },
     'post-impresion': {
         'manage_app_settings': False,
@@ -373,6 +380,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': False,
         'edit_produccion': True,
         'eliminar_archivos': False,
+        'edit_modo_creacion': False,
     },
     'oficina': {
         'manage_app_settings': False,
@@ -385,6 +393,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_presupuestos': True,
         'edit_produccion': False,
         'eliminar_archivos': False,
+        'edit_modo_creacion': False,
     },
 }
 
@@ -2774,6 +2783,8 @@ def api_modo_creacion():
             return jsonify({'modo_creacion': valor}), 200
 
         # PUT
+        if not can_role_permission(request_user.get('rol', ''), 'edit_modo_creacion', empresa_id):
+            return jsonify({'error': 'No tienes permiso para cambiar el modo de creación de pedidos.'}), 403
         data = request.get_json() or {}
         modo = str(data.get('modo_creacion') or data.get('modo') or '').strip().lower()
         if modo not in ['manual', 'automatico']:
@@ -3878,13 +3889,21 @@ def save_presupuesto():
 
 @app.route('/api/presupuestos/aceptar/<trabajo_id>', methods=['POST'])
 def aceptar_presupuesto(trabajo_id):
-    """Acepta un presupuesto y crea un pedido"""
+    """Acepta un presupuesto. En modo automático solo lo marca como aceptado sin crear pedido."""
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
+
+        # Comprobar modo_creacion de la empresa
+        try:
+            col_general = get_empresa_collection('config_general', None)
+            modo_doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
+            modo_creacion = (modo_doc.get('valor') if modo_doc else 'manual') or 'manual'
+        except Exception:
+            modo_creacion = 'manual'
 
         # Buscar presupuesto por trabajo_id
         pres_col = get_empresa_collection('presupuestos', empresa_id)
@@ -3899,7 +3918,22 @@ def aceptar_presupuesto(trabajo_id):
         if not pres:
             return jsonify({'error': 'Presupuesto no encontrado para el trabajo_id indicado'}), 404
 
-        # Crear pedido usando datos enviados o los datos del presupuesto
+        # Modo automático: solo marcar como aceptado, sin crear pedido
+        if modo_creacion == 'automatico':
+            try:
+                pres_col.update_one(
+                    {'_id': pres.get('_id')},
+                    {'$set': {'aprobado': True, 'fecha_aprobacion': datetime.now().isoformat()}}
+                )
+            except Exception:
+                pass
+            try:
+                log_audit('aceptar_presupuesto_automatico', request_user, {'trabajo_id': trabajo_id})
+            except Exception:
+                pass
+            return jsonify({'success': True, 'modo': 'automatico', 'mensaje': 'Presupuesto aceptado. El pedido se generará automáticamente vía endpoint externo.'}), 200
+
+        # Modo manual: crear pedido usando datos enviados o los datos del presupuesto
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
         try:
             counters_col = mongo.db['counters']
@@ -4464,6 +4498,16 @@ def crear_pedido_manual():
             return auth_error
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
+        # Bloquear si el modo es automático
+        try:
+            col_general = get_empresa_collection('config_general', None)
+            modo_doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
+            modo_creacion = (modo_doc.get('valor') if modo_doc else 'manual') or 'manual'
+        except Exception:
+            modo_creacion = 'manual'
+        if modo_creacion == 'automatico':
+            return jsonify({'error': 'La creación manual de pedidos está deshabilitada en modo automático.'}), 403
+
         data = request.get_json()
         nombre = data.get('nombre')
         cliente = data.get('cliente')
@@ -4583,6 +4627,17 @@ def crear_pedido():
         if auth_error:
             return auth_error
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        # Bloquear creación manual de pedidos si el modo es automático
+        try:
+            col_general = get_empresa_collection('config_general', None)
+            modo_doc = col_general.find_one({'clave': 'modo_creacion', 'empresa_id': empresa_id})
+            modo_creacion = (modo_doc.get('valor') if modo_doc else 'manual') or 'manual'
+        except Exception:
+            modo_creacion = 'manual'
+        if modo_creacion == 'automatico':
+            return jsonify({'error': 'La creación manual de pedidos está deshabilitada en modo automático.'}), 403
+
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_pedido = data.get('numero_pedido')

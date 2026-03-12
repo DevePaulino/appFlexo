@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
+import EmptyState from '../components/EmptyState';
 
 const styles = StyleSheet.create({
   container: {
@@ -254,6 +256,7 @@ const styles = StyleSheet.create({
 export default function MachinasScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   const [maquinas, setMaquinas] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
@@ -326,23 +329,23 @@ export default function MachinasScreen({ currentUser }) {
     })
       .then((res) => res.json().then((d) => ({ ok: res.ok, d })))
       .then(({ ok, d }) => {
-        if (!ok) { alert(d?.error || 'No se pudo guardar la máquina'); return; }
+        if (!ok) { alert(d?.error || 'No se pudo guardar'); return; }
         cargarMaquinas();
       })
-      .catch(() => alert('No se pudo guardar la máquina'));
+      .catch(() => alert('No se pudo guardar'));
   };
 
-  const t = (v) => (v === null || v === undefined || v === '' ? '–' : String(v));
+  const fmt = (v) => (v === null || v === undefined || v === '' ? '–' : String(v));
 
   const handleEliminarMaquina = async (maquina) => {
     const confirmar = typeof globalThis.confirm === 'function'
-      ? globalThis.confirm(`¿Eliminar la máquina "${maquina.nombre}"?`)
+      ? globalThis.confirm(t('screens.maquinas.deleteConfirm', { nombre: maquina.nombre }))
       : true;
     if (!confirmar) return;
     try {
       const res = await fetch(`http://localhost:8080/api/maquinas/${maquina.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { alert(data?.error || 'No se pudo eliminar la máquina'); return; }
+      if (!res.ok) { alert(data?.error || t('common.error')); return; }
       if (modoEdicion && maquinaEditandoId === maquina.id) {
         setModalVisible(false);
         setModoEdicion(false);
@@ -350,7 +353,7 @@ export default function MachinasScreen({ currentUser }) {
       }
       cargarMaquinas();
     } catch {
-      alert('No se pudo eliminar la máquina');
+      alert(t('common.error'));
     }
   };
 
@@ -374,7 +377,7 @@ export default function MachinasScreen({ currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Máquinas</Text>
+          <Text style={styles.headerTitle}>{t('nav.maquinas')}</Text>
           <View style={styles.btnPlusWrap}>
             <Pressable
               style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
@@ -383,12 +386,12 @@ export default function MachinasScreen({ currentUser }) {
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
-              <Text style={styles.btnPlusText}>+ Nueva máquina</Text>
+              <Text style={styles.btnPlusText}>{t('screens.maquinas.newBtn')}</Text>
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
                 <Text style={styles.hoverHintText}>
-                  {!puedeCrear ? 'Permiso denegado' : 'Nueva máquina'}
+                  {!puedeCrear ? t('forms.permisoDenegado') : t('screens.maquinas.newMaquina')}
                 </Text>
               </View>
             )}
@@ -396,7 +399,7 @@ export default function MachinasScreen({ currentUser }) {
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
+          placeholder={t('common.searchAny')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
@@ -406,9 +409,13 @@ export default function MachinasScreen({ currentUser }) {
       <View style={styles.mainBlock}>
         {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
-            <Text style={styles.emptyText}>
-              {busqueda ? 'No se encontraron resultados' : 'No hay máquinas'}
-            </Text>
+            <EmptyState
+              icon="🖨️"
+              title={busqueda ? t('common.noResults') : t('screens.maquinas.noMaquinas')}
+              message={busqueda ? t('common.noResultsMsg') : t('screens.maquinas.noItems')}
+              action={!busqueda && puedeCrear ? t('screens.maquinas.newBtn') : undefined}
+              onAction={!busqueda && puedeCrear ? abrirNuevaMaquina : undefined}
+            />
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
@@ -416,28 +423,28 @@ export default function MachinasScreen({ currentUser }) {
             {/* ── Cabecera ── */}
             <View style={styles.tableHeader}>
               <View style={[styles.tableCell, styles.colNombre]}>
-                <Text style={styles.headerText}>Máquina</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colMaquina')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colColores]}>
-                <Text style={styles.headerText}>Col.</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colColores')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colAnchos]}>
-                <Text style={styles.headerText}>Mat / Imp</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colMatImp')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colRep]}>
-                <Text style={styles.headerText}>Repetición</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colRepeticion')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colPlancha]}>
-                <Text style={styles.headerText}>Plancha</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colPlancha')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colVeloc]}>
-                <Text style={styles.headerText}>Velocidad</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colVelocidad')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colCola]}>
-                <Text style={styles.headerText}>Cola</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colCola')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colEstado]}>
-                <Text style={styles.headerText}>Estado</Text>
+                <Text style={styles.headerText}>{t('screens.maquinas.colEstado')}</Text>
               </View>
               <View style={[styles.tableCell, styles.colAcciones]} />
             </View>
@@ -461,38 +468,38 @@ export default function MachinasScreen({ currentUser }) {
 
                   {/* Colores */}
                   <View style={[styles.tableCell, styles.colColores]}>
-                    <Text style={styles.cellVal}>{t(maquina.numero_colores)}</Text>
+                    <Text style={styles.cellVal}>{fmt(maquina.numero_colores)}</Text>
                   </View>
 
                   {/* Anchos Mat / Imp */}
                   <View style={[styles.tableCell, styles.colAnchos]}>
                     <Text style={styles.cellVal} numberOfLines={1}>
-                      {t(maquina.ancho_max_material_mm)} mm
+                      {fmt(maquina.ancho_max_material_mm)} mm
                     </Text>
                     <Text style={styles.cellValMuted} numberOfLines={1}>
-                      {t(maquina.ancho_max_impresion_mm)} mm imp
+                      {fmt(maquina.ancho_max_impresion_mm)} mm imp
                     </Text>
                   </View>
 
                   {/* Repetición */}
                   <View style={[styles.tableCell, styles.colRep]}>
                     <Text style={styles.cellVal} numberOfLines={1}>
-                      {t(maquina.repeticion_min_mm)}–{t(maquina.repeticion_max_mm)} mm
+                      {fmt(maquina.repeticion_min_mm)}–{fmt(maquina.repeticion_max_mm)} mm
                     </Text>
                   </View>
 
                   {/* Plancha */}
                   <View style={[styles.tableCell, styles.colPlancha]}>
-                    <Text style={styles.cellVal}>{t(maquina.espesor_planchas_mm)} mm</Text>
+                    <Text style={styles.cellVal}>{fmt(maquina.espesor_planchas_mm)} mm</Text>
                   </View>
 
                   {/* Velocidad máq / imp */}
                   <View style={[styles.tableCell, styles.colVeloc]}>
                     <Text style={styles.cellVal} numberOfLines={1}>
-                      {t(maquina.velocidad_max_maquina_mmin)} m/min
+                      {fmt(maquina.velocidad_max_maquina_mmin)} m/min
                     </Text>
                     <Text style={styles.cellValMuted} numberOfLines={1}>
-                      {t(maquina.velocidad_max_impresion_mmin)} imp
+                      {fmt(maquina.velocidad_max_impresion_mmin)} imp
                     </Text>
                   </View>
 
@@ -506,7 +513,7 @@ export default function MachinasScreen({ currentUser }) {
                       }
                     >
                       <Text style={[styles.colaText, maquina.trabajos_en_cola > 0 && styles.colaLink]}>
-                        {t(maquina.trabajos_en_cola || 0)}
+                        {fmt(maquina.trabajos_en_cola || 0)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -526,7 +533,7 @@ export default function MachinasScreen({ currentUser }) {
                       style={styles.actionBtn}
                       onPress={() => abrirDetalleEdicion(maquina)}
                     >
-                      <Text style={styles.actionBtnText}>Ver</Text>
+                      <Text style={styles.actionBtnText}>{t('common.view')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -537,7 +544,7 @@ export default function MachinasScreen({ currentUser }) {
                       disabled={maquina.trabajos_en_cola > 0}
                       onPress={() => handleEliminarMaquina(maquina)}
                     >
-                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
+                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -551,17 +558,17 @@ export default function MachinasScreen({ currentUser }) {
                   onPress={() => setPaginaMaquinas((p) => Math.max(1, p - 1))}
                   disabled={paginaMaquinas === 1}
                 >
-                  <Text style={styles.paginationBtnText}>Anterior</Text>
+                  <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.paginationInfo}>
-                  Página {paginaMaquinas} de {totalPaginasMaquinas}
+                  {t('common.pageOf', { current: paginaMaquinas, total: totalPaginasMaquinas })}
                 </Text>
                 <TouchableOpacity
                   style={[styles.paginationBtn, paginaMaquinas === totalPaginasMaquinas && styles.paginationBtnDisabled]}
                   onPress={() => setPaginaMaquinas((p) => Math.min(totalPaginasMaquinas, p + 1))}
                   disabled={paginaMaquinas === totalPaginasMaquinas}
                 >
-                  <Text style={styles.paginationBtnText}>Siguiente</Text>
+                  <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
                 </TouchableOpacity>
               </View>
             )}

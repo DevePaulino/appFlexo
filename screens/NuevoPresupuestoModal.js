@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
+import EmptyState from '../components/EmptyState';
 
 const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
@@ -448,6 +450,7 @@ export default function NuevoPresupuestoModal({
     puedeCrear = true,
 }) {
     const isReadOnly = !!readOnly;
+    const { t } = useTranslation();
     const getNowDateStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -856,24 +859,24 @@ export default function NuevoPresupuestoModal({
 
     const handleSubmit = () => {
         if (!puedeCrear) {
-            Alert.alert('Permiso denegado', 'Tu rol no tiene permiso para crear presupuestos.');
+            Alert.alert(t('forms.permisoDenegado'), t('forms.sinPermisoPres'));
             return;
         }
         setSubmitted(true);
         if (emailVacio || emailInvalido || cifInvalido) {
-            Alert.alert('Error', 'Email vacío o inválido, o CIF inválido. Revisa los campos.');
+            Alert.alert(t('common.error'), t('forms.errorEmailOrCif'));
             return;
         }
 
         const fechaEntregaValida = !showFechaEntrega || !!fechaEntrega;
         const maquinaValida = !showMaquinaField || !!maquina;
         if (fechaEntregaAntesCreacion) {
-            Alert.alert('Error', 'La fecha de entrega no puede ser anterior a la fecha de creación.');
+            Alert.alert(t('common.error'), t('forms.errorFechaEntrega'));
             return;
         }
 
         if (showMaquinaField && maquinaIncompatible) {
-            Alert.alert('Máquina incompatible', 'La máquina seleccionada no soporta el número de tintas elegidas.');
+            Alert.alert(t('forms.maquinaIncompatibleTitle'), t('forms.maquinaIncompatibleMsg'));
             return;
         }
 
@@ -881,17 +884,17 @@ export default function NuevoPresupuestoModal({
 
         const missing = [];
         // Allow non-saved clients: require cliente name but don't force clienteSeleccionadoId
-        if (!cliente) missing.push('Nombre cliente');
-        if (!referencia) missing.push('Referencia');
-        if (!material) missing.push('Material');
-        if (!acabadoValido) missing.push('Acabado');
-        if (!tirada) missing.push('Tirada');
-        if (!(selectedTintas.length > 0)) missing.push('Tintas');
-        if (!fechaEntregaValida) missing.push('Fecha de entrega válida');
-        if (!maquinaValida) missing.push('Máquina compatible');
+        if (!cliente) missing.push(t('forms.fieldCliente'));
+        if (!referencia) missing.push(t('forms.fieldReferencia'));
+        if (!material) missing.push(t('forms.material'));
+        if (!acabadoValido) missing.push(t('forms.fieldAcabado'));
+        if (!tirada) missing.push(t('forms.fieldTirada'));
+        if (!(selectedTintas.length > 0)) missing.push(t('forms.tintas'));
+        if (!fechaEntregaValida) missing.push(t('forms.fieldFechaEntrega'));
+        if (!maquinaValida) missing.push(t('forms.fieldMaquina'));
 
         if (missing.length > 0) {
-            Alert.alert('Campos incompletos', 'Faltan o son inválidos: ' + missing.join(', '));
+            Alert.alert(t('forms.missingFields'), t('forms.missingFieldsMsg') + ': ' + missing.join(', '));
             return;
         }
 
@@ -1013,21 +1016,21 @@ export default function NuevoPresupuestoModal({
                 <ScrollView style={styles.container}>
                     {/* DATOS GENERALES */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Datos Generales</Text>
+                        <Text style={styles.sectionTitle}>{t('forms.sectionGeneral')}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: 18 }}>
                             <View style={{ flex: 1 }}>
                                 <View style={{ flexDirection: 'row', gap: 16 }}>
                                     <View style={styles.col}>
-                                        <Text style={styles.label}>Cliente</Text>
+                                        <Text style={styles.label}>{t('forms.cliente')}</Text>
                                         <TouchableOpacity
                                             style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#F1F5F9' } : null]}
                                             onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
                                         >
                                             <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>
-                                                {cliente ? (razonSocial || cliente) : 'Seleccionar cliente guardado'}
+                                                {cliente ? (razonSocial || cliente) : t('forms.selectCliente')}
                                             </Text>
                                         </TouchableOpacity>
-                                        {!cliente && <Text style={styles.clientePickerHint}>Al seleccionar un cliente, se autocompletan los datos comerciales</Text>}
+                                        {!cliente && <Text style={styles.clientePickerHint}>{t('forms.clienteHint')}</Text>}
                                         {/* eliminado campo placeholder innecesario para aprovechar espacio */}
                                     </View>
                                     <View style={styles.col}>
@@ -1152,12 +1155,12 @@ export default function NuevoPresupuestoModal({
                                                 )}
                                             </View>
                                             {submitted && fechaEntregaAntesCreacion && (
-                                                <Text style={styles.errorText}>La fecha de entrega no puede ser anterior a la fecha de creación</Text>
+                                                <Text style={styles.errorText}>{t('forms.errorFechaEntrega')}</Text>
                                             )}
                                         </View>
                                     )}
                                     <View style={styles.col}>
-                                        <Text style={styles.label}>Comercial</Text>
+                                        <Text style={styles.label}>{t('forms.comercial')}</Text>
                                         {Platform.OS === 'web' ? (
                                             <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
                                                 <select
@@ -1166,7 +1169,7 @@ export default function NuevoPresupuestoModal({
                                                     disabled={isReadOnly}
                                                     style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 14, color: '#0F172A', outlineWidth: 0, WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
                                                 >
-                                                    <option value="">Seleccionar comercial</option>
+                                                    <option value="">{t('forms.selectComercial')}</option>
                                                     {usuariosComerciales.map((u) => (
                                                         <option key={u.id || u.usuario_id || u.nombre} value={u.nombre}>{u.nombre}</option>
                                                     ))}
@@ -1186,11 +1189,11 @@ export default function NuevoPresupuestoModal({
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
                                     <View style={styles.col}>
-                                        <Text style={styles.label}>Referencia / Descripción</Text>
+                                        <Text style={styles.label}>{t('forms.referencia')}</Text>
                                         <TextInput
                                             value={referencia}
                                             onChangeText={(t) => { if (isReadOnly) return; setReferencia(t); }}
-                                            placeholder="Trabajo/referencia"
+                                            placeholder={t('forms.refereciaPlaceholder')}
                                             placeholderTextColor="#94A3B8"
                                             style={styles.input(referencia, true, false, submitted)}
                                             editable={!isReadOnly}
@@ -1207,29 +1210,29 @@ export default function NuevoPresupuestoModal({
                                                 {[cif, personasContacto, email].filter(Boolean).join(' · ')}
                                             </Text>
                                             <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', marginLeft: 10 }}>
-                                                {clienteExpandido ? '▲ Menos' : '▼ Ver datos'}
+                                                {clienteExpandido ? t('forms.menosDatos') : t('forms.verDatos')}
                                             </Text>
                                         </TouchableOpacity>
                                         {clienteExpandido && (
                                             <View style={{ padding: 12, paddingTop: 8 }}>
                                                 <View style={{ flexDirection: 'row', gap: 16 }}>
                                                     <View style={styles.col}>
-                                                        <Text style={styles.label}>Razón social</Text>
+                                                        <Text style={styles.label}>{t('forms.razonSocial')}</Text>
                                                         <TextInput
                                                             value={razonSocial}
                                                             onChangeText={() => {}}
-                                                            placeholder="Razón social"
+                                                            placeholder={t('forms.razonSocialPlaceholder')}
                                                             placeholderTextColor="#94A3B8"
                                                             style={styles.input(razonSocial, false, false, submitted)}
                                                             editable={false}
                                                         />
                                                     </View>
                                                     <View style={styles.col}>
-                                                        <Text style={styles.label}>CIF</Text>
+                                                        <Text style={styles.label}>{t('forms.cif')}</Text>
                                                         <TextInput
                                                             value={cif}
                                                             onChangeText={() => {}}
-                                                            placeholder="CIF"
+                                                            placeholder={t('forms.cifPlaceholder')}
                                                             placeholderTextColor="#94A3B8"
                                                             style={[
                                                                 styles.input(cif, false, false, submitted),
@@ -1238,28 +1241,28 @@ export default function NuevoPresupuestoModal({
                                                             editable={false}
                                                         />
                                                         {submitted && cifInvalido && (
-                                                            <Text style={styles.errorText}>CIF no válido (formato esperado: A1234567B)</Text>
+                                                            <Text style={styles.errorText}>{t('forms.errorCif')}</Text>
                                                         )}
                                                     </View>
                                                 </View>
                                                 <View style={{ flexDirection: 'row', gap: 16 }}>
                                                     <View style={styles.col}>
-                                                        <Text style={styles.label}>Personas de contacto</Text>
+                                                        <Text style={styles.label}>{t('forms.personasContacto')}</Text>
                                                         <TextInput
                                                             value={personasContacto}
                                                             onChangeText={() => {}}
-                                                            placeholder="Nombre(s) de contacto"
+                                                            placeholder={t('forms.personasContactoPlaceholder')}
                                                             placeholderTextColor="#94A3B8"
                                                             style={styles.input(personasContacto, false, false, submitted)}
                                                             editable={false}
                                                         />
                                                     </View>
                                                     <View style={styles.col}>
-                                                        <Text style={styles.label}>Email</Text>
+                                                        <Text style={styles.label}>{t('forms.email')}</Text>
                                                         <TextInput
                                                             value={email}
                                                             onChangeText={() => {}}
-                                                            placeholder="email@cliente.com"
+                                                            placeholder={t('forms.emailPlaceholder')}
                                                             placeholderTextColor="#94A3B8"
                                                             style={[
                                                                 styles.input(email, false, false, submitted),
@@ -1270,10 +1273,10 @@ export default function NuevoPresupuestoModal({
                                                             editable={false}
                                                         />
                                                         {submitted && emailInvalido && (
-                                                            <Text style={styles.errorText}>Email no válido</Text>
+                                                            <Text style={styles.errorText}>{t('forms.errorEmail')}</Text>
                                                         )}
                                                         {submitted && emailVacio && (
-                                                            <Text style={styles.errorText}>El email es obligatorio</Text>
+                                                            <Text style={styles.errorText}>{t('forms.errorEmailRequired')}</Text>
                                                         )}
                                                     </View>
                                                 </View>
@@ -1288,7 +1291,7 @@ export default function NuevoPresupuestoModal({
 
                     {/* PRODUCTO */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Producto</Text>
+                        <Text style={styles.sectionTitle}>{t('forms.sectionProducto')}</Text>
                         <View style={[styles.row, { alignItems: 'flex-start' }]}>
                             {showMaquinaField && (
                             <View style={styles.col}>
@@ -1299,7 +1302,7 @@ export default function NuevoPresupuestoModal({
                                             onPress={() => setShowMaquinaCreate(true)}
                                             style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                         >
-                                            <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nueva máquina</Text>
+                                            <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevaMaquina')}</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -1326,13 +1329,13 @@ export default function NuevoPresupuestoModal({
                                                 cursor: 'pointer',
                                             }}
                                         >
-                                            <option value="">Seleccionar máquina activa</option>
+                                            <option value="">{t('forms.selectMaquina')}</option>
                                             {maquinasActivas.map((itemMaquina) => (
                                                 <option
                                                     key={itemMaquina.id}
                                                     value={itemMaquina.nombre}
                                                 >
-                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} colores)${!puedeSeleccionarMaquina(itemMaquina) ? ' ⚠ no compatible' : ''}`}
+                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} ${t('forms.colores')})${!puedeSeleccionarMaquina(itemMaquina) ? ` ⚠ ${t('forms.noCompatible')}` : ''}`}
                                                 </option>
                                             ))}
                                         </select>
@@ -1373,29 +1376,29 @@ export default function NuevoPresupuestoModal({
                                     </View>
                                 )}
                                 {submitted && !maquina && (
-                                    <Text style={styles.errorText}>Selecciona una máquina activa</Text>
+                                    <Text style={styles.errorText}>{t('forms.errorMaquinaRequired')}</Text>
                                 )}
                                 {submitted && maquinaIncompatible && (
                                     <Text style={styles.errorText}>
-                                        La máquina seleccionada no soporta las tintas marcadas ({numeroTintasSeleccionadas}).
+                                        {t('forms.errorMaquinaIncompatible')} ({numeroTintasSeleccionadas}).
                                     </Text>
                                 )}
                             </View>
                             )}
                         <View style={styles.col}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <Text style={styles.label}>Troquel</Text>
+                                <Text style={styles.label}>{t('forms.troquel')}</Text>
                                 {!isReadOnly && (
                                     <TouchableOpacity
                                         onPress={() => setShowTroquelCreate(true)}
                                         style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                     >
-                                        <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>+ Nuevo troquel</Text>
+                                        <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevoTroquel')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
                             {troquelesCat.length === 0 ? (
-                                <Text style={{ color: '#94A3B8', fontSize: 13 }}>No hay troqueles en el catálogo. Crea uno con el botón de arriba.</Text>
+                                <EmptyState variant="inline" icon="✂️" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
                             ) : Platform.OS === 'web' ? (
                                 <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                                     <select
@@ -1407,7 +1410,7 @@ export default function NuevoPresupuestoModal({
                                             handleTroquelSelect(found || null);
                                         }}
                                     >
-                                        <option value="">Sin troquel</option>
+                                        <option value="">{t('forms.sinTroquel')}</option>
                                         {troquelesCat.map((t, i) => (
                                             <option key={t._id || t.id || i} value={t._id || t.id}>
                                                 {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
@@ -1422,7 +1425,7 @@ export default function NuevoPresupuestoModal({
                                         onPress={() => handleTroquelSelect(null)}
                                         style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#F1F5F9' }}
                                     >
-                                        <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>Sin troquel</Text>
+                                        <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>{t('forms.sinTroquel')}</Text>
                                     </TouchableOpacity>
                                     {troquelesCat.map((t, i) => {
                                         const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
@@ -1466,7 +1469,7 @@ export default function NuevoPresupuestoModal({
                     )}
                         <View style={styles.row}>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Material</Text>
+                                <Text style={styles.label}>{t('forms.material')}</Text>
                                 <BotonSelector
                                     opciones={materiales}
                                     valorSeleccionado={material}
@@ -1477,7 +1480,7 @@ export default function NuevoPresupuestoModal({
                                 />
                             </View>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Acabado</Text>
+                                <Text style={styles.label}>{t('forms.acabado')}</Text>
                                 <BotonSelector
                                     opciones={acabados}
                                     valorSeleccionado={acabado}
@@ -1491,12 +1494,12 @@ export default function NuevoPresupuestoModal({
                         </View>
                         <View style={styles.row}>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Tirada total</Text>
+                                <Text style={styles.label}>{t('forms.tirada')}</Text>
                                 <TextInput
                                     value={tirada}
                                     onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
                                     keyboardType="numeric"
-                                    placeholder="Cantidad"
+                                    placeholder={t('forms.tiradaPlaceholder')}
                                     placeholderTextColor="#94A3B8"
                                     style={styles.input(tirada, true, true, submitted)}
                                     editable={!isReadOnly}
@@ -1508,10 +1511,10 @@ export default function NuevoPresupuestoModal({
 
                     {/* IMPRESIÓN */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Impresión</Text>
+                        <Text style={styles.sectionTitle}>{t('forms.sectionImpresion')}</Text>
                         <View style={styles.row}>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Tintas</Text>
+                                <Text style={styles.label}>{t('forms.tintas')}</Text>
                                 <TintasSelector
                                     selectedTintas={selectedTintas}
                                     setSelectedTintas={setSelectedTintas}
@@ -1531,11 +1534,11 @@ export default function NuevoPresupuestoModal({
                                     addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
                                     disabled={isReadOnly}
                                 />
-                                <Text style={styles.tintaCounter}>Nº de tintas seleccionadas: {numeroTintasSeleccionadas}</Text>
+                                <Text style={styles.tintaCounter}>{t('forms.nTintasSeleccionadas')}: {numeroTintasSeleccionadas}</Text>
                                 
                             </View>
                             <View style={styles.col}>
-                                <Text style={styles.label}>Tinta especial</Text>
+                                <Text style={styles.label}>{t('forms.tintaEspecial')}</Text>
                                 {tintasEspeciales.length > 0 ? (
                                     <BotonSelector
                                         opciones={tintasEspeciales}
@@ -1549,7 +1552,7 @@ export default function NuevoPresupuestoModal({
                                     <TextInput
                                         value={Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.join(', ') : ''}
                                         onChangeText={(text) => setDetalleTintaEspecial(parseTintasEspecialesTexto(text))}
-                                        placeholder="Ej: metalizada, oro"
+                                        placeholder={t('forms.tintaEspecialPlaceholder')}
                                         placeholderTextColor="#94A3B8"
                                         style={styles.input(detalleTintaEspecial, false, false, submitted)}
                                     />
@@ -1558,12 +1561,27 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
 
+                    {/* ── Observaciones ── */}
+                    <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
+                        <Text style={styles.label}>{t('forms.observaciones')}</Text>
+                        <TextInput
+                            value={observaciones}
+                            onChangeText={setObservaciones}
+                            placeholder={t('forms.observacionesPlaceholder')}
+                            placeholderTextColor="#94A3B8"
+                            multiline
+                            numberOfLines={3}
+                            style={[styles.input(observaciones, false, false, submitted), { minHeight: 72, textAlignVertical: 'top' }]}
+                            editable={!isReadOnly}
+                        />
+                    </View>
+
                 </ScrollView>
 
                 {/* ── Barra de acciones inferior ── */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
                     <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
-                        <Text style={styles.bigBtnText}>Cancelar</Text>
+                        <Text style={styles.bigBtnText}>{t('forms.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
@@ -1599,20 +1617,20 @@ export default function NuevoPresupuestoModal({
                 >
                     <View style={styles.pickerModalOverlay}>
                         <View style={styles.pickerModalCard}>
-                            <Text style={styles.pickerModalTitle}>Seleccionar cliente</Text>
+                            <Text style={styles.pickerModalTitle}>{t('forms.selectarCliente')}</Text>
                             <TextInput
                                 value={busquedaCliente}
                                 onChangeText={setBusquedaCliente}
-                                placeholder="Buscar por nombre, CIF, contacto o email"
+                                placeholder={t('forms.buscarCliente')}
                                 placeholderTextColor="#94A3B8"
                                 style={styles.input(busquedaCliente, false, false, false)}
                             />
 
                             <ScrollView>
                                 {cargandoClientes ? (
-                                    <Text style={styles.pickerItemSub}>Cargando clientes...</Text>
+                                    <EmptyState variant="inline" icon="⌛" title={t('forms.cargandoClientes')} />
                                 ) : clientesFiltrados.length === 0 ? (
-                                    <Text style={styles.pickerItemSub}>No hay clientes guardados</Text>
+                                    <EmptyState variant="inline" icon="🏢" title={t('forms.sinClientes')} message={t('forms.sinClientesMsg')} />
                                 ) : (
                                     clientesFiltrados.map((item) => (
                                         <TouchableOpacity
@@ -1622,10 +1640,10 @@ export default function NuevoPresupuestoModal({
                                         >
                                             <Text style={styles.pickerItemTitle}>{item.nombre || '-'}</Text>
                                             <Text style={styles.pickerItemSub}>
-                                                {(item.razon_social || 'Sin razón social')} • {(item.cif || 'Sin CIF')}
+                                                {(item.razon_social || t('forms.sinRazonSocial'))} • {(item.cif || t('forms.sinCIF'))}
                                             </Text>
                                             <Text style={styles.pickerItemSub}>
-                                                {(item.personas_contacto || 'Sin contacto')} • {(item.email || 'Sin email')}
+                                                {(item.personas_contacto || t('forms.sinContacto'))} • {(item.email || t('forms.sinEmail'))}
                                             </Text>
                                         </TouchableOpacity>
                                     ))
@@ -1640,7 +1658,7 @@ export default function NuevoPresupuestoModal({
                                         setBusquedaCliente('');
                                     }}
                                 >
-                                    <Text style={styles.bigBtnText}>Cerrar</Text>
+                                    <Text style={styles.bigBtnText}>{t('common.close')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

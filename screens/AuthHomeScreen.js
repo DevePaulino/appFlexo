@@ -1,412 +1,344 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { C, R, S } from './theme';
 
 const API_BASE = 'http://localhost:8080';
 
-const styles = StyleSheet.create({
-  container: {
+// ─── Estilos ──────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: C.bg,
   },
-  content: {
-    paddingHorizontal: 18,
-    paddingVertical: 26,
-    alignItems: 'center',
-  },
-  wrapper: {
-    width: '100%',
-    maxWidth: 1080,
-  },
+
+  // Layout split (web: row, mobile: column)
   split: {
-    flexDirection: 'column',
-    gap: 16,
-    alignItems: 'center',
+    flex: 1,
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    minHeight: Platform.OS === 'web' ? '100vh' : undefined,
   },
-  leftCol: {
-    width: '100%',
-    maxWidth: 920,
+
+  // ── Panel izquierdo (marca) ──────────────────────────────────────────────
+  brand: {
+    backgroundColor: C.header,
+    justifyContent: 'center',
+    padding: 40,
+    ...(Platform.OS === 'web'
+      ? { width: '45%', minHeight: '100vh' }
+      : { paddingVertical: 36, paddingHorizontal: 28 }),
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 32,
   },
-  logoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
-    backgroundColor: '#0061FF',
-    marginRight: 12,
+  logoMark: {
+    width: 48,
+    height: 48,
+    borderRadius: R.lg,
+    backgroundColor: '#DC262620',
+    borderWidth: 1,
+    borderColor: '#DC262640',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
-  logoText: {
+  logoMarkInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 5,
+    backgroundColor: '#DC2626',
+  },
+  logoName: {
     fontSize: 28,
     fontWeight: '900',
-    lineHeight: 32,
+    letterSpacing: -0.5,
   },
-  logoPrintForge: {
+  logoNamePrint: {
+    color: '#FFFFFF',
+  },
+  logoNameForge: {
     color: '#DC2626',
   },
-  logoPro: {
-    color: '#1F2937',
+  logoSuffix: {
+    fontSize: 28,
+    fontWeight: '400',
+    color: '#94A3B8',
+    letterSpacing: -0.5,
   },
-  heroTitle: {
-    color: '#111827',
-    fontSize: 40,
-    lineHeight: 46,
-    fontWeight: '900',
-    marginBottom: 10,
-    letterSpacing: -0.4,
-  },
-  heroText: {
-    color: '#334155',
-    fontSize: 15,
-    lineHeight: 23,
-    fontWeight: '500',
-    marginBottom: 14,
-    maxWidth: 580,
-  },
-  freeTrialBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    backgroundColor: '#ECFDF3',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 12,
-  },
-  freeTrialBadgeText: {
-    color: '#027A48',
-    fontSize: 11,
+  brandTagline: {
+    fontSize: Platform.OS === 'web' ? 32 : 24,
     fontWeight: '800',
-  },
-  heroCtaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
-  },
-  heroCtaPrimary: {
-    backgroundColor: '#0061FF',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  heroCtaPrimaryText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
+    lineHeight: Platform.OS === 'web' ? 40 : 30,
+    letterSpacing: -0.5,
+    marginBottom: 14,
   },
-  valueHighlight: {
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#D6E4FF',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+  brandSub: {
+    fontSize: 14,
+    color: '#94A3B8',
+    lineHeight: 22,
+    marginBottom: 32,
+    maxWidth: 340,
   },
-  valueHighlightLabel: {
-    color: '#1E3A8A',
-    fontSize: 11,
-    fontWeight: '800',
-    marginBottom: 4,
+  prepressSection: {
+    marginBottom: 24,
   },
-  valueHighlightTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 8,
+  prepressSectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
-  valuePillRow: {
+  pillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
-    marginBottom: 8,
   },
-  valuePill: {
+  pill: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: R.full,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    borderColor: '#334155',
+    backgroundColor: '#FFFFFF0A',
   },
-  valuePillText: {
-    color: '#1E3A8A',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  valueHighlightNote: {
-    color: '#334155',
+  pillText: {
     fontSize: 12,
-    lineHeight: 18,
+    fontWeight: '600',
+    color: '#CBD5E1',
   },
   featureList: {
-    gap: 9,
+    gap: 10,
   },
-  featureItem: {
+  featureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 10,
   },
   featureDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#0061FF',
-    marginTop: 7,
-    marginRight: 8,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#475569',
+    marginTop: 8,
+    flexShrink: 0,
   },
   featureText: {
-    color: '#334155',
-    fontSize: 14,
-    lineHeight: 20,
-    flex: 1,
-  },
-  pricingWrap: {
-    marginTop: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D6E4FF',
-    borderRadius: 14,
-    padding: 16,
-  },
-  pricingTitle: {
-    color: '#0F172A',
-    fontSize: 19,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  pricingSub: {
+    fontSize: 12,
     color: '#64748B',
-    fontSize: 12,
     lineHeight: 18,
-    marginBottom: 10,
-  },
-  plansRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  planCard: {
-    flexGrow: 1,
-    flexBasis: 220,
-    borderWidth: 1,
-    borderColor: '#D6E4FF',
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#FFFFFF',
-    minHeight: 210,
-    justifyContent: 'space-between',
-  },
-  planCardActive: {
-    borderColor: '#0061FF',
-    backgroundColor: '#EAF2FF',
-  },
-  planBody: {
-    marginBottom: 10,
-  },
-  planType: {
-    color: '#1E3A8A',
-    fontSize: 11,
-    fontWeight: '800',
-    marginBottom: 5,
-  },
-  planName: {
-    color: '#0F172A',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-  planLine: {
-    color: '#334155',
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 5,
-  },
-  planSelect: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    alignItems: 'center',
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  planSelectActive: {
-    borderColor: '#0061FF',
-    backgroundColor: '#0061FF',
-  },
-  planSelectText: {
-    color: '#0F172A',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  planSelectTextActive: {
-    color: '#FFFFFF',
-  },
-  authCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 16,
-    shadowColor: '#0B1020',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
-  },
-  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
   },
-  modalCardWrap: {
+
+  // ── Panel derecho (formulario) ───────────────────────────────────────────
+  formPanel: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 40 : 24,
+    backgroundColor: C.bg,
+  },
+  formCard: {
     width: '100%',
-    maxWidth: 460,
-  },
-  authCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  authCloseBtn: {
+    maxWidth: 420,
+    backgroundColor: C.surface,
+    borderRadius: R.xl,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#FFFFFF',
+    borderColor: C.border,
+    padding: 28,
+    ...S.card,
   },
-  authCloseBtnText: {
-    color: '#334155',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  authTabs: {
+
+  // ── Tabs login / registro ────────────────────────────────────────────────
+  tabs: {
     flexDirection: 'row',
-    marginBottom: 14,
+    backgroundColor: C.surfaceAlt,
+    borderRadius: R.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderColor: C.border,
     overflow: 'hidden',
+    marginBottom: 24,
   },
-  authTabBtn: {
+  tab: {
     flex: 1,
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 40,
-    backgroundColor: '#F8FAFC',
   },
-  authTabBtnActive: {
-    backgroundColor: '#0061FF',
+  tabActive: {
+    backgroundColor: C.header,
   },
-  authTabText: {
-    color: '#334155',
+  tabText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
+    color: C.textMuted,
   },
-  authTabTextActive: {
+  tabTextActive: {
     color: '#FFFFFF',
-  },
-  authTitle: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  authSub: {
-    color: '#64748B',
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    color: '#334155',
-    fontSize: 12,
     fontWeight: '700',
-    marginBottom: 6,
-    marginTop: 4,
+  },
+
+  // ── Encabezado del formulario ────────────────────────────────────────────
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: C.text,
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  formSub: {
+    fontSize: 13,
+    color: C.textMuted,
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+
+  // ── Campos ──────────────────────────────────────────────────────────────
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.textSec,
+    marginBottom: 5,
+    marginTop: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 11,
-    paddingVertical: 10,
-    color: '#0F172A',
+    borderColor: C.borderStrong,
+    borderRadius: R.md,
+    backgroundColor: C.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: C.text,
     fontSize: 14,
-    marginBottom: 4,
   },
-  helper: {
-    color: '#64748B',
-    fontSize: 11,
-    marginTop: 6,
+  inputFocused: {
+    borderColor: C.borderFocus,
+    backgroundColor: C.surface,
   },
-  payMethodRow: {
+
+  // ── Billing model (registro) ─────────────────────────────────────────────
+  billingRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 4,
-    marginBottom: 2,
-    flexWrap: 'wrap',
+    marginTop: 6,
   },
-  payMethodBtn: {
+  billingBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: R.md,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
+    alignItems: 'center',
   },
-  payMethodBtnActive: {
-    borderColor: '#0061FF',
-    backgroundColor: '#EFF6FF',
+  billingBtnActive: {
+    borderColor: C.header,
+    backgroundColor: C.header,
   },
-  payMethodText: {
-    color: '#334155',
+  billingBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: C.textMuted,
   },
-  payMethodTextActive: {
-    color: '#0061FF',
+  billingBtnTextActive: {
+    color: '#FFFFFF',
   },
+  billingDesc: {
+    fontSize: 11,
+    color: C.textMuted,
+    marginTop: 5,
+    lineHeight: 16,
+  },
+
+  // ── Error ────────────────────────────────────────────────────────────────
+  errorBox: {
+    backgroundColor: C.errorBg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: R.md,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.danger,
+  },
+
+  // ── Botón principal ──────────────────────────────────────────────────────
   submitBtn: {
-    marginTop: 10,
-    minHeight: 42,
-    borderRadius: 10,
-    backgroundColor: '#0061FF',
+    marginTop: 16,
+    minHeight: 44,
+    borderRadius: R.md,
+    backgroundColor: C.header,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
-  secondaryBtn: {
-    marginTop: 8,
+
+  // ── Botón secundario (volver) ────────────────────────────────────────────
+  backBtn: {
+    marginTop: 10,
     minHeight: 40,
-    borderRadius: 10,
-    backgroundColor: '#94A3B8',
+    borderRadius: R.md,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: {
-    color: '#B42318',
+  backBtnText: {
+    color: C.textSec,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // ── MFA ─────────────────────────────────────────────────────────────────
+  mfaHelper: {
+    fontSize: 11,
+    color: C.textMuted,
+    marginTop: 5,
+    lineHeight: 16,
+  },
+  mfaDevBadge: {
+    backgroundColor: C.warningBg,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: R.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  mfaDevText: {
     fontSize: 12,
-    fontWeight: '700',
-    marginTop: 7,
+    color: C.warningText,
+    fontWeight: '600',
   },
 });
 
+// ─── Componente principal ─────────────────────────────────────────────────────
 export default function AuthHomeScreen({ onAuthSuccess }) {
+  const { t } = useTranslation();
   const [authMode, setAuthMode] = useState('login');
   const [billingModel, setBillingModel] = useState('creditos');
-  const [paymentMethod, setPaymentMethod] = useState('paypal');
   const [nombre, setNombre] = useState('');
   const [nombreEmpresa, setNombreEmpresa] = useState('');
   const [cif, setCif] = useState('');
@@ -416,40 +348,36 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaExpiresAt, setMfaExpiresAt] = useState(0);
   const [mfaDevCode, setMfaDevCode] = useState('');
-  const [showAuthPanel, setShowAuthPanel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focusedField, setFocusedField] = useState('');
 
+  const inp = (field) => [
+    s.input,
+    focusedField === field && s.inputFocused,
+  ];
+
+  // ── Login ─────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
     setError('');
     setMfaDevCode('');
-    if (!email.trim()) {
-      setError('Introduce tu email para iniciar sesión');
-      return;
-    }
-    if (!password.trim()) {
-      setError('Introduce tu contraseña');
-      return;
-    }
+    if (!email.trim()) { setError(t('auth.errorEmail')); return; }
+    if (!password.trim()) { setError(t('auth.errorPassword')); return; }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setError(data.error || 'No se pudo iniciar sesión');
-        return;
-      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorLogin')); return; }
 
       if (data.mfa_required && data.challenge_id) {
         setMfaChallengeId(data.challenge_id);
         setMfaExpiresAt(Number(data.mfa_expires_at || 0));
         setMfaDevCode(String(data.dev_mfa_code || ''));
-        setShowAuthPanel(true);
         setError('');
         return;
       }
@@ -461,35 +389,26 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         access_expires_at: data.access_expires_at,
       });
     } catch (e) {
-      setError(`No se pudo iniciar sesión: ${e.message}`);
+      setError(t('auth.errorLogin'));
     } finally {
       setLoading(false);
     }
   };
 
+  // ── MFA ───────────────────────────────────────────────────────────────────
   const handleVerifyMfa = async () => {
     setError('');
-    if (!mfaChallengeId) {
-      setError('No hay challenge MFA activo');
-      return;
-    }
-    if (!mfaCode.trim()) {
-      setError('Introduce el código MFA');
-      return;
-    }
+    if (!mfaCode.trim()) { setError(t('auth.errorMfa')); return; }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/auth/mfa/verify`, {
+      const res = await fetch(`${API_BASE}/api/auth/mfa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ challenge_id: mfaChallengeId, code: mfaCode.trim() }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setError(data.error || 'No se pudo verificar el código MFA');
-        return;
-      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorMfaInvalid')); return; }
 
       onAuthSuccess?.({
         usuario: data.usuario,
@@ -498,293 +417,342 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         access_expires_at: data.access_expires_at,
       });
     } catch (e) {
-      setError(`No se pudo verificar MFA: ${e.message}`);
+      setError(t('auth.errorMfaInvalid'));
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Registro ──────────────────────────────────────────────────────────────
   const handleRegister = async () => {
     setError('');
-    if (!nombre.trim()) {
-      setError('El nombre es obligatorio');
-      return;
-    }
-    if (!nombreEmpresa.trim()) {
-      setError('El nombre de la empresa es obligatorio');
-      return;
-    }
-    const cifNormalizado = String(cif || '').trim().replace(/[\s-]/g, '').toUpperCase();
-    if (!cifNormalizado) {
-      setError('El CIF es obligatorio');
-      return;
-    }
-    if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNormalizado)) {
-      setError('CIF no válido (ejemplo: A1234567B)');
-      return;
-    }
-    if (!email.trim()) {
-      setError('El email es obligatorio');
-      return;
-    }
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
+    if (!nombre.trim()) { setError(t('auth.errorName')); return; }
+    if (!nombreEmpresa.trim()) { setError(t('auth.errorCompany')); return; }
+    const cifNorm = String(cif || '').trim().replace(/[\s-]/g, '').toUpperCase();
+    if (!cifNorm) { setError(t('auth.errorCif')); return; }
+    if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
+    if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
+    if (password.length < 6) { setError(t('auth.errorPasswordLength')); return; }
 
     setLoading(true);
     try {
-      const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: nombre.trim(),
           nombre_empresa: nombreEmpresa.trim(),
-          cif: cifNormalizado,
+          cif: cifNorm,
           email: email.trim().toLowerCase(),
           password,
           billing_model: billingModel,
-          payment_method: paymentMethod,
+          payment_method: 'paypal',
         }),
       });
-      const registerData = await registerResponse.json().catch(() => ({}));
-      if (!registerResponse.ok) {
-        setError(registerData.error || 'No se pudo completar el registro');
-        return;
-      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorLogin')); return; }
 
       onAuthSuccess?.({
-        usuario: registerData.usuario,
-        access_token: registerData.access_token,
-        refresh_token: registerData.refresh_token,
-        access_expires_at: registerData.access_expires_at,
+        usuario: data.usuario,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        access_expires_at: data.access_expires_at,
       });
     } catch (e) {
-      setError(`No se pudo completar el registro: ${e.message}`);
+      setError(t('auth.errorLogin'));
     } finally {
       setLoading(false);
     }
   };
 
+  // ── MFA view ──────────────────────────────────────────────────────────────
+  const MfaView = () => (
+    <>
+      <Text style={s.formTitle}>{t('auth.mfaTitle')}</Text>
+      <Text style={s.formSub}>{t('auth.mfaSubtitle')}</Text>
+
+      {mfaExpiresAt > 0 && (
+        <Text style={s.mfaHelper}>
+          {t('auth.mfaExpires', { seconds: Math.max(0, Math.floor(mfaExpiresAt - Date.now() / 1000)) })}
+        </Text>
+      )}
+      {!!mfaDevCode && (
+        <View style={s.mfaDevBadge}>
+          <Text style={s.mfaDevText}>Código de dev: {mfaDevCode}</Text>
+        </View>
+      )}
+
+      <Text style={s.label}>{t('auth.mfaCodeLabel')}</Text>
+      <TextInput
+        style={inp('mfa')}
+        value={mfaCode}
+        onChangeText={setMfaCode}
+        placeholder={t('auth.mfaCodePlaceholder')}
+        placeholderTextColor={C.textMuted}
+        keyboardType="number-pad"
+        onFocus={() => setFocusedField('mfa')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+
+      <TouchableOpacity
+        style={[s.submitBtn, loading && { opacity: 0.7 }]}
+        onPress={handleVerifyMfa}
+        disabled={loading}
+      >
+        <Text style={s.submitBtnText}>{loading ? t('auth.verifyBtnLoading') : t('auth.verifyBtn')}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={s.backBtn}
+        onPress={() => {
+          setMfaChallengeId('');
+          setMfaCode('');
+          setMfaExpiresAt(0);
+          setMfaDevCode('');
+          setError('');
+        }}
+      >
+        <Text style={s.backBtnText}>{t('auth.backBtn')}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  // ── Login view ────────────────────────────────────────────────────────────
+  const LoginView = () => (
+    <>
+      <Text style={s.formTitle}>{t('auth.loginTitle')}</Text>
+      <Text style={s.formSub}>{t('auth.loginSubtitle')}</Text>
+
+      <Text style={s.label}>{t('auth.emailLabel')}</Text>
+      <TextInput
+        style={inp('email')}
+        value={email}
+        onChangeText={setEmail}
+        placeholder={t('auth.emailPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        onFocus={() => setFocusedField('email')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={s.label}>{t('auth.passwordLabel')}</Text>
+      <TextInput
+        style={inp('password')}
+        value={password}
+        onChangeText={setPassword}
+        placeholder={t('auth.passwordPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        secureTextEntry
+        onFocus={() => setFocusedField('password')}
+        onBlur={() => setFocusedField('')}
+        onSubmitEditing={handleLogin}
+      />
+
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+
+      <TouchableOpacity
+        style={[s.submitBtn, loading && { opacity: 0.7 }]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        <Text style={s.submitBtnText}>{loading ? t('auth.loginBtnLoading') : t('auth.loginBtn')}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  // ── Register view ─────────────────────────────────────────────────────────
+  const RegisterView = () => (
+    <>
+      <Text style={s.formTitle}>{t('auth.registerTitle')}</Text>
+      <Text style={s.formSub}>{t('auth.registerSubtitle')}</Text>
+
+      <Text style={s.label}>{t('auth.nameLabel')}</Text>
+      <TextInput
+        style={inp('nombre')}
+        value={nombre}
+        onChangeText={setNombre}
+        placeholder={t('auth.namePlaceholder')}
+        placeholderTextColor={C.textMuted}
+        onFocus={() => setFocusedField('nombre')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={s.label}>{t('auth.companyLabel')}</Text>
+      <TextInput
+        style={inp('empresa')}
+        value={nombreEmpresa}
+        onChangeText={setNombreEmpresa}
+        placeholder={t('auth.companyPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        onFocus={() => setFocusedField('empresa')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={s.label}>{t('auth.cifLabel')}</Text>
+      <TextInput
+        style={inp('cif')}
+        value={cif}
+        onChangeText={setCif}
+        placeholder={t('auth.cifPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        autoCapitalize="characters"
+        onFocus={() => setFocusedField('cif')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={s.label}>{t('auth.emailLabel')}</Text>
+      <TextInput
+        style={inp('email')}
+        value={email}
+        onChangeText={setEmail}
+        placeholder={t('auth.emailPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        onFocus={() => setFocusedField('email')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={s.label}>{t('auth.passwordLabel')}</Text>
+      <TextInput
+        style={inp('password')}
+        value={password}
+        onChangeText={setPassword}
+        placeholder={t('auth.passwordPlaceholder')}
+        placeholderTextColor={C.textMuted}
+        secureTextEntry
+        onFocus={() => setFocusedField('password')}
+        onBlur={() => setFocusedField('')}
+      />
+
+      <Text style={[s.label, { marginTop: 14 }]}>{t('auth.billingLabel')}</Text>
+      <View style={s.billingRow}>
+        <Pressable
+          style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]}
+          onPress={() => setBillingModel('creditos')}
+        >
+          <Text style={[s.billingBtnText, billingModel === 'creditos' && s.billingBtnTextActive]}>
+            {t('auth.billingCredits')}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[s.billingBtn, billingModel === 'suscripcion' && s.billingBtnActive]}
+          onPress={() => setBillingModel('suscripcion')}
+        >
+          <Text style={[s.billingBtnText, billingModel === 'suscripcion' && s.billingBtnTextActive]}>
+            {t('auth.billingSubscription')}
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={s.billingDesc}>
+        {billingModel === 'creditos'
+          ? t('auth.billingCreditsDesc')
+          : t('auth.billingSubscriptionDesc')}
+      </Text>
+
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+
+      <TouchableOpacity
+        style={[s.submitBtn, loading && { opacity: 0.7 }]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        <Text style={s.submitBtnText}>{loading ? t('auth.registerBtnLoading') : t('auth.registerBtn')}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.wrapper}>
-        <View style={styles.split}>
-          <View style={styles.leftCol}>
-            <View style={styles.logoRow}>
-              <View style={styles.logoBox} />
-              <Text style={styles.logoText}>
-                <Text style={styles.logoPrintForge}>PrintForge</Text>
-                <Text> </Text>
-                <Text style={styles.logoPro}>Pro</Text>
-              </Text>
+    <View style={s.root}>
+      <View style={s.split}>
+
+        {/* Panel de marca */}
+        <View style={s.brand}>
+          <View style={s.logoRow}>
+            <View style={s.logoMark}>
+              <View style={s.logoMarkInner} />
             </View>
+            <Text style={s.logoName}>
+              <Text style={s.logoNamePrint}>Print</Text>
+              <Text style={s.logoNameForge}>Forge</Text>
+              <Text style={s.logoSuffix}> Pro</Text>
+            </Text>
+          </View>
 
-            <Text style={styles.heroTitle}>El control de impresión que acelera tu negocio</Text>
-            <Text style={styles.heroText}>Planifica pedidos, coordina producción y toma decisiones comerciales con una interfaz clara, rápida y preparada para crecer contigo.</Text>
+          <Text style={s.brandTagline}>
+            {t('auth.brandTagline')}
+          </Text>
+          <Text style={s.brandSub}>
+            {t('auth.brandDesc')}
+          </Text>
 
-            <View style={styles.freeTrialBadge}>
-              <Text style={styles.freeTrialBadgeText}>Pruébala gratis y valida el flujo antes de escalar</Text>
-            </View>
-
-            <View style={styles.heroCtaRow}>
-              <TouchableOpacity style={styles.heroCtaPrimary} onPress={() => setShowAuthPanel(true)}>
-                <Text style={styles.heroCtaPrimaryText}>Probar gratis / Acceder</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.valueHighlight}>
-              <Text style={styles.valueHighlightLabel}>FUNCIONES CLAVE</Text>
-              <Text style={styles.valueHighlightTitle}>Herramientas técnicas para acelerar la preparación de trabajos</Text>
-              <View style={styles.valuePillRow}>
-                <View style={styles.valuePill}><Text style={styles.valuePillText}>Report</Text></View>
-                <View style={styles.valuePill}><Text style={styles.valuePillText}>Repetidoras</Text></View>
-                <View style={styles.valuePill}><Text style={styles.valuePillText}>Trapping</Text></View>
-                <View style={styles.valuePill}><Text style={styles.valuePillText}>Troqueles</Text></View>
+          {/* Capacidades de preimpresión */}
+          <View style={s.prepressSection}>
+            <Text style={s.prepressSectionLabel}>{t('auth.prepressTitle')}</Text>
+            <View style={s.pillRow}>
+              <View style={s.pill}>
+                <Text style={s.pillText}>{t('auth.prepressDesc')}</Text>
               </View>
-              <Text style={styles.valueHighlightNote}>Estas capacidades concentran la mayor parte del trabajo técnico diario y ayudan a estandarizar resultados en preimpresión.</Text>
-            </View>
-
-            <View style={styles.featureList}>
-              <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>Visibilidad total de pedidos, estados y producción en un solo flujo.</Text></View>
-              <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>Base sólida para equipos comerciales y operativos que quieren escalar.</Text></View>
-              <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>Diseñado para decisiones rápidas y mejor margen por trabajo.</Text></View>
-            </View>
-
-            <View style={styles.pricingWrap}>
-              <Text style={styles.pricingTitle}>Elige tu modalidad</Text>
-              <Text style={styles.pricingSub}>Selecciona el modelo que mejor encaja con tu ritmo operativo actual.</Text>
-              <View style={styles.plansRow}>
-                <View style={[styles.planCard, billingModel === 'creditos' && styles.planCardActive]}>
-                  <View style={styles.planBody}>
-                    <Text style={styles.planType}>PAGO POR USO</Text>
-                    <Text style={styles.planName}>Créditos</Text>
-                    <Text style={styles.planLine}>• Máxima flexibilidad para cargas variables.</Text>
-                    <Text style={styles.planLine}>• Pagas según uso real.</Text>
-                    <Text style={styles.planLine}>• Ideal para empezar rápido.</Text>
-                  </View>
-                  <TouchableOpacity style={[styles.planSelect, billingModel === 'creditos' && styles.planSelectActive]} onPress={() => setBillingModel('creditos')}>
-                    <Text style={[styles.planSelectText, billingModel === 'creditos' && styles.planSelectTextActive]}>{billingModel === 'creditos' ? 'Seleccionado' : 'Elegir créditos'}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={[styles.planCard, billingModel === 'suscripcion' && styles.planCardActive]}>
-                  <View style={styles.planBody}>
-                    <Text style={styles.planType}>CUOTA FIJA</Text>
-                    <Text style={styles.planName}>Suscripción</Text>
-                    <Text style={styles.planLine}>• Coste mensual predecible.</Text>
-                    <Text style={styles.planLine}>• Operación continua sin sobresaltos.</Text>
-                    <Text style={styles.planLine}>• Perfecta para volumen estable.</Text>
-                  </View>
-                  <TouchableOpacity style={[styles.planSelect, billingModel === 'suscripcion' && styles.planSelectActive]} onPress={() => setBillingModel('suscripcion')}>
-                    <Text style={[styles.planSelectText, billingModel === 'suscripcion' && styles.planSelectTextActive]}>{billingModel === 'suscripcion' ? 'Seleccionado' : 'Elegir suscripción'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
             </View>
           </View>
 
-          <Modal
-            transparent
-            visible={showAuthPanel || !!mfaChallengeId}
-            animationType="fade"
-            onRequestClose={() => {
-              if (!mfaChallengeId) setShowAuthPanel(false);
-            }}
-          >
-            <View style={styles.modalBackdrop}>
-              <Pressable style={StyleSheet.absoluteFill} onPress={() => {
-                if (!mfaChallengeId) {
-                  setShowAuthPanel(false);
-                }
-              }} />
-              <View style={styles.modalCardWrap}>
-                <View style={styles.authCard}>
-              <View style={styles.authCardTop}>
-                <Text style={styles.authTitle}>Acceso</Text>
-                {!mfaChallengeId && (
-                  <TouchableOpacity style={styles.authCloseBtn} onPress={() => setShowAuthPanel(false)}>
-                    <Text style={styles.authCloseBtnText}>Ocultar</Text>
-                  </TouchableOpacity>
-                )}
+          {/* Otras capacidades */}
+          <View style={s.featureList}>
+            {[
+              t('auth.feature1'),
+              t('auth.feature2'),
+              t('auth.feature3'),
+            ].map((f, i) => (
+              <View key={i} style={s.featureRow}>
+                <View style={s.featureDot} />
+                <Text style={s.featureText}>{f}</Text>
               </View>
-              {mfaChallengeId ? (
-                <>
-                  <Text style={styles.authTitle}>Verificación MFA</Text>
-                  <Text style={styles.authSub}>Introduce el código enviado para completar el acceso seguro.</Text>
-                  {mfaExpiresAt > 0 && <Text style={styles.helper}>Expira en: {Math.max(0, Math.floor(mfaExpiresAt - Date.now() / 1000))} s</Text>}
-                  {!!mfaDevCode && <Text style={styles.helper}>Código de desarrollo: {mfaDevCode}</Text>}
-
-                  <Text style={styles.fieldLabel}>Código MFA</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={mfaCode}
-                    onChangeText={setMfaCode}
-                    placeholder="000000"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="number-pad"
-                  />
-
-                  {!!error && <Text style={styles.error}>{error}</Text>}
-
-                  <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.75 }]} onPress={handleVerifyMfa} disabled={loading}>
-                    <Text style={styles.submitBtnText}>{loading ? 'Verificando...' : 'Verificar código'}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.secondaryBtn}
-                    onPress={() => {
-                      setMfaChallengeId('');
-                      setMfaCode('');
-                      setMfaExpiresAt(0);
-                      setMfaDevCode('');
-                      setShowAuthPanel(false);
-                      setError('');
-                    }}
-                  >
-                    <Text style={styles.submitBtnText}>Volver</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <View style={styles.authTabs}>
-                    <TouchableOpacity style={[styles.authTabBtn, authMode === 'login' && styles.authTabBtnActive]} onPress={() => setAuthMode('login')}>
-                      <Text style={[styles.authTabText, authMode === 'login' && styles.authTabTextActive]}>Login</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.authTabBtn, authMode === 'register' && styles.authTabBtnActive]} onPress={() => setAuthMode('register')}>
-                      <Text style={[styles.authTabText, authMode === 'register' && styles.authTabTextActive]}>Registro</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.authTitle}>{authMode === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta'}</Text>
-                  <Text style={styles.authSub}>{authMode === 'login' ? 'Accede y continúa con tu flujo de trabajo.' : 'Regístrate y pon en marcha tu operación digital.'}</Text>
-
-                  {authMode === 'register' && (
-                    <>
-                      <Text style={styles.fieldLabel}>Nombre</Text>
-                      <TextInput style={styles.input} value={nombre} onChangeText={setNombre} placeholder="Tu nombre" placeholderTextColor="#94A3B8" />
-
-                      <Text style={styles.fieldLabel}>Nombre de la empresa</Text>
-                      <TextInput style={styles.input} value={nombreEmpresa} onChangeText={setNombreEmpresa} placeholder="Empresa S.L." placeholderTextColor="#94A3B8" />
-
-                      <Text style={styles.fieldLabel}>CIF</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={cif}
-                        onChangeText={setCif}
-                        placeholder="A1234567B"
-                        placeholderTextColor="#94A3B8"
-                        autoCapitalize="characters"
-                      />
-
-                      <Text style={styles.fieldLabel}>Método de pago</Text>
-                      <View style={styles.payMethodRow}>
-                        <TouchableOpacity style={[styles.payMethodBtn, paymentMethod === 'paypal' && styles.payMethodBtnActive]} onPress={() => setPaymentMethod('paypal')}>
-                          <Text style={[styles.payMethodText, paymentMethod === 'paypal' && styles.payMethodTextActive]}>PayPal</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.payMethodBtn, paymentMethod === 'tarjeta' && styles.payMethodBtnActive]} onPress={() => setPaymentMethod('tarjeta')}>
-                          <Text style={[styles.payMethodText, paymentMethod === 'tarjeta' && styles.payMethodTextActive]}>Tarjeta</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.helper}>Modalidad seleccionada: {billingModel === 'creditos' ? 'Créditos' : 'Suscripción'}</Text>
-                    </>
-                  )}
-
-                  <Text style={styles.fieldLabel}>Email</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="usuario@dominio.com"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-
-                  <Text style={styles.fieldLabel}>Contraseña</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Mínimo 6 caracteres"
-                    placeholderTextColor="#94A3B8"
-                    secureTextEntry
-                  />
-
-                  {!!error && <Text style={styles.error}>{error}</Text>}
-
-                  <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.75 }]} onPress={authMode === 'login' ? handleLogin : handleRegister} disabled={loading}>
-                    <Text style={styles.submitBtnText}>{loading ? 'Procesando...' : (authMode === 'login' ? 'Entrar' : 'Crear cuenta')}</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-                </View>
-              </View>
-            </View>
-          </Modal>
+            ))}
+          </View>
         </View>
+
+        {/* Panel de formulario */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={s.formPanel}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={s.formCard}>
+            {mfaChallengeId ? (
+              <MfaView />
+            ) : (
+              <>
+                {/* Tabs */}
+                <View style={s.tabs}>
+                  <Pressable
+                    style={[s.tab, authMode === 'login' && s.tabActive]}
+                    onPress={() => { setAuthMode('login'); setError(''); }}
+                  >
+                    <Text style={[s.tabText, authMode === 'login' && s.tabTextActive]}>
+                      {t('auth.switchToLogin')}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[s.tab, authMode === 'register' && s.tabActive]}
+                    onPress={() => { setAuthMode('register'); setError(''); }}
+                  >
+                    <Text style={[s.tabText, authMode === 'register' && s.tabTextActive]}>
+                      {t('auth.switchToRegister')}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {authMode === 'login' ? <LoginView /> : <RegisterView />}
+              </>
+            )}
+          </View>
+        </ScrollView>
+
       </View>
-    </ScrollView>
+    </View>
   );
 }

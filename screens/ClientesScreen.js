@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePermission } from './usePermission';
+import EmptyState from '../components/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 const styles = StyleSheet.create({
   container: {
@@ -225,6 +227,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
   },
   modalCard: {
@@ -233,6 +236,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 16,
+    width: '100%',
+    maxWidth: 480,
   },
   modalTitle: {
     fontSize: 18,
@@ -278,6 +283,7 @@ const styles = StyleSheet.create({
 });
 
 export default function ClientesScreen({ currentUser }) {
+  const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
   const [clientes, setClientes] = useState([]);
   const [filtrados, setFiltrados] = useState(clientes);
@@ -433,15 +439,15 @@ export default function ClientesScreen({ currentUser }) {
 
       const data = await response.json();
       if (!response.ok) {
-        Alert.alert('Error', data.error || 'No se pudo guardar el cliente');
+        Alert.alert(t('common.error'), data.error || t('common.error'));
         return;
       }
 
       cerrarModalNuevoCliente();
       await cargarClientes();
-      Alert.alert('Éxito', modoEdicion ? 'Cliente actualizado correctamente' : 'Cliente creado correctamente');
+      Alert.alert(t('common.success'), modoEdicion ? t('screens.clientes.updatedOk') : t('screens.clientes.createdOk'));
     } catch (error) {
-      Alert.alert('Error', 'Error de conexión: ' + error.message);
+      Alert.alert(t('common.error'), t('common.error') + ': ' + error.message);
     } finally {
       setGuardando(false);
     }
@@ -457,7 +463,7 @@ export default function ClientesScreen({ currentUser }) {
   const ejecutarEliminacionCliente = async (cliente) => {
     try {
       if (!cliente?.id) {
-        Alert.alert('Error', 'Cliente inválido para eliminar');
+        Alert.alert(t('common.error'), t('screens.clientes.deleteError'));
         return;
       }
 
@@ -469,23 +475,23 @@ export default function ClientesScreen({ currentUser }) {
 
       if (!response.ok) {
         if (response.status === 409 && data?.in_use) {
-          Alert.alert('Cliente en uso', data.error || 'No se puede eliminar porque el cliente tiene trabajos asociados');
+          Alert.alert(t('screens.clientes.inUseTitle'), data.error || t('screens.clientes.inUseMsg'));
           return;
         }
-        Alert.alert('Error', data.error || 'No se pudo eliminar el cliente');
+        Alert.alert(t('common.error'), data.error || t('common.error'));
         return;
       }
 
       await cargarClientes();
       console.log('DEBUG after reload clientes, loading=', loading);
-      Alert.alert('OK', 'Cliente eliminado correctamente');
+      Alert.alert(t('common.success'), t('screens.clientes.deletedOk'));
     } catch (error) {
-      Alert.alert('Error', `No se pudo eliminar: ${error.message}`);
+      Alert.alert(t('common.error'), t('common.error') + ': ' + error.message);
     }
   };
 
   const eliminarCliente = (cliente) => {
-    const mensaje = `¿Seguro que quieres eliminar "${cliente.nombre || 'este cliente'}"?`;
+    const mensaje = t('screens.clientes.deleteConfirm', { nombre: cliente.nombre || '' });
 
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
       const confirmado = window.confirm(mensaje);
@@ -495,10 +501,10 @@ export default function ClientesScreen({ currentUser }) {
       return;
     }
 
-    Alert.alert('Eliminar cliente', mensaje, [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(t('screens.clientes.deleteTitle'), mensaje, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Eliminar',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => ejecutarEliminacionCliente(cliente),
       },
@@ -529,7 +535,7 @@ export default function ClientesScreen({ currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>Clientes</Text>
+          <Text style={styles.headerTitle}>{t('nav.clientes')}</Text>
           <View style={styles.btnPlusWrap}>
             <Pressable
               style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
@@ -538,18 +544,18 @@ export default function ClientesScreen({ currentUser }) {
               onHoverIn={handleHoverNuevoIn}
               onHoverOut={handleHoverNuevoOut}
             >
-              <Text style={styles.btnPlusText}>+ Nuevo cliente</Text>
+              <Text style={styles.btnPlusText}>{t('screens.clientes.newBtn')}</Text>
             </Pressable>
             {hoverNuevo && (
               <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>{!puedeCrear ? 'Permiso denegado' : 'Nuevo cliente'}</Text>
+                <Text style={styles.hoverHintText}>{!puedeCrear ? t('forms.permisoDenegado') : t('screens.clientes.newTitle')}</Text>
               </View>
             )}
           </View>
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por cualquier campo..."
+          placeholder={t('common.search')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
@@ -558,34 +564,36 @@ export default function ClientesScreen({ currentUser }) {
 
       {loading ? (
         <View style={styles.tableContainer}>
-          <Text style={styles.emptyText}>Cargando clientes...</Text>
+          <EmptyState icon="⌛" title={t('common.loading')} />
         </View>
       ) : filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
-          <Text style={styles.emptyText}>
-            {busqueda ? 'No se encontraron resultados' : 'No hay clientes'}
-          </Text>
+          <EmptyState
+            icon="🏢"
+            title={busqueda ? t('common.noResults') : t('nav.clientes')}
+            message={busqueda ? t('screens.clientes.noResultsMsg') : t('screens.clientes.noItems')}
+          />
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNombre]}>
-              <Text style={styles.headerText}>Cliente</Text>
+              <Text style={styles.headerText}>{t('forms.fieldCliente')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colRazonSocial]}>
-              <Text style={styles.headerText}>Razón social</Text>
+              <Text style={styles.headerText}>{t('forms.razonSocial')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colCif]}>
-              <Text style={styles.headerText}>CIF</Text>
+              <Text style={styles.headerText}>{t('forms.cif')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colContacto]}>
-              <Text style={styles.headerText}>Contacto</Text>
+              <Text style={styles.headerText}>{t('screens.clientes.colContacto')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colEmail]}>
-              <Text style={styles.headerText}>Email</Text>
+              <Text style={styles.headerText}>{t('forms.email')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>Acciones</Text>
+              <Text style={styles.headerText}>{t('common.actions')}</Text>
             </View>
           </View>
           {clientesPaginados.map((cliente, idx) => (
@@ -607,10 +615,10 @@ export default function ClientesScreen({ currentUser }) {
               </View>
               <View style={[styles.tableCell, styles.colAcciones]}>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(cliente)}>
-                  <Text style={styles.actionBtnText}>Ver</Text>
+                  <Text style={styles.actionBtnText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => eliminarCliente(cliente)}>
-                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Eliminar</Text>
+                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -622,15 +630,16 @@ export default function ClientesScreen({ currentUser }) {
                 onPress={() => setPaginaClientes((prev) => Math.max(1, prev - 1))}
                 disabled={paginaClientes === 1}
               >
-                <Text style={styles.paginationBtnText}>Anterior</Text>
+                <Text style={styles.paginationBtnText}>{t('common.prev')}</Text>
               </TouchableOpacity>
-              <Text style={styles.paginationInfo}>Página {paginaClientes} de {totalPaginasClientes}</Text>
+              <Text style={styles.paginationInfo}>{t('common.pageOf', { current: paginaClientes, total: totalPaginasClientes })}</Text>
               <TouchableOpacity
                 style={[styles.paginationBtn, paginaClientes === totalPaginasClientes && styles.paginationBtnDisabled]}
                 onPress={() => setPaginaClientes((prev) => Math.min(totalPaginasClientes, prev + 1))}
                 disabled={paginaClientes === totalPaginasClientes}
               >
-                <Text style={styles.paginationBtnText}>Siguiente</Text>
+                <Text style={styles.paginationBtnText}>{t('common.next')}</Text>
+
               </TouchableOpacity>
             </View>
           )}
@@ -640,67 +649,67 @@ export default function ClientesScreen({ currentUser }) {
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={cerrarModalNuevoCliente}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{modoEdicion ? 'Detalle / Editar cliente' : 'Nuevo cliente'}</Text>
+            <Text style={styles.modalTitle}>{modoEdicion ? t('screens.clientes.editTitle') : t('screens.clientes.newTitle')}</Text>
 
-            <Text style={styles.fieldLabel}>Cliente *</Text>
+            <Text style={styles.fieldLabel}>{t('screens.clientes.nombreLabel')}</Text>
             <TextInput
               style={[styles.fieldInput, nombreVacio && styles.fieldInputError]}
               value={nuevoNombre}
               onChangeText={setNuevoNombre}
-              placeholder="Nombre cliente"
+              placeholder={t('screens.clientes.nombrePlaceholder')}
               placeholderTextColor="#94A3B8"
             />
-            {nombreVacio && <Text style={styles.errorText}>El nombre del cliente es obligatorio</Text>}
+            {nombreVacio && <Text style={styles.errorText}>{t('screens.clientes.nombreRequired')}</Text>}
 
-            <Text style={styles.fieldLabel}>Razón social</Text>
+            <Text style={styles.fieldLabel}>{t('forms.razonSocial')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={nuevoRazonSocial}
               onChangeText={setNuevoRazonSocial}
-              placeholder="Razón social"
+              placeholder={t('forms.razonSocialPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.fieldLabel}>CIF</Text>
+            <Text style={styles.fieldLabel}>{t('forms.cif')}</Text>
             <TextInput
               style={[styles.fieldInput, cifNuevoInvalido && styles.fieldInputError]}
               value={nuevoCif}
               onChangeText={setNuevoCif}
-              placeholder="A1234567B"
+              placeholder={t('forms.cifPlaceholder')}
               placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
             />
-            {cifNuevoInvalido && <Text style={styles.errorText}>CIF no válido (ejemplo: A1234567B)</Text>}
+            {cifNuevoInvalido && <Text style={styles.errorText}>{t('forms.errorCif')}</Text>}
 
-            <Text style={styles.fieldLabel}>Personas de contacto</Text>
+            <Text style={styles.fieldLabel}>{t('screens.clientes.contactoLabel')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={nuevoContacto}
               onChangeText={setNuevoContacto}
-              placeholder="Nombre(s) de contacto"
+              placeholder={t('forms.personasContactoPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.fieldLabel}>Email</Text>
+            <Text style={styles.fieldLabel}>{t('forms.email')}</Text>
             <TextInput
               style={[styles.fieldInput, emailNuevoInvalido && styles.fieldInputError]}
               value={nuevoEmail}
               onChangeText={setNuevoEmail}
-              placeholder="email@cliente.com"
+              placeholder={t('forms.emailPlaceholder')}
               placeholderTextColor="#94A3B8"
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            {emailNuevoVacio && <Text style={styles.errorText}>El email es obligatorio</Text>}
-            {emailNuevoInvalido && <Text style={styles.errorText}>Email no válido</Text>}
+            {emailNuevoVacio && <Text style={styles.errorText}>{t('forms.errorEmailRequired')}</Text>}
+            {emailNuevoInvalido && <Text style={styles.errorText}>{t('forms.errorEmail')}</Text>}
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={cerrarModalNuevoCliente}>
-                <Text style={styles.btnText}>Cancelar</Text>
+                <Text style={styles.btnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.btnNew]} onPress={guardarCliente}>
                 <Text style={[styles.btnText, styles.btnNewText]}>
-                  {guardando ? 'Guardando...' : modoEdicion ? 'Guardar cambios' : 'Guardar'}
+                  {guardando ? t('common.saving') : modoEdicion ? t('common.saveChanges') : t('common.save')}
                 </Text>
               </TouchableOpacity>
             </View>
