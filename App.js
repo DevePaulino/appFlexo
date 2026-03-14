@@ -44,8 +44,8 @@ const Stack = createNativeStackNavigator();
 const SettingsStack = createNativeStackNavigator();
 const ActivosStack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Activos', 'Setting'];
-const VISIBLE_TOP_TABS = ['Pedidos', 'Presupuesto', 'Producción', 'Activos', 'Setting'];
+const VALID_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting'];
+const VISIBLE_TOP_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting'];
 const DROPDOWN_TABS = ['Setting', 'Activos'];
 
 // Tabs que ya no existen como pestaña general → redirigir
@@ -295,7 +295,26 @@ function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
                     return (
                       <Pressable
                         key={lang.code}
-                        onPress={() => changeLanguage(lang.code)}
+                        onPress={async () => {
+                          await changeLanguage(lang.code);
+                          // Actualizar authUser en AsyncStorage para que el boot state no revierta el idioma
+                          try {
+                            const stored = await AsyncStorage.getItem('authUser');
+                            if (stored) {
+                              const u = JSON.parse(stored);
+                              await AsyncStorage.setItem('authUser', JSON.stringify({ ...u, idioma: lang.code }));
+                            }
+                          } catch {}
+                          if (currentUser?.id && global.__MIAPP_ACCESS_TOKEN) {
+                            try {
+                              fetch(`${API_BASE}/api/usuarios/${currentUser.id}/preferencias`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${global.__MIAPP_ACCESS_TOKEN}` },
+                                body: JSON.stringify({ idioma: lang.code }),
+                              });
+                            } catch {}
+                          }
+                        }}
                         style={[styles.userPanelLangBtn, active && styles.userPanelLangBtnActive]}
                       >
                         <Text style={styles.userPanelLangFlag}>{lang.flag}</Text>
@@ -354,6 +373,8 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const activosTabRef = React.useRef(null);
   const activeRoute = state.routes[state.index];
   const activeRouteName = activeRoute?.name;
+  // Active screen inside the nested stack (e.g. 'ActivosClientes', 'SettingsImpresion')
+  const activeNestedRoute = activeRoute?.state?.routes?.[activeRoute.state?.index ?? 0]?.name ?? null;
 
   const handleTabPress = (route, isFocused) => {
     const isDropdown = DROPDOWN_TABS.includes(route.name);
@@ -363,8 +384,8 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
         return;
       }
       const ref = route.name === 'Setting' ? settingTabRef : activosTabRef;
-      ref.current?.measureInWindow?.((x, y, _w, height) => {
-        setSubmenuPosition({ top: y + height, left: x });
+      ref.current?.measureInWindow?.((x, y, w, height) => {
+        setSubmenuPosition({ top: y + height, left: x, width: w });
         setOpenSubmenu(route.name);
       });
       return;
@@ -399,7 +420,8 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
               const label = options.tabBarLabel || options.title || route.name;
               const isFocused = activeRouteName === route.name;
               const isDropdown = DROPDOWN_TABS.includes(route.name);
-              const isActive = isFocused || (isDropdown && (openSubmenu === route.name || activeRouteName === route.name));
+              const isOpen = openSubmenu === route.name;
+              const isActive = isFocused || (isDropdown && (isOpen || activeRouteName === route.name));
               const tabRef = route.name === 'Setting' ? settingTabRef : route.name === 'Activos' ? activosTabRef : undefined;
 
               return (
@@ -407,9 +429,21 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
                   key={route.key}
                   ref={tabRef}
                   onPress={() => handleTabPress(route, isFocused)}
-                  style={[styles.tabBtn, isActive && styles.tabBtnActive]}
+                  style={({ pressed, hovered }) => [
+                    styles.tabBtn,
+                    isActive && styles.tabBtnActive,
+                    !isActive && (pressed || hovered) && styles.tabBtnHover,
+                  ]}
                 >
-                  <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
+                  <View style={styles.tabInner}>
+                    <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
+                    {isDropdown && (
+                      <Text style={[styles.tabChevron, isActive && styles.tabChevronActive]}>
+                        {isOpen ? '▲' : '▾'}
+                      </Text>
+                    )}
+                  </View>
+                  {isActive && <View style={styles.tabActiveIndicator} />}
                 </Pressable>
               );
             })}
@@ -421,16 +455,26 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
         <Modal transparent visible={!!openSubmenu} animationType="none" onRequestClose={() => setOpenSubmenu(null)}>
           <View style={StyleSheet.absoluteFill}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpenSubmenu(null)} />
-            <View style={[styles.settingsSubmenuWrap, { top: submenuPosition.top, left: submenuPosition.left }]}>
-              {currentSubmenuItems.map((item) => (
-                <Pressable
-                  key={item.key}
-                  onPress={() => goToSubmenuTarget(item.target)}
-                  style={styles.settingsSubmenuItem}
-                >
-                  <Text style={styles.settingsSubmenuItemText}>{item.label}</Text>
-                </Pressable>
-              ))}
+            <View style={[styles.settingsSubmenuWrap, { top: submenuPosition.top, left: submenuPosition.left, minWidth: submenuPosition.width || 220 }]}>
+              {currentSubmenuItems.map((item) => {
+                const isItemActive = activeNestedRoute === item.target?.route;
+                return (
+                  <Pressable
+                    key={item.key}
+                    onPress={() => goToSubmenuTarget(item.target)}
+                    style={({ pressed, hovered }) => [
+                      styles.settingsSubmenuItem,
+                      isItemActive && styles.settingsSubmenuItemActive,
+                      !isItemActive && (pressed || hovered) && styles.settingsSubmenuItemHover,
+                    ]}
+                  >
+                    {isItemActive && <View style={styles.settingsSubmenuItemDot} />}
+                    <Text style={[styles.settingsSubmenuItemText, isItemActive && styles.settingsSubmenuItemTextActive]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         </Modal>
@@ -501,14 +545,14 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvat
       initialRouteName={initialRouteName}
     >
       <Tab.Screen
-        name="Pedidos"
-        options={{ tabBarLabel: t('nav.pedidos') }}
-        children={(props) => <TrabajoScreen {...props} currentUser={currentUser} />}
-      />
-      <Tab.Screen
         name="Presupuesto"
         options={{ tabBarLabel: t('nav.presupuestos') }}
         children={(props) => <PresupuestoScreen {...props} currentUser={currentUser} />}
+      />
+      <Tab.Screen
+        name="Pedidos"
+        options={{ tabBarLabel: t('nav.pedidos') }}
+        children={(props) => <TrabajoScreen {...props} currentUser={currentUser} />}
       />
       <Tab.Screen
         name="Producción"
@@ -532,69 +576,81 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvat
 const styles = StyleSheet.create({
   tabsBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: C.bg,
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
     position: 'relative',
     zIndex: 5,
     paddingRight: 8,
-    paddingTop: 8,
+    paddingVertical: 5,
   },
   tabsList: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 8,
+    alignItems: 'center',
+    paddingHorizontal: 6,
     gap: 2,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    minHeight: 38,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    backgroundColor: '#DDE3EC',
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderTopColor: '#C8D0DC',
-    borderLeftColor: '#C8D0DC',
-    borderRightColor: '#C8D0DC',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
+    position: 'relative',
+    cursor: 'pointer',
   },
   tabBtnActive: {
-    backgroundColor: C.surface,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderTopColor: C.border,
-    borderLeftColor: C.border,
-    borderRightColor: C.border,
-    borderBottomColor: C.surface,
-    marginBottom: -1,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  tabBtnHover: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 8,
+  },
+  tabInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  tabActiveIndicator: {
+    position: 'absolute',
+    bottom: -6,
+    left: '20%',
+    right: '20%',
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: '#3B82F6',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#64748B',
+    color: 'rgba(248,250,252,0.42)',
+    letterSpacing: 0.1,
   },
   tabLabelActive: {
-    color: C.text,
+    color: '#F8FAFC',
     fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  tabChevron: {
+    fontSize: 9,
+    color: 'rgba(248,250,252,0.35)',
+    lineHeight: 13,
+  },
+  tabChevronActive: {
+    color: 'rgba(248,250,252,0.85)',
   },
   userBadge: {
     position: 'relative',
     marginLeft: 10,
     marginRight: 4,
-    marginBottom: 6,
+    marginBottom: 0,
     alignSelf: 'center',
     padding: 2,
   },
@@ -833,39 +889,55 @@ const styles = StyleSheet.create({
   },
   settingsSubmenuWrap: {
     position: 'absolute',
-    backgroundColor: C.surface,
+    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: C.border,
-    borderTopWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 4,
-    minWidth: 210,
-    maxWidth: 260,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    paddingVertical: 6,
+    minWidth: 220,
+    maxWidth: 280,
     zIndex: 50,
-    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 14,
   },
   settingsSubmenuItem: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    borderRadius: 0,
-    minHeight: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 0,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginHorizontal: 6,
+    marginVertical: 1,
+    borderRadius: 8,
+    minHeight: 38,
+  },
+  settingsSubmenuItemHover: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   settingsSubmenuItemActive: {
-    backgroundColor: '#1E293B',
-    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  settingsSubmenuItemDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#3B82F6',
+    flexShrink: 0,
   },
   settingsSubmenuItemText: {
-    color: C.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
+    color: 'rgba(248,250,252,0.60)',
+    fontSize: 13,
+    fontWeight: '500',
   },
   settingsSubmenuItemTextActive: {
     color: '#F8FAFC',
+    fontWeight: '700',
   },
   settingsSubmenuIndicator: {
     marginTop: 6,
@@ -1130,6 +1202,10 @@ export default function App() {
         global.__MIAPP_ACCESS_TOKEN = nextSession?.access_token || null;
         setAuthSession(nextSession || null);
         setAuthUser(nextUser || null);
+        // Restaurar idioma guardado en el servidor (tiene prioridad sobre AsyncStorage)
+        if (nextUser?.idioma) {
+          try { await changeLanguage(nextUser.idioma); } catch {}
+        }
       } catch (error) {
         console.error('Error loading boot state:', error);
       } finally {
@@ -1156,6 +1232,10 @@ export default function App() {
     setAuthUser(usuario);
     setAuthSession(session || null);
     markActivity();
+    // Restaurar idioma guardado en el servidor
+    if (usuario?.idioma) {
+      try { await changeLanguage(usuario.idioma); } catch {}
+    }
     try {
       if (usuario) {
         await AsyncStorage.setItem('authUser', JSON.stringify(usuario));
@@ -1234,6 +1314,12 @@ export default function App() {
     let cancelled = false;
 
     const loadSessionTimeout = async () => {
+      // Per-user timeout takes priority over company-wide setting
+      const perUser = Number(authUser?.sesion_timeout_minutos);
+      if (Number.isFinite(perUser) && perUser > 0) {
+        if (!cancelled) setSessionTimeoutMinutes(perUser);
+        return;
+      }
       try {
         const response = await fetch(API_SESSION_TIMEOUT_URL);
         const data = await response.json().catch(() => ({}));

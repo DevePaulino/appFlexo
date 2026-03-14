@@ -5,6 +5,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { useFocusEffect } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
+import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePermission } from './usePermission';
 
@@ -28,6 +29,7 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'manage_app_settings', title: 'Editar configuración de la app', hint: 'Permite modificar catálogos y reglas globales.' },
   { key: 'manage_roles_permissions', title: 'Editar roles y permisos', hint: 'Permite cambiar el rol activo y la matriz de permisos.' },
   { key: 'manage_usuarios', title: 'Gestionar usuarios', hint: 'Permite añadir, editar y eliminar usuarios del sistema.' },
+  { key: 'manage_session_timeout', title: 'Gestionar tiempo de sesión', hint: 'Permite configurar el tiempo de inactividad por usuario antes del cierre automático.' },
   { key: 'manage_estados_pedido', title: 'Editar estados de pedidos', hint: 'Permite crear, modificar y eliminar estados disponibles.' },
   { key: 'edit_clientes', title: 'Editar clientes', hint: 'Alta, edición y eliminación de clientes.' },
   { key: 'edit_maquinas', title: 'Editar máquinas', hint: 'Alta, edición y eliminación de máquinas.' },
@@ -451,6 +453,25 @@ const styles = StyleSheet.create({
     flex: 0.12,
     paddingRight: 8,
   },
+  usersColSesion: {
+    flex: 0.13,
+    paddingRight: 8,
+    justifyContent: 'center',
+  },
+  sesionTimeoutBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  sesionTimeoutBadgeText: {
+    fontSize: 11,
+    color: '#1D4ED8',
+    fontWeight: '600',
+  },
   usersColAcciones: {
     flex: 0.24,
     flexDirection: 'row',
@@ -589,6 +610,8 @@ const ESTADO_RULE_CONFIG = [
 ];
 
 function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette }) {
+  const { t } = useTranslation();
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: item.id });
 
   const rnRef = useCallback(
@@ -660,13 +683,20 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
           >
             <Text style={styles.chipEditText}>✎</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.chipDelete, isProtected && styles.chipDeleteDisabled]}
-            disabled={isProtected}
-            onPress={() => onDelete(item.id)}
-          >
-            <Text style={styles.chipDeleteText}>✕</Text>
-          </TouchableOpacity>
+          {confirmingDelete ? (
+            <DeleteConfirmRow
+              onCancel={() => setConfirmingDelete(false)}
+              onConfirm={() => { setConfirmingDelete(false); onDelete(item.id); }}
+            />
+          ) : (
+            <TouchableOpacity
+              style={[styles.chipDelete, isProtected && styles.chipDeleteDisabled]}
+              disabled={isProtected}
+              onPress={() => setConfirmingDelete(true)}
+            >
+              <Text style={styles.chipDeleteText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
     </View>
@@ -696,6 +726,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [nuevoUsuarioNombre, setNuevoUsuarioNombre] = useState('');
   const [nuevoUsuarioEmail, setNuevoUsuarioEmail] = useState('');
   const [nuevoUsuarioRol, setNuevoUsuarioRol] = useState('comercial');
+  const [nuevoUsuarioSesionTimeout, setNuevoUsuarioSesionTimeout] = useState('');
   const [submittedUsuario, setSubmittedUsuario] = useState(false);
   
   const [estadoRules, setEstadoRules] = useState(ESTADO_RULE_DEFAULTS);
@@ -743,8 +774,9 @@ export default function ConfigScreen({ route, currentUser }) {
     'usuarios-roles': t('screens.config.usuariosTitle'),
     creditos: t('screens.config.creditosTitle'),
     impresion: t('screens.config.impresionTitle'),
+    pedidos: t('nav.pedidosConfig'),
   };
-  const pageTitle = titleBySection[section] || t('nav.configuracion');
+  const pageTitle = titleBySection[section] || t('nav.pedidosConfig');
   const showBlockTitles = section === 'all';
   const showTopUsersPlus = section === 'usuarios-roles';
 
@@ -1130,6 +1162,7 @@ export default function ConfigScreen({ route, currentUser }) {
 
   // Usar permiso dinámico desde el backend
   const puedeEditarSessionTimeout = usePermission('manage_app_settings');
+  const puedeGestionarSesionTimeout = usePermission('manage_session_timeout');
   const puedeEditarRolesPermisosFromHook = usePermission('manage_roles_permissions');
 
   // Estado local para reflejar cambios inmediatos cuando el usuario se quita permisos a si mismo
@@ -1192,6 +1225,7 @@ export default function ConfigScreen({ route, currentUser }) {
     setNuevoUsuarioNombre('');
     setNuevoUsuarioEmail('');
     setNuevoUsuarioRol(rolesDisponibles[0]?.key || 'comercial');
+    setNuevoUsuarioSesionTimeout('');
     setSubmittedUsuario(false);
   };
 
@@ -1256,7 +1290,14 @@ export default function ConfigScreen({ route, currentUser }) {
       const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, email, rol }),
+        body: JSON.stringify({
+        nombre,
+        email,
+        rol,
+        ...(puedeGestionarSesionTimeout ? {
+          sesion_timeout_minutos: nuevoUsuarioSesionTimeout.trim() !== '' ? parseInt(nuevoUsuarioSesionTimeout, 10) || null : null,
+        } : {}),
+      }),
       });
       const data = await response.json().catch(() => ({}));
 
@@ -1295,11 +1336,14 @@ export default function ConfigScreen({ route, currentUser }) {
     setNuevoUsuarioNombre(String(usuario?.nombre || ''));
     setNuevoUsuarioEmail(String(usuario?.email || ''));
     setNuevoUsuarioRol(String(usuario?.rol || rolesDisponibles[0]?.key || 'comercial').toLowerCase());
+    setNuevoUsuarioSesionTimeout(usuario?.sesion_timeout_minutos != null ? String(usuario.sesion_timeout_minutos) : '');
     setSubmittedUsuario(false);
     setModalUsuarioVisible(true);
   };
 
   const [deletingUserId, setDeletingUserId] = useState(null);
+  const [confirmingDeleteUsuario, setConfirmingDeleteUsuario] = useState(null);
+  const [confirmingDeleteValor, setConfirmingDeleteValor] = useState(null);
 
   const eliminarUsuario = async (id) => {
     if (!puedeAdministrarUsuarios) {
@@ -1350,33 +1394,7 @@ export default function ConfigScreen({ route, currentUser }) {
       mostrarPermisoUsuariosDenegado();
       return;
     }
-
-    try {
-      const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-      // On web, react-native Alert may not trigger the onPress handlers; use window.confirm instead.
-      if (isWeb && typeof window.confirm === 'function') {
-        const accepted = window.confirm(t('screens.config.confirmDeleteUser', { nombre: usuario?.nombre || 'este usuario' }));
-        if (accepted) {
-          eliminarUsuario(usuario.id);
-        }
-        return;
-      }
-    } catch (e) {
-      // ignore and fallback to Alert
-    }
-
-    Alert.alert(
-      t('screens.config.confirmDeleteUserTitle'),
-      t('screens.config.confirmDeleteUser', { nombre: usuario?.nombre || 'este usuario' }),
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: t('screens.config.deleteUserBtn'),
-          style: 'destructive',
-          onPress: () => eliminarUsuario(usuario.id),
-        },
-      ]
-    );
+    setConfirmingDeleteUsuario(usuario.id);
   };
 
   const abrirModalRecarga = (usuario) => {
@@ -2035,13 +2053,20 @@ export default function ConfigScreen({ route, currentUser }) {
                   >
                     <Text style={styles.chipEditText}>✎</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.chipDelete, esRolProtegido && styles.chipDeleteDisabled]}
-                    disabled={esRolProtegido}
-                    onPress={() => eliminarValor(item.id)}
-                  >
-                    <Text style={styles.chipDeleteText}>✕</Text>
-                  </TouchableOpacity>
+                  {confirmingDeleteValor === item.id ? (
+                    <DeleteConfirmRow
+                      onCancel={() => setConfirmingDeleteValor(null)}
+                      onConfirm={() => { setConfirmingDeleteValor(null); eliminarValor(item.id); }}
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.chipDelete, esRolProtegido && styles.chipDeleteDisabled]}
+                      disabled={esRolProtegido}
+                      onPress={() => setConfirmingDeleteValor(item.id)}
+                    >
+                      <Text style={styles.chipDeleteText}>✕</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })}
@@ -2093,6 +2118,9 @@ export default function ConfigScreen({ route, currentUser }) {
                       <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
                       <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>{t('screens.config.colEmail')}</Text></View>
                       <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>{t('screens.config.colRol')}</Text></View>
+                      {puedeGestionarSesionTimeout && (
+                        <View style={styles.usersColSesion}><Text style={styles.usersHeaderText}>{t('screens.config.colSesion')}</Text></View>
+                      )}
                       <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>{t('screens.config.colAcciones')}</Text></View>
                     </View>
                     <ScrollView>
@@ -2101,6 +2129,17 @@ export default function ConfigScreen({ route, currentUser }) {
                           <View style={styles.usersColNombre}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.nombre || '-'}</Text></View>
                           <View style={styles.usersColEmail}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.email || '-'}</Text></View>
                           <View style={styles.usersColRol}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.rol || '-'}</Text></View>
+                          {puedeGestionarSesionTimeout && (
+                            <View style={styles.usersColSesion}>
+                              {usuario.sesion_timeout_minutos ? (
+                                <View style={styles.sesionTimeoutBadge}>
+                                  <Text style={styles.sesionTimeoutBadgeText}>⏱ {usuario.sesion_timeout_minutos} min</Text>
+                                </View>
+                              ) : (
+                                <Text style={[styles.usersCellText, { color: '#94A3B8' }]}>{t('screens.config.sesionDefault')}</Text>
+                              )}
+                            </View>
+                          )}
                           <View style={styles.usersColAcciones}>
                             <TouchableOpacity
                               style={[styles.usersActionBtn, !puedeAdministrarUsuarios && { opacity: 0.5 }]}
@@ -2109,13 +2148,20 @@ export default function ConfigScreen({ route, currentUser }) {
                             >
                               <Text style={styles.usersActionBtnText}>{t('screens.config.editUserBtn')}</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                              style={[styles.usersActionBtn, styles.usersActionBtnDelete, (!puedeAdministrarUsuarios || deletingUserId === usuario.id) && { opacity: 0.5 }]}
-                              onPress={() => confirmarEliminarUsuario(usuario)}
-                              disabled={!puedeAdministrarUsuarios || deletingUserId === usuario.id}
-                            >
-                              <Text style={[styles.usersActionBtnText, { color: '#DC2626' }]}>{deletingUserId === usuario.id ? t('screens.config.deletingUserBtn') : t('screens.config.deleteUserBtn')}</Text>
-                            </TouchableOpacity>
+                            {confirmingDeleteUsuario === usuario.id ? (
+                              <DeleteConfirmRow
+                                onCancel={() => setConfirmingDeleteUsuario(null)}
+                                onConfirm={() => { setConfirmingDeleteUsuario(null); eliminarUsuario(usuario.id); }}
+                              />
+                            ) : (
+                              <TouchableOpacity
+                                style={[styles.usersActionBtn, styles.usersActionBtnDelete, (!puedeAdministrarUsuarios || deletingUserId === usuario.id) && { opacity: 0.5 }]}
+                                onPress={() => confirmarEliminarUsuario(usuario)}
+                                disabled={!puedeAdministrarUsuarios || deletingUserId === usuario.id}
+                              >
+                                <Text style={[styles.usersActionBtnText, { color: '#DC2626' }]}>{deletingUserId === usuario.id ? t('screens.config.deletingUserBtn') : t('screens.config.deleteUserBtn')}</Text>
+                              </TouchableOpacity>
+                            )}
                           </View>
                         </View>
                       ))}
@@ -2188,6 +2234,25 @@ export default function ConfigScreen({ route, currentUser }) {
                         })}
                       </View>
                     </View>
+
+                    {puedeGestionarSesionTimeout && (
+                      <View style={{ marginTop: 12 }}>
+                        <Text style={styles.usersFieldLabel}>{t('screens.config.userSesionTimeoutLabel')}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TextInput
+                            style={[styles.usersFieldInput, { flex: 1 }]}
+                            value={nuevoUsuarioSesionTimeout}
+                            onChangeText={(v) => setNuevoUsuarioSesionTimeout(v.replace(/[^0-9]/g, ''))}
+                            placeholder={t('screens.config.userSesionTimeoutPlaceholder')}
+                            placeholderTextColor="#94A3B8"
+                            keyboardType="number-pad"
+                            maxLength={4}
+                          />
+                          <Text style={{ fontSize: 12, color: '#64748B' }}>{t('screens.config.userSesionTimeoutUnit')}</Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>{t('screens.config.userSesionTimeoutHint')}</Text>
+                      </View>
+                    )}
 
                     <View style={styles.usersFormActions}>
                       <TouchableOpacity style={styles.usersBtn} onPress={cerrarModalUsuario}>

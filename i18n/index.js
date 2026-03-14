@@ -22,8 +22,16 @@ export const LANGUAGES = [
   { code: 'it', label: 'Italiano',  flag: '🇮🇹' },
 ];
 
-/** Detect language: AsyncStorage preference → browser/device locale → 'es' */
+/** Detect language: localStorage (web) / AsyncStorage → browser locale → 'es' */
 async function detectLanguage() {
+  // On web, prefer localStorage — it survives hard reloads reliably
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const saved = window.localStorage.getItem(LANG_STORAGE_KEY);
+      if (saved && SUPPORTED.includes(saved)) return saved;
+    } catch {}
+  }
+
   try {
     const saved = await AsyncStorage.getItem(LANG_STORAGE_KEY);
     if (saved && SUPPORTED.includes(saved)) return saved;
@@ -64,6 +72,10 @@ export async function initI18n() {
 /** Change language, persist to storage, trigger re-render via i18next */
 export async function changeLanguage(code) {
   if (!SUPPORTED.includes(code)) return;
+  // Persist in both storages so web page reloads pick it up
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try { window.localStorage.setItem(LANG_STORAGE_KEY, code); } catch {}
+  }
   try {
     await AsyncStorage.setItem(LANG_STORAGE_KEY, code);
   } catch {}

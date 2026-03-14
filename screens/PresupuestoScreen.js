@@ -270,6 +270,12 @@ const styles = StyleSheet.create({
   colEstado: {
     flex: 0.18,
   },
+  fechaAprobacionText: {
+    fontSize: 10,
+    color: '#16A34A',
+    marginTop: 2,
+    opacity: 0.75,
+  },
   actionBtn: {
     backgroundColor: '#F0FDF4',
     borderWidth: 1,
@@ -812,6 +818,16 @@ export default function PresupuestoScreen({ currentUser }) {
     return `${dia}-${mes}-${anio}`;
   };
 
+  const formatearFechaHora = (valor) => {
+    if (!valor) return '-';
+    const str = String(valor);
+    const [fechaParte, horaParte] = str.includes('T') ? str.split('T') : [str, null];
+    const [anio, mes, dia] = fechaParte.split('-');
+    if (!anio || !mes || !dia) return str;
+    const horaStr = horaParte ? horaParte.substring(0, 5) : null;
+    return horaStr ? `${dia}-${mes}-${anio} ${horaStr}` : `${dia}-${mes}-${anio}`;
+  };
+
   const getDetalleLabel = (clave) => {
     const labels = {
       numero_presupuesto: 'Número de presupuesto',
@@ -911,6 +927,8 @@ export default function PresupuestoScreen({ currentUser }) {
   const formatearValorDetalle = (valor, clave = '') => {
     if (valor === null || valor === undefined || valor === '') return '-';
     if (clave === 'aprobado') return valor ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente');
+    if (clave === 'fecha_aprobacion') return formatearFechaHora(valor);
+    if (clave === 'fecha_presupuesto') return formatearFecha(valor);
     if (typeof valor === 'boolean') return valor ? t('common.yes') : t('common.no');
     if (Array.isArray(valor)) return valor.length ? valor.join(', ') : '-';
     if (typeof valor === 'object') return JSON.stringify(valor);
@@ -1078,6 +1096,11 @@ export default function PresupuestoScreen({ currentUser }) {
                   >
                     {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
                   </Text>
+                  {presupuesto.aprobado && presupuesto.fecha_aprobacion ? (
+                    <Text style={styles.fechaAprobacionText} numberOfLines={1}>
+                      {formatearFechaHora(presupuesto.fecha_aprobacion)}
+                    </Text>
+                  ) : null}
                   {!presupuesto.aprobado ? (
                     <TouchableOpacity style={styles.actionBtn} onPress={() => handleAceptarPresupuesto(presupuesto)}>
                       <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>

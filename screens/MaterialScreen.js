@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import EmptyState from '../components/EmptyState';
+import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +36,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
   const changeTab = useCallback((tab) => {
     setActiveTab(tab);
+    setBusquedaStock('');
     AsyncStorage.setItem('MaterialScreen_activeTab', tab).catch(() => {});
   }, []);
 
@@ -53,6 +55,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const [stock, setStock] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
   const [stockFilter, setStockFilter] = useState('');
+  const [busquedaStock, setBusquedaStock] = useState('');
   const [stockModal, setStockModal] = useState({ visible: false, editing: null });
   const [stockForm, setStockForm] = useState({
     material_nombre: '',
@@ -84,6 +87,9 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const [loadingProveedores, setLoadingProveedores] = useState(false);
   const [provModal, setProvModal] = useState({ visible: false, editing: null });
   const [provForm, setProvForm] = useState({ nombre: '', contacto: '', telefono: '', email: '', notas: '' });
+
+  // ── Inline delete confirmation ────────────────────────────────────────────
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
 
   // ── Auth headers ─────────────────────────────────────────────────────────
   const authHeaders = useCallback(() => ({
@@ -291,7 +297,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
   };
 
   const deleteCatalogo = async (mat) => {
-    if (!window.confirm(t('screens.materiales.confirmDeleteMaterial', { nombre: mat.nombre }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/catalogo/${mat._id || mat.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -417,7 +422,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
   };
 
   const deleteStock = async (entry) => {
-    if (!window.confirm(t('screens.materiales.confirmDeleteStock', { nombre: entry.material_nombre, fabricante: entry.fabricante, ancho: entry.ancho_cm }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/stock/${entry._id || entry.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -474,7 +478,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
   };
 
   const deleteProveedor = async (prov) => {
-    if (!window.confirm(t('screens.materiales.confirmDeleteProveedor', { nombre: prov.nombre }))) return;
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/proveedores/${prov._id || prov.id}`, {
         method: 'DELETE', headers: authHeaders(),
@@ -732,9 +735,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
               <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openCatEdit(mat)}>
                 <Text style={styles.actionBtnSmallText}>✎</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => deleteCatalogo(mat)}>
-                <Text style={styles.actionBtnSmallText}>✕</Text>
-              </TouchableOpacity>
+              {confirmingDelete === (mat._id || mat.id) ? (
+                <DeleteConfirmRow
+                  onCancel={() => setConfirmingDelete(null)}
+                  onConfirm={() => { setConfirmingDelete(null); deleteCatalogo(mat); }}
+                />
+              ) : (
+                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(mat._id || mat.id)}>
+                  <Text style={styles.actionBtnSmallText}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </TouchableOpacity>
 
@@ -766,7 +776,17 @@ export default function MaterialScreen({ currentUser, navigation }) {
     </ScrollView>
   );
 
-  const renderStockTab = () => (
+  const renderStockTab = () => {
+    const q = busquedaStock.trim().toLowerCase();
+    const stockFiltrado = q
+      ? stock.filter(e =>
+          (e.material_nombre || '').toLowerCase().includes(q) ||
+          (e.fabricante || '').toLowerCase().includes(q) ||
+          (e.numero_lote || '').toLowerCase().includes(q)
+        )
+      : stock;
+
+    return (
     <ScrollView style={styles.tabContent}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle}>{t('screens.materiales.stockTitle')}</Text>
@@ -775,32 +795,49 @@ export default function MaterialScreen({ currentUser, navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Filter */}
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>{t('screens.materiales.filtrarPorMaterial')}</Text>
-        <View style={styles.filterSelectWrap}>
-          {Platform.OS === 'web' ? (
-            <select
-              style={styles.filterSelect}
-              value={stockFilter}
-              onChange={e => setStockFilter(e.target.value)}
-            >
-              <option value="">{t('screens.materiales.todos')}</option>
-              {catalogoNames.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          ) : (
-            <TextInput
-              style={styles.filterInput}
-              value={stockFilter}
-              onChangeText={setStockFilter}
-              placeholder={t('screens.materiales.materialNamePlaceholder')}
-              placeholderTextColor="#94A3B8"
-            />
-          )}
-        </View>
-      </View>
-
       {loadingStock && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
+
+      {/* Mini chart — same as resumen tab */}
+      {chartData.length > 0 && !loadingStock && (
+        <View style={[styles.chartCard, { marginBottom: 16 }]}>
+          <Text style={styles.chartTitle}>{t('screens.materiales.metrosPorMaterial')}</Text>
+          {chartData.map((entry) => {
+            const total = entry.disponible + entry.consumido + entry.retales;
+            if (total === 0) return null;
+            const pctDisp = entry.disponible / total;
+            const pctRetal = entry.retales / total;
+            const color = MATERIAL_COLORS[entry.colorIdx % MATERIAL_COLORS.length];
+            return (
+              <View key={entry.name} style={{ marginBottom: 14 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: color, marginRight: 7 }} />
+                    <Text style={{ fontWeight: '700', fontSize: 13, color: '#111827' }}>{entry.name}</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>{total.toFixed(0)} {t('screens.materiales.mTotal')}</Text>
+                </View>
+                <View style={{ height: 10, borderRadius: 5, backgroundColor: '#E9EDF2', overflow: 'hidden', flexDirection: 'row' }}>
+                  {pctDisp > 0 && <View style={{ width: `${pctDisp * 100}%`, backgroundColor: color }} />}
+                  {pctRetal > 0 && <View style={{ width: `${pctRetal * 100}%`, backgroundColor: '#FFB300' }} />}
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 5, gap: 12 }}>
+                  <Text style={{ fontSize: 11, color: '#374151' }}>
+                    <Text style={{ color, fontWeight: '700' }}>{entry.disponible.toFixed(0)} m</Text>{'  '}{t('screens.materiales.disponibleLabel')}
+                  </Text>
+                  {entry.retales > 0 && (
+                    <Text style={{ fontSize: 11, color: '#374151' }}>
+                      <Text style={{ color: '#F59E0B', fontWeight: '700' }}>{entry.retales.toFixed(0)} m</Text>{'  '}{t('screens.materiales.retalesLabel')}
+                    </Text>
+                  )}
+                  <Text style={{ fontSize: 11, color: '#374151' }}>
+                    <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>{entry.consumido.toFixed(0)} m</Text>{'  '}{t('screens.materiales.consumidoLabel')}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
@@ -816,11 +853,14 @@ export default function MaterialScreen({ currentUser, navigation }) {
         <Text style={[styles.th, { width: 100 }]}>{t('screens.materiales.colAcciones')}</Text>
       </View>
 
-      {stock.length === 0 && !loadingStock && (
-        <EmptyState variant="inline" icon="📦" title={t('screens.materiales.sinStockEntradas')} message={t('screens.materiales.addToStart')} />
+      {stockFiltrado.length === 0 && !loadingStock && (
+        <EmptyState variant="inline" icon="📦"
+          title={busquedaStock ? t('common.noResults') : t('screens.materiales.sinStockEntradas')}
+          message={busquedaStock ? '' : t('screens.materiales.addToStart')}
+        />
       )}
 
-      {stock.map((entry, idx) => {
+      {stockFiltrado.map((entry, idx) => {
         const pct = entry.metros_total > 0 ? Math.round((entry.metros_disponibles / entry.metros_total) * 100) : 0;
         const color = stockColor(entry);
         return (
@@ -841,15 +881,23 @@ export default function MaterialScreen({ currentUser, navigation }) {
               <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openStockEdit(entry)}>
                 <Text style={styles.actionBtnSmallText}>✎</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => deleteStock(entry)}>
-                <Text style={styles.actionBtnSmallText}>✕</Text>
-              </TouchableOpacity>
+              {confirmingDelete === (entry._id || entry.id) ? (
+                <DeleteConfirmRow
+                  onCancel={() => setConfirmingDelete(null)}
+                  onConfirm={() => { setConfirmingDelete(null); deleteStock(entry); }}
+                />
+              ) : (
+                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(entry._id || entry.id)}>
+                  <Text style={styles.actionBtnSmallText}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         );
       })}
     </ScrollView>
-  );
+    );
+  };
 
   const renderHistorialTab = () => {
     const totalPages = Math.max(1, Math.ceil(consumosTotal / 50));
@@ -939,9 +987,16 @@ export default function MaterialScreen({ currentUser, navigation }) {
               <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openProvEdit(prov)}>
                 <Text style={styles.actionBtnSmallText}>✎</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => deleteProveedor(prov)}>
-                <Text style={styles.actionBtnSmallText}>✕</Text>
-              </TouchableOpacity>
+              {confirmingDelete === (prov._id || prov.id) ? (
+                <DeleteConfirmRow
+                  onCancel={() => setConfirmingDelete(null)}
+                  onConfirm={() => { setConfirmingDelete(null); deleteProveedor(prov); }}
+                />
+              ) : (
+                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(prov._id || prov.id)}>
+                  <Text style={styles.actionBtnSmallText}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -1502,6 +1557,15 @@ export default function MaterialScreen({ currentUser, navigation }) {
           <Text style={styles.pageTitle}>{t('nav.materiales')}</Text>
           <View style={{ width: 38 }} />
         </View>
+        {activeTab === 'stock' && (
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('common.search')}
+            value={busquedaStock}
+            onChangeText={setBusquedaStock}
+            placeholderTextColor="#94A3B8"
+          />
+        )}
       </View>
 
       {/* Tab bar */}
@@ -1561,6 +1625,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 38,
+    marginBottom: 6,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    fontSize: 12,
+    color: '#0F172A',
+    width: '62%',
+    alignSelf: 'center',
+    marginBottom: 4,
   },
   pageTitle: {
     flex: 1,

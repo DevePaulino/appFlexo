@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useSortable } from '@dnd-kit/sortable';
+import { useTranslation } from 'react-i18next';
 
 function TrabajoRow({
   trabajo,
@@ -15,9 +16,11 @@ function TrabajoRow({
   getStatusLabel,
   getEntregaSemaforo,
   formatearFecha,
+  onMarcarImpreso,
   styles,
 }) {
   const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: canonicalId });
 
   const rnRef = useCallback(
@@ -94,6 +97,20 @@ function TrabajoRow({
           </Picker>
         </View>
       </View>
+      <View style={[styles.tableCell, styles.colImpreso]}>
+        {trabajo.impresion_registrada ? (
+          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#DCFCE7', alignItems: 'center' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#16A34A' }}>✓ {t('screens.produccion.consumo.yaImpreso')}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
+            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#1E293B', alignItems: 'center' }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -105,6 +122,7 @@ export default React.memo(TrabajoRow, (a, b) => {
     return (
       aid === bid &&
       a.trabajo.estado === b.trabajo.estado &&
+      a.trabajo.impresion_registrada === b.trabajo.impresion_registrada &&
       a.trabajo.en_produccion === b.trabajo.en_produccion &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.maquinaActual === b.maquinaActual &&

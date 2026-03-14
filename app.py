@@ -280,6 +280,7 @@ PERMISSION_KEYS = [
     'manage_app_settings',
     'manage_roles_permissions',
     'manage_usuarios',
+    'manage_session_timeout',
     'manage_estados_pedido',
     'edit_clientes',
     'edit_maquinas',
@@ -294,6 +295,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -307,6 +309,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
         'manage_usuarios': True,
+        'manage_session_timeout': True,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
@@ -320,6 +323,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': True,
         'manage_roles_permissions': True,
         'manage_usuarios': True,
+        'manage_session_timeout': True,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
@@ -334,6 +338,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'edit_clientes': True,
         'edit_maquinas': False,
@@ -347,6 +352,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -360,6 +366,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': True,
@@ -373,6 +380,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
@@ -386,6 +394,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
+        'manage_session_timeout': False,
         'manage_estados_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': False,
@@ -652,10 +661,13 @@ def is_auth_rate_limited(channel, key, limit=8, window_seconds=300):
 
 def get_bearer_token_from_request():
     auth_header = str(request.headers.get('Authorization') or '').strip()
-    if not auth_header.lower().startswith('bearer '):
-        return None
-    token = auth_header[7:].strip()
-    return token or None
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+        if token:
+            return token
+    # Fallback: accept ?token= query param (needed for iframes that can't set headers)
+    query_token = str(request.args.get('token') or '').strip()
+    return query_token or None
 
 
 def get_request_user():
@@ -1685,6 +1697,8 @@ def login_public_user():
             'rol': rol,
             'empresa_id': empresa_id,
             'empresa_nombre': user.get('empresa_nombre', ''),
+            'idioma': user.get('idioma') or None,
+            'sesion_timeout_minutos': user.get('sesion_timeout_minutos') or None,
         }
 
         try:
@@ -2282,6 +2296,17 @@ def actualizar_usuario(usuario_id):
             update_doc['email'] = email
         if rol:
             update_doc['rol'] = rol
+        if 'sesion_timeout_minutos' in data:
+            val = data.get('sesion_timeout_minutos')
+            if val is None or str(val).strip() == '':
+                update_doc['sesion_timeout_minutos'] = None
+            else:
+                try:
+                    mins = int(val)
+                    if SESSION_TIMEOUT_MINUTES_MIN <= mins <= SESSION_TIMEOUT_MINUTES_MAX:
+                        update_doc['sesion_timeout_minutos'] = mins
+                except (ValueError, TypeError):
+                    pass
 
         if not update_doc:
             return jsonify({'error': 'Nada que actualizar'}), 400
@@ -2295,6 +2320,52 @@ def actualizar_usuario(usuario_id):
         except Exception:
             pass
         return jsonify(fix_id(usuario)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/usuarios/<usuario_id>/preferencias', methods=['PATCH'])
+def actualizar_preferencias_usuario(usuario_id):
+    """Guarda preferencias del usuario (ej. idioma) sin tocar datos críticos."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        data = request.get_json() or {}
+        SUPPORTED_LANGS = ['es', 'en', 'fr', 'pt', 'de', 'it']
+        update_doc = {}
+        if 'idioma' in data:
+            idioma = str(data.get('idioma') or '').strip()
+            if idioma in SUPPORTED_LANGS:
+                update_doc['idioma'] = idioma
+        if 'sesion_timeout_minutos' in data:
+            val = data.get('sesion_timeout_minutos')
+            if val is None or str(val).strip() == '':
+                update_doc['sesion_timeout_minutos'] = None
+            else:
+                try:
+                    mins = int(val)
+                    if SESSION_TIMEOUT_MINUTES_MIN <= mins <= SESSION_TIMEOUT_MINUTES_MAX:
+                        update_doc['sesion_timeout_minutos'] = mins
+                except (ValueError, TypeError):
+                    pass
+
+        if not update_doc:
+            return jsonify({'error': 'Nada que actualizar'}), 400
+
+        col = get_empresa_collection('usuarios', empresa_id)
+        try:
+            oid = ObjectId(usuario_id)
+        except Exception:
+            oid = usuario_id
+
+        result = col.update_one({'_id': oid, 'empresa_id': empresa_id}, {'$set': update_doc})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        return jsonify({'ok': True, **update_doc}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -3157,7 +3228,8 @@ def get_pedidos():
             return auth_error
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
-        pedidos = list(col.find({'empresa_id': empresa_id}))
+        # Excluir documentos sin numero_pedido (son trabajos auxiliares de presupuestos no aprobados)
+        pedidos = list(col.find({'empresa_id': empresa_id, 'numero_pedido': {'$exists': True, '$nin': [None, '']}}))
         trabajos_col = get_empresa_collection('trabajos', empresa_id)
         trabajos_map = {}
         for t in trabajos_col.find({'empresa_id': empresa_id}):
@@ -3206,6 +3278,21 @@ def get_pedido(pedido_id):
                     trabajo_doc = None
             if trabajo_doc:
                 pedido['trabajo'] = fix_id(trabajo_doc)
+        except Exception:
+            pass
+
+        # enriquecer con fecha_aprobacion del presupuesto asociado (si existe)
+        try:
+            t_id = pedido.get('trabajo_id')
+            if t_id:
+                pres_col = get_empresa_collection('presupuestos', empresa_id)
+                pres = pres_col.find_one(
+                    {'trabajo_id': t_id, 'empresa_id': empresa_id, 'aprobado': True},
+                    {'fecha_aprobacion': 1, 'numero_presupuesto': 1}
+                )
+                if pres:
+                    pedido['fecha_aprobacion_presupuesto'] = pres.get('fecha_aprobacion')
+                    pedido['numero_presupuesto'] = pres.get('numero_presupuesto')
         except Exception:
             pass
 
@@ -3646,6 +3733,464 @@ def registrar_consumo_material():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/materiales/consumos/preview', methods=['OPTIONS'])
+def consumo_preview_options():
+    return '', 204
+
+@app.route('/api/materiales/consumos/preview', methods=['GET'])
+def preview_consumo_auto():
+    """
+    Calcula (sin registrar) el consumo estimado para un pedido.
+    Devuelve las mismas claves que /consumos/auto pero sin escribir nada en BD.
+    Query param: pedido_id
+    """
+    import math
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        pedido_id = str(request.args.get('pedido_id') or '').strip()
+        if not pedido_id:
+            return jsonify({'error': 'pedido_id es requerido'}), 400
+
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            pedido = pedidos_col.find_one({'_id': ObjectId(pedido_id), 'empresa_id': empresa_id})
+        except Exception:
+            pedido = None
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        dp = pedido.get('datos_presupuesto') or {}
+        troquel_id_str = str(dp.get('troquelId') or '').strip()
+        material_nombre = str(dp.get('material') or '').strip()
+        try:
+            tirada = int(pedido.get('tirada_total') or dp.get('tirada_total') or dp.get('tirada') or 0)
+        except (TypeError, ValueError):
+            tirada = 0
+
+        try:
+            merma_metros = float(request.args.get('merma_metros') or 0)
+        except (TypeError, ValueError):
+            merma_metros = 0.0
+
+        troquel = None
+        sentido = 'vertical'
+        motivos_ancho = 1
+        motivos_alto = 1
+        if troquel_id_str:
+            troqueles_col = get_empresa_collection('troqueles', empresa_id)
+            try:
+                troquel = troqueles_col.find_one({'_id': ObjectId(troquel_id_str), 'empresa_id': empresa_id})
+            except Exception:
+                troquel = None
+            if troquel:
+                sentido = troquel.get('sentido_impresion', 'vertical')
+                try:
+                    motivos_ancho = max(1, int(float(troquel.get('motivosAncho') or 1)))
+                except (TypeError, ValueError):
+                    motivos_ancho = 1
+                try:
+                    motivos_alto = max(1, int(float(troquel.get('motivosAlto') or 1)))
+                except (TypeError, ValueError):
+                    motivos_alto = 1
+
+        archivos_col = get_empresa_collection('pedido_archivos', empresa_id)
+        rep_file = archivos_col.find_one(
+            {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+            sort=[('fecha_subida', -1)]
+        )
+
+        if rep_file is None:
+            return jsonify({
+                'error': 'No hay PDF en el contenedor de Repetidora.',
+                'code': 'SIN_REPETIDORA',
+            }), 422
+
+        pdf_ancho_mm      = rep_file.get('ancho_mm')
+        pdf_desarrollo_mm = rep_file.get('desarrollo_mm')
+        if not pdf_ancho_mm or not pdf_desarrollo_mm:
+            return jsonify({
+                'error': 'El PDF de repetidora no tiene dimensiones registradas.',
+                'code': 'SIN_DIMENSIONES_PDF',
+            }), 422
+
+        if sentido == 'horizontal':
+            ancho_repetidora_mm = pdf_desarrollo_mm
+            desarrollo_mm       = pdf_ancho_mm
+        else:
+            ancho_repetidora_mm = pdf_ancho_mm
+            desarrollo_mm       = pdf_desarrollo_mm
+
+        ancho_material_mm = ancho_repetidora_mm + 10
+        ancho_material_cm = round(ancho_material_mm / 10, 2)
+        etiquetas_por_vuelta = motivos_ancho * motivos_alto
+        vueltas = math.ceil(tirada / etiquetas_por_vuelta) if tirada > 0 else 0
+        metros_consumidos = round(desarrollo_mm * vueltas / 1000 + merma_metros, 4)
+
+        calculo = {
+            'sentido_impresion': sentido,
+            'ancho_repetidora_mm': ancho_repetidora_mm,
+            'desarrollo_mm': desarrollo_mm,
+            'ancho_material_requerido_mm': ancho_material_mm,
+            'etiquetas_por_vuelta': etiquetas_por_vuelta,
+            'vueltas': vueltas,
+            'merma_metros': merma_metros,
+            'metros_consumidos': metros_consumidos,
+        }
+
+        stock_entry = None
+        retal_preview = None
+        if metros_consumidos > 0 and material_nombre:
+            stock_col = get_empresa_collection('stock_materiales', empresa_id)
+
+            def buscar_stock(es_retal_flag):
+                q = {
+                    'empresa_id': empresa_id,
+                    'activo': True,
+                    'ancho_cm': {'$gte': ancho_material_cm},
+                    'material_nombre': {'$regex': material_nombre, '$options': 'i'},
+                }
+                if es_retal_flag:
+                    q['es_retal'] = True
+                else:
+                    q['$or'] = [{'es_retal': False}, {'es_retal': {'$exists': False}}]
+                for c in stock_col.find(q).sort('ancho_cm', 1):
+                    if c.get('metros_disponibles', 0) >= metros_consumidos:
+                        return c
+                return None
+
+            stock_entry = buscar_stock(True) or buscar_stock(False)
+            if not stock_entry:
+                return jsonify({
+                    'error': f'Sin stock disponible con ancho ≥ {ancho_material_cm} cm y ≥ {metros_consumidos} m para "{material_nombre}"',
+                    'code': 'SIN_STOCK',
+                    'calculo': calculo,
+                    'ancho_requerido_cm': ancho_material_cm,
+                    'metros_requeridos': metros_consumidos,
+                }), 400
+
+            ancho_rollo_cm = stock_entry.get('ancho_cm', 0)
+            desperdicio_cm = round(ancho_rollo_cm - ancho_material_cm, 2)
+            if desperdicio_cm >= 1.0:
+                retal_preview = {
+                    'ancho_cm': desperdicio_cm,
+                    'metros_disponibles': metros_consumidos,
+                    'material_nombre': stock_entry['material_nombre'],
+                }
+
+        stock_preview = None
+        if stock_entry:
+            stock_preview = {
+                'material_nombre': stock_entry.get('material_nombre', ''),
+                'fabricante': stock_entry.get('fabricante', ''),
+                'ancho_cm': stock_entry.get('ancho_cm', 0),
+                'metros_disponibles': stock_entry.get('metros_disponibles', 0),
+                'es_retal': bool(stock_entry.get('es_retal', False)),
+            }
+
+        return jsonify({
+            'calculo': calculo,
+            'stock': stock_preview,
+            'retal_generado': retal_preview,
+            'material_nombre': material_nombre,
+            'repetidora_nombre': rep_file.get('nombre_original', ''),
+            'repetidora_tamanio': rep_file.get('tamanio'),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/materiales/consumos/auto', methods=['OPTIONS'])
+def consumo_auto_options():
+    return '', 204
+
+@app.route('/api/materiales/consumos/auto', methods=['POST'])
+def registrar_consumo_auto():
+    """
+    Registra el consumo de material al marcar un pedido como impreso.
+
+    Parámetros JSON:
+      pedido_id      : ID del pedido (obligatorio)
+      sin_material   : bool — si True, omite el consumo pero avanza el estado
+                       (usar cuando no hay PDF de repetidora)
+
+    Lógica:
+    1. Carga pedido → troquel → PDF de repetidora
+    2. Si no hay PDF en contenedor 'repetidora': devuelve code='SIN_REPETIDORA'
+    3. Dimensiones del PDF (ancho_mm, desarrollo_mm) + sentido_impresion del troquel
+    4. Busca primero retales, luego rollos con ancho suficiente
+    5. Registra consumo y genera retal (merma) si hay diferencia de ancho
+    6. Avanza el estado del pedido al siguiente en la lista ordenada
+    """
+    import math
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        pedido_id = str(data.get('pedido_id') or '').strip()
+        sin_material = bool(data.get('sin_material', False))
+        try:
+            merma_metros = float(data.get('merma_metros') or 0)
+        except (TypeError, ValueError):
+            merma_metros = 0.0
+        if not pedido_id:
+            return jsonify({'error': 'pedido_id es requerido'}), 400
+
+        # ── 1. Cargar pedido ──────────────────────────────────────────────────
+        pedidos_col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            pedido = pedidos_col.find_one({'_id': ObjectId(pedido_id), 'empresa_id': empresa_id})
+        except Exception:
+            pedido = None
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        dp = pedido.get('datos_presupuesto') or {}
+        troquel_id_str = str(dp.get('troquelId') or '').strip()
+        material_nombre = str(dp.get('material') or '').strip()
+        try:
+            tirada = int(pedido.get('tirada_total') or dp.get('tirada_total') or dp.get('tirada') or 0)
+        except (TypeError, ValueError):
+            tirada = 0
+
+        # ── 2. Cargar troquel (para sentido_impresion, motivos_ancho y motivos_alto) ─
+        troquel = None
+        sentido = 'vertical'
+        motivos_ancho = 1
+        motivos_alto = 1
+        if troquel_id_str:
+            troqueles_col = get_empresa_collection('troqueles', empresa_id)
+            try:
+                troquel = troqueles_col.find_one({'_id': ObjectId(troquel_id_str), 'empresa_id': empresa_id})
+            except Exception:
+                troquel = None
+            if troquel:
+                sentido = troquel.get('sentido_impresion', 'vertical')
+                try:
+                    motivos_ancho = max(1, int(float(troquel.get('motivosAncho') or 1)))
+                except (TypeError, ValueError):
+                    motivos_ancho = 1
+                try:
+                    motivos_alto = max(1, int(float(troquel.get('motivosAlto') or 1)))
+                except (TypeError, ValueError):
+                    motivos_alto = 1
+
+        # ── 3. Buscar PDF de repetidora y obtener sus dimensiones ────────────
+        archivos_col = get_empresa_collection('pedido_archivos', empresa_id)
+        rep_file = archivos_col.find_one(
+            {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+            sort=[('fecha_subida', -1)]
+        )
+
+        if not sin_material and rep_file is None:
+            # No hay PDF en el contenedor repetidora → advertir al frontend
+            return jsonify({
+                'error': 'No hay PDF en el contenedor de Repetidora. No se contabilizará el consumo.',
+                'code': 'SIN_REPETIDORA',
+                'pedido_nombre': pedido.get('nombre') or pedido.get('numero_pedido') or pedido_id,
+            }), 422
+
+        consumo_registrado = None
+        retal_entry = None
+        calculo = None
+
+        if not sin_material and rep_file:
+            pdf_ancho_mm     = rep_file.get('ancho_mm')
+            pdf_desarrollo_mm = rep_file.get('desarrollo_mm')
+
+            if not pdf_ancho_mm or not pdf_desarrollo_mm:
+                return jsonify({
+                    'error': 'El PDF de repetidora no tiene dimensiones registradas. Vuelva a subirlo.',
+                    'code': 'SIN_DIMENSIONES_PDF',
+                }), 422
+
+            # Aplicar sentido de impresión:
+            # vertical: ancho=ancho_pdf, desarrollo=alto_pdf
+            # horizontal: el PDF está girado 90° → ancho=alto_pdf, desarrollo=ancho_pdf
+            if sentido == 'horizontal':
+                ancho_repetidora_mm = pdf_desarrollo_mm  # el alto del PDF es el ancho de material
+                desarrollo_mm       = pdf_ancho_mm
+            else:
+                ancho_repetidora_mm = pdf_ancho_mm
+                desarrollo_mm       = pdf_desarrollo_mm
+
+            ancho_material_mm = ancho_repetidora_mm + 10  # margen de 10 mm
+            ancho_material_cm = round(ancho_material_mm / 10, 2)
+
+            etiquetas_por_vuelta = motivos_ancho * motivos_alto
+            vueltas = math.ceil(tirada / etiquetas_por_vuelta) if tirada > 0 else 0
+            metros_consumidos = round(desarrollo_mm * vueltas / 1000 + merma_metros, 4)  # mm → m + merma
+
+            calculo = {
+                'sentido_impresion': sentido,
+                'ancho_repetidora_mm': ancho_repetidora_mm,
+                'desarrollo_mm': desarrollo_mm,
+                'ancho_material_requerido_mm': ancho_material_mm,
+                'etiquetas_por_vuelta': etiquetas_por_vuelta,
+                'vueltas': vueltas,
+                'merma_metros': merma_metros,
+                'metros_consumidos': metros_consumidos,
+            }
+
+            if metros_consumidos > 0 and material_nombre:
+                # ── 4. Buscar stock (retal primero, luego rollo nuevo) ────────
+                stock_col = get_empresa_collection('stock_materiales', empresa_id)
+
+                def buscar_stock(es_retal_flag):
+                    q = {
+                        'empresa_id': empresa_id,
+                        'activo': True,
+                        'ancho_cm': {'$gte': ancho_material_cm},
+                        'material_nombre': {'$regex': material_nombre, '$options': 'i'},
+                    }
+                    if es_retal_flag:
+                        q['es_retal'] = True
+                    else:
+                        q['$or'] = [{'es_retal': False}, {'es_retal': {'$exists': False}}]
+                    for c in stock_col.find(q).sort('ancho_cm', 1):
+                        if c.get('metros_disponibles', 0) >= metros_consumidos:
+                            return c
+                    return None
+
+                stock_entry = buscar_stock(True) or buscar_stock(False)
+                if not stock_entry:
+                    return jsonify({
+                        'error': f'Sin stock disponible con ancho ≥ {ancho_material_cm} cm y ≥ {metros_consumidos} m para "{material_nombre}"',
+                        'code': 'SIN_STOCK',
+                        'ancho_requerido_cm': ancho_material_cm,
+                        'metros_requeridos': metros_consumidos,
+                    }), 400
+
+                # ── 5. Registrar consumo ──────────────────────────────────────
+                ancho_rollo_cm = stock_entry.get('ancho_cm', 0)
+                desperdicio_cm = round(ancho_rollo_cm - ancho_material_cm, 2)
+                aprovechamiento_pct = round((ancho_material_cm / ancho_rollo_cm) * 100, 1) if ancho_rollo_cm > 0 else 100.0
+                metros_restantes = round(stock_entry['metros_disponibles'] - metros_consumidos, 4)
+                now = datetime.now().isoformat()
+                stock_col.update_one(
+                    {'_id': stock_entry['_id']},
+                    {'$set': {'metros_disponibles': metros_restantes, 'fecha_actualizacion': now}}
+                )
+
+                consumo_col = get_empresa_collection('consumos_material', empresa_id)
+                numero_pedido = str(pedido.get('numero_pedido') or pedido_id[:8])
+                consumo_doc = {
+                    'empresa_id': empresa_id,
+                    'pedido_id': pedido_id,
+                    'numero_pedido': numero_pedido,
+                    'stock_id': str(stock_entry['_id']),
+                    'material_nombre': stock_entry['material_nombre'],
+                    'fabricante': stock_entry.get('fabricante', ''),
+                    'ancho_cm': ancho_rollo_cm,
+                    'ancho_trabajo_cm': ancho_material_cm,
+                    'metros_consumidos': metros_consumidos,
+                    'merma_metros': merma_metros,
+                    'metros_sobrante': metros_restantes,
+                    'aprovechamiento_pct': aprovechamiento_pct,
+                    'desperdicio_cm': desperdicio_cm,
+                    'es_auto': True,
+                    'sentido_impresion': sentido,
+                    'troquel_id': troquel_id_str,
+                    'tirada': tirada,
+                    'etiquetas_por_vuelta': etiquetas_por_vuelta,
+                    'vueltas': vueltas,
+                    'ancho_repetidora_mm': ancho_repetidora_mm,
+                    'desarrollo_mm': desarrollo_mm,
+                    'repetidora_archivo_id': str(rep_file.get('_id') or ''),
+                    'fecha': now,
+                    'usuario_id': str(request_user.get('id') or ''),
+                }
+                ins = consumo_col.insert_one(consumo_doc)
+                consumo_doc['_id'] = str(ins.inserted_id)
+                consumo_registrado = fix_id(consumo_doc)
+
+                # ── 6. Generar retal (merma) si el rollo es más ancho ────────
+                if desperdicio_cm >= 1.0:
+                    retal_doc = {
+                        'empresa_id': empresa_id,
+                        'material_nombre': stock_entry['material_nombre'],
+                        'fabricante': stock_entry.get('fabricante', ''),
+                        'ancho_cm': desperdicio_cm,
+                        'metros_total': metros_consumidos,
+                        'metros_disponibles': metros_consumidos,
+                        'numero_lote': f"RETAL-{pedido_id[:8]}",
+                        'notas': f"Merma del pedido {numero_pedido} (troquel {troquel.get('numero', '') if troquel else ''})",
+                        'es_retal': True,
+                        'retal_origen_pedido': pedido_id,
+                        'fecha_entrada': now,
+                        'fecha_actualizacion': now,
+                        'activo': True,
+                    }
+                    r = stock_col.insert_one(retal_doc)
+                    retal_doc['_id'] = str(r.inserted_id)
+                    retal_entry = fix_id(retal_doc)
+
+        # ── 7. Avanzar estado del pedido al siguiente en la lista ordenada ────
+        now = datetime.now().isoformat()
+        estados_disponibles = get_estados_pedido_disponibles(empresa_id)
+        estado_actual_label = str(pedido.get('estado') or '')
+        estado_actual_slug  = slugify_estado(estado_actual_label)
+        slugs_ordenados = [slugify_estado(e['valor']) for e in estados_disponibles]
+        labels_ordenados = [e['valor'] for e in estados_disponibles]
+        siguiente_estado_label = None
+        try:
+            idx = slugs_ordenados.index(estado_actual_slug)
+            if idx + 1 < len(labels_ordenados):
+                siguiente_estado_label = labels_ordenados[idx + 1]
+        except ValueError:
+            pass
+
+        update_pedido = {'impresion_registrada': True}
+        if consumo_registrado:
+            update_pedido['datos_impresion'] = {
+                'fecha': now,
+                'sin_material': False,
+                'material_nombre': consumo_registrado.get('material_nombre'),
+                'fabricante': consumo_registrado.get('fabricante'),
+                'ancho_rollo_cm': consumo_registrado.get('ancho_cm'),
+                'ancho_trabajo_cm': consumo_registrado.get('ancho_trabajo_cm'),
+                'metros_consumidos': consumo_registrado.get('metros_consumidos'),
+                'merma_metros': merma_metros,
+                'vueltas': consumo_registrado.get('vueltas'),
+                'etiquetas_por_vuelta': consumo_registrado.get('etiquetas_por_vuelta'),
+                'tirada': tirada,
+                'aprovechamiento_pct': consumo_registrado.get('aprovechamiento_pct'),
+                'retal_generado': retal_entry is not None,
+                'sentido_impresion': sentido,
+            }
+        elif sin_material:
+            update_pedido['datos_impresion'] = {
+                'fecha': now,
+                'sin_material': True,
+            }
+        if siguiente_estado_label:
+            reglas = get_estados_pedido_rules(empresa_id).get('rules', ESTADOS_RULES_DEFAULT)
+            estados_finales = set(reglas.get('estados_finalizados', []))
+            nuevo_slug = slugify_estado(siguiente_estado_label)
+            update_pedido['estado'] = siguiente_estado_label
+            if nuevo_slug in estados_finales:
+                update_pedido['fecha_finalizacion'] = now
+            else:
+                update_pedido['fecha_finalizacion'] = None
+        pedidos_col.update_one({'_id': ObjectId(pedido_id)}, {'$set': update_pedido})
+
+        return jsonify({
+            'success': True,
+            'sin_material': sin_material,
+            'consumo': consumo_registrado,
+            'retal_generado': retal_entry,
+            'calculo': calculo,
+            'estado_anterior': estado_actual_label,
+            'estado_nuevo': siguiente_estado_label,
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/materiales/migracion', methods=['POST'])
 def migrar_materiales_legacy_endpoint():
     try:
@@ -3780,7 +4325,7 @@ def get_troqueles():
             '_id': 1, 'numero': 1, 'tipo': 1, 'forma': 1, 'estado': 1,
             'anchoMotivo': 1, 'altoMotivo': 1, 'motivosAncho': 1,
             'separacionAncho': 1, 'valorZ': 1, 'distanciaSesgado': 1,
-            'created_at': 1
+            'sentido_impresion': 1, 'created_at': 1
         }))
         for d in docs:
             d['_id'] = str(d['_id'])
@@ -3811,6 +4356,7 @@ def create_troquel():
             'separacionAncho': str(data.get('separacionAncho') or ''),
             'valorZ': str(data.get('valorZ') or ''),
             'distanciaSesgado': str(data.get('distanciaSesgado') or ''),
+            'sentido_impresion': data.get('sentido_impresion', 'vertical'),
             'created_at': datetime.utcnow(),
         }
         col = get_empresa_collection('troqueles', empresa_id)
@@ -3839,6 +4385,9 @@ def update_troquel(troquel_id):
                       'motivosAncho', 'separacionAncho', 'valorZ', 'distanciaSesgado'):
             if field in data:
                 update[field] = str(data[field] or '')
+        if 'sentido_impresion' in data:
+            si = data['sentido_impresion']
+            update['sentido_impresion'] = si if si in ('vertical', 'horizontal') else 'vertical'
         if not update:
             return jsonify({'error': 'Nada que actualizar'}), 400
         col = get_empresa_collection('troqueles', empresa_id)
@@ -4904,7 +5453,8 @@ def enviar_trabajo_produccion():
                 pass
         trabajo_id = data.get('trabajo_id')
         maquina_id = data.get('maquina_id')
-        
+        force = bool(data.get('force', False))
+
         if not trabajo_id or not maquina_id:
             return jsonify({'error': 'Faltan datos'}), 400
         
@@ -4976,6 +5526,29 @@ def enviar_trabajo_produccion():
         if not existing_order:
             existing_order = orden_col.find_one({'empresa_id': empresa_id, '$or': [{'trabajo_id': trabajo_id}, {'trabajo_id': str(trabajo_id)}]})
         
+        # ── Validar compatibilidad máquina (si no forzado) ───────────────────
+        if not force:
+            maquinas_col_v = get_empresa_collection('maquinas', empresa_id)
+            try:
+                maquina_id_v = int(maquina_id)
+            except Exception:
+                maquina_id_v = str(maquina_id)
+            maq_v = maquinas_col_v.find_one({'id': maquina_id_v, 'empresa_id': empresa_id})
+            if not maq_v:
+                try:
+                    maq_v = maquinas_col_v.find_one({'_id': ObjectId(maquina_id), 'empresa_id': empresa_id})
+                except Exception:
+                    pass
+            pedido_v = None
+            try:
+                pedido_v = get_empresa_collection('pedidos', empresa_id).find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+            if maq_v and pedido_v:
+                advertencias = verificar_compatibilidad_maquina(pedido_v, maq_v, empresa_id)
+                if advertencias:
+                    return jsonify({'needs_confirm': True, 'advertencias': advertencias}), 200
+
         # Solo rechazar si está en estados bloqueados O si está en en_cola pero NO existe en orden_col
         # (si ya existe en orden_col, permitir actualizar máquina o posición)
         if estado_actual in bloqueados or (estado_actual in en_cola and not existing_order):
@@ -5272,6 +5845,84 @@ def api_get_produccion():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def verificar_compatibilidad_maquina(pedido, maquina, empresa_id):
+    """
+    Comprueba si un pedido es compatible con una máquina (tintas y ancho).
+    Devuelve lista de advertencias: [{'tipo': 'colores'|'ancho', 'requerido': X, 'maximo': Y}]
+    """
+    import math as _math
+    advertencias = []
+    if not pedido or not maquina:
+        return advertencias
+
+    dp = pedido.get('datos_presupuesto') or {}
+    if isinstance(dp, str):
+        try:
+            dp = json.loads(dp)
+        except Exception:
+            dp = {}
+
+    # ── Validar número de tintas ──────────────────────────────────────────────
+    colores_maquina = int(float(maquina.get('numero_colores') or 0))
+    if colores_maquina > 0:
+        selected_tintas = dp.get('selectedTintas') or []
+        detalle_especial = dp.get('detalleTintaEspecial') or []
+        tintas_especiales_count = len(detalle_especial) if isinstance(detalle_especial, list) else (1 if detalle_especial else 0)
+        num_tintas = len(selected_tintas) + tintas_especiales_count
+        if num_tintas > colores_maquina:
+            advertencias.append({'tipo': 'colores', 'requerido': num_tintas, 'maximo': colores_maquina})
+
+    # ── Validar ancho de material ─────────────────────────────────────────────
+    ancho_max_mm = float(maquina.get('ancho_max_material_mm') or 0)
+    if ancho_max_mm > 0:
+        troquel_id_str = str(dp.get('troquelId') or '').strip()
+        sentido = 'vertical'
+        troquel = None
+        if troquel_id_str:
+            try:
+                troqueles_col = get_empresa_collection('troqueles', empresa_id)
+                troquel = troqueles_col.find_one({'_id': ObjectId(troquel_id_str), 'empresa_id': empresa_id})
+            except Exception:
+                pass
+            if troquel:
+                sentido = troquel.get('sentido_impresion', 'vertical')
+
+        ancho_material_mm = None
+        pedido_id = str(pedido.get('_id') or '')
+        # 1. Intentar desde PDF de repetidora (más preciso)
+        try:
+            archivos_col = get_empresa_collection('pedido_archivos', empresa_id)
+            rep_file = archivos_col.find_one(
+                {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+                sort=[('fecha_subida', -1)]
+            )
+            if rep_file and rep_file.get('ancho_mm') and rep_file.get('desarrollo_mm'):
+                ancho_rep = rep_file.get('desarrollo_mm') if sentido == 'horizontal' else rep_file.get('ancho_mm')
+                ancho_material_mm = ancho_rep + 10
+        except Exception:
+            pass
+
+        # 2. Fallback: estimar desde dimensiones del troquel
+        if ancho_material_mm is None and troquel:
+            try:
+                ancho_motivo = float(troquel.get('anchoMotivo') or 0)
+                motivos_ancho = max(1, int(float(troquel.get('motivosAncho') or 1)))
+                separacion = float(troquel.get('separacionAncho') or 0)
+                if ancho_motivo > 0:
+                    ancho_material_mm = ancho_motivo * motivos_ancho + separacion * max(0, motivos_ancho - 1) + 10
+            except Exception:
+                pass
+
+        if ancho_material_mm and ancho_material_mm > ancho_max_mm:
+            advertencias.append({
+                'tipo': 'ancho',
+                'requerido': round(ancho_material_mm, 1),
+                'maximo': round(ancho_max_mm, 1),
+            })
+
+    return advertencias
+
+
 @app.route('/api/produccion/mover', methods=['POST'])
 def mover_trabajo_maquina():
     """Mueve un trabajo a otra máquina"""
@@ -5284,13 +5935,39 @@ def mover_trabajo_maquina():
         data = request.get_json()
         trabajo_id = data.get('trabajo_id')
         maquina_destino = data.get('maquina_destino')
-        
+        force = bool(data.get('force', False))
+
         if not trabajo_id or not maquina_destino:
             return jsonify({'error': 'Faltan datos'}), 400
         
         # Eliminar de la máquina anterior (si existe)
         orden_col = get_empresa_collection('trabajo_orden', empresa_id)
         pedidos_col = get_empresa_collection('pedidos', empresa_id)
+
+        # ── Validar compatibilidad máquina ─────────────────────────────────────
+        if not force:
+            maquinas_col_v = get_empresa_collection('maquinas', empresa_id)
+            try:
+                maquina_destino_v = int(maquina_destino)
+            except Exception:
+                maquina_destino_v = str(maquina_destino)
+            maq_v = maquinas_col_v.find_one({'id': maquina_destino_v, 'empresa_id': empresa_id})
+            if not maq_v:
+                try:
+                    maq_v = maquinas_col_v.find_one({'_id': ObjectId(maquina_destino), 'empresa_id': empresa_id})
+                except Exception:
+                    pass
+            pedido_v = pedidos_col.find_one({'trabajo_id': trabajo_id, 'empresa_id': empresa_id})
+            if not pedido_v:
+                try:
+                    if isinstance(trabajo_id, str) and len(trabajo_id) == 24:
+                        pedido_v = pedidos_col.find_one({'_id': ObjectId(trabajo_id), 'empresa_id': empresa_id})
+                except Exception:
+                    pass
+            if maq_v and pedido_v:
+                advertencias = verificar_compatibilidad_maquina(pedido_v, maq_v, empresa_id)
+                if advertencias:
+                    return jsonify({'needs_confirm': True, 'advertencias': advertencias}), 200
 
         # Build list of possible trabajo_id variants stored in trabajo_orden
         posible_ids = set()
@@ -6171,24 +6848,38 @@ def upload_archivos_pedido(pedido_id):
         if not pedidos_col.find_one({'_id': oid, 'empresa_id': empresa_id}):
             return jsonify({'error': 'Pedido no encontrado'}), 404
 
+        ESKO_TIPOS = ('report', 'repetidora', 'trapping', 'troquel')
         tipo = request.form.get('tipo', '').strip()
-        if tipo not in ('arte', 'unitario'):
-            return jsonify({'error': 'tipo debe ser "arte" o "unitario"'}), 400
+        if tipo not in ('arte', 'unitario') + ESKO_TIPOS:
+            return jsonify({'error': 'tipo debe ser "arte", "unitario", "report", "repetidora", "trapping" o "troquel"'}), 400
 
         files = [f for f in request.files.getlist('files') if f.filename != '']
         if not files:
             return jsonify({'error': 'No se recibieron archivos'}), 400
-        if tipo == 'unitario' and len(files) > 1:
-            return jsonify({'error': 'Unitario acepta solo un archivo por subida'}), 400
+        # Esko containers and unitario accept only one file (replace semantics)
+        if tipo in ('unitario',) + ESKO_TIPOS and len(files) > 1:
+            return jsonify({'error': f'"{tipo}" acepta solo un archivo por subida'}), 400
 
-        allowed   = ALLOWED_EXTENSIONS_ARTES if tipo == 'arte' else ALLOWED_EXTENSIONS_UNITARIO
-        subdir    = 'artes' if tipo == 'arte' else 'unitario'
-        col       = get_empresa_collection('pedido_archivos', empresa_id)
+        allowed = ALLOWED_EXTENSIONS_ARTES if tipo == 'arte' else ALLOWED_EXTENSIONS_UNITARIO
+        subdir  = 'artes' if tipo == 'arte' else tipo
+        col     = get_empresa_collection('pedido_archivos', empresa_id)
         resultado = []
 
         for f in files:
             if not _allowed_file(f.filename, allowed):
                 return jsonify({'error': f'Extensión no permitida para "{f.filename}". Permitidas: {", ".join(sorted(allowed))}'}), 400
+
+            # ── Esko containers: replace (delete previous file from FS + DB) ──
+            if tipo in ESKO_TIPOS:
+                prev_docs = list(col.find({'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': tipo}))
+                for prev in prev_docs:
+                    prev_path = os.path.join(UPLOAD_BASE_DIR, prev.get('ruta_relativa', ''))
+                    try:
+                        if os.path.isfile(prev_path):
+                            os.remove(prev_path)
+                    except OSError:
+                        pass
+                col.delete_many({'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': tipo})
 
             version = None
             if tipo == 'unitario':
@@ -6206,6 +6897,20 @@ def upload_archivos_pedido(pedido_id):
             full_path   = os.path.join(upload_dir, stored_name)
             f.save(full_path)
 
+            # Extract PDF page dimensions for repetidora container
+            pdf_ancho_mm = None
+            pdf_desarrollo_mm = None
+            if tipo == 'repetidora' and safe_name.lower().endswith('.pdf'):
+                try:
+                    reader = PdfReader(full_path)
+                    if reader.pages:
+                        mb = reader.pages[0].mediabox
+                        pts_to_mm = 25.4 / 72
+                        pdf_ancho_mm     = round(float(mb.width)  * pts_to_mm, 2)
+                        pdf_desarrollo_mm = round(float(mb.height) * pts_to_mm, 2)
+                except Exception:
+                    pass
+
             doc = {
                 'pedido_id':       pedido_id,
                 'empresa_id':      empresa_id,
@@ -6219,6 +6924,9 @@ def upload_archivos_pedido(pedido_id):
                 'subido_por':      request_user.get('nombre') or str(request_user.get('id') or ''),
                 'fecha_subida':    datetime.now().isoformat(),
             }
+            if pdf_ancho_mm is not None:
+                doc['ancho_mm']     = pdf_ancho_mm
+                doc['desarrollo_mm'] = pdf_desarrollo_mm
             inserted = col.insert_one(doc)
             resultado.append(fix_id(col.find_one({'_id': inserted.inserted_id})))
 
@@ -6284,6 +6992,7 @@ def preview_archivo_inline(archivo_id):
     """
     Sirve el archivo inline para vista previa en iframe.
     El hook apply_security_headers exime esta función del X-Frame-Options: DENY.
+    Acepta token vía query param ?token= (para iframes que no pueden enviar headers).
     """
     try:
         request_user, auth_error = require_request_user()
@@ -6609,9 +7318,10 @@ def metadatos_archivo(archivo_id):
     nombre original, tamaño y versión.
     """
     try:
-        empresa_id = normalize_empresa_id(
-            (request.headers.get('X-Empresa-Id') or '1').strip()
-        )
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedido_archivos', empresa_id)
         try:
             oid = ObjectId(archivo_id)

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal,
 import { useFocusEffect } from '@react-navigation/native';
 import { usePermission } from './usePermission';
 import EmptyState from '../components/EmptyState';
+import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useTranslation } from 'react-i18next';
 
 const styles = StyleSheet.create({
@@ -294,6 +295,7 @@ export default function ClientesScreen({ currentUser }) {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [clienteEditandoId, setClienteEditandoId] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [confirmingDeleteCliente, setConfirmingDeleteCliente] = useState(null);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
   const [submittedNuevo, setSubmittedNuevo] = useState(false);
@@ -490,26 +492,6 @@ export default function ClientesScreen({ currentUser }) {
     }
   };
 
-  const eliminarCliente = (cliente) => {
-    const mensaje = t('screens.clientes.deleteConfirm', { nombre: cliente.nombre || '' });
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
-      const confirmado = window.confirm(mensaje);
-      if (confirmado) {
-        ejecutarEliminacionCliente(cliente);
-      }
-      return;
-    }
-
-    Alert.alert(t('screens.clientes.deleteTitle'), mensaje, [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: () => ejecutarEliminacionCliente(cliente),
-      },
-    ]);
-  };
 
   const handleHoverNuevoIn = () => {
     if (hoverNuevoTimerRef.current) clearTimeout(hoverNuevoTimerRef.current);
@@ -572,6 +554,8 @@ export default function ClientesScreen({ currentUser }) {
             icon="🏢"
             title={busqueda ? t('common.noResults') : t('nav.clientes')}
             message={busqueda ? t('screens.clientes.noResultsMsg') : t('screens.clientes.noItems')}
+            action={!busqueda && puedeCrear ? t('screens.clientes.newBtn') : undefined}
+            onAction={!busqueda && puedeCrear ? () => setModalVisible(true) : undefined}
           />
         </View>
       ) : (
@@ -617,9 +601,16 @@ export default function ClientesScreen({ currentUser }) {
                 <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(cliente)}>
                   <Text style={styles.actionBtnText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => eliminarCliente(cliente)}>
-                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                </TouchableOpacity>
+                {confirmingDeleteCliente === cliente.id ? (
+                  <DeleteConfirmRow
+                    onCancel={() => setConfirmingDeleteCliente(null)}
+                    onConfirm={() => { setConfirmingDeleteCliente(null); ejecutarEliminacionCliente(cliente); }}
+                  />
+                ) : (
+                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => setConfirmingDeleteCliente(cliente.id)}>
+                    <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))}

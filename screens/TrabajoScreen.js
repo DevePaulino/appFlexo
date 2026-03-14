@@ -1073,10 +1073,9 @@ export default function TrabajoScreen({ currentUser }) {
     setModalMaquinasVisible(true);
   };
 
-  const handleEnviarAProduccion = async (maquinaId, maquinaNombre) => {
+  const handleEnviarAProduccion = async (maquinaId, maquinaNombre, force = false) => {
     if (!trabajoParaProduccion) return;
     try {
-      // Determinar el id real del trabajo: preferir el trabajo anidado en el pedido
       const trabajoIdToSend = (
         (trabajoParaProduccion && trabajoParaProduccion.trabajo && (trabajoParaProduccion.trabajo.id || trabajoParaProduccion.trabajo._id || trabajoParaProduccion.trabajo.trabajo_id))
         || trabajoParaProduccion.trabajo_id
@@ -1084,16 +1083,27 @@ export default function TrabajoScreen({ currentUser }) {
         || trabajoParaProduccion._id
       );
 
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('http://localhost:8080/api/produccion/enviar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          trabajo_id: trabajoIdToSend,
-          maquina_id: maquinaId,
-        }),
+        headers,
+        body: JSON.stringify({ trabajo_id: trabajoIdToSend, maquina_id: maquinaId, force }),
       });
 
       const data = await res.json().catch(() => ({}));
+      if (res.ok && data.needs_confirm && data.advertencias?.length > 0) {
+        const msgs = data.advertencias.map((a) => {
+          if (a.tipo === 'colores') return `• Tintas: el trabajo necesita ${a.requerido} colores, la máquina tiene ${a.maximo}`;
+          if (a.tipo === 'ancho') return `• Ancho de material: necesita ${a.requerido} mm, máquina admite ${a.maximo} mm`;
+          return `• ${a.tipo}`;
+        }).join('\n');
+        const confirmar = window.confirm(`⚠ Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
+        if (confirmar) handleEnviarAProduccion(maquinaId, maquinaNombre, true);
+        return;
+      }
       if (res.ok) {
         setModalMaquinasVisible(false);
         setTrabajoParaProduccion(null);

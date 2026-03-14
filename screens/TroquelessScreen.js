@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import { usePermission } from './usePermission';
 import EmptyState from '../components/EmptyState';
+import DeleteConfirmRow from '../components/DeleteConfirmRow';
 
 function calcularSiguienteNumeroTroquel(lista) {
   let maxNumero = 0;
@@ -524,6 +525,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
   const [modoEdicionTroquel, setModoEdicionTroquel] = useState(false);
   const [troquelEditando, setTroquelEditando] = useState(null);
   const [activeRole, setActiveRole] = useState('root');
+  const [confirmingDeleteTroquel, setConfirmingDeleteTroquel] = useState(null);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
 
@@ -861,41 +863,24 @@ export default function TroquelessScreen({ currentUser, navigation }) {
     setTroquelSeleccionado(null);
   };
 
-  const confirmarEliminarTroquel = (troquel) => {
-    const ejecutar = async () => {
-      const troquelId = troquel._id || troquel.id;
-      try {
-        const resp = await fetch(`${API_TROQUELES}/${troquelId}`, { method: 'DELETE' });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          const msg = err.error || 'Error al eliminar';
-          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
-          return;
-        }
-      } catch (e) {
-        if (Platform.OS === 'web') { window.alert('Error de red al eliminar'); } else { Alert.alert('Error', 'Error de red'); }
+  const ejecutarEliminarTroquel = async (troquel) => {
+    const troquelId = troquel._id || troquel.id;
+    try {
+      const resp = await fetch(`${API_TROQUELES}/${troquelId}`, { method: 'DELETE' });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        const msg = err.error || 'Error al eliminar';
+        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Error', msg); }
         return;
       }
-      if (troquelSeleccionado?.id === troquel.id) {
-        cerrarDetalle();
-      }
-      await cargarTroqueles();
-    };
-
-    if (Platform.OS === 'web') {
-      const ok = typeof window !== 'undefined' ? window.confirm(t('screens.troqueles.deleteConfirm', { numero: troquel.numero })) : true;
-      if (ok) ejecutar();
+    } catch (e) {
+      if (Platform.OS === 'web') { window.alert('Error de red al eliminar'); } else { Alert.alert('Error', 'Error de red'); }
       return;
     }
-
-    Alert.alert(
-      t('screens.troqueles.deleteTitle'),
-      t('screens.troqueles.deleteConfirm', { numero: troquel.numero }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: ejecutar },
-      ]
-    );
+    if (troquelSeleccionado?.id === troquel.id) {
+      cerrarDetalle();
+    }
+    await cargarTroqueles();
   };
 
   const renderDetalles = (troquel) => {
@@ -1088,9 +1073,16 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                     >
                       <Text style={styles.actionBtnText}>{t('common.view')}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => confirmarEliminarTroquel(troquele)}>
-                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                    </TouchableOpacity>
+                    {confirmingDeleteTroquel === (troquele._id || troquele.id) ? (
+                      <DeleteConfirmRow
+                        onCancel={() => setConfirmingDeleteTroquel(null)}
+                        onConfirm={() => { setConfirmingDeleteTroquel(null); ejecutarEliminarTroquel(troquele); }}
+                      />
+                    ) : (
+                      <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => setConfirmingDeleteTroquel(troquele._id || troquele.id)}>
+                        <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                   </View>
                 ))}
@@ -1160,9 +1152,17 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                 </TouchableOpacity>
               )}
               {troquelSeleccionado && (
-                <TouchableOpacity style={[styles.btn, styles.deleteBtn]} onPress={() => confirmarEliminarTroquel(troquelSeleccionado)}>
-                  <Text style={[styles.btnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                </TouchableOpacity>
+                confirmingDeleteTroquel === (troquelSeleccionado._id || troquelSeleccionado.id) ? (
+                  <DeleteConfirmRow
+                    size="md"
+                    onCancel={() => setConfirmingDeleteTroquel(null)}
+                    onConfirm={() => { setConfirmingDeleteTroquel(null); ejecutarEliminarTroquel(troquelSeleccionado); }}
+                  />
+                ) : (
+                  <TouchableOpacity style={[styles.btn, styles.deleteBtn]} onPress={() => setConfirmingDeleteTroquel(troquelSeleccionado._id || troquelSeleccionado.id)}>
+                    <Text style={[styles.btnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                  </TouchableOpacity>
+                )
               )}
             </View>
           </View>

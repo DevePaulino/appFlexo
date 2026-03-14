@@ -10,8 +10,10 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
 import NuevoPedidoModal from './NuevoPedidoModal';
+import DeleteConfirmRow from '../components/DeleteConfirmRow';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -470,29 +472,29 @@ const styles = StyleSheet.create({
   },
   eskoToolCol: {
     flex: 1,
-    minWidth: 80,
+    minWidth: 90,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
   },
   eskoBtn: {
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#0369A1',
+    backgroundColor: '#1E293B',
     alignItems: 'center',
   },
   eskoBtnText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.4,
   },
   eskoOutputBox: {
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderStyle: 'dashed',
-    borderRadius: 6,
-    minHeight: 36,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+    minHeight: 52,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
@@ -502,53 +504,89 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
     fontStyle: 'italic',
   },
+  eskoOutputBoxFilled: {
+    backgroundColor: '#F1F5F9',
+    alignItems: 'flex-start',
+  },
+  eskoFileName: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 1,
+  },
+  eskoFileMeta: {
+    fontSize: 9,
+    color: '#94A3B8',
+    marginBottom: 5,
+  },
+  eskoFileBtns: {
+    flexDirection: 'row',
+    gap: 4,
+    width: '100%',
+  },
+  eskoFileBtn: {
+    flex: 1,
+    paddingVertical: 4,
+    borderRadius: 5,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+  },
+  eskoFileBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  eskoUploadBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  eskoUploadBtnText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
   // ── Tabs navegación ──────────────────────────────────────────────────
   tabBar: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    marginBottom: 10,
-    paddingHorizontal: 8,
-    paddingTop: 6,
-    gap: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 12,
+    gap: 2,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderRadius: 8,
   },
   tabBtnActive: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderTopColor: '#E2E8F0',
-    borderLeftColor: '#E2E8F0',
-    borderRightColor: '#E2E8F0',
-    borderBottomColor: '#FFFFFF',
-    marginBottom: -1,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.10,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   tabText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: '500',
+    color: '#94A3B8',
+    letterSpacing: 0.1,
   },
   tabTextActive: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
+    letterSpacing: 0.1,
   },
   filesSectionLabel: {
     fontSize: 11,
@@ -688,6 +726,7 @@ const styles = StyleSheet.create({
 });
 
 export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit, currentUser = null, refreshKey = 0 }) {
+  const { t } = useTranslation();
   const canDelete = usePermission('eliminar_archivos');
   const canEdit   = usePermission('edit_pedidos');
   const [editVisible, setEditVisible]           = useState(false);
@@ -697,20 +736,24 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [chargingAction, setChargingAction] = useState(null);
-  const [activeTab, setActiveTab] = useState('datos');
+  const [activeTab, setActiveTab] = useState('archivos');
 
   // Archivos
-  const [archivos, setArchivos] = useState({ artes: [], unitario: [] });
+  const [archivos, setArchivos] = useState({ artes: [], unitario: [], esko: {} });
   const [archivosLoading, setArchivosLoading] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [uploadingArtes, setUploadingArtes] = useState(false);
   const [uploadingUnitario, setUploadingUnitario] = useState(false);
+  const [uploadingEsko, setUploadingEsko] = useState({});   // { report: bool, repetidora: bool, … }
   const [artesExpanded, setArtesExpanded] = useState(false);
   const [pdfMeta, setPdfMeta] = useState(null);
   const [pdfMetaLoading, setPdfMetaLoading] = useState(false);
   const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
-  const fileInputArtesRef    = useRef(null);
-  const fileInputUnitarioRef = useRef(null);
+  const [confirmingDeleteArchivo, setConfirmingDeleteArchivo] = useState(null);
+  const [confirmingDeletePedido, setConfirmingDeletePedido] = useState(false);
+  const fileInputArtesRef      = useRef(null);
+  const fileInputUnitarioRef   = useRef(null);
+  const fileInputEskoRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
 
   // Carga metadatos XMP cuando cambia la versión seleccionada
   useEffect(() => {
@@ -720,7 +763,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     setPdfMetaLoading(true);
     setPdfMeta(null);
     fetch(`${API_BASE}/api/archivos/${versionDoc.id}/metadatos`, {
-      headers: { 'X-Empresa-Id': '1' },
+      headers: getAuthHeaders(),
     })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => setPdfMeta(data || null))
@@ -730,10 +773,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
   useEffect(() => {
     if (!visible) {
-      setArchivos({ artes: [], unitario: [] });
+      setArchivos({ artes: [], unitario: [], esko: {} });
       setSelectedVersion(null);
-      setActiveTab('datos');
+      setActiveTab('archivos');
       setPdfLightboxUrl(null);
+      setConfirmingDeleteArchivo(null);
+      setConfirmingDeletePedido(false);
       return;
     }
     if (pedidoId) {
@@ -779,11 +824,19 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     }
   };
 
+  const getAuthHeaders = () => {
+    const h = {};
+    if (global.__MIAPP_ACCESS_TOKEN) h.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
+    return h;
+  };
+
   const cargarArchivos = async () => {
     if (!pedidoId) return;
     setArchivosLoading(true);
     try {
-      const resp = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/archivos`);
+      const resp = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/archivos`, {
+        headers: getAuthHeaders(),
+      });
       if (!resp.ok) return;
       const data = await resp.json().catch(() => ({}));
       const lista = data.archivos || [];
@@ -791,7 +844,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const unitario = lista
         .filter((a) => a.tipo === 'unitario')
         .sort((a, b) => (a.version || 0) - (b.version || 0));
-      setArchivos({ artes, unitario });
+      const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
+      const esko = {};
+      ESKO_TIPOS.forEach((tipo) => {
+        const found = lista.filter((a) => a.tipo === tipo);
+        esko[tipo] = found.length > 0 ? found[found.length - 1] : null;
+      });
+      setArchivos({ artes, unitario, esko });
       if (unitario.length > 0) {
         const latestVersion = unitario[unitario.length - 1].version;
         setSelectedVersion((prev) => {
@@ -817,14 +876,15 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       Array.from(files).forEach((file) => formData.append('files', file));
       const resp = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/archivos`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData,
       });
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { Alert.alert('Error al subir', data.error || 'No se pudieron subir los archivos'); return; }
+      if (!resp.ok) { Alert.alert(t('screens.pedidoDetalle.errSubir'), data.error || t('screens.pedidoDetalle.errNoSubirArtes')); return; }
       await cargarArchivos();
       setArtesExpanded(true);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert(t('common.error'), err.message);
     } finally {
       setUploadingArtes(false);
       if (fileInputArtesRef.current) fileInputArtesRef.current.value = '';
@@ -840,36 +900,69 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       formData.append('files', file);
       const resp = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/archivos`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData,
       });
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { Alert.alert('Error al subir', data.error || 'No se pudo subir el PDF unitario'); return; }
+      if (!resp.ok) { Alert.alert(t('screens.pedidoDetalle.errSubir'), data.error || t('screens.pedidoDetalle.errNoSubirUnitario')); return; }
       await cargarArchivos();
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert(t('common.error'), err.message);
     } finally {
       setUploadingUnitario(false);
       if (fileInputUnitarioRef.current) fileInputUnitarioRef.current.value = '';
     }
   };
 
-  const handleEliminarArchivo = async (archivoId) => {
-    const confirmDel = (typeof window !== 'undefined' && window.confirm)
-      ? window.confirm('¿Eliminar este archivo?')
-      : await new Promise((resolve) =>
-          Alert.alert('Eliminar archivo', '¿Seguro que deseas eliminar este archivo?', [
-            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Eliminar', style: 'destructive', onPress: () => resolve(true) },
-          ])
-        );
-    if (!confirmDel) return;
+  const handleUploadEsko = async (tipo, file) => {
+    if (!file) return;
+    setUploadingEsko((prev) => ({ ...prev, [tipo]: true }));
     try {
-      const resp = await fetch(`${API_BASE}/api/archivos/${archivoId}`, { method: 'DELETE' });
+      const formData = new FormData();
+      formData.append('tipo', tipo);
+      formData.append('files', file);
+      const resp = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/archivos`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: formData,
+      });
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { Alert.alert('Error', data.error || 'No se pudo eliminar'); return; }
+      if (!resp.ok) {
+        console.error('[uploadEsko] error body:', JSON.stringify(data));
+        Alert.alert(t('screens.pedidoDetalle.errSubir'), data.error || t('common.error'));
+        return;
+      }
       await cargarArchivos();
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert(t('common.error'), err.message);
+    } finally {
+      setUploadingEsko((prev) => ({ ...prev, [tipo]: false }));
+      const ref = fileInputEskoRefs.current[tipo];
+      if (ref) ref.value = '';
+    }
+  };
+
+  const ejecutarEliminarArchivo = async (archivoId) => {
+    try {
+      const resp = await fetch(`${API_BASE}/api/archivos/${archivoId}`, { method: 'DELETE', headers: getAuthHeaders() });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { Alert.alert(t('common.error'), data.error || t('screens.pedidoDetalle.errNoPudo')); return; }
+      await cargarArchivos();
+    } catch (err) {
+      Alert.alert(t('common.error'), err.message);
+    }
+  };
+
+  const ejecutarEliminarPedido = async () => {
+    if (!pedido?.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/pedidos/${pedido.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { Alert.alert(t('common.error'), data.error || t('screens.pedidoDetalle.errNoPudoEliminar')); return; }
+      Alert.alert(t('screens.pedidoDetalle.pedidoEliminado'), t('screens.pedidoDetalle.msgPedidoEliminado'));
+      if (typeof onDeleted === 'function') onDeleted();
+    } catch (err) {
+      Alert.alert(t('common.error'), t('screens.pedidoDetalle.errConexion', { msg: err.message }));
     }
   };
 
@@ -897,6 +990,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     return `${dia}-${mes}-${anio}`;
   };
 
+  const formatearFechaHora = (valor) => {
+    if (!valor) return '-';
+    const str = String(valor);
+    const [fechaParte, horaParte] = str.includes('T') ? str.split('T') : [str, null];
+    const [anio, mes, dia] = fechaParte.split('-');
+    if (!anio || !mes || !dia) return str;
+    const horaStr = horaParte ? horaParte.substring(0, 5) : null;
+    return horaStr ? `${dia}-${mes}-${anio} ${horaStr}` : `${dia}-${mes}-${anio}`;
+  };
+
   const mapToolToAccion = (title) => {
     const normalized = String(title || '').trim().toLowerCase();
     if (normalized === 'report') return 'report';
@@ -909,12 +1012,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const handleDescargarTool = async (title) => {
     const accion = mapToolToAccion(title);
     if (!accion || !pedido?.id) {
-      Alert.alert('Error', 'No se pudo preparar la descarga');
+      Alert.alert(t('common.error'), t('screens.pedidoDetalle.errDescarga'));
       return;
     }
     const usuarioNombre = String(pedido?.datos_presupuesto?.vendedor || '').trim();
     if (!usuarioNombre) {
-      Alert.alert('Falta vendedor', 'Asigna un vendedor al pedido para poder cargar créditos en la descarga.');
+      Alert.alert(t('screens.pedidoDetalle.errFaltaVendedor'), t('screens.pedidoDetalle.msgFaltaVendedor'));
       return;
     }
     setChargingAction(accion);
@@ -930,16 +1033,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) { Alert.alert('No se pudo descargar', data.error || 'Error al consumir créditos'); return; }
+      if (!response.ok) { Alert.alert(t('screens.pedidoDetalle.errNoPuedeDescargar'), data.error || t('common.error')); return; }
       const charged = Number(data.charged_credits || 0);
       const saldo = Number(data.creditos || 0);
       if (charged > 0) {
-        Alert.alert('Descarga preparada', `Se han descontado ${charged} créditos. Saldo restante: ${saldo}.`);
+        Alert.alert(t('screens.pedidoDetalle.descargaPreparada'), t('screens.pedidoDetalle.msgDescargaCreditos', { charged, saldo }));
       } else {
-        Alert.alert('Descarga preparada', `Acción incluida por suscripción activa. Saldo actual: ${saldo}.`);
+        Alert.alert(t('screens.pedidoDetalle.descargaPreparada'), t('screens.pedidoDetalle.msgDescargaSuscripcion', { saldo }));
       }
     } catch (err) {
-      Alert.alert('Error', `No se pudo procesar la descarga: ${err.message}`);
+      Alert.alert(t('common.error'), t('screens.pedidoDetalle.errProcesarDescarga', { msg: err.message }));
     } finally {
       setChargingAction(null);
     }
@@ -951,7 +1054,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       <View style={styles.container}>
         <View style={styles.modal}>
           <View style={styles.header}>
-            <Text style={styles.title}>Detalle del Pedido</Text>
+            <Text style={styles.title}>{t('screens.pedidoDetalle.title')}</Text>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
@@ -960,16 +1063,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           {/* ── Pestañas ── */}
           <View style={styles.tabBar}>
             <TouchableOpacity
-              style={activeTab === 'datos' ? styles.tabBtnActive : styles.tabBtn}
-              onPress={() => setActiveTab('datos')}
-            >
-              <Text style={activeTab === 'datos' ? styles.tabTextActive : styles.tabText}>Pedido</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={activeTab === 'archivos' ? styles.tabBtnActive : styles.tabBtn}
               onPress={() => setActiveTab('archivos')}
             >
-              <Text style={activeTab === 'archivos' ? styles.tabTextActive : styles.tabText}>Archivos</Text>
+              <Text style={activeTab === 'archivos' ? styles.tabTextActive : styles.tabText}>{t('screens.pedidoDetalle.tabArchivos')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={activeTab === 'datos' ? styles.tabBtnActive : styles.tabBtn}
+              onPress={() => setActiveTab('datos')}
+            >
+              <Text style={activeTab === 'datos' ? styles.tabTextActive : styles.tabText}>{t('screens.pedidoDetalle.tabDatos')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -985,6 +1088,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
               {/* ═══════════════════ TAB: PEDIDO ═══════════════════ */}
               {activeTab === 'datos' && (
+                <>
                 <View style={styles.topGrid}>
                   {(() => {
                     const dp = pedido.datos_presupuesto || null;
@@ -1001,39 +1105,40 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <>
                           <View style={styles.leftCol}>
                             <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>Pedido</Text>
-                              {renderRow('Número:', pedido.numero_pedido || '-')}
-                              {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
-                              {renderRow('Referencia:', pedido.referencia || '-')}
-                              {renderRow('Nombre trabajo:', pedido.nombre || '-')}
-                              {renderRow('Estado:', pedido.estado || '-')}
-                              {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                              {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
+                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPedido')}</Text>
+                              {renderRow(t('screens.pedidoDetalle.labelNumero'), pedido.numero_pedido || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelFechaPedido'), formatearFecha(pedido.fecha_pedido))}
+                              {renderRow(t('screens.pedidoDetalle.labelReferencia'), pedido.referencia || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelNombreTrabajo'), pedido.nombre || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
+                              {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
                             </View>
                             <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
-                              {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                              {renderRow('Razón social:', dp?.razon_social || pedido.razon_social || '-')}
-                              {renderRow('CIF:', dp?.cif || pedido.cif || '-')}
-                              {renderRow('Contacto:', dp?.personas_contacto || pedido.personas_contacto || '-')}
-                              {renderRow('Email:', dp?.email || pedido.email || '-')}
-                              {renderRow('Vendedor:', dp?.vendedor || '-')}
+                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secCliente')}</Text>
+                              {renderRow(t('screens.pedidoDetalle.labelCliente'), (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
+                              {renderRow(t('screens.pedidoDetalle.labelRazonSocial'), dp?.razon_social || pedido.razon_social || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelCif'), dp?.cif || pedido.cif || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelContacto'), dp?.personas_contacto || pedido.personas_contacto || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelEmail'), dp?.email || pedido.email || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelVendedor'), dp?.vendedor || '-')}
                             </View>
                           </View>
 
                           <View style={styles.rightCol}>
                             <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>Presupuesto / Producto</Text>
-                              {renderRow('Nº Presupuesto:', dp?.numero_presupuesto || pedido.numero_presupuesto || '-')}
-                              {renderRow('Referencia presupuesto:', dp?.referencia || '-')}
-                              {renderRow('Formato:', dp?.formatoAncho ? `${dp.formatoAncho} x ${dp.formatoLargo || '-'} mm` : '-')}
-                              {renderRow('Máquina:', dp?.maquina || pedido.maquina || '-')}
-                              {renderRow('Material:', dp?.material || '-')}
-                              {renderRow('Acabado:', Array.isArray(dp?.acabado) ? (dp.acabado.length ? dp.acabado.join(', ') : '-') : (dp?.acabado || '-'))}
-                              {renderRow('Tirada:', dp?.tirada ? `${dp.tirada} unidades` : '-')}
+                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPresupuesto')}</Text>
+                              {renderRow(t('screens.pedidoDetalle.labelNPresupuesto'), dp?.numero_presupuesto || pedido.numero_presupuesto || '-')}
+                              {pedido.fecha_aprobacion_presupuesto ? renderRow(t('screens.pedidoDetalle.labelFechaAprobacion'), formatearFechaHora(pedido.fecha_aprobacion_presupuesto)) : null}
+                              {renderRow(t('screens.pedidoDetalle.labelRefPresupuesto'), dp?.referencia || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelFormato'), dp?.formatoAncho ? `${dp.formatoAncho} x ${dp.formatoLargo || '-'} mm` : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelMaquina'), dp?.maquina || pedido.maquina || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelMaterial'), dp?.material || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelAcabado'), Array.isArray(dp?.acabado) ? (dp.acabado.length ? dp.acabado.join(', ') : '-') : (dp?.acabado || '-'))}
+                              {renderRow(t('screens.pedidoDetalle.labelTirada'), dp?.tirada ? `${dp.tirada} ${t('screens.pedidoDetalle.unidades')}` : '-')}
                               {/* ── Tintas como texto ── */}
                               {(() => {
-                                const CMYK_LABELS = { C: 'Cyan', M: 'Magenta', Y: 'Yellow', K: 'Negro' };
+                                const CMYK_LABELS = { C: 'Cyan', M: 'Magenta', Y: 'Yellow', K: t('screens.pedidoDetalle.cmykNegro') };
                                 const items = [];
                                 (dp?.selectedTintas || []).filter((t) => ['C','M','Y','K'].includes(t)).forEach((t) => items.push(CMYK_LABELS[t]));
                                 const spotMap = new Map();
@@ -1047,13 +1152,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                 (Array.isArray(dp?.detalleTintaEspecial) ? dp.detalleTintaEspecial : [])
                                   .forEach((te) => { if (te && !items.includes(te)) items.push(te); });
                                 if (items.length === 0) return null;
-                                return renderRow('Tintas:', items.join(' · '));
+                                return renderRow(t('screens.pedidoDetalle.labelTintas'), items.join(' · '));
                               })()}
-                              {renderRow('Troquel estado:', dp?.troquelEstadoSel || '-')}
-                              {renderRow('Troquel forma:', dp?.troquelFormaSel || '-')}
-                              {renderRow('Troquel coste:', dp?.troquelCoste || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelTroquelEstado'), dp?.troquelEstadoSel || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelTroquelForma'), dp?.troquelFormaSel || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelTroquelCoste'), dp?.troquelCoste || '-')}
                               <View style={styles.fullWidthRow}>
-                                <Text style={styles.fullWidthLabel}>Observaciones:</Text>
+                                <Text style={styles.fullWidthLabel}>{t('screens.pedidoDetalle.labelObservaciones')}</Text>
                                 <Text style={styles.fullWidthValue}>{dp?.observaciones || '-'}</Text>
                               </View>
                             </View>
@@ -1066,31 +1171,65 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       <>
                         <View style={styles.leftCol}>
                           <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>Pedido</Text>
-                            {renderRow('Número:', pedido.numero_pedido || '-')}
-                            {renderRow('Fecha pedido:', formatearFecha(pedido.fecha_pedido))}
-                            {renderRow('Referencia:', pedido.referencia || '-')}
-                            {renderRow('Nombre trabajo:', pedido.nombre || '-')}
-                            {renderRow('Estado:', pedido.estado || '-')}
-                            {renderRow('Fecha entrega:', formatearFecha(pedido.fecha_entrega))}
-                            {renderRow('Retraso (días):', String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
+                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPedido')}</Text>
+                            {renderRow(t('screens.pedidoDetalle.labelNumero'), pedido.numero_pedido || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelFechaPedido'), formatearFecha(pedido.fecha_pedido))}
+                            {renderRow(t('screens.pedidoDetalle.labelReferencia'), pedido.referencia || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelNombreTrabajo'), pedido.nombre || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
+                            {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
                           </View>
                         </View>
                         <View style={styles.rightCol}>
                           <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>Cliente / Contacto</Text>
-                            {renderRow('Cliente:', (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                            {renderRow('Razón social:', pedido.razon_social || '-')}
-                            {renderRow('CIF:', pedido.cif || '-')}
-                            {renderRow('Contacto:', pedido.personas_contacto || '-')}
-                            {renderRow('Email:', pedido.email || '-')}
-                            {renderRow('Vendedor:', (pedido.datos_presupuesto && pedido.datos_presupuesto.vendedor) || '-')}
+                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secCliente')}</Text>
+                            {renderRow(t('screens.pedidoDetalle.labelCliente'), (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
+                            {renderRow(t('screens.pedidoDetalle.labelRazonSocial'), pedido.razon_social || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelCif'), pedido.cif || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelContacto'), pedido.personas_contacto || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelEmail'), pedido.email || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelVendedor'), (pedido.datos_presupuesto && pedido.datos_presupuesto.vendedor) || '-')}
                           </View>
                         </View>
                       </>
                     );
                   })()}
                 </View>
+
+                {/* ═══════════════════ IMPRESIÓN (datos tab) ═══════════════════ */}
+                {pedido.datos_impresion && (() => {
+                  const di = pedido.datos_impresion;
+                  if (di.sin_material) {
+                    return (
+                      <View style={[styles.sectionCard, { marginTop: 6 }]}>
+                        <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
+                        {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
+                        {renderRow(t('screens.pedidoDetalle.labelSinMaterial'), t('screens.pedidoDetalle.valSinMaterial'))}
+                      </View>
+                    );
+                  }
+                  return (
+                    <View style={[styles.sectionCard, { marginTop: 6 }]}>
+                      <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
+                      {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelMaterialImpresion'), di.material_nombre || '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelFabricante'), di.fabricante || '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelAnchoRollo'), di.ancho_rollo_cm != null ? `${di.ancho_rollo_cm} cm` : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelAnchoTrabajo'), di.ancho_trabajo_cm != null ? `${di.ancho_trabajo_cm} cm` : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelAprovechamiento'), di.aprovechamiento_pct != null ? `${di.aprovechamiento_pct}%` : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelTirada'), di.tirada != null ? String(di.tirada) : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelEtiqPorVuelta'), di.etiquetas_por_vuelta != null ? String(di.etiquetas_por_vuelta) : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelVueltas'), di.vueltas != null ? String(di.vueltas) : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelMermaImpresion'), di.merma_metros != null ? `${di.merma_metros} m` : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelMetrosConsumidos'), di.metros_consumidos != null ? `${di.metros_consumidos} m` : '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelSentidoImpresion'), di.sentido_impresion || '-')}
+                      {renderRow(t('screens.pedidoDetalle.labelRetalGenerado'), di.retal_generado ? t('common.yes') : t('common.no'))}
+                    </View>
+                  );
+                })()}
+
+                </>
               )}
 
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
@@ -1105,7 +1244,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       onPress={() => setArtesExpanded(v => !v)}
                     >
                       <Text style={{ fontSize: 9, color: '#94A3B8', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
-                      <Text style={styles.filesSectionLabel}>Artes Finales del Cliente</Text>
+                      <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.artesTitle')}</Text>
                       {archivos.artes.length > 0 && (
                         <View style={styles.fileCountBadge}>
                           <Text style={styles.fileCountBadgeText}>{archivos.artes.length}</Text>
@@ -1139,7 +1278,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   {artesExpanded && (archivosLoading && archivos.artes.length === 0 ? (
                     <ActivityIndicator size="small" color="#475569" />
                   ) : archivos.artes.length === 0 ? (
-                    <Text style={styles.emptyFilesText}>Sin archivos de cliente</Text>
+                    <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinArtes')}</Text>
                   ) : (
                     archivos.artes.map((archivo) => {
                       const ext = (archivo.nombre_original || '').split('.').pop().toUpperCase().slice(0, 4);
@@ -1157,12 +1296,19 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             <Text style={styles.fileActionBtnText}>↓</Text>
                           </TouchableOpacity>
                           {canDelete && (
-                            <TouchableOpacity
-                              style={[styles.fileActionBtn, styles.fileDeleteBtn]}
-                              onPress={() => handleEliminarArchivo(archivo.id)}
-                            >
-                              <Text style={styles.fileActionBtnText}>✕</Text>
-                            </TouchableOpacity>
+                            confirmingDeleteArchivo === archivo.id ? (
+                              <DeleteConfirmRow
+                                onCancel={() => setConfirmingDeleteArchivo(null)}
+                                onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(archivo.id); }}
+                              />
+                            ) : (
+                              <TouchableOpacity
+                                style={[styles.fileActionBtn, styles.fileDeleteBtn]}
+                                onPress={() => setConfirmingDeleteArchivo(archivo.id)}
+                              >
+                                <Text style={styles.fileActionBtnText}>✕</Text>
+                              </TouchableOpacity>
+                            )
                           )}
                         </View>
                       );
@@ -1174,7 +1320,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 {/* ── Unitario ── */}
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
-                    <Text style={styles.filesSectionLabel}>Unitario</Text>
+                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
                     {uploadingUnitario
                       ? <ActivityIndicator size="small" color="#94A3B8" />
                       : (
@@ -1201,7 +1347,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   {archivosLoading && archivos.unitario.length === 0 ? (
                     <ActivityIndicator size="small" color="#475569" />
                   ) : archivos.unitario.length === 0 ? (
-                    <Text style={styles.emptyFilesText}>Sin PDF unitario — sube la primera versión</Text>
+                    <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinUnitario')}</Text>
                   ) : (
                     <>
                       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -1223,26 +1369,34 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
                                 </TouchableOpacity>
                                 {canDelete && (
-                                  <TouchableOpacity
-                                    onPress={() => handleEliminarArchivo(u.id)}
-                                    style={[styles.versionTabDeleteBtn, isActive && { backgroundColor: '#475569' }]}
-                                  >
-                                    <Text style={styles.versionTabDeleteBtnText}>✕</Text>
-                                  </TouchableOpacity>
+                                  confirmingDeleteArchivo === u.id ? (
+                                    <DeleteConfirmRow
+                                      onCancel={() => setConfirmingDeleteArchivo(null)}
+                                      onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(u.id); }}
+                                    />
+                                  ) : (
+                                    <TouchableOpacity
+                                      onPress={() => setConfirmingDeleteArchivo(u.id)}
+                                      style={[styles.versionTabDeleteBtn, isActive && { backgroundColor: '#475569' }]}
+                                    >
+                                      <Text style={styles.versionTabDeleteBtnText}>✕</Text>
+                                    </TouchableOpacity>
+                                  )
                                 )}
                               </View>
                             );
                           })}
                         </View>
 
-                        {/* RIGHT: Preview + separaciones + botones Esko */}
+                        {/* RIGHT: Preview + separaciones */}
                         <View style={{ flex: 1, minWidth: 0 }}>
 
                           {/* Fila: thumbnail + separaciones */}
                           {(() => {
                             const selected = archivos.unitario.find((u) => u.version === selectedVersion);
                             if (!selected) return null;
-                            const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline`;
+                            const inlineToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
+                            const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline${inlineToken}`;
 
                             // ── Detección de mismatch tintas PDF vs pedido ──────────
                             const CMYK_NORM = { c: 'cyan', m: 'magenta', y: 'yellow', k: 'black' };
@@ -1288,7 +1442,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       <div
                                         onClick={() => setPdfLightboxUrl(inlineUrl)}
                                         style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
-                                        title="Ampliar PDF"
+                                        title={t('screens.pedidoDetalle.ampliarPdf')}
                                       />
                                     </div>
                                   ) : (
@@ -1300,11 +1454,11 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                                 {/* Columna separaciones */}
                                 <View style={styles.metaColumn}>
-                                  <Text style={styles.metaTitle}>Separaciones</Text>
+                                  <Text style={styles.metaTitle}>{t('screens.pedidoDetalle.separacionesTitle')}</Text>
                                   {pdfMetaLoading ? (
                                     <ActivityIndicator size="small" color="#94A3B8" />
                                   ) : pdfSeps.length === 0 ? (
-                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>Sin datos</Text>
+                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
                                   ) : (
                                     <>
                                       <View style={styles.sepChipsWrap}>
@@ -1321,18 +1475,18 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       </View>
                                       {hasPedidoInks && extraEnPdf.length === 0 && extraEnPedido.length === 0 ? (
                                         <View style={styles.matchBanner}>
-                                          <Text style={styles.matchText}>✓ Tintas coinciden con el pedido</Text>
+                                          <Text style={styles.matchText}>{t('screens.pedidoDetalle.tintasCoinciden')}</Text>
                                         </View>
                                       ) : (extraEnPdf.length > 0 || extraEnPedido.length > 0) ? (
                                         <View style={styles.mismatchBanner}>
                                           {extraEnPdf.length > 0 && (
                                             <Text style={styles.mismatchText}>
-                                              En PDF, no en pedido: {extraEnPdf.map((s) => s.nombre).join(', ')}
+                                              {t('screens.pedidoDetalle.enPdfNoPedido')}{extraEnPdf.map((s) => s.nombre).join(', ')}
                                             </Text>
                                           )}
                                           {extraEnPedido.length > 0 && (
                                             <Text style={[styles.mismatchText, { marginTop: extraEnPdf.length > 0 ? 2 : 0 }]}>
-                                              En pedido, no en PDF: {extraEnPedido.join(', ')}
+                                              {t('screens.pedidoDetalle.enPedidoNoPdf')}{extraEnPedido.join(', ')}
                                             </Text>
                                           )}
                                         </View>
@@ -1344,36 +1498,98 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             );
                           })()}
 
-                          {/* Botones Esko */}
-                          <View style={styles.eskoActionsRow}>
-                            {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
-                              const accion = mapToolToAccion(title);
-                              const isLoading = chargingAction === accion;
-                              return (
-                                <View key={title} style={styles.eskoToolCol}>
-                                  <TouchableOpacity
-                                    style={[styles.eskoBtn, isLoading && { opacity: 0.6 }]}
-                                    onPress={() => handleDescargarTool(title)}
-                                    disabled={!!isLoading}
-                                  >
-                                    <Text style={styles.eskoBtnText}>
-                                      {isLoading ? '...' : title}
-                                    </Text>
-                                  </TouchableOpacity>
-                                  {/* Contenedor archivos procesados Esko */}
-                                  <View style={styles.eskoOutputBox}>
-                                    <Text style={styles.eskoOutputEmptyText}>—</Text>
-                                  </View>
-                                </View>
-                              );
-                            })}
-                          </View>
-
                         </View>
                       </View>
                     </>
                   )}
 
+                </View>
+
+                {/* ── Contenedores Esko ── */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.fileSectionHeader}>
+                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
+                  </View>
+                  <View style={styles.eskoActionsRow}>
+                    {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
+                      const accion = mapToolToAccion(title);
+                      const tipoKey = accion;
+                      const isLoading = chargingAction === accion;
+                      const isUploading = !!uploadingEsko[tipoKey];
+                      const eskoFile = archivos.esko[tipoKey] || null;
+                      return (
+                        <View key={title} style={styles.eskoToolCol}>
+                          <TouchableOpacity
+                            style={[styles.eskoBtn, isLoading && { opacity: 0.6 }]}
+                            onPress={() => handleDescargarTool(title)}
+                            disabled={!!isLoading}
+                          >
+                            <Text style={styles.eskoBtnText}>
+                              {isLoading ? '...' : title}
+                            </Text>
+                          </TouchableOpacity>
+
+                          {/* Contenedor archivos procesados Esko */}
+                          <View style={[styles.eskoOutputBox, eskoFile && styles.eskoOutputBoxFilled]}>
+                            {isUploading ? (
+                              <ActivityIndicator size="small" color="#475569" />
+                            ) : eskoFile ? (
+                              <>
+                                <Text style={styles.eskoFileName} numberOfLines={1}>{eskoFile.nombre_original}</Text>
+                                <Text style={styles.eskoFileMeta}>{formatearTamanio(eskoFile.tamanio)}</Text>
+                                {confirmingDeleteArchivo === eskoFile.id ? (
+                                  <DeleteConfirmRow
+                                    onCancel={() => setConfirmingDeleteArchivo(null)}
+                                    onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(eskoFile.id); }}
+                                  />
+                                ) : (
+                                  <View style={styles.eskoFileBtns}>
+                                    <TouchableOpacity
+                                      style={styles.eskoFileBtn}
+                                      onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${eskoFile.id}`, '_blank'); }}
+                                    >
+                                      <Text style={styles.eskoFileBtnText}>↓</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={[styles.eskoFileBtn, { backgroundColor: '#64748B' }]}
+                                      onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
+                                    >
+                                      <Text style={styles.eskoFileBtnText}>↑</Text>
+                                    </TouchableOpacity>
+                                    {canDelete && (
+                                      <TouchableOpacity
+                                        style={[styles.eskoFileBtn, { backgroundColor: '#DC2626' }]}
+                                        onPress={() => setConfirmingDeleteArchivo(eskoFile.id)}
+                                      >
+                                        <Text style={styles.eskoFileBtnText}>✕</Text>
+                                      </TouchableOpacity>
+                                    )}
+                                  </View>
+                                )}
+                              </>
+                            ) : (
+                              <TouchableOpacity
+                                onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
+                                style={styles.eskoUploadBtn}
+                              >
+                                <Text style={styles.eskoUploadBtnText}>+ PDF</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+
+                          {Platform.OS === 'web' && (
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              style={{ display: 'none' }}
+                              ref={(el) => { fileInputEskoRefs.current[tipoKey] = el; }}
+                              onChange={(e) => { if (e.target.files[0]) handleUploadEsko(tipoKey, e.target.files[0]); }}
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
                 </>
               )}
@@ -1386,34 +1602,22 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           {pedido && (
             <View style={styles.bottomBar}>
               {canDelete && (
-                <TouchableOpacity
-                  style={styles.bottomDeleteBtn}
-                  onPress={async () => {
-                    if (!pedido?.id) return;
-                    const confirmDelete = (typeof window !== 'undefined' && window.confirm)
-                      ? window.confirm('¿Seguro que deseas eliminar este pedido?')
-                      : await new Promise((resolve) => {
-                          Alert.alert('Eliminar pedido', '¿Seguro que deseas eliminar este pedido?', [
-                            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-                            { text: 'Eliminar', style: 'destructive', onPress: () => resolve(true) },
-                          ]);
-                        });
-                    if (!confirmDelete) return;
-                    try {
-                      const res = await fetch(`${API_BASE}/api/pedidos/${pedido.id}`, { method: 'DELETE' });
-                      const data = await res.json().catch(() => ({}));
-                      if (!res.ok) { Alert.alert('Error', data.error || 'No se pudo eliminar el pedido'); return; }
-                      Alert.alert('Pedido eliminado', 'El pedido ha sido eliminado con éxito');
-                      if (typeof onDeleted === 'function') onDeleted();
-                    } catch (err) { Alert.alert('Error', 'Error de conexión: ' + err.message); }
-                  }}
-                >
-                  <Text style={styles.bottomDeleteBtnText}>Eliminar</Text>
-                </TouchableOpacity>
+                !confirmingDeletePedido ? (
+                  <TouchableOpacity style={styles.bottomDeleteBtn} onPress={() => setConfirmingDeletePedido(true)}>
+                    <Text style={styles.bottomDeleteBtnText}>{t('screens.pedidoDetalle.btnEliminar')}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <DeleteConfirmRow
+                    size="md"
+                    message={t('screens.pedidoDetalle.confirmEliminarPedido')}
+                    onCancel={() => setConfirmingDeletePedido(false)}
+                    onConfirm={() => { setConfirmingDeletePedido(false); ejecutarEliminarPedido(); }}
+                  />
+                )
               )}
               <View style={styles.bottomMainBtns}>
                 <TouchableOpacity style={styles.bottomCancelBtn} onPress={onClose}>
-                  <Text style={styles.bottomCancelBtnText}>Cancelar</Text>
+                  <Text style={styles.bottomCancelBtnText}>{t('screens.pedidoDetalle.btnCancelar')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.bottomEditBtn}
@@ -1431,7 +1635,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     setEditVisible(true);
                   }}
                 >
-                  <Text style={styles.bottomEditBtnText}>Editar pedido</Text>
+                  <Text style={styles.bottomEditBtnText}>{t('screens.pedidoDetalle.btnEditar')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1448,7 +1652,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 <iframe
                   src={pdfLightboxUrl}
                   style={{ width: '100%', height: '100%', border: 'none', colorScheme: 'light', backgroundColor: '#FFFFFF' }}
-                  title="Vista previa PDF"
+                  title={t('screens.pedidoDetalle.vistaPrevia')}
                 />
               )}
               <TouchableOpacity style={styles.lightboxCloseBtn} onPress={() => setPdfLightboxUrl(null)}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function NuevoTroquelModal({
   visible,
@@ -12,6 +13,7 @@ export default function NuevoTroquelModal({
   currentUser = null,
   puedeCrear = true,
 }) {
+  const { t } = useTranslation();
   const [refTroquel, setRefTroquel]           = useState('');
   const [tipoTroquel, setTipoTroquel]         = useState('regular');
   const [forma, setForma]                     = useState('Rectangular');
@@ -22,6 +24,7 @@ export default function NuevoTroquelModal({
   const [separacionAncho, setSeparacionAncho] = useState('');
   const [valorZ, setValorZ]                   = useState('');
   const [distanciaSesgado, setDistanciaSesgado] = useState('');
+  const [sentidoImpresion, setSentidoImpresion] = useState('vertical');
 
   useEffect(() => {
     if (visible) {
@@ -36,6 +39,7 @@ export default function NuevoTroquelModal({
         setSeparacionAncho(initialTroquel.separacionAncho || '');
         setValorZ(initialTroquel.valorZ || '');
         setDistanciaSesgado(initialTroquel.distanciaSesgado || '');
+        setSentidoImpresion(initialTroquel.sentido_impresion || 'vertical');
       } else {
         setRefTroquel(defaultNumero || '');
         setTipoTroquel('regular');
@@ -47,6 +51,7 @@ export default function NuevoTroquelModal({
         setSeparacionAncho('');
         setValorZ('');
         setDistanciaSesgado('');
+        setSentidoImpresion('vertical');
       }
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
@@ -62,6 +67,7 @@ export default function NuevoTroquelModal({
     setSeparacionAncho('');
     setValorZ('');
     setDistanciaSesgado('');
+    setSentidoImpresion('vertical');
     onClose();
   };
 
@@ -99,6 +105,7 @@ export default function NuevoTroquelModal({
       separacionAncho,
       valorZ,
       distanciaSesgado,
+      sentido_impresion: sentidoImpresion,
     });
     resetAndClose();
   };
@@ -166,6 +173,19 @@ export default function NuevoTroquelModal({
               {['Disponible', 'En uso'].map((e) => (
                 <TouchableOpacity key={e} onPress={() => setEstado(e)} style={pill(estado === e)}>
                   <Text style={pillTxt(estado === e)}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Sentido de impresión */}
+            <Text style={styles.label}>{t('screens.troqueles.sentidoImpresion')}</Text>
+            <View style={[styles.pillRow, { marginBottom: 16 }]}>
+              {[
+                { value: 'vertical',   label: t('screens.troqueles.sentidoVertical') },
+                { value: 'horizontal', label: t('screens.troqueles.sentidoHorizontal') },
+              ].map((s) => (
+                <TouchableOpacity key={s.value} onPress={() => setSentidoImpresion(s.value)} style={pill(sentidoImpresion === s.value)}>
+                  <Text style={pillTxt(sentidoImpresion === s.value)}>{s.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

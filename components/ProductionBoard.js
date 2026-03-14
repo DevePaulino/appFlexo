@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, TextInput } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { useTranslation } from 'react-i18next';
 import TrabajoRow from './TrabajoRow';
 import EmptyState from './EmptyState';
 
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
+  const { t } = useTranslation();
   const [maquinaActual, setMaquinaActual] = useState(0);
   const [trabajos, setTrabajos] = useState([]);
   const [paginaActual, setPaginaActual] = useState(0);
   const [cambiandoMaquina, setCambiandoMaquina] = useState(null);
+  // ── Consumo automático ─────────────────────────────────────────────────────
+  const [consumoModal, setConsumoModal] = useState(null);  // trabajo seleccionado
+  const [consumoLoading, setConsumoLoading] = useState(false);
+  const [consumoResultado, setConsumoResultado] = useState(null);  // respuesta del backend
+  const [consumoError, setConsumoError] = useState(null);
+  const [consumoPreview, setConsumoPreview] = useState(null);
+  const [consumoPreviewLoading, setConsumoPreviewLoading] = useState(false);
+  const [mermaMetros, setMermaMetros] = useState('0');
   const TRABAJOS_POR_PAGINA = 100;
 
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -162,32 +172,63 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     return labels[estado] || (estado || 'Pendiente');
   };
 
+  const ejecutarMoverMaquina = async (trabajoId, nuevaMaquinaId) => {
+    const token = global.__MIAPP_ACCESS_TOKEN;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch('http://localhost:8080/api/produccion/mover', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ trabajo_id: trabajoId, maquina_destino: nuevaMaquinaId, force: true }),
+    });
+    if (res.ok) {
+      const indiceMaquinaDestino = maquinas.findIndex((m) => String(m.id) === String(nuevaMaquinaId));
+      try { if (onRequestPage) await onRequestPage(nuevaMaquinaId, 1); } catch (e) { /* no fatal */ }
+      if (indiceMaquinaDestino !== -1) setMaquinaActual(indiceMaquinaDestino);
+      setTrabajos((prev) => prev.filter((t) => String(t.id || t.trabajo_id || '') !== String(trabajoId)));
+      if (onRefresh) await onRefresh();
+      try {
+        if (onRequestPage) {
+          setTimeout(() => { onRequestPage(nuevaMaquinaId, 1).catch(() => {}); }, 500);
+        }
+      } catch (e) { /* ignore */ }
+    } else {
+      if (onRefresh) await onRefresh();
+      alert('Error al cambiar de máquina');
+    }
+  };
+
   const handleCambiarMaquina = async (trabajoId, nuevaMaquinaId) => {
     if (cambiandoMaquina) return;
     setCambiandoMaquina(trabajoId);
     try {
-      const res = await fetch('http://localhost:8080/api/produccion/mover', {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      // Paso 1: validar compatibilidad (force: false)
+      const resCheck = await fetch('http://localhost:8080/api/produccion/mover', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trabajo_id: trabajoId, maquina_destino: nuevaMaquinaId }),
+        headers,
+        body: JSON.stringify({ trabajo_id: trabajoId, maquina_destino: nuevaMaquinaId, force: false }),
       });
-      if (res.ok) {
-        const indiceMaquinaDestino = maquinas.findIndex((m) => String(m.id) === String(nuevaMaquinaId));
-        try { if (onRequestPage) await onRequestPage(nuevaMaquinaId, 1); } catch (e) { /* no fatal */ }
-        if (indiceMaquinaDestino !== -1) setMaquinaActual(indiceMaquinaDestino);
-        setTrabajos((prev) => prev.filter((t) => String(t.id || t.trabajo_id || '') !== String(trabajoId)));
-        if (onRefresh) await onRefresh();
-        try {
-          if (onRequestPage) {
-            setTimeout(() => {
-              onRequestPage(nuevaMaquinaId, 1).catch((e) => console.warn('onRequestPage retry', e));
-            }, 500);
-          }
-        } catch (e) { /* ignore */ }
-      } else {
-        alert('Error al cambiar de máquina');
+      const jsonCheck = await resCheck.json();
+      if (resCheck.ok && jsonCheck.needs_confirm && jsonCheck.advertencias?.length > 0) {
+        const msgs = jsonCheck.advertencias.map((a) => {
+          if (a.tipo === 'colores') return `• Tintas: el trabajo necesita ${a.requerido} colores, la máquina tiene ${a.maximo}`;
+          if (a.tipo === 'ancho') return `• Ancho de material: necesita ${a.requerido} mm, máquina admite ${a.maximo} mm`;
+          return `• ${a.tipo}`;
+        }).join('\n');
+        const confirmar = window.confirm(`⚠ Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
+        if (!confirmar) {
+          if (onRefresh) await onRefresh();
+          setCambiandoMaquina(null);
+          return;
+        }
       }
+      // Paso 2: ejecutar el movimiento
+      await ejecutarMoverMaquina(trabajoId, nuevaMaquinaId);
     } catch (e) {
+      if (onRefresh) await onRefresh();
       alert('Error al cambiar de máquina');
     }
     setCambiandoMaquina(null);
@@ -219,13 +260,93 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     return { container: [styles.retrasoContainer, styles.retrasoVerde], text: [styles.retrasoText, styles.retrasoVerdeText], label: `${dias}` };
   };
 
+  const [sinRepetidora, setSinRepetidora] = useState(false);
+
+  const abrirConsumoModal = async (trabajo) => {
+    setConsumoModal(trabajo);
+    setConsumoResultado(null);
+    setConsumoError(null);
+    setSinRepetidora(false);
+    setConsumoPreview(null);
+    // Cargar preview
+    const pedidoId = String(trabajo._id || trabajo.id || trabajo.trabajo_id || '');
+    if (!pedidoId) return;
+    setConsumoPreviewLoading(true);
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`http://localhost:8080/api/materiales/consumos/preview?pedido_id=${pedidoId}`, { headers });
+      const json = await res.json();
+      if (res.ok) {
+        setConsumoPreview(json);
+      } else if (json.code === 'SIN_REPETIDORA') {
+        setSinRepetidora(true);
+      }
+      // otros errores (SIN_STOCK, SIN_DIMENSIONES_PDF) los dejamos silenciosos en preview;
+      // el endpoint de registro los reportará con mensaje completo
+    } catch (_) { /* silencioso */ }
+    setConsumoPreviewLoading(false);
+  };
+
+  const cerrarConsumoModal = () => {
+    setConsumoModal(null);
+    setConsumoResultado(null);
+    setConsumoError(null);
+    setSinRepetidora(false);
+    setConsumoPreview(null);
+    setMermaMetros('0');
+  };
+
+  const llamarEndpointConsumo = async (sinMaterial) => {
+    if (!consumoModal) return;
+    const pedidoId = String(consumoModal._id || consumoModal.id || consumoModal.trabajo_id || '');
+    if (!pedidoId) { setConsumoError('No se pudo obtener el ID del pedido'); return; }
+    setConsumoLoading(true);
+    setConsumoError(null);
+    setSinRepetidora(false);
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('http://localhost:8080/api/materiales/consumos/auto', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ pedido_id: pedidoId, sin_material: sinMaterial, merma_metros: parseFloat(mermaMetros) || 0 }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.code === 'SIN_REPETIDORA') {
+          setSinRepetidora(true);
+        } else {
+          setConsumoError(json.error || 'Error al registrar consumo');
+        }
+      } else {
+        setConsumoResultado(json);
+        // Actualización optimista: marcar como impreso inmediatamente en el estado local
+        setTrabajos((prev) => prev.map((t) =>
+          String(t.id || t._id || t.trabajo_id || '') === pedidoId
+            ? { ...t, impresion_registrada: true }
+            : t
+        ));
+        if (onRefresh) onRefresh();
+      }
+    } catch (e) {
+      setConsumoError('Error de red: ' + e.message);
+    }
+    setConsumoLoading(false);
+  };
+
+  const confirmarConsumo = () => llamarEndpointConsumo(false);
+  const confirmarSinMaterial = () => llamarEndpointConsumo(true);
+
   if (!maquinas || maquinas.length === 0) {
     return (
       <EmptyState
         variant="inline"
         icon="⚙️"
-        title="Sin máquinas"
-        message="No hay máquinas configuradas"
+        title={t('screens.produccion.sinMaquinas')}
+        message={t('screens.produccion.noMaquinas')}
       />
     );
   }
@@ -250,8 +371,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       <EmptyState
         variant="inline"
         icon="📋"
-        title={filtro ? 'Sin resultados' : 'Sin trabajos'}
-        message={filtro ? 'Sin resultados para la búsqueda' : 'No hay trabajos para el filtro seleccionado'}
+        title={filtro ? t('screens.produccion.sinResultados') : t('screens.produccion.sinTrabajos')}
+        message={filtro ? t('screens.produccion.sinResultadosBusqueda') : t('screens.produccion.noTrabajosFilro')}
       />
     )
     : trabajosFiltrados.map((item, index) => (
@@ -268,6 +389,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         getStatusLabel={getStatusLabel}
         getEntregaSemaforo={getEntregaSemaforo}
         formatearFecha={formatearFecha}
+        onMarcarImpreso={abrirConsumoModal}
         styles={styles}
       />
     ));
@@ -281,8 +403,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           <View style={styles.reorderHint}>
             <Text style={styles.reorderHintText}>
               {maquinasFiltradasIds.length === 0
-                ? '⠿  Selecciona una máquina en la barra superior para activar el reordenamiento por arrastre'
-                : '⠿  Selecciona solo una máquina para activar el reordenamiento por arrastre'}
+                ? t('screens.produccion.reorderHintNone')
+                : t('screens.produccion.reorderHintMulti')}
             </Text>
           </View>
         )}
@@ -296,25 +418,28 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
             <Text style={styles.headerText}>ID</Text>
           </View>
           <View style={[styles.tableCell, styles.colNombre]}>
-            <Text style={styles.headerText}>Pedido</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colPedido')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colCliente]}>
-            <Text style={styles.headerText}>Cliente</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colCliente')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colEstado]}>
-            <Text style={styles.headerText}>Estado</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colEstado')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colFechaPedido]}>
-            <Text style={styles.headerText}>F. Pedido</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colFechaPedido')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colFechaEntrega]}>
-            <Text style={styles.headerText}>F. Entrega</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colFechaEntrega')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colDias]}>
-            <Text style={styles.headerText}>Días</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colDias')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colMaquina]}>
-            <Text style={styles.headerText}>Máquina</Text>
+            <Text style={styles.headerText}>{t('screens.produccion.colMaquina')}</Text>
+          </View>
+          <View style={[styles.tableCell, styles.colImpreso]}>
+            <Text style={styles.headerText}>{t('screens.produccion.colConsumo')}</Text>
           </View>
         </View>
 
@@ -340,10 +465,10 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
             onPress={() => setPaginaActual(Math.max(0, paginaActual - 1))}
             disabled={paginaActual === 0}
           >
-            <Text style={styles.paginationButtonText}>← Anterior</Text>
+            <Text style={styles.paginationButtonText}>← {t('common.prev')}</Text>
           </TouchableOpacity>
           <Text style={styles.paginationInfo}>
-            Página {paginaActual + 1} de {totalPaginas} ({totalCount} trabajos)
+            {t('screens.produccion.paginaInfo', { pagina: paginaActual + 1, total: totalPaginas, count: totalCount })}
           </Text>
           <TouchableOpacity
             style={[styles.paginationButton, paginaActual >= totalPaginas - 1 && styles.paginationButtonDisabled]}
@@ -361,11 +486,180 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
             }}
             disabled={paginaActual >= totalPaginas - 1}
           >
-            <Text style={styles.paginationButtonText}>Siguiente →</Text>
+            <Text style={styles.paginationButtonText}>{t('common.next')} →</Text>
           </TouchableOpacity>
         </View>
 
       </View>
+
+      {/* ── Modal de consumo automático ─────────────────────────────────── */}
+      <Modal visible={!!consumoModal} transparent animationType="fade" onRequestClose={cerrarConsumoModal}>
+        <View style={styles.consumoOverlay}>
+          <View style={styles.consumoCard}>
+            {/* Header */}
+            <View style={styles.consumoHeader}>
+              <Text style={styles.consumoTitle}>{t('screens.produccion.consumo.modalTitle')}</Text>
+              <TouchableOpacity onPress={cerrarConsumoModal}>
+                <Text style={styles.consumoCloseX}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Pedido info (estado normal o sin repetidora) */}
+            {consumoModal && !consumoResultado && (
+              <View style={[styles.consumoInfo, sinRepetidora && styles.consumoInfoWarning]}>
+                <Text style={styles.consumoLabel}>{t('screens.produccion.consumo.labelPedido')}</Text>
+                <Text style={styles.consumoValue}>{consumoModal.nombre || consumoModal.numero_pedido || String(consumoModal._id || consumoModal.id || '-')}</Text>
+                <Text style={styles.consumoLabel}>{t('screens.produccion.consumo.labelCliente')}</Text>
+                <Text style={styles.consumoValue}>{typeof consumoModal.cliente === 'string' ? consumoModal.cliente : (consumoModal.cliente?.nombre || '-')}</Text>
+                {consumoPreview?.repetidora_nombre ? (
+                  <View style={styles.consumoRepetidoraRow}>
+                    <Text style={styles.consumoRepetidoraIcon}>📄</Text>
+                    <Text style={styles.consumoRepetidoraNombre} numberOfLines={1}>{consumoPreview.repetidora_nombre}</Text>
+                  </View>
+                ) : null}
+                {sinRepetidora ? (
+                  <Text style={styles.consumoWarningText}>
+                    ⚠ {t('screens.produccion.consumo.warnSinRepetidora')}
+                  </Text>
+                ) : consumoPreviewLoading ? (
+                  <View style={styles.consumoPreviewLoading}>
+                    <ActivityIndicator size="small" color="#475569" />
+                    <Text style={styles.consumoPreviewLoadingText}>{t('screens.produccion.consumo.calculando')}</Text>
+                  </View>
+                ) : consumoPreview ? (
+                  <View style={styles.consumoPreviewBox}>
+                    {consumoPreview.calculo && (
+                      <>
+                        <View style={styles.consumoPreviewRow}>
+                          <Text style={styles.consumoPreviewKey}>{t('screens.produccion.consumo.labelAncho')}</Text>
+                          <Text style={styles.consumoPreviewVal}>{consumoPreview.calculo.ancho_repetidora_mm} mm + 10 mm</Text>
+                        </View>
+                        <View style={styles.consumoPreviewRow}>
+                          <Text style={styles.consumoPreviewKey}>{t('screens.produccion.consumo.labelMetros')}</Text>
+                          <Text style={styles.consumoPreviewVal}>
+                            {(consumoPreview.calculo.metros_consumidos + (parseFloat(mermaMetros) || 0)).toFixed(4)} m
+                            {(parseFloat(mermaMetros) || 0) > 0 ? ` (base: ${consumoPreview.calculo.metros_consumidos} m + ${parseFloat(mermaMetros)} m merma)` : ''}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                    {consumoPreview.stock && (
+                      <View style={styles.consumoPreviewRow}>
+                        <Text style={styles.consumoPreviewKey}>{t('screens.produccion.consumo.labelStock')}</Text>
+                        <Text style={styles.consumoPreviewVal}>
+                          {consumoPreview.stock.material_nombre} — {consumoPreview.stock.ancho_cm} cm
+                          {consumoPreview.stock.es_retal ? ' (retal)' : ''}
+                          {' · '}{consumoPreview.stock.metros_disponibles} m {t('screens.produccion.consumo.disponibles')}
+                        </Text>
+                      </View>
+                    )}
+                    {consumoPreview.retal_generado && (
+                      <View style={styles.consumoPreviewRow}>
+                        <Text style={styles.consumoPreviewKey}>{t('screens.produccion.consumo.labelRetal')}</Text>
+                        <Text style={styles.consumoPreviewVal}>
+                          {consumoPreview.retal_generado.ancho_cm} cm × {consumoPreview.retal_generado.metros_disponibles} m
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.consumoHint}>{t('screens.produccion.consumo.hint')}</Text>
+                )}
+              </View>
+            )}
+
+            {/* Merma */}
+            {consumoModal && !consumoResultado && (
+              <View style={styles.mermaRow}>
+                <Text style={styles.mermaLabel}>{t('screens.produccion.consumo.labelMerma')}</Text>
+                <View style={styles.mermaInputWrap}>
+                  <TextInput
+                    style={styles.mermaInput}
+                    value={mermaMetros}
+                    onChangeText={setMermaMetros}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <Text style={styles.mermaUnit}>m</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Error genérico */}
+            {consumoError && (
+              <View style={styles.consumoErrorBox}>
+                <Text style={styles.consumoErrorText}>⚠ {consumoError}</Text>
+              </View>
+            )}
+
+            {/* Resultado */}
+            {consumoResultado && (
+              <View style={styles.consumoResultBox}>
+                <Text style={styles.consumoResultTitle}>
+                  {consumoResultado.sin_material ? t('screens.produccion.consumo.resultTitleSinMaterial') : t('screens.produccion.consumo.resultTitle')}
+                </Text>
+                {consumoResultado.estado_nuevo && (
+                  <Text style={styles.consumoResultRow}>
+                    {t('screens.produccion.consumo.labelEstadoCambio')}: <Text style={styles.consumoResultVal}>{consumoResultado.estado_anterior} → {consumoResultado.estado_nuevo}</Text>
+                  </Text>
+                )}
+                {consumoResultado.calculo && (
+                  <>
+                    <Text style={styles.consumoResultRow}>
+                      {t('screens.produccion.consumo.labelAncho')}: <Text style={styles.consumoResultVal}>{consumoResultado.calculo.ancho_repetidora_mm} mm + 10 mm</Text>
+                    </Text>
+                    <Text style={styles.consumoResultRow}>
+                      {t('screens.produccion.consumo.labelMetros')}: <Text style={styles.consumoResultVal}>{consumoResultado.calculo.metros_consumidos} m</Text>
+                    </Text>
+                  </>
+                )}
+                {consumoResultado.consumo?.material_nombre && (
+                  <Text style={styles.consumoResultRow}>
+                    {t('screens.produccion.consumo.labelStock')}: <Text style={styles.consumoResultVal}>{consumoResultado.consumo.material_nombre} — {consumoResultado.consumo.ancho_cm} cm{consumoResultado.consumo.es_retal ? ' (retal)' : ''}</Text>
+                  </Text>
+                )}
+                {consumoResultado.retal_generado && (
+                  <Text style={styles.consumoResultRow}>
+                    {t('screens.produccion.consumo.labelRetal')}: <Text style={styles.consumoResultVal}>{consumoResultado.retal_generado.ancho_cm} cm × {consumoResultado.retal_generado.metros_disponibles} m</Text>
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Botones */}
+            <View style={styles.consumoBtnRow}>
+              {!consumoResultado ? (
+                <>
+                  <TouchableOpacity onPress={cerrarConsumoModal} style={styles.consumoBtnCancel} disabled={consumoLoading}>
+                    <Text style={styles.consumoBtnCancelText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  {sinRepetidora ? (
+                    <TouchableOpacity onPress={confirmarSinMaterial} style={[styles.consumoBtnWarning, consumoLoading && { opacity: 0.6 }]} disabled={consumoLoading}>
+                      {consumoLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Text style={styles.consumoBtnConfirmText}>{t('screens.produccion.consumo.btnSinConsumo')}</Text>
+                      }
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={confirmarConsumo} style={[styles.consumoBtnConfirm, consumoLoading && { opacity: 0.6 }]} disabled={consumoLoading}>
+                      {consumoLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Text style={styles.consumoBtnConfirmText}>{t('screens.produccion.consumo.btnRegistrar')}</Text>
+                      }
+                    </TouchableOpacity>
+                  )}
+                </>
+              ) : (
+                <TouchableOpacity onPress={cerrarConsumoModal} style={styles.consumoBtnConfirm}>
+                  <Text style={styles.consumoBtnConfirmText}>{t('common.close')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -582,4 +876,252 @@ const styles = StyleSheet.create({
   retrasoVerdeText: { color: '#2E7D32' },
   retrasoAmarilloText: { color: '#F57C00' },
   retrasoRojoText: { color: '#DC2626' },
+  colImpreso: {
+    width: 100,
+    alignItems: 'center',
+  },
+  // ── Modal consumo ──────────────────────────────────────────────────────────
+  consumoOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  consumoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 480,
+  },
+  consumoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  consumoTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    flex: 1,
+  },
+  consumoCloseX: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#64748B',
+    padding: 4,
+  },
+  consumoInfo: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+    gap: 4,
+  },
+  consumoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 6,
+  },
+  consumoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  consumoHint: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 10,
+    lineHeight: 18,
+  },
+  consumoErrorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 14,
+  },
+  consumoErrorText: {
+    fontSize: 13,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  consumoResultBox: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+    gap: 4,
+  },
+  consumoResultTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#16A34A',
+    marginBottom: 8,
+  },
+  consumoResultRow: {
+    fontSize: 12,
+    color: '#374151',
+    marginBottom: 2,
+  },
+  consumoResultVal: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  consumoBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 4,
+  },
+  consumoBtnCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  consumoBtnCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  consumoBtnConfirm: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  consumoBtnWarning: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#B45309',
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  consumoBtnConfirmText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  consumoInfoWarning: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,6,0.3)',
+  },
+  consumoWarningText: {
+    fontSize: 12,
+    color: '#92400E',
+    marginTop: 10,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  consumoPreviewLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  consumoPreviewLoadingText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  consumoRepetidoraRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  consumoRepetidoraIcon: {
+    fontSize: 14,
+  },
+  consumoRepetidoraNombre: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  consumoPreviewBox: {
+    marginTop: 12,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: 'rgba(14,165,233,0.25)',
+    borderRadius: 8,
+    padding: 10,
+    gap: 6,
+  },
+  consumoPreviewRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    alignItems: 'baseline',
+  },
+  consumoPreviewKey: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  consumoPreviewVal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  mermaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,6,0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+    gap: 12,
+  },
+  mermaLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+    flex: 1,
+  },
+  mermaInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mermaInput: {
+    borderWidth: 1.5,
+    borderColor: '#D97706',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    width: 70,
+    textAlign: 'right',
+    backgroundColor: '#fff',
+  },
+  mermaUnit: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400E',
+  },
 });
