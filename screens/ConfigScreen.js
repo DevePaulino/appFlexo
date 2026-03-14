@@ -1893,6 +1893,7 @@ export default function ConfigScreen({ route, currentUser }) {
     const rolesProtegidos = new Set(['administrador']);
     const estadosProtegidos = new Set([
       'en-diseno',
+      'finalizado',
     ]);
     return (
       <View key={categoryKey} style={[styles.section, sectionStyle]}>
