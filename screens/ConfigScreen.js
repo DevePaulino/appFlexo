@@ -1528,6 +1528,7 @@ export default function ConfigScreen({ route, currentUser }) {
       const estadoKey = slugifyEstado(String(estadoItem?.valor || ''));
       const estadosProtegidos = new Set([
         'en-diseno',
+        'finalizado',
       ]);
       
       if (estadosProtegidos.has(estadoKey)) {

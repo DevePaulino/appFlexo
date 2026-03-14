@@ -269,6 +269,7 @@ PROTECTED_ROLE_ORDER = ['administrador']
 PROTECTED_ROLE_KEYS = {'administrador'}
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'en-diseno',
+    'finalizado',
 }
 
 # Ensure minimum users exist at startup (call after helpers are defined)
