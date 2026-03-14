@@ -735,7 +735,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [editVisible, setEditVisible]           = useState(false);
   const [editInitialValues, setEditInitialValues] = useState(null);
   const [pedido, setPedido] = useState(null);
-  const esFinalizado = pedido ? (estadoRules?.estados_finalizados || ['finalizado']).includes(slugifyEstado(pedido.estado)) : false;
+  const finalizadoSlugs = estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado'];
+  const esFinalizado = pedido ? finalizadoSlugs.includes(slugifyEstado(pedido.estado)) : false;
   const [activeRole, setActiveRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

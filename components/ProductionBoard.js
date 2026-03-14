@@ -18,7 +18,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   const { modulos } = useModulos();
   const consumoModuloActivo = modulos.consumo_material !== false;
   const { estadoRules } = useSettings();
-  const estadosFinalizadosSlugs = new Set((estadoRules?.estados_finalizados || ['finalizado']));
+  const estadosFinalizadosSlugs = new Set(estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado']);
   // ── Consumo automático ─────────────────────────────────────────────────────
   const [consumoModal, setConsumoModal] = useState(null);  // trabajo seleccionado
   const [consumoLoading, setConsumoLoading] = useState(false);

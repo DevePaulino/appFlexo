@@ -1211,7 +1211,7 @@ export default function TrabajoScreen({ currentUser }) {
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
             const estadoColor = getEstadoDotColor(estadoTrabajoActual);
-            const esFinalizado = (estadoRules?.estados_finalizados || ['finalizado']).includes(estadoTrabajoActual);
+            const esFinalizado = (estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado']).includes(estadoTrabajoActual);
             const envioBloqueado = !puedeEnviarAProduccion(trabajo);
             let textoBoton;
             if (estadoTrabajoActual === 'parado' || estadoTrabajoActual === 'cancelado') {

@@ -741,8 +741,8 @@ export default function ProduccionScreen() {
 
         // Filtrar trabajos: excluir trabajos que NO están en producción
         const rules = estadoRulesRef.current || {};
-        const finalizadosSlugs = new Set(rules.estados_finalizados || ['finalizado']);
-        const pausadosSlugs = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const finalizadosSlugs = new Set(rules.estados_finalizados?.length ? rules.estados_finalizados : ['finalizado']);
+        const pausadosSlugs = new Set(rules.estados_pausados?.length ? rules.estados_pausados : ['parado', 'cancelado']);
         const slugify = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         const trabajosMaqFiltrados = (trabajosData.trabajos || []).filter(trabajo => {
           const slug = slugify(trabajo.estado);
@@ -808,8 +808,8 @@ export default function ProduccionScreen() {
       const trabajosData = await trabajosRes.json();
       const paginaTrabajos = (trabajosData.trabajos || []).filter(trabajo => {
         const rules = estadoRulesRef.current || {};
-        const fin = new Set(rules.estados_finalizados || ['finalizado']);
-        const pau = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const fin = new Set(rules.estados_finalizados?.length ? rules.estados_finalizados : ['finalizado']);
+        const pau = new Set(rules.estados_pausados?.length ? rules.estados_pausados : ['parado', 'cancelado']);
         const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         return !fin.has(sl) && !pau.has(sl);
       });
@@ -852,8 +852,8 @@ export default function ProduccionScreen() {
       const data = await res.json();
       const paginaTrabajos = (data.trabajos || []).filter(trabajo => {
         const rules = estadoRulesRef.current || {};
-        const fin = new Set(rules.estados_finalizados || ['finalizado']);
-        const pau = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const fin = new Set(rules.estados_finalizados?.length ? rules.estados_finalizados : ['finalizado']);
+        const pau = new Set(rules.estados_pausados?.length ? rules.estados_pausados : ['parado', 'cancelado']);
         const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         return !fin.has(sl) && !pau.has(sl);
       });
