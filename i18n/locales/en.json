@@ -11,7 +11,8 @@
     "troqueles": "Dies",
     "usuariosRoles": "Users & roles",
     "impresion": "Printing",
-    "pedidosConfig": "Order settings"
+    "pedidosConfig": "Order settings",
+    "modulos": "Modules"
   },
   "user": {
     "changePhoto": "Change profile photo",
@@ -358,7 +359,11 @@
         "labelRetal": "Off-cut generated:",
         "calculando": "Calculating estimated consumption...",
         "disponibles": "available"
-      }
+      },
+      "impresosTitle": "Print history",
+      "impresosEmpty": "No printed jobs",
+      "impresosHint": "History of jobs marked as printed",
+      "colFechaImpresion": "Print date"
     },
     "materiales": {
       "title": "Materials",
@@ -552,6 +557,10 @@
       "ocultarEjemplosApi": "Hide API examples",
       "verEjemplosApi": "View API examples",
       "estadosPedidoTitle": "Order statuses",
+      "modulosTitle": "Modules",
+      "modulosHint": "Enable or disable optional application features.",
+      "moduloConsumoMaterial": "Material consumption",
+      "moduloConsumoMaterialHint": "Tracks material usage when marking a job as printed.",
       "creditosTitle": "Credits",
       "sinPermisoCreditosMsg": "Your role does not have permission to manage top-ups.",
       "recargarBtn": "Top up",

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { usePermission } from './usePermission';
 import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useTranslation } from 'react-i18next';
+import { useClientes } from '../ClientesContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -286,11 +286,21 @@ const styles = StyleSheet.create({
 export default function ClientesScreen({ currentUser }) {
   const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
-  const [clientes, setClientes] = useState([]);
-  const [filtrados, setFiltrados] = useState(clientes);
+  const { clientes: rawClientes, recargarClientes } = useClientes();
+  const clientes = useMemo(() => (rawClientes || [])
+    .map((item) => ({
+      id: item.id,
+      nombre: item.nombre || '',
+      razonSocial: item.razon_social || '',
+      cif: item.cif || '',
+      contacto: item.personas_contacto || '',
+      email: item.email || '',
+    }))
+    .sort((a, b) => (a.nombre || a.razonSocial || '').localeCompare(b.nombre || b.razonSocial || '', 'es')),
+  [rawClientes]);
+  const [filtrados, setFiltrados] = useState([]);
   const [paginaClientes, setPaginaClientes] = useState(1);
   const [busqueda, setBusqueda] = useState('');
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [clienteEditandoId, setClienteEditandoId] = useState(null);
@@ -310,40 +320,6 @@ export default function ClientesScreen({ currentUser }) {
   const normalizarCif = (value) => normalizarTexto(value).replace(/[\s-]/g, '').toUpperCase();
   const emailValido = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   const cifValido = (value) => /^[A-Z]\d{7}[A-Z0-9]$/.test(value);
-
-  const cargarClientes = async () => {
-    setLoading(true);
-    try {
-      const cliRes = await fetch('http://localhost:8080/api/clientes');
-      const clientesData = cliRes.ok ? await cliRes.json() : { clientes: [] };
-      console.log('DEBUG cargarClientes response:', clientesData);
-
-      const lista = (clientesData.clientes || [])
-        .map((item) => ({
-          id: item.id,
-          nombre: item.nombre || '',
-          razonSocial: item.razon_social || '',
-          cif: item.cif || '',
-          contacto: item.personas_contacto || '',
-          email: item.email || '',
-        }))
-        .sort((a, b) =>
-        (a.nombre || a.razonSocial || '').localeCompare(b.nombre || b.razonSocial || '', 'es')
-      );
-
-      setClientes(lista);
-    } catch {
-      setClientes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      cargarClientes();
-    }, [])
-  );
 
   useEffect(() => {
     const query = (busqueda || '').trim().toLowerCase();
@@ -446,7 +422,7 @@ export default function ClientesScreen({ currentUser }) {
       }
 
       cerrarModalNuevoCliente();
-      await cargarClientes();
+      await recargarClientes();
       Alert.alert(t('common.success'), modoEdicion ? t('screens.clientes.updatedOk') : t('screens.clientes.createdOk'));
     } catch (error) {
       Alert.alert(t('common.error'), t('common.error') + ': ' + error.message);
@@ -484,8 +460,7 @@ export default function ClientesScreen({ currentUser }) {
         return;
       }
 
-      await cargarClientes();
-      console.log('DEBUG after reload clientes, loading=', loading);
+      await recargarClientes();
       Alert.alert(t('common.success'), t('screens.clientes.deletedOk'));
     } catch (error) {
       Alert.alert(t('common.error'), t('common.error') + ': ' + error.message);
@@ -544,11 +519,7 @@ export default function ClientesScreen({ currentUser }) {
         />
       </View>
 
-      {loading ? (
-        <View style={styles.tableContainer}>
-          <EmptyState icon="⌛" title={t('common.loading')} />
-        </View>
-      ) : filtrados.length === 0 ? (
+      {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
           <EmptyState
             icon="🏢"

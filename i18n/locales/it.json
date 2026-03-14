@@ -11,7 +11,8 @@
     "troqueles": "Fustelle",
     "usuariosRoles": "Utenti e ruoli",
     "impresion": "Stampa",
-    "pedidosConfig": "Configurazione ordini"
+    "pedidosConfig": "Configurazione ordini",
+    "modulos": "Moduli"
   },
   "user": {
     "changePhoto": "Cambia foto profilo",
@@ -358,7 +359,11 @@
         "labelRetal": "Ritaglio generato:",
         "calculando": "Calcolo del consumo stimato...",
         "disponibles": "disponibili"
-      }
+      },
+      "impresosTitle": "Storico delle stampe",
+      "impresosEmpty": "Nessun lavoro stampato",
+      "impresosHint": "Storico dei lavori contrassegnati come stampati",
+      "colFechaImpresion": "Data di stampa"
     },
     "config": {
       "usuariosTitle": "Utenti",
@@ -402,6 +407,10 @@
       "ocultarEjemplosApi": "Nascondi esempi API",
       "verEjemplosApi": "Vedi esempi API",
       "estadosPedidoTitle": "Stati dell'ordine",
+      "modulosTitle": "Moduli",
+      "modulosHint": "Attiva o disattiva le funzionalità opzionali dell'applicazione.",
+      "moduloConsumoMaterial": "Consumo di materiale",
+      "moduloConsumoMaterialHint": "Registra il consumo di materiale quando si contrassegna un lavoro come stampato.",
       "creditosTitle": "Crediti",
       "sinPermisoCreditosMsg": "Il tuo ruolo non ha il permesso di gestire le ricariche.",
       "recargarBtn": "Ricarica",

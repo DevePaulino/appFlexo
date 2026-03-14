@@ -11,7 +11,8 @@
     "troqueles": "Stanzwerkzeuge",
     "usuariosRoles": "Benutzer & Rollen",
     "impresion": "Druck",
-    "pedidosConfig": "Auftragseinstellungen"
+    "pedidosConfig": "Auftragseinstellungen",
+    "modulos": "Module"
   },
   "user": {
     "changePhoto": "Profilfoto ändern",
@@ -358,7 +359,11 @@
         "labelRetal": "Erzeugter Abfall:",
         "calculando": "Geschätzten Verbrauch berechnen...",
         "disponibles": "verfügbar"
-      }
+      },
+      "impresosTitle": "Druckverlauf",
+      "impresosEmpty": "Keine gedruckten Aufträge",
+      "impresosHint": "Verlauf der als gedruckt markierten Aufträge",
+      "colFechaImpresion": "Druckdatum"
     },
     "config": {
       "usuariosTitle": "Benutzer",
@@ -402,6 +407,10 @@
       "ocultarEjemplosApi": "API-Beispiele ausblenden",
       "verEjemplosApi": "API-Beispiele anzeigen",
       "estadosPedidoTitle": "Auftragsstatus",
+      "modulosTitle": "Module",
+      "modulosHint": "Aktivieren oder deaktivieren Sie optionale Anwendungsfunktionen.",
+      "moduloConsumoMaterial": "Materialverbrauch",
+      "moduloConsumoMaterialHint": "Erfasst den Materialverbrauch beim Markieren eines Auftrags als gedruckt.",
       "creditosTitle": "Guthaben",
       "sinPermisoCreditosMsg": "Ihre Rolle hat keine Berechtigung zum Verwalten von Aufladungen.",
       "recargarBtn": "Aufladen",

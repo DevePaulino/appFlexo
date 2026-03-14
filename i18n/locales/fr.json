@@ -11,7 +11,8 @@
     "troqueles": "Découpes",
     "usuariosRoles": "Utilisateurs et rôles",
     "impresion": "Impression",
-    "pedidosConfig": "Configuration des commandes"
+    "pedidosConfig": "Configuration des commandes",
+    "modulos": "Modules"
   },
   "user": {
     "changePhoto": "Changer la photo de profil",
@@ -358,7 +359,11 @@
         "labelRetal": "Chute générée :",
         "calculando": "Calcul de la consommation estimée...",
         "disponibles": "disponibles"
-      }
+      },
+      "impresosTitle": "Historique des impressions",
+      "impresosEmpty": "Aucun travail imprimé",
+      "impresosHint": "Historique des travaux marqués comme imprimés",
+      "colFechaImpresion": "Date d'impression"
     },
     "materiales": {
       "title": "Matériaux",
@@ -548,6 +553,10 @@
       "ocultarEjemplosApi": "Masquer les exemples API",
       "verEjemplosApi": "Voir les exemples API",
       "estadosPedidoTitle": "États de commande",
+      "modulosTitle": "Modules",
+      "modulosHint": "Activez ou désactivez les fonctionnalités optionnelles de l'application.",
+      "moduloConsumoMaterial": "Consommation de matériau",
+      "moduloConsumoMaterialHint": "Enregistre la consommation de matériau lors du marquage d'un travail comme imprimé.",
       "creditosTitle": "Crédits",
       "sinPermisoCreditosMsg": "Votre rôle n'a pas l'autorisation de gérer les recharges.",
       "recargarBtn": "Recharger",

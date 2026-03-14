@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
 import EmptyState from '../components/EmptyState';
+import { useSettings } from '../SettingsContext';
+import { useMaquinas } from '../MaquinasContext';
+import { useClientes } from '../ClientesContext';
 
 const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
@@ -486,11 +489,13 @@ export default function NuevoPresupuestoModal({
     const [coberturaResult, setCoberturaResult] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [coberturaError, setCoberturaError] = useState('');
-    const [clientesGuardados, setClientesGuardados] = useState([]);
+    const { clientes: rawClientes } = useClientes();
+    const clientesGuardados = rawClientes || [];
     const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState(null);
     const [clienteExpandido, setClienteExpandido] = useState(false);
-    const [cargandoClientes, setCargandoClientes] = useState(false);
-    const [maquinasActivas, setMaquinasActivas] = useState([]);
+    const { maquinas: allMaquinas, recargarMaquinas } = useMaquinas();
+    const maquinasActivas = useMemo(() => (allMaquinas || []).filter((m) => (m?.estado || 'Activa') === 'Activa'), [allMaquinas]);
+    const { settings: ctxSettings } = useSettings();
     const [catalogos, setCatalogos] = useState({
         materiales: [],
         acabados: [],
@@ -675,19 +680,6 @@ export default function NuevoPresupuestoModal({
             .filter((item, idx, arr) => item && arr.indexOf(item) === idx);
     };
 
-    const cargarClientesGuardados = async () => {
-        setCargandoClientes(true);
-        try {
-            const response = await fetch('http://localhost:8080/api/clientes');
-            const data = response.ok ? await response.json() : { clientes: [] };
-            setClientesGuardados(data.clientes || []);
-        } catch {
-            setClientesGuardados([]);
-        } finally {
-            setCargandoClientes(false);
-        }
-    };
-
     const cargarCatalogos = async () => {
         try {
             const authHdrs = {
@@ -696,25 +688,19 @@ export default function NuevoPresupuestoModal({
                 'X-User-Id': currentUser?.id || 'admin',
                 'X-Role': currentUser?.role || 'administrador',
             };
-            const [settingsRes, catRes] = await Promise.all([
-                fetch('http://localhost:8080/api/settings'),
-                fetch('http://localhost:8080/api/materiales/catalogo', { headers: authHdrs }),
-            ]);
-            const settingsData = settingsRes.ok ? await settingsRes.json() : { settings: {} };
-            const settings = settingsData.settings || {};
+            const catRes = await fetch('http://localhost:8080/api/materiales/catalogo', { headers: authHdrs });
             const catData = catRes.ok ? await catRes.json() : { catalogo: [] };
-            // Use full materials catalog if available, else fall back to settings.materiales
             const catalogoMateriales = (catData.catalogo || []).map(item => ({ valor: item.nombre }));
             setCatalogos({
-                materiales: catalogoMateriales.length > 0 ? catalogoMateriales : (settings.materiales || []),
-                acabados: settings.acabados || [],
-                tintas_especiales: settings.tintas_especiales || []
+                materiales: catalogoMateriales.length > 0 ? catalogoMateriales : (ctxSettings.materiales || []),
+                acabados: ctxSettings.acabados || [],
+                tintas_especiales: ctxSettings.tintas_especiales || []
             });
         } catch {
             setCatalogos({
                 materiales: [],
-                acabados: [],
-                tintas_especiales: []
+                acabados: ctxSettings.acabados || [],
+                tintas_especiales: ctxSettings.tintas_especiales || []
             });
         }
     };
@@ -731,17 +717,6 @@ export default function NuevoPresupuestoModal({
             setUsuariosComerciales(lista);
         } catch {
             setUsuariosComerciales(currentUser?.nombre ? [{ id: currentUser.id || 'current', nombre: currentUser.nombre }] : []);
-        }
-    };
-
-    const cargarMaquinasActivas = async () => {
-        try {
-            const response = await fetch('http://localhost:8080/api/maquinas');
-            const data = response.ok ? await response.json() : { maquinas: [] };
-            const activas = (data.maquinas || []).filter((item) => (item?.estado || 'Activa') === 'Activa');
-            setMaquinasActivas(activas);
-        } catch {
-            setMaquinasActivas([]);
         }
     };
 
@@ -776,15 +751,20 @@ export default function NuevoPresupuestoModal({
 
     useEffect(() => {
         if (visible) {
-            cargarClientesGuardados();
             cargarCatalogos();
             cargarUsuariosComerciales();
             cargarTroqueles();
-            if (showMaquinaField) {
-                cargarMaquinasActivas();
-            }
         }
-    }, [visible, showMaquinaField]);
+    }, [visible]);
+
+    // Sync catalogos from context when settings change
+    useEffect(() => {
+        setCatalogos((prev) => ({
+            ...prev,
+            acabados: ctxSettings.acabados || [],
+            tintas_especiales: ctxSettings.tintas_especiales || [],
+        }));
+    }, [ctxSettings]);
 
     const filtrarTexto = (value) => (value || '').toString().trim().toLowerCase();
     const terminoCliente = filtrarTexto(busquedaCliente);
@@ -1627,9 +1607,7 @@ export default function NuevoPresupuestoModal({
                             />
 
                             <ScrollView>
-                                {cargandoClientes ? (
-                                    <EmptyState variant="inline" icon="⌛" title={t('forms.cargandoClientes')} />
-                                ) : clientesFiltrados.length === 0 ? (
+                                {clientesFiltrados.length === 0 ? (
                                     <EmptyState variant="inline" icon="🏢" title={t('forms.sinClientes')} message={t('forms.sinClientesMsg')} />
                                 ) : (
                                     clientesFiltrados.map((item) => (
@@ -1695,7 +1673,7 @@ export default function NuevoPresupuestoModal({
                             });
                             const json = await res.json().catch(() => ({}));
                             if (!res.ok) { alert(json.error || 'Error guardando máquina'); return; }
-                            await cargarMaquinasActivas();
+                            await recargarMaquinas();
                             setMaquina(data.nombre);
                         } catch (e) {
                             alert('Error de conexión');

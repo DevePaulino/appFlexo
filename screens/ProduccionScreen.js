@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
@@ -6,6 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import ProductionBoard from '../components/ProductionBoard';
 import EmptyState from '../components/EmptyState';
+import { useMaquinas } from '../MaquinasContext';
+import { useSettings } from '../SettingsContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -421,6 +423,137 @@ const styles = StyleSheet.create({
   retrasoRojoText: {
     color: '#D32F2F',
   },
+  // Sección trabajos impresos
+  impresosSection: {
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  impresosSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  impresosTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  impresosSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  impresosBadge: {
+    backgroundColor: '#16A34A',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  impresosBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  impresosChevron: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  impresosBody: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  impresosBusqueda: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: '#0F172A',
+    marginBottom: 10,
+  },
+  impresosEmpty: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingVertical: 10,
+  },
+  impresosTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    marginBottom: 2,
+  },
+  impresosColHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  impresosTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  impresosTableRowAlt: {
+    backgroundColor: '#F8FAFC',
+  },
+  impresosCell: {
+    fontSize: 12,
+    color: '#0F172A',
+  },
+  impresosColNombre: {
+    flex: 3,
+    paddingRight: 6,
+  },
+  impresosColRef: {
+    flex: 2,
+    paddingRight: 6,
+    color: '#475569',
+  },
+  impresosColCliente: {
+    flex: 2,
+    paddingRight: 6,
+  },
+  impresosColEstado: {
+    flex: 2,
+    paddingRight: 6,
+  },
+  impresosColFecha: {
+    flex: 2,
+    color: '#64748B',
+  },
+  impresosEstadoBadge: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  impresosEstadoText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#388E3C',
+  },
+  impresosHint: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 8,
+  },
 });
 
 const getRetrasoStyle = (dias) => {
@@ -471,7 +604,12 @@ export default function ProduccionScreen() {
   const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
-  const [maquinas, setMaquinas] = useState([]);
+  const { maquinas } = useMaquinas();
+  const maquinasRef = useRef(maquinas);
+  useEffect(() => { maquinasRef.current = maquinas; }, [maquinas]);
+  const { estadoRules } = useSettings();
+  const estadoRulesRef = useRef(estadoRules);
+  useEffect(() => { estadoRulesRef.current = estadoRules; }, [estadoRules]);
   const [trabajosPorMaquina, setTrabajosPorMaquina] = useState({});
   const [trabajosPages, setTrabajosPages] = useState({});
   const [trabajosTotals, setTrabajosTotals] = useState({});
@@ -479,6 +617,9 @@ export default function ProduccionScreen() {
   const [error, setError] = useState(null);
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
   const [maquinasFiltroIds, setMaquinasFiltroIds] = useState([]);
+  const [trabajosImpresos, setTrabajosImpresos] = useState([]);
+  const [impresosExpanded, setImpresosExpanded] = useState(false);
+  const [busquedaImpresos, setBusquedaImpresos] = useState('');
   const maquinaInicial = route?.params?.maquinaId || null;
   const LOCALSTORAGE_KEY = 'pfp_maquinasFiltro';
 
@@ -589,38 +730,31 @@ export default function ProduccionScreen() {
     }
     setError(null);
     try {
-      const maquinasRes = await fetch('http://localhost:8080/api/maquinas');
-      const maquinasData = await maquinasRes.json();
-      setMaquinas(maquinasData.maquinas || []);
-
       // Cargar trabajos para cada máquina (colas de producción: excluir parado, cancelado y finalizado)
       const trabajosObj = {};
       const totalsObj = {};
-      for (const maq of maquinasData.maquinas || []) {
+      for (const maq of maquinasRef.current) {
         const maquinaNombreEncoded = encodeURIComponent(maq.nombre);
         // Request first page for each machine to avoid loading huge lists at once
         const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maq.id}&maquina_nombre=${maquinaNombreEncoded}&page=1&page_size=100`);
         const trabajosData = await trabajosRes.json();
 
-        // Filtrar trabajos: excluir trabajos que NO están en producción (diseño, aprobación, etc.)
+        // Filtrar trabajos: excluir trabajos que NO están en producción
+        const rules = estadoRulesRef.current || {};
+        const finalizadosSlugs = new Set(rules.estados_finalizados || ['finalizado']);
+        const pausadosSlugs = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const slugify = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         const trabajosMaqFiltrados = (trabajosData.trabajos || []).filter(trabajo => {
-          // Mostrar solo trabajos con en_produccion: true o estados de producción
-          // Excluir: parado, cancelado, finalizado, y estados de etapas previas (Diseño, Pendiente de Aprobación, etc.)
-          const estadoLower = (trabajo.estado || '').toLowerCase();
-          
-          // Excluir estos estados específicamente
-          if (trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado' ||
-              trabajo.estado === 'Finalizado' || trabajo.estado === 'Parado' || trabajo.estado === 'Cancelado') {
+          const slug = slugify(trabajo.estado);
+
+          // Excluir finalizados y pausados según configuración
+          if (finalizadosSlugs.has(slug) || pausadosSlugs.has(slug)) return false;
+
+          // Excluir estados de diseño/aprobación/cliché (etapas previas a producción)
+          if (slug.includes('disen') || slug.includes('aprobac') || slug.includes('cliche')) {
             return false;
           }
-          
-          // Excluir estados de diseño/aprobación
-          if (estadoLower.includes('diseño') || estadoLower.includes('diseno') || 
-              estadoLower.includes('aprobación') || estadoLower.includes('aprobacion') ||
-              estadoLower.includes('cliché') || estadoLower.includes('cliche')) {
-            return false;
-          }
-          
+
           // Incluir todos los demás (pendiente-de-impresion, en-proceso, etc.)
           return true;
         });
@@ -638,6 +772,21 @@ export default function ProduccionScreen() {
       }
       setTrabajosPorMaquina(trabajosObj);
       setTrabajosTotals(totalsObj);
+
+      // Cargar histórico completo de trabajos impresos
+      try {
+        const token = global.__MIAPP_ACCESS_TOKEN;
+        const impresosRes = await fetch(
+          'http://localhost:8080/api/produccion/impresos?all=1',
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        );
+        if (impresosRes.ok) {
+          const impresosData = await impresosRes.json();
+          setTrabajosImpresos(impresosData.impresos || []);
+        }
+      } catch (_e) {
+        // impresos section is non-critical
+      }
 
     } catch (e) {
       console.error('Error cargando datos:', e);
@@ -657,7 +806,13 @@ export default function ProduccionScreen() {
       const trabajosRes = await fetch(`http://localhost:8080/api/produccion?maquina=${maquinaId}&page=${targetPage}&page_size=100`);
       if (!trabajosRes.ok) return false;
       const trabajosData = await trabajosRes.json();
-      const paginaTrabajos = (trabajosData.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+      const paginaTrabajos = (trabajosData.trabajos || []).filter(trabajo => {
+        const rules = estadoRulesRef.current || {};
+        const fin = new Set(rules.estados_finalizados || ['finalizado']);
+        const pau = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        return !fin.has(sl) && !pau.has(sl);
+      });
 
       setTrabajosPorMaquina((prev) => {
         const existente = Array.isArray(prev[maquinaId]) ? prev[maquinaId].slice() : [];
@@ -695,7 +850,13 @@ export default function ProduccionScreen() {
       const res = await fetch(`http://localhost:8080/api/produccion?search=${q}&page=${page}&page_size=100`);
       if (!res.ok) return false;
       const data = await res.json();
-      const paginaTrabajos = (data.trabajos || []).filter(trabajo => !(trabajo.estado === 'parado' || trabajo.estado === 'cancelado' || trabajo.estado === 'finalizado'));
+      const paginaTrabajos = (data.trabajos || []).filter(trabajo => {
+        const rules = estadoRulesRef.current || {};
+        const fin = new Set(rules.estados_finalizados || ['finalizado']);
+        const pau = new Set(rules.estados_pausados || ['parado', 'cancelado']);
+        const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        return !fin.has(sl) && !pau.has(sl);
+      });
 
       // Group by maquina and either replace (page=1) or append
       const agrupado = {};
@@ -749,8 +910,8 @@ export default function ProduccionScreen() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (maquinas.length > 0) fetchData();
+  }, [maquinas]);
 
   // When the search term changes, perform server-side search across all records (debounced)
   useEffect(() => {
@@ -931,8 +1092,8 @@ export default function ProduccionScreen() {
         </View>
 
         {/* Production Board - Trabajos en Producción */}
-        <ProductionBoard 
-          maquinas={maquinas} 
+        <ProductionBoard
+          maquinas={maquinas}
           trabajosPorMaquina={trabajosPorMaquina}
           trabajosTotals={trabajosTotals}
           searchText={busquedaProduccion}
@@ -941,6 +1102,94 @@ export default function ProduccionScreen() {
           onRefresh={() => fetchData({ silent: true })}
           onRequestPage={handleRequestPage}
         />
+
+        {/* Trabajos Impresos */}
+        <View style={styles.impresosSection}>
+          <TouchableOpacity
+            style={styles.impresosSectionHeader}
+            onPress={() => setImpresosExpanded((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.impresosTitleRow}>
+              <Text style={styles.impresosSectionTitle}>
+                {t('screens.produccion.impresosTitle')}
+              </Text>
+              {trabajosImpresos.length > 0 && (
+                <View style={styles.impresosBadge}>
+                  <Text style={styles.impresosBadgeText}>{trabajosImpresos.length}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.impresosChevron}>{impresosExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {impresosExpanded && (
+            <View style={styles.impresosBody}>
+              <TextInput
+                style={styles.impresosBusqueda}
+                placeholder={t('common.searchAny')}
+                placeholderTextColor="#94A3B8"
+                value={busquedaImpresos}
+                onChangeText={setBusquedaImpresos}
+              />
+              {/* Cabecera de columnas */}
+              <View style={styles.impresosTableHeader}>
+                <Text style={[styles.impresosColHeader, styles.impresosColNombre]}>{t('screens.produccion.colPedido')}</Text>
+                <Text style={[styles.impresosColHeader, styles.impresosColRef]}>{t('forms.referencia')}</Text>
+                <Text style={[styles.impresosColHeader, styles.impresosColCliente]}>{t('screens.produccion.colCliente')}</Text>
+                <Text style={[styles.impresosColHeader, styles.impresosColEstado]}>{t('screens.produccion.colEstado')}</Text>
+                <Text style={[styles.impresosColHeader, styles.impresosColFecha]}>{t('screens.produccion.colFechaImpresion')}</Text>
+              </View>
+              {(() => {
+                const q = busquedaImpresos.trim().toLowerCase();
+                const filtrados = q
+                  ? trabajosImpresos.filter((tj) => {
+                      const cliente = typeof tj.cliente === 'string' ? tj.cliente : (tj.cliente?.nombre || '');
+                      return (
+                        (tj.nombre || '').toLowerCase().includes(q) ||
+                        (tj.referencia || '').toLowerCase().includes(q) ||
+                        cliente.toLowerCase().includes(q) ||
+                        (tj.numero_pedido || '').toLowerCase().includes(q)
+                      );
+                    })
+                  : trabajosImpresos;
+                if (filtrados.length === 0) {
+                  return <Text style={styles.impresosEmpty}>{t('screens.produccion.impresosEmpty')}</Text>;
+                }
+                return filtrados.map((trabajo, idx) => {
+                  const fechaImp = trabajo.fecha_impresion
+                    ? new Date(trabajo.fecha_impresion).toLocaleString()
+                    : '—';
+                  const clienteNombre = typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente?.nombre || '');
+                  return (
+                    <View key={String(trabajo._id || trabajo.id)} style={[styles.impresosTableRow, idx % 2 === 1 && styles.impresosTableRowAlt]}>
+                      <Text style={[styles.impresosCell, styles.impresosColNombre]} numberOfLines={1}>
+                        {trabajo.nombre || trabajo.numero_pedido || '—'}
+                      </Text>
+                      <Text style={[styles.impresosCell, styles.impresosColRef, { fontStyle: 'italic' }]} numberOfLines={1}>
+                        {trabajo.referencia || '—'}
+                      </Text>
+                      <Text style={[styles.impresosCell, styles.impresosColCliente]} numberOfLines={1}>
+                        {clienteNombre || '—'}
+                      </Text>
+                      <View style={[styles.impresosColEstado, { flexDirection: 'row', alignItems: 'center' }]}>
+                        {trabajo.estado ? (
+                          <View style={styles.impresosEstadoBadge}>
+                            <Text style={styles.impresosEstadoText} numberOfLines={1}>{trabajo.estado}</Text>
+                          </View>
+                        ) : <Text style={styles.impresosCell}>—</Text>}
+                      </View>
+                      <Text style={[styles.impresosCell, styles.impresosColFecha]} numberOfLines={1}>
+                        {fechaImp}
+                      </Text>
+                    </View>
+                  );
+                });
+              })()}
+              <Text style={styles.impresosHint}>{t('screens.produccion.impresosHint')}</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );

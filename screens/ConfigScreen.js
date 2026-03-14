@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSettings } from '../SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -706,12 +707,9 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
 export default function ConfigScreen({ route, currentUser }) {
   const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
-  const [settings, setSettings] = useState({
-    roles: [],
-    acabados: [],
-    tintas_especiales: [],
-    estados_pedido: [],
-  });
+  const { settings, estadoRules: ctxEstadoRules, modoCreacion, recargarSettings, setModoCreacion: setModoCreacionCtx } = useSettings();
+  const [estadoRules, setEstadoRules] = React.useState(ctxEstadoRules);
+  React.useEffect(() => { setEstadoRules(ctxEstadoRules); }, [ctxEstadoRules]);
   const [inputs, setInputs] = useState({
     roles: '',
     acabados: '',
@@ -729,7 +727,6 @@ export default function ConfigScreen({ route, currentUser }) {
   const [nuevoUsuarioSesionTimeout, setNuevoUsuarioSesionTimeout] = useState('');
   const [submittedUsuario, setSubmittedUsuario] = useState(false);
   
-  const [estadoRules, setEstadoRules] = useState(ESTADO_RULE_DEFAULTS);
   const [guardandoRules, setGuardandoRules] = useState(false);
   const [pedidoRulesExpanded, setPedidoRulesExpanded] = useState(false);
   const [roleRulesExpanded, setRoleRulesExpanded] = useState(false);
@@ -744,7 +741,6 @@ export default function ConfigScreen({ route, currentUser }) {
   const [sessionTimeoutMax, setSessionTimeoutMax] = useState(480);
   const [guardandoSessionTimeout, setGuardandoSessionTimeout] = useState(false);
   const [forceRootEnabled, setForceRootEnabled] = useState(false);
-  const [modoCreacion, setModoCreacion] = useState('manual');
   const [apiExamplesExpanded, setApiExamplesExpanded] = useState(false);
   const [guardandoModoCreacion, setGuardandoModoCreacion] = useState(false);
   const [billingConfig, setBillingConfig] = useState({
@@ -857,22 +853,7 @@ export default function ConfigScreen({ route, currentUser }) {
     .filter((item) => item.label && item.value)
     .filter((item, index, arr) => index === arr.findIndex((it) => it.value === item.value));
 
-  const cargarSettings = async () => {
-    try {
-      const response = await fetch(API_URL);
-      const data = await response.json();
-      if (response.ok && data.settings) {
-        setSettings({
-          roles: data.settings.roles || [],
-          acabados: data.settings.acabados || [],
-          tintas_especiales: data.settings.tintas_especiales || [],
-          estados_pedido: data.settings.estados_pedido || [],
-        });
-      }
-    } catch (e) {
-      Alert.alert('Error', `No se pudieron cargar settings: ${e.message}`);
-    }
-  };
+  const cargarSettings = recargarSettings;
 
   const cargarUsuarios = async () => {
     try {
@@ -912,57 +893,16 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
-  const cargarModoCreacion = () => {
-    try {
-      const headers = {};
-      if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
-      fetch(API_MODO_URL, { headers })
-        .then((r) => r.json().catch(() => ({})))
-        .then((data) => {
-          if (data && data.modo_creacion) {
-            setModoCreacion(String(data.modo_creacion));
-          }
-        })
-        .catch(() => setModoCreacion('manual'));
-    } catch (e) {
-      setModoCreacion('manual');
-    }
-  };
+  const cargarEstadoRules = recargarSettings;
 
   const actualizarModoCreacion = async (modo) => {
     try {
       setGuardandoModoCreacion(true);
-      const headers = { 'Content-Type': 'application/json' };
-      if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
-      await fetch(API_MODO_URL, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ modo }),
-      });
-      setModoCreacion(modo);
+      await setModoCreacionCtx(modo);
     } catch (e) {
       Alert.alert('Error', `No se pudo actualizar el modo: ${e.message}`);
     } finally {
       setGuardandoModoCreacion(false);
-    }
-  };
-
-  const cargarEstadoRules = () => {
-    try {
-      fetch(API_ESTADOS_RULES_URL)
-        .then((r) => r.json().catch(() => ({})))
-        .then((data) => {
-          if (data && data.rules) {
-            setEstadoRules((prev) => ({ ...prev, ...data.rules }));
-          } else if (!data) {
-            setEstadoRules(ESTADO_RULE_DEFAULTS);
-          }
-        })
-        .catch(() => {
-          setEstadoRules(ESTADO_RULE_DEFAULTS);
-        });
-    } catch (e) {
-      setEstadoRules(ESTADO_RULE_DEFAULTS);
     }
   };
 
@@ -1021,12 +961,10 @@ export default function ConfigScreen({ route, currentUser }) {
   };
 
   const recargarConfiguracion = () => {
-    cargarSettings();
-    cargarEstadoRules();
+    recargarSettings();
     cargarPermisosRoles();
     cargarUsuarios();
     cargarSessionTimeout();
-    cargarModoCreacion();
     cargarBillingConfig();
   };
 
@@ -1548,8 +1486,7 @@ export default function ConfigScreen({ route, currentUser }) {
         await cargarPermisosRoles();
       }
       if (categoria === 'estados_pedido') {
-        // Reload page to sync colors across all views
-        window.location.reload();
+        await recargarSettings();
       }
     } catch (e) {
       Alert.alert('Error', `${t('screens.config.errSaveValue')}: ${e.message}`);
@@ -1633,9 +1570,7 @@ export default function ConfigScreen({ route, currentUser }) {
         await cargarPermisosRoles();
       }
       if (esEstado) {
-        await cargarEstadoRules();
-        // Reload page to update all views with correct colors
-        window.location.reload();
+        await recargarSettings();
       }
     } catch (e) {
       Alert.alert('Error', `${t('screens.config.errCantDelete')}: ${e.message}`);
@@ -1698,7 +1633,6 @@ export default function ConfigScreen({ route, currentUser }) {
         [
           {
             text: 'OK',
-            onPress: () => window.location.reload(),
           }
         ]
       );
@@ -1752,9 +1686,7 @@ export default function ConfigScreen({ route, currentUser }) {
       await cargarSettings();
       if (category === 'roles') await cargarPermisosRoles();
       if (category === 'estados_pedido') {
-        await cargarEstadoRules();
-        // Reload page to sync colors across all views
-        window.location.reload();
+        await recargarSettings();
       }
     } catch (e) {
       Alert.alert('Error', `${t('screens.config.errEditValueFailed')}: ${e.message}`);

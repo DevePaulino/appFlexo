@@ -89,12 +89,8 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
         return;
       }
 
-      // Generar número de pedido
-      const numero_pedido = `PED-${Date.now()}`;
-
       const bodyPedido = {
         trabajo_id: trabajo_id,
-        numero_pedido: numero_pedido,
         referencia: formulario.referencia,
         fecha_pedido: formulario.fecha,
         fecha_entrega: formulario.fechaEntrega || formulario.fecha,
@@ -136,7 +132,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       onSave({
         ...formulario,
         nombre: nombreTrabajo,
-        numero_pedido: numero_pedido,
+        numero_pedido: dataPedido.numero_pedido,
         pedido_id: dataPedido.pedido_id
       });
       onClose();

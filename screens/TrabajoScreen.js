@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,8 @@ import { usePermission } from './usePermission';
 import Toast from '../components/Toast';
 import useToast from '../components/useToast';
 import EmptyState from '../components/EmptyState';
+import { useSettings } from '../SettingsContext';
+import { useMaquinas } from '../MaquinasContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -581,20 +583,11 @@ export default function TrabajoScreen({ currentUser }) {
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [modalDetalleVisible, setModalDetalleVisible] = useState(false);
   const [detalleRefreshKey, setDetalleRefreshKey] = useState(0);
-  const [maquinas, setMaquinas] = useState([]);
+  const { settings, estadoRules, modoCreacion } = useSettings();
+  const { maquinas } = useMaquinas();
   const [modalMaquinasVisible, setModalMaquinasVisible] = useState(false);
   const [trabajoParaProduccion, setTrabajoParaProduccion] = useState(null);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
-  const [estadosDisponibles, setEstadosDisponibles] = useState(ESTADOS_DEFAULT);
-  const [estadoRules, setEstadoRules] = useState({
-    bloqueados_produccion: ['cancelado', 'parado', 'finalizado'],
-    en_cola_produccion: ['pendiente-de-impresion', 'pendiente-post-impresion'],
-    preimpresion: ['en-diseno'],
-    estados_finalizados: ['finalizado'],
-    ocultar_timeline: ['parado', 'cancelado'],
-    ocultar_grafica: ['parado', 'cancelado', 'finalizado'],
-  });
-  const [modoCreacion, setModoCreacion] = useState('manual');
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const [canChangeEstado, setCanChangeEstado] = useState(true);
   const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHdrs: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
@@ -627,56 +620,19 @@ export default function TrabajoScreen({ currentUser }) {
     return slug;
   };
 
-  const cargarEstadosDisponibles = () => {
-    fetch('http://localhost:8080/api/settings?categoria=estados_pedido')
-      .then((res) => res.json())
-      .then((data) => {
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const parsed = items
-          .map((item) => {
-            const label = String(item?.valor || '').trim();
-            const entry = { label, value: slugifyEstado(label) };
-            if (item?.color) entry.color = item.color;
-            return entry;
-          })
-          .filter((item) => item.label && item.value);
-
-        const unique = parsed.filter((item, index, self) => index === self.findIndex((x) => x.value === item.value));
-        setEstadosDisponibles(unique.length > 0 ? unique : ESTADOS_DEFAULT);
+  const estadosDisponibles = useMemo(() => {
+    const items = settings.estados_pedido || [];
+    const parsed = items
+      .map((item) => {
+        const label = String(item?.valor || '').trim();
+        const entry = { label, value: slugifyEstado(label) };
+        if (item?.color) entry.color = item.color;
+        return entry;
       })
-      .catch(() => setEstadosDisponibles(ESTADOS_DEFAULT));
-  };
-
-  const cargarEstadoRules = () => {
-    fetch('http://localhost:8080/api/settings/estados-pedido-rules')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.rules) {
-          // Normalize every rule value to slug to guard against labels from older data
-          const normalized = {};
-          Object.entries(data.rules).forEach(([key, arr]) => {
-            normalized[key] = Array.isArray(arr)
-              ? [...new Set(arr.map((v) => slugifyEstado(String(v || ''))))]
-              : [];
-          });
-          setEstadoRules((prev) => ({ ...prev, ...normalized }));
-        }
-      })
-      .catch(() => {});
-  };
-
-  const cargarModoCreacion = () => {
-    const headers = {};
-    if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
-    fetch('http://localhost:8080/api/settings/modo-creacion', { headers })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.modo_creacion) {
-          setModoCreacion(data.modo_creacion);
-        }
-      })
-      .catch(() => setModoCreacion('manual'));
-  };
+      .filter((item) => item.label && item.value);
+    const unique = parsed.filter((item, idx, self) => idx === self.findIndex((x) => x.value === item.value));
+    return unique.length > 0 ? unique : ESTADOS_DEFAULT;
+  }, [settings.estados_pedido]);
 
   const getStatusColor = (estado) => {
     const value = normalizarEstadoValue(estado);
@@ -880,14 +836,7 @@ export default function TrabajoScreen({ currentUser }) {
   // Cargar pedidos al montar el componente
   useEffect(() => {
     cargarPedidos();
-    cargarModoCreacion();
-    cargarEstadosDisponibles();
-    cargarEstadoRules();
     checkCanChangeEstado();
-    fetch('http://localhost:8080/api/maquinas')
-      .then((res) => res.json())
-      .then((data) => setMaquinas(data.maquinas || []))
-      .catch(() => setMaquinas([]));
   }, []);
 
   // Revalidar permisos al cambiar el rol activo sin refrescar la página
@@ -905,9 +854,6 @@ export default function TrabajoScreen({ currentUser }) {
 
   useFocusEffect(
     React.useCallback(() => {
-      cargarModoCreacion();
-      cargarEstadosDisponibles();
-      cargarEstadoRules();
       checkCanChangeEstado();
     }, [])
   );
@@ -1265,7 +1211,7 @@ export default function TrabajoScreen({ currentUser }) {
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
             const estadoColor = getEstadoDotColor(estadoTrabajoActual);
-            const esFinalizado = estadoTrabajoActual === 'finalizado';
+            const esFinalizado = (estadoRules?.estados_finalizados || ['finalizado']).includes(estadoTrabajoActual);
             const envioBloqueado = !puedeEnviarAProduccion(trabajo);
             let textoBoton;
             if (estadoTrabajoActual === 'parado' || estadoTrabajoActual === 'cancelado') {
@@ -1318,7 +1264,7 @@ export default function TrabajoScreen({ currentUser }) {
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
                   <select
-                    disabled={!canChangeEstado}
+                    disabled={!canChangeEstado || esFinalizado}
                     style={{
                       paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
                       borderRadius: 10,
@@ -1326,12 +1272,12 @@ export default function TrabajoScreen({ currentUser }) {
                       backgroundColor: estadoColor + '33',
                       fontSize: 13,
                       fontWeight: '600',
-                      cursor: canChangeEstado ? 'pointer' : 'not-allowed',
+                      cursor: (canChangeEstado && !esFinalizado) ? 'pointer' : 'not-allowed',
                       width: '100%',
                       color: estadoColor,
                       outlineWidth: 0,
-                      opacity: canChangeEstado ? 1 : 0.65,
-                      pointerEvents: canChangeEstado ? 'auto' : 'none',
+                      opacity: (canChangeEstado && !esFinalizado) ? 1 : 0.65,
+                      pointerEvents: (canChangeEstado && !esFinalizado) ? 'auto' : 'none',
                     }}
                     value={normalizarEstadoValue(trabajo.estado)}
                     onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}

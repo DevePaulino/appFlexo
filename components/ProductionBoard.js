@@ -5,6 +5,8 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 import { useTranslation } from 'react-i18next';
 import TrabajoRow from './TrabajoRow';
 import EmptyState from './EmptyState';
+import { useModulos } from '../ModulosContext';
+import { useSettings } from '../SettingsContext';
 
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
   const { t } = useTranslation();
@@ -12,6 +14,11 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   const [trabajos, setTrabajos] = useState([]);
   const [paginaActual, setPaginaActual] = useState(0);
   const [cambiandoMaquina, setCambiandoMaquina] = useState(null);
+  // ── Módulos ────────────────────────────────────────────────────────────────
+  const { modulos } = useModulos();
+  const consumoModuloActivo = modulos.consumo_material !== false;
+  const { estadoRules } = useSettings();
+  const estadosFinalizadosSlugs = new Set((estadoRules?.estados_finalizados || ['finalizado']));
   // ── Consumo automático ─────────────────────────────────────────────────────
   const [consumoModal, setConsumoModal] = useState(null);  // trabajo seleccionado
   const [consumoLoading, setConsumoLoading] = useState(false);
@@ -95,6 +102,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
       setMaquinaActual(indice);
     }
   }, [maquinaActivaIds, initialMaquinaId, maquinas, maquinaActual]);
+
 
   // Reset pagination on search/machine change
   useEffect(() => {
@@ -289,6 +297,27 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     setConsumoPreviewLoading(false);
   };
 
+  const marcarImpresoSinConsumo = async (trabajo) => {
+    const pedidoId = String(trabajo._id || trabajo.id || trabajo.trabajo_id || '');
+    if (!pedidoId) return;
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/marcar-impreso`, { method: 'POST', headers });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setTrabajos((prev) => prev.map((t) => {
+          if (String(t.id || t._id || t.trabajo_id || '') !== pedidoId) return t;
+          const updated = { ...t, impresion_registrada: true };
+          if (data.nuevo_estado) updated.estado = data.nuevo_estado;
+          return updated;
+        }));
+        if (onRefresh) onRefresh();
+      }
+    } catch (_) {}
+  };
+
   const cerrarConsumoModal = () => {
     setConsumoModal(null);
     setConsumoResultado(null);
@@ -389,7 +418,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         getStatusLabel={getStatusLabel}
         getEntregaSemaforo={getEntregaSemaforo}
         formatearFecha={formatearFecha}
-        onMarcarImpreso={abrirConsumoModal}
+        onMarcarImpreso={consumoModuloActivo ? abrirConsumoModal : marcarImpresoSinConsumo}
+        isFinalizado={estadosFinalizadosSlugs.has(slugifyEstado(item.estado))}
         styles={styles}
       />
     ));
@@ -413,9 +443,6 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         <View style={styles.tableHeader}>
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.headerText}>#</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colId]}>
-            <Text style={styles.headerText}>ID</Text>
           </View>
           <View style={[styles.tableCell, styles.colNombre]}>
             <Text style={styles.headerText}>{t('screens.produccion.colPedido')}</Text>

@@ -11,7 +11,8 @@
     "troqueles": "Troqueles",
     "usuariosRoles": "Usuarios y roles",
     "impresion": "Impresión",
-    "pedidosConfig": "Configuración de pedidos"
+    "pedidosConfig": "Configuración de pedidos",
+    "modulos": "Módulos"
   },
   "user": {
     "changePhoto": "Cambiar foto de perfil",
@@ -358,7 +359,11 @@
         "labelRetal": "Retal generado:",
         "calculando": "Calculando consumo estimado...",
         "disponibles": "disponibles"
-      }
+      },
+      "impresosTitle": "Historial de impresos",
+      "impresosEmpty": "No hay trabajos impresos",
+      "impresosHint": "Historial de pedidos marcados como impresos",
+      "colFechaImpresion": "F. Impresión"
     },
     "materiales": {
       "title": "Materiales",
@@ -548,6 +553,10 @@
       "ocultarEjemplosApi": "Ocultar ejemplos API",
       "verEjemplosApi": "Ver ejemplos API",
       "estadosPedidoTitle": "Estados de pedido",
+      "modulosTitle": "Módulos",
+      "modulosHint": "Activa o desactiva funcionalidades opcionales de la aplicación.",
+      "moduloConsumoMaterial": "Consumo de material",
+      "moduloConsumoMaterialHint": "Registra el consumo de material al marcar un trabajo como impreso.",
       "creditosTitle": "Créditos",
       "sinPermisoCreditosMsg": "Tu rol no tiene permiso para gestionar recargas.",
       "recargarBtn": "Recargar",

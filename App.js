@@ -5,6 +5,10 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, AppState, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PedidosProvider } from './PedidosContext';
+import { ModulosProvider, useModulos } from './ModulosContext';
+import { SettingsProvider } from './SettingsContext';
+import { MaquinasProvider } from './MaquinasContext';
+import { ClientesProvider } from './ClientesContext';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { C, paperThemeColors } from './screens/theme';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +24,7 @@ import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
 import MaterialScreen from './screens/MaterialScreen';
 import SettingMenuScreen from './screens/SettingMenuScreen';
+import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 
 // Inject global web CSS: placeholder text italic + muted color
@@ -54,6 +59,7 @@ const MIGRATED_TO_ACTIVOS = ['Clientes', 'Máquinas', 'Troqueles', 'Materiales']
 const buildSettingsSubmenu = (t) => [
   { key: 'settings-impresion', label: t('nav.impresion'), target: { type: 'stack', tab: 'Setting', route: 'SettingsImpresion' } },
   { key: 'settings-funcionalidades', label: t('nav.pedidosConfig'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFuncionalidades' } },
+  { key: 'settings-modulos', label: t('nav.modulos'), target: { type: 'stack', tab: 'Setting', route: 'SettingsModulos' } },
 ];
 
 const buildActivosSubmenu = (t) => [
@@ -87,6 +93,7 @@ const linking = {
               SettingsMenu: 'setting',
               SettingsFuncionalidades: 'setting/funcionalidades',
               SettingsImpresion: 'setting/impresion',
+              SettingsModulos: 'setting/modulos',
             },
           },
         },
@@ -368,6 +375,8 @@ function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
 function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChange, onLogout, currentUser, onAvatarUpdate }) {
   const { t } = useTranslation();
   const [openSubmenu, setOpenSubmenu] = React.useState(null); // null | 'Setting' | 'Activos'
+  const { modulos } = useModulos();
+  const consumoModuloActivo = modulos.consumo_material !== false;
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
   const activosTabRef = React.useRef(null);
@@ -407,7 +416,11 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
     }
   };
 
-  const currentSubmenuItems = openSubmenu === 'Setting' ? buildSettingsSubmenu(t) : openSubmenu === 'Activos' ? buildActivosSubmenu(t) : [];
+  const currentSubmenuItems = openSubmenu === 'Setting'
+    ? buildSettingsSubmenu(t)
+    : openSubmenu === 'Activos'
+      ? buildActivosSubmenu(t).filter(item => consumoModuloActivo || item.key !== 'activos-materiales')
+      : [];
 
   return (
     <View>
@@ -499,6 +512,10 @@ function SettingsNavigator({ currentUser }) {
         name="SettingsImpresion"
         initialParams={{ section: 'impresion' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsModulos"
+        children={(props) => <ModulosScreen {...props} />}
       />
     </SettingsStack.Navigator>
   );
@@ -1372,6 +1389,10 @@ export default function App() {
 
   return (
     <PaperProvider theme={paperTheme}>
+    <ModulosProvider authUser={authUser}>
+    <SettingsProvider authUser={authUser}>
+    <MaquinasProvider authUser={authUser}>
+    <ClientesProvider authUser={authUser}>
     <PedidosProvider>
       {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
       <NavigationContainer linking={linking}>
@@ -1399,6 +1420,10 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </PedidosProvider>
+    </ClientesProvider>
+    </MaquinasProvider>
+    </SettingsProvider>
+    </ModulosProvider>
     </PaperProvider>
   );
 }

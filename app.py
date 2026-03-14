@@ -2912,6 +2912,47 @@ def api_session_timeout():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/settings/modulos', methods=['GET', 'PATCH', 'OPTIONS'])
+def api_settings_modulos():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col_general = get_empresa_collection('config_general', empresa_id)
+
+        MODULOS_DEFAULT = {
+            'consumo_material': True,
+        }
+
+        if request.method == 'GET':
+            doc = col_general.find_one({'clave': 'modulos', 'empresa_id': empresa_id})
+            modulos = dict(MODULOS_DEFAULT)
+            if doc and isinstance(doc.get('valor'), dict):
+                modulos.update(doc['valor'])
+            return jsonify({'modulos': modulos}), 200
+
+        # PATCH
+        data = request.get_json() or {}
+        doc = col_general.find_one({'clave': 'modulos', 'empresa_id': empresa_id})
+        modulos = dict(MODULOS_DEFAULT)
+        if doc and isinstance(doc.get('valor'), dict):
+            modulos.update(doc['valor'])
+        for key in MODULOS_DEFAULT:
+            if key in data:
+                modulos[key] = bool(data[key])
+        col_general.update_one(
+            {'clave': 'modulos', 'empresa_id': empresa_id},
+            {'$set': {'valor': modulos, 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
+            upsert=True
+        )
+        return jsonify({'success': True, 'modulos': modulos}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/settings/opcion', methods=['GET', 'POST'])
 def crear_config_opcion():
     try:
@@ -5200,6 +5241,23 @@ def crear_pedido():
         if not numero_pedido:
             try:
                 counters_col = mongo.db['counters']
+                # Sincronizar el contador con el máximo numero_pedido ya existente
+                # para que no empiece desde 1 cuando ya hay pedidos previos.
+                pedidos_col = get_empresa_collection('pedidos', empresa_id)
+                max_existing = 0
+                for p in pedidos_col.find({'empresa_id': empresa_id}, {'numero_pedido': 1}):
+                    try:
+                        n = int(str(p.get('numero_pedido', '') or '').strip())
+                        if n > max_existing:
+                            max_existing = n
+                    except (ValueError, TypeError):
+                        pass
+                if max_existing > 0:
+                    counters_col.update_one(
+                        {'key': 'pedido_seq', 'empresa_id': empresa_id},
+                        {'$max': {'seq': max_existing}},
+                        upsert=True
+                    )
                 seq_doc = counters_col.find_one_and_update(
                     {'key': 'pedido_seq', 'empresa_id': empresa_id},
                     {'$inc': {'seq': 1}},
@@ -5241,7 +5299,7 @@ def crear_pedido():
             update_fields = {k: v for k, v in doc.items() if k != '_id'}
             col.update_one({'_id': existing['_id']}, {'$set': update_fields})
             pedido_id = str(existing['_id'])
-        return jsonify({'success': True, 'pedido_id': pedido_id}), 201
+        return jsonify({'success': True, 'pedido_id': pedido_id, 'numero_pedido': numero_pedido}), 201
     except Exception as e:
         _traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -6523,6 +6581,83 @@ def _mark_deprecated_and_forward(result):
     except Exception:
         pass
     return resp
+
+
+@app.route('/api/pedidos/<pedido_id>/marcar-impreso', methods=['POST', 'OPTIONS'])
+def marcar_pedido_impreso(pedido_id):
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+        pedido = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+        if pedido.get('impresion_registrada'):
+            return jsonify({'error': 'El pedido ya ha sido marcado como impreso'}), 409
+        now = datetime.now().isoformat()
+        # Avanzar al siguiente estado, igual que el flujo con consumo
+        estados_disponibles = get_estados_pedido_disponibles(empresa_id)
+        estado_actual_slug = slugify_estado(str(pedido.get('estado') or ''))
+        slugs_ordenados = [slugify_estado(e['valor']) for e in estados_disponibles]
+        labels_ordenados = [e['valor'] for e in estados_disponibles]
+        siguiente_estado_label = None
+        try:
+            idx = slugs_ordenados.index(estado_actual_slug)
+            if idx + 1 < len(labels_ordenados):
+                siguiente_estado_label = labels_ordenados[idx + 1]
+        except ValueError:
+            pass
+        update_fields = {'impresion_registrada': True, 'fecha_impresion': now}
+        if siguiente_estado_label:
+            reglas = get_estados_pedido_rules(empresa_id).get('rules', ESTADOS_RULES_DEFAULT)
+            estados_finales = set(reglas.get('estados_finalizados', []))
+            update_fields['estado'] = siguiente_estado_label
+            if slugify_estado(siguiente_estado_label) in estados_finales:
+                update_fields['fecha_finalizacion'] = now
+            else:
+                update_fields['fecha_finalizacion'] = None
+        col.update_one(
+            {'_id': oid, 'empresa_id': empresa_id},
+            {'$set': update_fields}
+        )
+        return jsonify({'success': True, 'pedido_id': pedido_id, 'nuevo_estado': siguiente_estado_label}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/produccion/impresos', methods=['GET'])
+def get_produccion_impresos():
+    """Pedidos marcados como impresos. Por defecto devuelve los de hoy; ?all=1 devuelve todos."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedidos', empresa_id)
+        query = {'empresa_id': empresa_id, 'impresion_registrada': True}
+        show_all = request.args.get('all', '0') == '1'
+        if not show_all:
+            from datetime import date
+            hoy = date.today().isoformat()  # "YYYY-MM-DD"
+            query['fecha_impresion'] = {'$gte': hoy}
+        docs = list(col.find(query, {
+            '_id': 1, 'numero_pedido': 1, 'nombre': 1, 'referencia': 1, 'cliente': 1,
+            'estado': 1, 'maquina': 1, 'maquina_id': 1,
+            'fecha_impresion': 1, 'fecha_entrega': 1,
+        }).sort('fecha_impresion', -1).limit(200))
+        for d in docs:
+            d['id'] = str(d.pop('_id'))
+        return jsonify({'impresos': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/pedidos/<pedido_id>/estado', methods=['PUT', 'POST'])

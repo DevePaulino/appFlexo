@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
 import EmptyState from '../components/EmptyState';
+import { useMaquinas } from '../MaquinasContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -258,7 +259,7 @@ export default function MachinasScreen({ currentUser }) {
   const navigation = useNavigation();
   const { t } = useTranslation();
 
-  const [maquinas, setMaquinas] = useState([]);
+  const { maquinas, recargarMaquinas } = useMaquinas();
   const [filtrados, setFiltrados] = useState([]);
   const [paginaMaquinas, setPaginaMaquinas] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -269,14 +270,6 @@ export default function MachinasScreen({ currentUser }) {
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
 
-  const cargarMaquinas = () => {
-    fetch('http://localhost:8080/api/maquinas')
-      .then((res) => res.json())
-      .then((data) => setMaquinas(data?.maquinas || []))
-      .catch(() => setMaquinas([]));
-  };
-
-  useEffect(() => { cargarMaquinas(); }, []);
 
   useEffect(() => {
     const query = (busqueda || '').trim().toLowerCase();
@@ -330,7 +323,7 @@ export default function MachinasScreen({ currentUser }) {
       .then((res) => res.json().then((d) => ({ ok: res.ok, d })))
       .then(({ ok, d }) => {
         if (!ok) { alert(d?.error || 'No se pudo guardar'); return; }
-        cargarMaquinas();
+        recargarMaquinas();
       })
       .catch(() => alert('No se pudo guardar'));
   };
@@ -351,7 +344,7 @@ export default function MachinasScreen({ currentUser }) {
         setModoEdicion(false);
         setMaquinaEditandoId(null);
       }
-      cargarMaquinas();
+      recargarMaquinas();
     } catch {
       alert(t('common.error'));
     }

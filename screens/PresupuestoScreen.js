@@ -8,6 +8,7 @@ import { usePermission } from './usePermission';
 import Toast from '../components/Toast';
 import useToast from '../components/useToast';
 import EmptyState from '../components/EmptyState';
+import { useSettings } from '../SettingsContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -456,22 +457,9 @@ export default function PresupuestoScreen({ currentUser }) {
   const [detalleVisible, setDetalleVisible] = useState(false);
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(false);
-  const [modoCreacion, setModoCreacion] = useState('manual');
+  const { modoCreacion } = useSettings();
   const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHeaders: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
   const { notificarNuevoPedido } = React.useContext(PedidosContext);
-
-  const cargarModoCreacion = () => {
-    const headers = {};
-    if (global.__MIAPP_ACCESS_TOKEN) headers.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
-    fetch('http://localhost:8080/api/settings/modo-creacion', { headers })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.modo_creacion) {
-          setModoCreacion(data.modo_creacion);
-        }
-      })
-      .catch(() => setModoCreacion('manual'));
-  };
 
   // Cargar presupuestos desde backend
   const cargarPresupuestos = () => {
@@ -505,13 +493,11 @@ export default function PresupuestoScreen({ currentUser }) {
 
   useEffect(() => {
     cargarPresupuestos();
-    cargarModoCreacion();
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
       cargarPresupuestos();
-      cargarModoCreacion();
     }, [])
   );
 

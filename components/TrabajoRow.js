@@ -17,6 +17,7 @@ function TrabajoRow({
   getEntregaSemaforo,
   formatearFecha,
   onMarcarImpreso,
+  isFinalizado,
   styles,
 }) {
   const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
@@ -50,9 +51,6 @@ function TrabajoRow({
           {canReorder ? '⠿' : '—'}
         </Text>
       </View>
-      <View style={[styles.tableCell, styles.colId]}>
-        <Text style={styles.cellText} numberOfLines={1}>{canonicalId}</Text>
-      </View>
       <View style={[styles.tableCell, styles.colNombre]}>
         <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
       </View>
@@ -80,25 +78,35 @@ function TrabajoRow({
         </View>
       </View>
       <View style={[styles.tableCell, styles.colMaquina]}>
-        <View style={[styles.maquinaPickerWrap, cambiandoMaquina === canonicalId && styles.maquinaPickerWrapDisabled]}>
-          <Picker
-            selectedValue={maquinaFilaId}
-            onValueChange={(nuevaMaquina) => {
-              if (String(nuevaMaquina) !== String(maquinaFilaId)) {
-                handleCambiarMaquina(canonicalId, nuevaMaquina);
-              }
-            }}
-            enabled={cambiandoMaquina !== canonicalId}
-            style={styles.maquinaPicker}
-          >
-            {maquinas.map((maq) => (
-              <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
-            ))}
-          </Picker>
-        </View>
+        {isFinalizado ? (
+          <Text style={[styles.cellText, { color: '#94A3B8', fontSize: 11 }]} numberOfLines={1}>
+            {maquinas.find((m) => String(m.id) === String(maquinaFilaId))?.nombre || '—'}
+          </Text>
+        ) : (
+          <View style={[styles.maquinaPickerWrap, cambiandoMaquina === canonicalId && styles.maquinaPickerWrapDisabled]}>
+            <Picker
+              selectedValue={maquinaFilaId}
+              onValueChange={(nuevaMaquina) => {
+                if (String(nuevaMaquina) !== String(maquinaFilaId)) {
+                  handleCambiarMaquina(canonicalId, nuevaMaquina);
+                }
+              }}
+              enabled={cambiandoMaquina !== canonicalId}
+              style={styles.maquinaPicker}
+            >
+              {maquinas.map((maq) => (
+                <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
+              ))}
+            </Picker>
+          </View>
+        )}
       </View>
       <View style={[styles.tableCell, styles.colImpreso]}>
-        {trabajo.impresion_registrada ? (
+        {isFinalizado ? (
+          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#F1F5F9', alignItems: 'center' }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B' }}>{t('screens.trabajos.finalizado')}</Text>
+          </View>
+        ) : trabajo.impresion_registrada ? (
           <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#DCFCE7', alignItems: 'center' }}>
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#16A34A' }}>✓ {t('screens.produccion.consumo.yaImpreso')}</Text>
           </View>
@@ -124,6 +132,7 @@ export default React.memo(TrabajoRow, (a, b) => {
       a.trabajo.estado === b.trabajo.estado &&
       a.trabajo.impresion_registrada === b.trabajo.impresion_registrada &&
       a.trabajo.en_produccion === b.trabajo.en_produccion &&
+      a.isFinalizado === b.isFinalizado &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.maquinaActual === b.maquinaActual &&
       a.canReorder === b.canReorder

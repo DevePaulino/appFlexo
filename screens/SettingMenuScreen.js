@@ -100,6 +100,11 @@ export default function SettingMenuScreen() {
       description: 'Funciones experimentales y modos de desarrollo.',
       route: 'SettingsFuncionalidades',
     },
+    {
+      title: 'Módulos',
+      description: 'Activa o desactiva funcionalidades opcionales de la aplicación.',
+      route: 'SettingsModulos',
+    },
   ];
 
   return (

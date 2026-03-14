@@ -14,6 +14,7 @@ import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import { useModulos } from '../ModulosContext';
 
 // Color palette for per-material chart bars
 const MATERIAL_COLORS = [
@@ -25,13 +26,18 @@ const API_BASE = 'http://localhost:8080';
 
 export default function MaterialScreen({ currentUser, navigation }) {
   const { t } = useTranslation();
+  // ── Módulos ───────────────────────────────────────────────────────────────
+  const { modulos } = useModulos();
+  const consumoModuloActivo = modulos.consumo_material !== false;
+
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('catalogo'); // 'catalogo' | 'stock' | 'historial'
 
   useEffect(() => {
     AsyncStorage.getItem('MaterialScreen_activeTab')
-      .then(v => { if (v) setActiveTab(v); })
+      .then(v => { if (v && (v !== 'historial' || consumoModuloActivo)) setActiveTab(v); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const changeTab = useCallback((tab) => {
@@ -1570,7 +1576,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {['resumen', 'catalogo', 'stock', 'proveedores', 'historial'].map(tab => (
+        {['resumen', 'catalogo', 'stock', 'proveedores', ...(consumoModuloActivo ? ['historial'] : [])].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
@@ -1592,7 +1598,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
       {activeTab === 'catalogo' && renderCatalogoTab()}
       {activeTab === 'stock' && renderStockTab()}
       {activeTab === 'proveedores' && renderProveedoresTab()}
-      {activeTab === 'historial' && renderHistorialTab()}
+      {activeTab === 'historial' && consumoModuloActivo && renderHistorialTab()}
 
       {/* Modals */}
       {catModal.visible && renderCatModal()}

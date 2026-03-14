@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
+import { useSettings } from '../SettingsContext';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 
@@ -729,9 +730,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const { t } = useTranslation();
   const canDelete = usePermission('eliminar_archivos');
   const canEdit   = usePermission('edit_pedidos');
+  const { estadoRules } = useSettings();
+  const slugifyEstado = (texto) => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const [editVisible, setEditVisible]           = useState(false);
   const [editInitialValues, setEditInitialValues] = useState(null);
   const [pedido, setPedido] = useState(null);
+  const esFinalizado = pedido ? (estadoRules?.estados_finalizados || ['finalizado']).includes(slugifyEstado(pedido.estado)) : false;
   const [activeRole, setActiveRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1601,7 +1605,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           {/* ── Barra de acciones inferior ── */}
           {pedido && (
             <View style={styles.bottomBar}>
-              {canDelete && (
+              {canDelete && !esFinalizado && (
                 !confirmingDeletePedido ? (
                   <TouchableOpacity style={styles.bottomDeleteBtn} onPress={() => setConfirmingDeletePedido(true)}>
                     <Text style={styles.bottomDeleteBtnText}>{t('screens.pedidoDetalle.btnEliminar')}</Text>
@@ -1619,7 +1623,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 <TouchableOpacity style={styles.bottomCancelBtn} onPress={onClose}>
                   <Text style={styles.bottomCancelBtnText}>{t('screens.pedidoDetalle.btnCancelar')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                {!esFinalizado && <TouchableOpacity
                   style={styles.bottomEditBtn}
                   onPress={async () => {
                     if (!pedido) return;
@@ -1636,7 +1640,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   }}
                 >
                   <Text style={styles.bottomEditBtnText}>{t('screens.pedidoDetalle.btnEditar')}</Text>
-                </TouchableOpacity>
+                </TouchableOpacity>}
               </View>
             </View>
           )}
