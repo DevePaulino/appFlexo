@@ -2935,6 +2935,8 @@ def api_settings_modulos():
 
         MODULOS_DEFAULT = {
             'consumo_material': True,
+            'produccion': False,
+            'produccion_trigger_estado': '',
         }
 
         if request.method == 'GET':
@@ -2952,7 +2954,8 @@ def api_settings_modulos():
             modulos.update(doc['valor'])
         for key in MODULOS_DEFAULT:
             if key in data:
-                modulos[key] = bool(data[key])
+                val = data[key]
+                modulos[key] = bool(val) if isinstance(val, bool) else val
         col_general.update_one(
             {'clave': 'modulos', 'empresa_id': empresa_id},
             {'$set': {'valor': modulos, 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
@@ -5435,13 +5438,13 @@ def update_pedido(pedido_id):
             estados_finales = set(reglas.get('estados_finalizados', []))
             estado_actual = slugify_estado(str(pedido_actual.get('estado') or ''))
 
-            # Allow root users to override final-state lock
-            request_role = str(request_user.get('rol') or '').strip().lower()
-            # Allow override only for root users (removed dependency on configurable
-            # "active_role"). If the current state is final and the requester is
-            # not 'root', disallow the change.
-            if estado_actual in estados_finales and estado_actual != nuevo_estado and request_role != 'root':
-                return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
+            # Check permission to edit finalized states
+            if estado_actual in estados_finales and estado_actual != nuevo_estado:
+                request_role = str(request_user.get('rol') or '').strip().lower()
+                allowed = can_role_permission(request_role, 'editar_estado_finalizado', empresa_id=empresa_id)
+                print(f'[DEBUG] editar_estado_finalizado check: role={request_role} empresa_id={empresa_id} allowed={allowed}')
+                if not allowed:
+                    return jsonify({'error': 'No se puede cambiar el estado desde un estado finalizado'}), 400
 
             # Guardar el estado en formato de label (mantener consistencia con datos existentes)
             estado_label = disponibles.get(nuevo_estado) or nuevo_estado

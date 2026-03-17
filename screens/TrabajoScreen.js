@@ -1076,8 +1076,11 @@ export default function TrabajoScreen({ currentUser }) {
           const total = conteos.reduce((sum, item) => sum + item.cantidad, 0);
           const activos = conteos.filter((item) => item.cantidad > 0);
 
-          if (total === 0) {
+          if (trabajos.length === 0) {
             return <EmptyState variant="inline" icon="📊" title={t('screens.trabajos.sinPedidosActivos')} message={t('screens.trabajos.sinPedidosMsg')} />;
+          }
+          if (total === 0) {
+            return null;
           }
 
           return (
@@ -1175,7 +1178,7 @@ export default function TrabajoScreen({ currentUser }) {
             const resolvedIdx = currentIdx === -1 ? 0 : currentIdx;
             const isAtFirst = resolvedIdx === 0;
             const isAtLast = resolvedIdx === estadosDisponibles.length - 1;
-            const showNavBtns = canChangeEstado && (!esFinalizado || puedeEditarFinalizado);
+            const showNavBtns = canChangeEstado || (puedeEditarFinalizado && esFinalizado);
 
             return (
               <View key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`} style={[styles.tableRow, (idx + (paginaPedidos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>

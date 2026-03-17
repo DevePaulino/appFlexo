@@ -751,27 +751,35 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
+    alignItems: 'center',
   },
   colPos: {
     width: '6%',
+    alignItems: 'center',
   },
   colId: {
     flex: 0.12,
+    alignItems: 'center',
   },
   colNombre: {
     flex: 0.22,
+    alignItems: 'center',
   },
   colCliente: {
     flex: 0.13,
+    alignItems: 'center',
   },
   colEstado: {
     flex: 0.16,
+    alignItems: 'center',
   },
   colFechaPedido: {
     flex: 0.10,
+    alignItems: 'center',
   },
   colFechaEntrega: {
     flex: 0.10,
+    alignItems: 'center',
   },
   colDias: {
     flex: 0.07,
@@ -779,6 +787,7 @@ const styles = StyleSheet.create({
   },
   colMaquina: {
     flex: 0.13,
+    alignItems: 'center',
   },
   maquinaPickerWrap: {
     borderWidth: 1,
@@ -803,11 +812,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#475569',
+    textAlign: 'center',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#0F172A',
+    textAlign: 'center',
   },
   dragHandle: {
     fontSize: 16,
