@@ -60,6 +60,7 @@ const buildSettingsSubmenu = (t) => [
   { key: 'settings-impresion', label: t('nav.impresion'), target: { type: 'stack', tab: 'Setting', route: 'SettingsImpresion' } },
   { key: 'settings-funcionalidades', label: t('nav.pedidosConfig'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFuncionalidades' } },
   { key: 'settings-modulos', label: t('nav.modulos'), target: { type: 'stack', tab: 'Setting', route: 'SettingsModulos' } },
+  { key: 'settings-usuarios-roles', label: t('nav.usuariosRoles'), target: { type: 'stack', tab: 'Setting', route: 'SettingsUsuariosRoles' } },
 ];
 
 const buildActivosSubmenu = (t) => [
@@ -67,7 +68,6 @@ const buildActivosSubmenu = (t) => [
   { key: 'activos-maquinas', label: t('nav.maquinas'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMaquinas' } },
   { key: 'activos-materiales', label: t('nav.materiales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMateriales' } },
   { key: 'activos-troqueles', label: t('nav.troqueles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosTroqueles' } },
-  { key: 'activos-usuarios-roles', label: t('nav.usuariosRoles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosUsuariosRoles' } },
 ];
 
 const linking = {
@@ -94,6 +94,7 @@ const linking = {
               SettingsFuncionalidades: 'setting/funcionalidades',
               SettingsImpresion: 'setting/impresion',
               SettingsModulos: 'setting/modulos',
+              SettingsUsuariosRoles: 'setting/usuarios-roles',
             },
           },
         },
@@ -517,6 +518,11 @@ function SettingsNavigator({ currentUser }) {
       <SettingsStack.Screen
         name="SettingsModulos"
         children={(props) => <ModulosScreen {...props} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsUsuariosRoles"
+        initialParams={{ section: 'usuarios-roles' }}
+        children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
       />
     </SettingsStack.Navigator>
   );

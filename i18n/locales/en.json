@@ -302,7 +302,7 @@
       "colFase": "Phase",
       "colEstado": "Status",
       "colProduccion": "Production",
-      "colAcciones": "Actions",
+      "colAcciones": "Change status",
       "filtroActivo": "Active filter: {{estados}}",
       "quitarFiltro": "Clear filter",
       "finalizado": "Done",
