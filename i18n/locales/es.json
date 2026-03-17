@@ -732,5 +732,22 @@
       "labelSentidoImpresion": "Sentido impresión:",
       "labelRetalGenerado": "Retal generado:"
     }
+  },
+  "legal": {
+    "consentPre": "Al crear una cuenta aceptas los",
+    "consentAnd": "y la",
+    "consentPost": ".",
+    "acceptTermsPre": "He leído y acepto los",
+    "acceptPrivacyPre": "He leído y acepto la",
+    "errorConsent": "Debes aceptar los Términos de uso y la Política de privacidad para continuar.",
+    "terms": "Términos de uso",
+    "privacy": "Política de privacidad",
+    "legalNotice": "Aviso legal",
+    "gdprNote": "Tus datos se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) para la gestión del servicio. Responsable: PrintForgePro.",
+    "dataController": "Responsable del tratamiento: PrintForgePro · RGPD (UE) 2016/679",
+    "cookieTitle": "Usamos almacenamiento local",
+    "cookieBody": "Guardamos tu preferencia de idioma en el dispositivo. No utilizamos cookies de seguimiento ni publicidad.",
+    "cookieAccept": "Aceptar",
+    "cookieReject": "Solo esencial"
   }
 }

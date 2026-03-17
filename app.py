@@ -1952,6 +1952,11 @@ def register_public_user():
         col = get_empresa_collection('usuarios', None)
         if col.find_one({'email': email}):
             return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
+        # RGPD Art. 7 — verificar que el usuario aceptó explícitamente los términos
+        gdpr_accepted = bool(data.get('gdpr_consent_accepted'))
+        if not gdpr_accepted:
+            return jsonify({'error': 'Debes aceptar los Términos de uso y la Política de privacidad para continuar'}), 400
+
         doc = {
             'empresa_nombre': empresa_nombre,
             'empresa_cif': empresa_cif,
@@ -1963,7 +1968,16 @@ def register_public_user():
             'payment_method': payment_method,
             'subscription_active': subscription_active,
             'creditos': FREE_SIGNUP_CREDITS,
-            'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
+            'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S'),
+            # Registro de consentimiento RGPD Art. 7 — prueba de consentimiento
+            'gdpr_consent': {
+                'accepted': True,
+                'accepted_at': datetime.now().isoformat(),
+                'terms_version': '1.0',
+                'privacy_version': '1.0',
+                'ip_address': request.remote_addr or '',
+                'user_agent': (request.headers.get('User-Agent') or '')[:256],
+            }
         }
         result = col.insert_one(doc)
         usuario_id = str(result.inserted_id)
@@ -2019,6 +2033,82 @@ def register_public_user():
                 'creditos': FREE_SIGNUP_CREDITS,
             }
         }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── RGPD Art. 20 — Derecho de portabilidad ────────────────────────────────────
+@app.route('/api/user/me/export', methods=['GET', 'OPTIONS'])
+def export_user_data():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        usuario_id = str(request_user.get('id') or request_user.get('_id') or '')
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col_usuarios = get_empresa_collection('usuarios', empresa_id)
+        user_doc = col_usuarios.find_one({'_id': ObjectId(usuario_id)})
+        if not user_doc:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        user_doc.pop('password_hash', None)
+        user_doc['_id'] = str(user_doc['_id'])
+        col_pedidos = get_empresa_collection('pedidos', empresa_id)
+        pedidos = []
+        for p in col_pedidos.find({'empresa_id': empresa_id}):
+            p['_id'] = str(p['_id'])
+            pedidos.append(p)
+        log_audit('gdpr_data_export', request_user, {'usuario_id': usuario_id})
+        return jsonify({
+            'usuario': user_doc,
+            'pedidos': pedidos,
+            'exportado_en': datetime.now().isoformat(),
+            'formato_version': '1.0',
+            'normativa': 'RGPD (UE) 2016/679 Art. 20',
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── RGPD Art. 17 — Derecho de supresión (right to be forgotten) ───────────────
+@app.route('/api/user/me/delete-account', methods=['POST', 'OPTIONS'])
+def delete_own_account():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        data = request.get_json() or {}
+        password_confirm = str(data.get('password') or '').strip()
+        if not password_confirm:
+            return jsonify({'error': 'Se requiere la contraseña para confirmar la eliminación'}), 400
+        usuario_id = str(request_user.get('id') or request_user.get('_id') or '')
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col_usuarios = get_empresa_collection('usuarios', empresa_id)
+        user_doc = col_usuarios.find_one({'_id': ObjectId(usuario_id)})
+        if not user_doc:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        if not verify_password(password_confirm, user_doc.get('password_hash', '')):
+            return jsonify({'error': 'Contraseña incorrecta'}), 403
+        # Soft-delete: anonimizar PII, conservar registros contables (obligación legal 7 años)
+        col_usuarios.update_one(
+            {'_id': ObjectId(usuario_id)},
+            {'$set': {
+                'nombre': '[Cuenta eliminada]',
+                'email': f'deleted_{usuario_id}@deleted.invalid',
+                'password_hash': '',
+                'deleted': True,
+                'deleted_at': datetime.now().isoformat(),
+                'gdpr_deletion_ip': request.remote_addr or '',
+            }}
+        )
+        log_audit('gdpr_account_deletion', request_user, {'usuario_id': usuario_id})
+        return jsonify({
+            'success': True,
+            'message': 'Cuenta eliminada conforme al RGPD Art. 17. Los datos contables se conservarán el período legalmente obligatorio.',
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -736,5 +736,22 @@
       "labelSentidoImpresion": "Print direction:",
       "labelRetalGenerado": "Waste roll:"
     }
+  },
+  "legal": {
+    "consentPre": "By creating an account you agree to the",
+    "consentAnd": "and the",
+    "consentPost": ".",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "legalNotice": "Legal Notice",
+    "gdprNote": "Your data will be processed in accordance with Regulation (EU) 2016/679 (GDPR) for service management. Controller: PrintForgePro.",
+    "dataController": "Data controller: PrintForgePro · GDPR (EU) 2016/679",
+    "acceptTermsPre": "I have read and accept the",
+    "acceptPrivacyPre": "I have read and accept the",
+    "errorConsent": "You must accept the Terms of Use and Privacy Policy to continue.",
+    "cookieTitle": "We use local storage",
+    "cookieBody": "We save your language preference on your device. We do not use tracking or advertising cookies.",
+    "cookieAccept": "Accept",
+    "cookieReject": "Essential only"
   }
 }

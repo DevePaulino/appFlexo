@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +12,14 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { R, S } from './theme';
+
+// URLs de documentos legales (actualizar cuando estén publicados)
+const LEGAL_URLS = {
+  privacy: 'https://printforgepro.com/legal/privacidad',
+  terms:   'https://printforgepro.com/legal/terminos',
+  legal:   'https://printforgepro.com/legal/aviso-legal',
+};
+const openUrl = (url) => { try { Linking.openURL(url); } catch (_) {} };
 
 const API_BASE = 'http://localhost:8080';
 
@@ -390,6 +399,114 @@ const s = StyleSheet.create({
     color: '#F59E0B',
     fontWeight: '600',
   },
+
+  // ── Checkboxes de consentimiento ─────────────────────────────────────────
+  consentBox: {
+    marginTop: 16,
+    backgroundColor: 'rgba(232,82,42,0.06)',
+    borderRadius: R.md,
+    borderWidth: 1,
+    borderColor: 'rgba(232,82,42,0.18)',
+    padding: 12,
+    gap: 10,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: P.accent,
+    borderColor: P.accent,
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 13,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 12,
+    color: P.textSec,
+    lineHeight: 18,
+  },
+
+  // ── Legal ────────────────────────────────────────────────────────────────
+  legalConsent: {
+    marginTop: 14,
+    fontSize: 10.5,
+    color: P.textMuted,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  legalLink: {
+    color: 'rgba(232,82,42,0.70)',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(232,82,42,0.35)',
+  },
+  legalGdpr: {
+    marginTop: 6,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.18)',
+    lineHeight: 15,
+    textAlign: 'center',
+  },
+  legalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginHorizontal: -30,
+    marginTop: 24,
+    marginBottom: 14,
+  },
+  legalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  legalFooterText: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.18)',
+  },
+  legalFooterLink: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.28)',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(255,255,255,0.15)',
+  },
+  legalBrandFooter: {
+    marginTop: 'auto',
+    paddingTop: 32,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  legalBrandFooterText: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.20)',
+  },
+  legalBrandFooterLink: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.28)',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(255,255,255,0.12)',
+  },
 });
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -409,6 +526,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const inp = (field) => [s.input, focusedField === field && s.inputFocused];
 
@@ -483,6 +602,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
     if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
     if (password.length < 6) { setError(t('auth.errorPasswordLength')); return; }
+    // RGPD Art. 7 — consentimiento explícito obligatorio antes de registrar
+    if (!acceptTerms || !acceptPrivacy) { setError(t('legal.errorConsent')); return; }
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -496,6 +617,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           password,
           billing_model: billingModel,
           payment_method: 'paypal',
+          gdpr_consent_accepted: true,  // RGPD Art. 7 — registrado en servidor
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -612,10 +734,37 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <Text style={s.billingDesc}>
         {billingModel === 'creditos' ? t('auth.billingCreditsDesc') : t('auth.billingSubscriptionDesc')}
       </Text>
+      {/* Consentimiento explícito RGPD Art. 7 — checkboxes obligatorios */}
+      <View style={s.consentBox}>
+        <Pressable style={s.consentRow} onPress={() => setAcceptTerms((v) => !v)}>
+          <View style={[s.checkbox, acceptTerms && s.checkboxChecked]}>
+            {acceptTerms && <Text style={s.checkmark}>✓</Text>}
+          </View>
+          <Text style={s.consentText}>
+            {t('legal.acceptTermsPre')}{' '}
+            <Text style={s.legalLink} onPress={() => openUrl(LEGAL_URLS.terms)}>{t('legal.terms')}</Text>
+          </Text>
+        </Pressable>
+        <Pressable style={s.consentRow} onPress={() => setAcceptPrivacy((v) => !v)}>
+          <View style={[s.checkbox, acceptPrivacy && s.checkboxChecked]}>
+            {acceptPrivacy && <Text style={s.checkmark}>✓</Text>}
+          </View>
+          <Text style={s.consentText}>
+            {t('legal.acceptPrivacyPre')}{' '}
+            <Text style={s.legalLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
+          </Text>
+        </Pressable>
+      </View>
+
       {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
-      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.6 }]} onPress={handleRegister} disabled={loading}>
+      <TouchableOpacity
+        style={[s.submitBtn, (loading || !acceptTerms || !acceptPrivacy) && { opacity: 0.5 }]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
         <Text style={s.submitBtnText}>{loading ? t('auth.registerBtnLoading') : t('auth.registerBtn')}</Text>
       </TouchableOpacity>
+      <Text style={s.legalGdpr}>{t('legal.gdprNote')}</Text>
     </>
   );
 
@@ -663,6 +812,16 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             <Text style={s.modulesCaptionAccent}>{t('auth.modulesCaptionAccent')}</Text>
           </Text>
 
+          {/* Pie del panel de marca — sutil, solo visible en web */}
+          {Platform.OS === 'web' && (
+            <View style={s.legalBrandFooter}>
+              <Text style={s.legalBrandFooterText}>{t('legal.dataController')}</Text>
+              <Text style={s.legalBrandFooterLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
+              <Text style={s.legalBrandFooterText}>·</Text>
+              <Text style={s.legalBrandFooterLink} onPress={() => openUrl(LEGAL_URLS.legal)}>{t('legal.legalNotice')}</Text>
+            </View>
+          )}
+
         </View>
 
         {/* Separador */}
@@ -686,6 +845,15 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
                 {authMode === 'login' ? <LoginView /> : <RegisterView />}
               </>
             )}
+
+            {/* Pie legal del formulario */}
+            <View style={s.legalDivider} />
+            <View style={s.legalFooter}>
+              <Text style={s.legalFooterText}>© {new Date().getFullYear()} PrintForgePro</Text>
+              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
+              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.terms)}>{t('legal.terms')}</Text>
+              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.legal)}>{t('legal.legalNotice')}</Text>
+            </View>
           </View>
         </ScrollView>
 

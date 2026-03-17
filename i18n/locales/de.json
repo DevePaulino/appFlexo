@@ -586,5 +586,22 @@
       "labelSentidoImpresion": "Druckrichtung:",
       "labelRetalGenerado": "Verschnitt erzeugt:"
     }
+  },
+  "legal": {
+    "consentPre": "Mit der Erstellung eines Kontos stimmen Sie den",
+    "consentAnd": "und der",
+    "consentPost": "zu.",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzerklärung",
+    "legalNotice": "Impressum",
+    "gdprNote": "Ihre Daten werden gemäß der Verordnung (EU) 2016/679 (DSGVO) zur Dienstverwaltung verarbeitet. Verantwortlicher: PrintForgePro.",
+    "dataController": "Verantwortlicher: PrintForgePro · DSGVO (EU) 2016/679",
+    "acceptTermsPre": "Ich habe die gelesen und akzeptiere die",
+    "acceptPrivacyPre": "Ich habe die gelesen und akzeptiere die",
+    "errorConsent": "Sie müssen die Nutzungsbedingungen und die Datenschutzerklärung akzeptieren, um fortzufahren.",
+    "cookieTitle": "Wir verwenden lokalen Speicher",
+    "cookieBody": "Wir speichern Ihre Spracheinstellung auf Ihrem Gerät. Wir verwenden keine Tracking- oder Werbe-Cookies.",
+    "cookieAccept": "Akzeptieren",
+    "cookieReject": "Nur wesentlich"
   }
 }

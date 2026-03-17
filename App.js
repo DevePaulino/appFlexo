@@ -26,6 +26,7 @@ import MaterialScreen from './screens/MaterialScreen';
 import SettingMenuScreen from './screens/SettingMenuScreen';
 import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
+import CookieBanner from './components/CookieBanner';
 
 // Inject global web CSS: placeholder text italic + muted color
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -1427,6 +1428,7 @@ export default function App() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+      <CookieBanner />
     </PedidosProvider>
     </ClientesProvider>
     </MaquinasProvider>
