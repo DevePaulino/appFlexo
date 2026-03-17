@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   header: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111014',
     paddingVertical: 14,
     paddingHorizontal: 16,
     position: 'relative',
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   versionTabActive: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111014',
     borderColor: '#1E293B',
   },
   versionTabDeleteBtn: {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   lightboxContent: {
     width: '92%',
     height: '92%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111014',
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   eskoBtn: {
     paddingVertical: 9,
     paddingHorizontal: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111014',
     alignItems: 'center',
   },
   eskoBtnText: {

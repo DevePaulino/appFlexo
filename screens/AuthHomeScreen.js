@@ -10,137 +10,184 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { C, R, S } from './theme';
+import { R, S } from './theme';
 
 const API_BASE = 'http://localhost:8080';
+
+// ─── Paleta ───────────────────────────────────────────────────────────────────
+const P = {
+  bg:          '#0A0A0C',
+  bgPanel:     '#0E0E10',
+  surface:     '#141416',
+  surfaceAlt:  '#1C1C1F',
+  border:      'rgba(255,255,255,0.08)',
+  borderInput: 'rgba(255,255,255,0.12)',
+  borderFocus: '#E8522A',
+  accent:      '#E8522A',
+  accentDim:   'rgba(232,82,42,0.15)',
+  accentBorder:'rgba(232,82,42,0.30)',
+  text:        '#FFFFFF',
+  textSec:     'rgba(255,255,255,0.55)',
+  textMuted:   'rgba(255,255,255,0.28)',
+  danger:      '#F87171',
+  dangerBg:    'rgba(248,113,113,0.10)',
+  dangerBorder:'rgba(248,113,113,0.25)',
+};
+
+// ─── Módulos de la app ────────────────────────────────────────────────────────
+const MODULES = [
+  { icon: '📋', key: 'Pedidos' },
+  { icon: '💼', key: 'Presupuestos' },
+  { icon: '⚙️', key: 'Producción' },
+  { icon: '📦', key: 'Materiales' },
+  { icon: '🖨️', key: 'Máquinas' },
+  { icon: '👥', key: 'Roles y permisos' },
+];
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: P.bg,
   },
 
-  // Layout split (web: row, mobile: column)
   split: {
     flex: 1,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     minHeight: Platform.OS === 'web' ? '100vh' : undefined,
   },
 
-  // ── Panel izquierdo (marca) ──────────────────────────────────────────────
+  // ── Panel izquierdo ──────────────────────────────────────────────────────
   brand: {
-    backgroundColor: C.header,
+    backgroundColor: P.bg,
     justifyContent: 'center',
-    padding: 40,
+    padding: 48,
     ...(Platform.OS === 'web'
-      ? { width: '45%', minHeight: '100vh' }
-      : { paddingVertical: 36, paddingHorizontal: 28 }),
+      ? { width: '48%', minHeight: '100vh' }
+      : { paddingVertical: 40, paddingHorizontal: 28 }),
   },
+
+  // Marca superior
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 56,
   },
   logoMark: {
-    width: 48,
-    height: 48,
-    borderRadius: R.lg,
-    backgroundColor: '#DC262620',
-    borderWidth: 1,
-    borderColor: '#DC262640',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: P.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
+    shadowColor: P.accent,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
-  logoMarkInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 5,
-    backgroundColor: '#DC2626',
+  logoMarkSlash: {
+    width: 3,
+    height: 22,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+    transform: [{ rotate: '20deg' }],
   },
   logoName: {
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   logoNamePrint: {
     color: '#FFFFFF',
   },
   logoNameForge: {
-    color: '#DC2626',
+    color: P.accent,
   },
   logoSuffix: {
-    fontSize: 28,
-    fontWeight: '400',
-    color: '#94A3B8',
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '300',
+    color: 'rgba(255,255,255,0.35)',
+    letterSpacing: 0.2,
+  },
+
+  // Titular principal
+  brandEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.accent,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    marginBottom: 14,
   },
   brandTagline: {
-    fontSize: Platform.OS === 'web' ? 32 : 24,
-    fontWeight: '800',
+    fontSize: Platform.OS === 'web' ? 38 : 26,
+    fontWeight: '900',
     color: '#FFFFFF',
-    lineHeight: Platform.OS === 'web' ? 40 : 30,
-    letterSpacing: -0.5,
-    marginBottom: 14,
+    lineHeight: Platform.OS === 'web' ? 46 : 32,
+    letterSpacing: -1,
+    marginBottom: 16,
+  },
+  brandTaglineAccent: {
+    color: P.accent,
   },
   brandSub: {
     fontSize: 14,
-    color: '#94A3B8',
-    lineHeight: 22,
-    marginBottom: 32,
-    maxWidth: 340,
+    color: P.textSec,
+    lineHeight: 24,
+    marginBottom: 44,
+    maxWidth: 380,
   },
-  prepressSection: {
-    marginBottom: 24,
-  },
-  prepressSectionLabel: {
+
+  // Módulos
+  modulesLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#475569',
-    letterSpacing: 1.2,
+    color: P.textMuted,
+    letterSpacing: 2,
     textTransform: 'uppercase',
-    marginBottom: 10,
+    marginBottom: 14,
   },
-  pillRow: {
+  modulesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 7,
+    gap: 8,
+    marginBottom: 20,
   },
-  pill: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
+  moduleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: R.full,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#FFFFFF0A',
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  pillText: {
+  moduleChipIcon: {
     fontSize: 12,
+  },
+  moduleChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.50)',
+  },
+  modulesCaption: {
+    fontSize: 11,
+    color: P.textMuted,
+    lineHeight: 17,
+  },
+  modulesCaptionAccent: {
+    color: P.accent,
     fontWeight: '600',
-    color: '#CBD5E1',
   },
-  featureList: {
-    gap: 10,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  featureDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#475569',
-    marginTop: 8,
-    flexShrink: 0,
-  },
-  featureText: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-    flex: 1,
+
+  // ── Separador vertical ───────────────────────────────────────────────────
+  divider: {
+    ...(Platform.OS === 'web'
+      ? { width: 1, backgroundColor: 'rgba(255,255,255,0.05)' }
+      : { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 28 }),
   },
 
   // ── Panel derecho (formulario) ───────────────────────────────────────────
@@ -148,87 +195,93 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.OS === 'web' ? 40 : 24,
-    backgroundColor: C.bg,
+    padding: Platform.OS === 'web' ? 48 : 24,
+    backgroundColor: P.bgPanel,
   },
   formCard: {
     width: '100%',
-    maxWidth: 420,
-    backgroundColor: C.surface,
+    maxWidth: 400,
+    backgroundColor: P.surface,
     borderRadius: R.xl,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 28,
-    ...S.card,
+    borderColor: P.border,
+    padding: 30,
+    ...S.modal,
   },
 
   // ── Tabs login / registro ────────────────────────────────────────────────
   tabs: {
     flexDirection: 'row',
-    backgroundColor: C.surfaceAlt,
+    backgroundColor: P.surfaceAlt,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: P.border,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 28,
+    padding: 3,
+    gap: 3,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
+    borderRadius: 7,
   },
   tabActive: {
-    backgroundColor: C.header,
+    backgroundColor: P.accent,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.textMuted,
+    color: P.textMuted,
+    letterSpacing: 0.2,
   },
   tabTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
   },
 
-  // ── Encabezado del formulario ────────────────────────────────────────────
+  // ── Cabecera del formulario ──────────────────────────────────────────────
   formTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: C.text,
-    marginBottom: 4,
-    letterSpacing: -0.3,
+    color: P.text,
+    marginBottom: 6,
+    letterSpacing: -0.4,
   },
   formSub: {
     fontSize: 13,
-    color: C.textMuted,
-    lineHeight: 19,
-    marginBottom: 20,
+    color: P.textSec,
+    lineHeight: 20,
+    marginBottom: 24,
   },
 
   // ── Campos ──────────────────────────────────────────────────────────────
   label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.textSec,
-    marginBottom: 5,
-    marginTop: 10,
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.textSec,
+    marginBottom: 6,
+    marginTop: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   input: {
     borderWidth: 1,
-    borderColor: C.borderStrong,
+    borderColor: P.borderInput,
     borderRadius: R.md,
-    backgroundColor: C.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    color: C.text,
+    backgroundColor: P.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: P.text,
     fontSize: 14,
   },
   inputFocused: {
-    borderColor: C.borderFocus,
-    backgroundColor: C.surface,
+    borderColor: P.borderFocus,
+    backgroundColor: 'rgba(232,82,42,0.04)',
   },
 
-  // ── Billing model (registro) ─────────────────────────────────────────────
+  // ── Billing ──────────────────────────────────────────────────────────────
   billingRow: {
     flexDirection: 'row',
     gap: 8,
@@ -239,34 +292,35 @@ const s = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surfaceAlt,
+    borderColor: P.border,
+    backgroundColor: P.surfaceAlt,
     alignItems: 'center',
   },
   billingBtnActive: {
-    borderColor: C.header,
-    backgroundColor: C.header,
+    borderColor: P.accentBorder,
+    backgroundColor: P.accentDim,
   },
   billingBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: C.textMuted,
+    color: P.textSec,
   },
   billingBtnTextActive: {
-    color: '#FFFFFF',
+    color: P.accent,
+    fontWeight: '700',
   },
   billingDesc: {
     fontSize: 11,
-    color: C.textMuted,
-    marginTop: 5,
+    color: P.textMuted,
+    marginTop: 6,
     lineHeight: 16,
   },
 
   // ── Error ────────────────────────────────────────────────────────────────
   errorBox: {
-    backgroundColor: C.errorBg,
+    backgroundColor: P.dangerBg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: P.dangerBorder,
     borderRadius: R.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -275,53 +329,57 @@ const s = StyleSheet.create({
   errorText: {
     fontSize: 12,
     fontWeight: '600',
-    color: C.danger,
+    color: P.danger,
   },
 
   // ── Botón principal ──────────────────────────────────────────────────────
   submitBtn: {
-    marginTop: 16,
-    minHeight: 44,
+    marginTop: 20,
+    minHeight: 46,
     borderRadius: R.md,
-    backgroundColor: C.header,
+    backgroundColor: P.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: P.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   submitBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.1,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 
-  // ── Botón secundario (volver) ────────────────────────────────────────────
+  // ── Botón secundario ─────────────────────────────────────────────────────
   backBtn: {
     marginTop: 10,
     minHeight: 40,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surfaceAlt,
+    borderColor: P.border,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   backBtnText: {
-    color: C.textSec,
+    color: P.textSec,
     fontSize: 13,
     fontWeight: '600',
   },
 
-  // ── MFA ─────────────────────────────────────────────────────────────────
+  // ── MFA ──────────────────────────────────────────────────────────────────
   mfaHelper: {
     fontSize: 11,
-    color: C.textMuted,
+    color: P.textMuted,
     marginTop: 5,
     lineHeight: 16,
   },
   mfaDevBadge: {
-    backgroundColor: C.warningBg,
+    backgroundColor: 'rgba(217,119,6,0.12)',
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: 'rgba(217,119,6,0.30)',
     borderRadius: R.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -329,7 +387,7 @@ const s = StyleSheet.create({
   },
   mfaDevText: {
     fontSize: 12,
-    color: C.warningText,
+    color: '#F59E0B',
     fontWeight: '600',
   },
 });
@@ -352,10 +410,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState('');
 
-  const inp = (field) => [
-    s.input,
-    focusedField === field && s.inputFocused,
-  ];
+  const inp = (field) => [s.input, focusedField === field && s.inputFocused];
 
   // ── Login ─────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
@@ -363,7 +418,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     setMfaDevCode('');
     if (!email.trim()) { setError(t('auth.errorEmail')); return; }
     if (!password.trim()) { setError(t('auth.errorPassword')); return; }
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -373,7 +427,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || t('auth.errorLogin')); return; }
-
       if (data.mfa_required && data.challenge_id) {
         setMfaChallengeId(data.challenge_id);
         setMfaExpiresAt(Number(data.mfa_expires_at || 0));
@@ -381,7 +434,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         setError('');
         return;
       }
-
       onAuthSuccess?.({
         usuario: data.usuario,
         access_token: data.access_token,
@@ -399,7 +451,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const handleVerifyMfa = async () => {
     setError('');
     if (!mfaCode.trim()) { setError(t('auth.errorMfa')); return; }
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/mfa/verify`, {
@@ -409,7 +460,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || t('auth.errorMfaInvalid')); return; }
-
       onAuthSuccess?.({
         usuario: data.usuario,
         access_token: data.access_token,
@@ -433,7 +483,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
     if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
     if (password.length < 6) { setError(t('auth.errorPasswordLength')); return; }
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -451,7 +500,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || t('auth.errorLogin')); return; }
-
       onAuthSuccess?.({
         usuario: data.usuario,
         access_token: data.access_token,
@@ -470,7 +518,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     <>
       <Text style={s.formTitle}>{t('auth.mfaTitle')}</Text>
       <Text style={s.formSub}>{t('auth.mfaSubtitle')}</Text>
-
       {mfaExpiresAt > 0 && (
         <Text style={s.mfaHelper}>
           {t('auth.mfaExpires', { seconds: Math.max(0, Math.floor(mfaExpiresAt - Date.now() / 1000)) })}
@@ -481,39 +528,22 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           <Text style={s.mfaDevText}>Código de dev: {mfaDevCode}</Text>
         </View>
       )}
-
       <Text style={s.label}>{t('auth.mfaCodeLabel')}</Text>
       <TextInput
         style={inp('mfa')}
         value={mfaCode}
         onChangeText={setMfaCode}
         placeholder={t('auth.mfaCodePlaceholder')}
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={P.textMuted}
         keyboardType="number-pad"
         onFocus={() => setFocusedField('mfa')}
         onBlur={() => setFocusedField('')}
       />
-
       {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
-
-      <TouchableOpacity
-        style={[s.submitBtn, loading && { opacity: 0.7 }]}
-        onPress={handleVerifyMfa}
-        disabled={loading}
-      >
+      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.7 }]} onPress={handleVerifyMfa} disabled={loading}>
         <Text style={s.submitBtnText}>{loading ? t('auth.verifyBtnLoading') : t('auth.verifyBtn')}</Text>
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={s.backBtn}
-        onPress={() => {
-          setMfaChallengeId('');
-          setMfaCode('');
-          setMfaExpiresAt(0);
-          setMfaDevCode('');
-          setError('');
-        }}
-      >
+      <TouchableOpacity style={s.backBtn} onPress={() => { setMfaChallengeId(''); setMfaCode(''); setMfaExpiresAt(0); setMfaDevCode(''); setError(''); }}>
         <Text style={s.backBtnText}>{t('auth.backBtn')}</Text>
       </TouchableOpacity>
     </>
@@ -524,40 +554,32 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     <>
       <Text style={s.formTitle}>{t('auth.loginTitle')}</Text>
       <Text style={s.formSub}>{t('auth.loginSubtitle')}</Text>
-
       <Text style={s.label}>{t('auth.emailLabel')}</Text>
       <TextInput
         style={inp('email')}
         value={email}
         onChangeText={setEmail}
         placeholder={t('auth.emailPlaceholder')}
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={P.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
         onFocus={() => setFocusedField('email')}
         onBlur={() => setFocusedField('')}
       />
-
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
       <TextInput
         style={inp('password')}
         value={password}
         onChangeText={setPassword}
         placeholder={t('auth.passwordPlaceholder')}
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={P.textMuted}
         secureTextEntry
         onFocus={() => setFocusedField('password')}
         onBlur={() => setFocusedField('')}
         onSubmitEditing={handleLogin}
       />
-
       {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
-
-      <TouchableOpacity
-        style={[s.submitBtn, loading && { opacity: 0.7 }]}
-        onPress={handleLogin}
-        disabled={loading}
-      >
+      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading}>
         <Text style={s.submitBtnText}>{loading ? t('auth.loginBtnLoading') : t('auth.loginBtn')}</Text>
       </TouchableOpacity>
     </>
@@ -568,98 +590,30 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     <>
       <Text style={s.formTitle}>{t('auth.registerTitle')}</Text>
       <Text style={s.formSub}>{t('auth.registerSubtitle')}</Text>
-
       <Text style={s.label}>{t('auth.nameLabel')}</Text>
-      <TextInput
-        style={inp('nombre')}
-        value={nombre}
-        onChangeText={setNombre}
-        placeholder={t('auth.namePlaceholder')}
-        placeholderTextColor={C.textMuted}
-        onFocus={() => setFocusedField('nombre')}
-        onBlur={() => setFocusedField('')}
-      />
-
+      <TextInput style={inp('nombre')} value={nombre} onChangeText={setNombre} placeholder={t('auth.namePlaceholder')} placeholderTextColor={P.textMuted} onFocus={() => setFocusedField('nombre')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.companyLabel')}</Text>
-      <TextInput
-        style={inp('empresa')}
-        value={nombreEmpresa}
-        onChangeText={setNombreEmpresa}
-        placeholder={t('auth.companyPlaceholder')}
-        placeholderTextColor={C.textMuted}
-        onFocus={() => setFocusedField('empresa')}
-        onBlur={() => setFocusedField('')}
-      />
-
+      <TextInput style={inp('empresa')} value={nombreEmpresa} onChangeText={setNombreEmpresa} placeholder={t('auth.companyPlaceholder')} placeholderTextColor={P.textMuted} onFocus={() => setFocusedField('empresa')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.cifLabel')}</Text>
-      <TextInput
-        style={inp('cif')}
-        value={cif}
-        onChangeText={setCif}
-        placeholder={t('auth.cifPlaceholder')}
-        placeholderTextColor={C.textMuted}
-        autoCapitalize="characters"
-        onFocus={() => setFocusedField('cif')}
-        onBlur={() => setFocusedField('')}
-      />
-
+      <TextInput style={inp('cif')} value={cif} onChangeText={setCif} placeholder={t('auth.cifPlaceholder')} placeholderTextColor={P.textMuted} autoCapitalize="characters" onFocus={() => setFocusedField('cif')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.emailLabel')}</Text>
-      <TextInput
-        style={inp('email')}
-        value={email}
-        onChangeText={setEmail}
-        placeholder={t('auth.emailPlaceholder')}
-        placeholderTextColor={C.textMuted}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        onFocus={() => setFocusedField('email')}
-        onBlur={() => setFocusedField('')}
-      />
-
+      <TextInput style={inp('email')} value={email} onChangeText={setEmail} placeholder={t('auth.emailPlaceholder')} placeholderTextColor={P.textMuted} autoCapitalize="none" keyboardType="email-address" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
-      <TextInput
-        style={inp('password')}
-        value={password}
-        onChangeText={setPassword}
-        placeholder={t('auth.passwordPlaceholder')}
-        placeholderTextColor={C.textMuted}
-        secureTextEntry
-        onFocus={() => setFocusedField('password')}
-        onBlur={() => setFocusedField('')}
-      />
-
-      <Text style={[s.label, { marginTop: 14 }]}>{t('auth.billingLabel')}</Text>
+      <TextInput style={inp('password')} value={password} onChangeText={setPassword} placeholder={t('auth.passwordPlaceholder')} placeholderTextColor={P.textMuted} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField('')} />
+      <Text style={[s.label, { marginTop: 16 }]}>{t('auth.billingLabel')}</Text>
       <View style={s.billingRow}>
-        <Pressable
-          style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]}
-          onPress={() => setBillingModel('creditos')}
-        >
-          <Text style={[s.billingBtnText, billingModel === 'creditos' && s.billingBtnTextActive]}>
-            {t('auth.billingCredits')}
-          </Text>
+        <Pressable style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]} onPress={() => setBillingModel('creditos')}>
+          <Text style={[s.billingBtnText, billingModel === 'creditos' && s.billingBtnTextActive]}>{t('auth.billingCredits')}</Text>
         </Pressable>
-        <Pressable
-          style={[s.billingBtn, billingModel === 'suscripcion' && s.billingBtnActive]}
-          onPress={() => setBillingModel('suscripcion')}
-        >
-          <Text style={[s.billingBtnText, billingModel === 'suscripcion' && s.billingBtnTextActive]}>
-            {t('auth.billingSubscription')}
-          </Text>
+        <Pressable style={[s.billingBtn, billingModel === 'suscripcion' && s.billingBtnActive]} onPress={() => setBillingModel('suscripcion')}>
+          <Text style={[s.billingBtnText, billingModel === 'suscripcion' && s.billingBtnTextActive]}>{t('auth.billingSubscription')}</Text>
         </Pressable>
       </View>
       <Text style={s.billingDesc}>
-        {billingModel === 'creditos'
-          ? t('auth.billingCreditsDesc')
-          : t('auth.billingSubscriptionDesc')}
+        {billingModel === 'creditos' ? t('auth.billingCreditsDesc') : t('auth.billingSubscriptionDesc')}
       </Text>
-
       {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
-
-      <TouchableOpacity
-        style={[s.submitBtn, loading && { opacity: 0.7 }]}
-        onPress={handleRegister}
-        disabled={loading}
-      >
+      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.6 }]} onPress={handleRegister} disabled={loading}>
         <Text style={s.submitBtnText}>{loading ? t('auth.registerBtnLoading') : t('auth.registerBtn')}</Text>
       </TouchableOpacity>
     </>
@@ -670,11 +624,13 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     <View style={s.root}>
       <View style={s.split}>
 
-        {/* Panel de marca */}
+        {/* ── Panel de marca ─────────────────────────────────────────────── */}
         <View style={s.brand}>
+
+          {/* Logo */}
           <View style={s.logoRow}>
             <View style={s.logoMark}>
-              <View style={s.logoMarkInner} />
+              <View style={s.logoMarkSlash} />
             </View>
             <Text style={s.logoName}>
               <Text style={s.logoNamePrint}>Print</Text>
@@ -683,69 +639,50 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             </Text>
           </View>
 
+          {/* Titular */}
+          <Text style={s.brandEyebrow}>{t('auth.brandEyebrow')}</Text>
           <Text style={s.brandTagline}>
-            {t('auth.brandTagline')}
+            {t('auth.brandTaglinePre')}
+            {'\n'}
+            <Text style={s.brandTaglineAccent}>{t('auth.brandTaglineAccent')}</Text>
           </Text>
-          <Text style={s.brandSub}>
-            {t('auth.brandDesc')}
-          </Text>
+          <Text style={s.brandSub}>{t('auth.brandDesc')}</Text>
 
-          {/* Capacidades de preimpresión */}
-          <View style={s.prepressSection}>
-            <Text style={s.prepressSectionLabel}>{t('auth.prepressTitle')}</Text>
-            <View style={s.pillRow}>
-              <View style={s.pill}>
-                <Text style={s.pillText}>{t('auth.prepressDesc')}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Otras capacidades */}
-          <View style={s.featureList}>
-            {[
-              t('auth.feature1'),
-              t('auth.feature2'),
-              t('auth.feature3'),
-            ].map((f, i) => (
-              <View key={i} style={s.featureRow}>
-                <View style={s.featureDot} />
-                <Text style={s.featureText}>{f}</Text>
+          {/* Módulos */}
+          <Text style={s.modulesLabel}>{t('auth.modulesLabel')}</Text>
+          <View style={s.modulesGrid}>
+            {MODULES.map((m) => (
+              <View key={m.key} style={s.moduleChip}>
+                <Text style={s.moduleChipIcon}>{m.icon}</Text>
+                <Text style={s.moduleChipText}>{m.key}</Text>
               </View>
             ))}
           </View>
+          <Text style={s.modulesCaption}>
+            {t('auth.modulesCaption')}{' '}
+            <Text style={s.modulesCaptionAccent}>{t('auth.modulesCaptionAccent')}</Text>
+          </Text>
+
         </View>
 
-        {/* Panel de formulario */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={s.formPanel}
-          keyboardShouldPersistTaps="handled"
-        >
+        {/* Separador */}
+        <View style={s.divider} />
+
+        {/* ── Panel de formulario ─────────────────────────────────────────── */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={s.formPanel} keyboardShouldPersistTaps="handled">
           <View style={s.formCard}>
             {mfaChallengeId ? (
               <MfaView />
             ) : (
               <>
-                {/* Tabs */}
                 <View style={s.tabs}>
-                  <Pressable
-                    style={[s.tab, authMode === 'login' && s.tabActive]}
-                    onPress={() => { setAuthMode('login'); setError(''); }}
-                  >
-                    <Text style={[s.tabText, authMode === 'login' && s.tabTextActive]}>
-                      {t('auth.switchToLogin')}
-                    </Text>
+                  <Pressable style={[s.tab, authMode === 'login' && s.tabActive]} onPress={() => { setAuthMode('login'); setError(''); }}>
+                    <Text style={[s.tabText, authMode === 'login' && s.tabTextActive]}>{t('auth.switchToLogin')}</Text>
                   </Pressable>
-                  <Pressable
-                    style={[s.tab, authMode === 'register' && s.tabActive]}
-                    onPress={() => { setAuthMode('register'); setError(''); }}
-                  >
-                    <Text style={[s.tabText, authMode === 'register' && s.tabTextActive]}>
-                      {t('auth.switchToRegister')}
-                    </Text>
+                  <Pressable style={[s.tab, authMode === 'register' && s.tabActive]} onPress={() => { setAuthMode('register'); setError(''); }}>
+                    <Text style={[s.tabText, authMode === 'register' && s.tabTextActive]}>{t('auth.switchToRegister')}</Text>
                   </Pressable>
                 </View>
-
                 {authMode === 'login' ? <LoginView /> : <RegisterView />}
               </>
             )}

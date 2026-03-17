@@ -122,7 +122,7 @@ const styles = {
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#1E293B',
+        backgroundColor: '#111014',
         paddingVertical: 14,
         paddingHorizontal: 16,
         position: 'relative',
