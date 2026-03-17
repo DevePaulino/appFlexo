@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView, Modal, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useModulos } from '../ModulosContext';
+import { useSettings } from '../SettingsContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -87,11 +88,142 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 2,
   },
+  triggerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 0,
+    marginTop: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  triggerLabel: {
+    fontSize: 13,
+    color: '#475569',
+    flex: 1,
+  },
+  triggerValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginRight: 6,
+  },
+  triggerBtn: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  triggerBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    width: '85%',
+    maxWidth: 420,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  modalHint: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 14,
+  },
+  estadoItem: {
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  estadoItemSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  estadoItemText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  estadoItemTextSelected: {
+    color: '#1D4ED8',
+  },
+  modalCancelBtn: {
+    marginTop: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
 });
 
 export default function ModulosScreen() {
   const { t } = useTranslation();
   const { modulos, setModulo } = useModulos();
+  const { settings } = useSettings();
+  const [showTriggerPicker, setShowTriggerPicker] = useState(false);
+  // pendingActivation: true when we opened the picker to enable the module
+  const [pendingActivation, setPendingActivation] = useState(false);
+
+  const estadosDisponibles = settings.estados_pedido || [];
+
+  const handleToggleProduccion = (value) => {
+    if (!value) {
+      setModulo('produccion', false);
+      return;
+    }
+    // Activating: if trigger not set, force selection first
+    if (!modulos.produccion_trigger_estado) {
+      setPendingActivation(true);
+      setShowTriggerPicker(true);
+    } else {
+      setModulo('produccion', true);
+    }
+  };
+
+  const handleSelectTrigger = (estadoValor) => {
+    setModulo('produccion_trigger_estado', estadoValor);
+    if (pendingActivation) {
+      setModulo('produccion', true);
+      setPendingActivation(false);
+    }
+    setShowTriggerPicker(false);
+  };
+
+  const handleCancelPicker = () => {
+    setPendingActivation(false);
+    setShowTriggerPicker(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -106,7 +238,9 @@ export default function ModulosScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('screens.config.modulosTitle')}</Text>
           <Text style={styles.hint}>{t('screens.config.modulosHint')}</Text>
-          <View style={[styles.row, styles.rowLast]}>
+
+          {/* Consumo de material */}
+          <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.rowLabel}>{t('screens.config.moduloConsumoMaterial')}</Text>
               <Text style={styles.rowHint}>{t('screens.config.moduloConsumoMaterialHint')}</Text>
@@ -118,8 +252,66 @@ export default function ModulosScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
+
+          {/* Módulo Producción */}
+          <View style={[styles.row, !modulos.produccion && styles.rowLast]}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.rowLabel}>{t('screens.config.moduloProduccion')}</Text>
+              <Text style={styles.rowHint}>{t('screens.config.moduloProduccionHint')}</Text>
+            </View>
+            <Switch
+              value={!!modulos.produccion}
+              onValueChange={handleToggleProduccion}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          {/* Trigger de producción — visible solo cuando el módulo está activo */}
+          {!!modulos.produccion && (
+            <View style={[styles.triggerRow, styles.rowLast]}>
+              <Text style={styles.triggerLabel}>{t('screens.config.moduloProduccionTrigger')}</Text>
+              <Text style={styles.triggerValue}>
+                {modulos.produccion_trigger_estado || '—'}
+              </Text>
+              <TouchableOpacity style={styles.triggerBtn} onPress={() => { setPendingActivation(false); setShowTriggerPicker(true); }}>
+                <Text style={styles.triggerBtnText}>{t('common.change')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Modal selección de estado trigger */}
+      <Modal visible={showTriggerPicker} transparent animationType="fade" onRequestClose={handleCancelPicker}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('screens.config.seleccionarTriggerEstado')}</Text>
+            <Text style={styles.modalHint}>{t('screens.config.seleccionarTriggerEstadoHint')}</Text>
+            <ScrollView style={{ maxHeight: 280 }}>
+              {estadosDisponibles.map((item) => {
+                const isSelected = modulos.produccion_trigger_estado === item.valor;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.estadoItem, isSelected && styles.estadoItemSelected]}
+                    onPress={() => handleSelectTrigger(item.valor)}
+                  >
+                    <Text style={[styles.estadoItemText, isSelected && styles.estadoItemTextSelected]}>
+                      {item.valor}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            {!pendingActivation && (
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={handleCancelPicker}>
+                <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

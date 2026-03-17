@@ -183,7 +183,8 @@
     "saving": "Wird gespeichert...",
     "import": "Importieren",
     "actions": "Aktionen",
-    "deleteQuestion": "Löschen?"
+    "deleteQuestion": "Löschen?",
+    "change": "Ändern"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Phase",
       "colEstado": "Status",
       "colProduccion": "Produktion",
+      "colAcciones": "Aktionen",
       "filtroActivo": "Aktiver Filter: {{estados}}",
       "quitarFiltro": "Filter entfernen",
       "finalizado": "Fertig",
@@ -411,6 +413,11 @@
       "modulosHint": "Aktivieren oder deaktivieren Sie optionale Anwendungsfunktionen.",
       "moduloConsumoMaterial": "Materialverbrauch",
       "moduloConsumoMaterialHint": "Erfasst den Materialverbrauch beim Markieren eines Auftrags als gedruckt.",
+      "moduloProduccion": "Produktion",
+      "moduloProduccionHint": "Aktiviert die Produktionswarteschlange und den Reiter Produktion.",
+      "moduloProduccionTrigger": "Status, der die Maschinenauswahl auslöst:",
+      "seleccionarTriggerEstado": "Auslöserstatus auswählen",
+      "seleccionarTriggerEstadoHint": "Beim Vorrücken zu diesem Status öffnet sich die Maschinenauswahl.",
       "creditosTitle": "Guthaben",
       "sinPermisoCreditosMsg": "Ihre Rolle hat keine Berechtigung zum Verwalten von Aufladungen.",
       "recargarBtn": "Aufladen",

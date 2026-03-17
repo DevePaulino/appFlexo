@@ -4,6 +4,8 @@ const API_MODULOS_URL = 'http://localhost:8080/api/settings/modulos';
 
 const MODULOS_DEFAULT = {
   consumo_material: true,
+  produccion: false,
+  produccion_trigger_estado: '',
 };
 
 export const ModulosContext = createContext({ modulos: MODULOS_DEFAULT, setModulo: () => {} });

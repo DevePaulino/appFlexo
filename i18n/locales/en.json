@@ -183,7 +183,8 @@
     "saving": "Saving...",
     "import": "Import",
     "actions": "Actions",
-    "deleteQuestion": "Delete?"
+    "deleteQuestion": "Delete?",
+    "change": "Change"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Phase",
       "colEstado": "Status",
       "colProduccion": "Production",
+      "colAcciones": "Actions",
       "filtroActivo": "Active filter: {{estados}}",
       "quitarFiltro": "Clear filter",
       "finalizado": "Done",
@@ -561,6 +563,11 @@
       "modulosHint": "Enable or disable optional application features.",
       "moduloConsumoMaterial": "Material consumption",
       "moduloConsumoMaterialHint": "Tracks material usage when marking a job as printed.",
+      "moduloProduccion": "Production",
+      "moduloProduccionHint": "Enables the production queue and the Production tab.",
+      "moduloProduccionTrigger": "State that triggers the machine selector:",
+      "seleccionarTriggerEstado": "Select trigger state",
+      "seleccionarTriggerEstadoHint": "When advancing to this state the machine selector will open.",
       "creditosTitle": "Credits",
       "sinPermisoCreditosMsg": "Your role does not have permission to manage top-ups.",
       "recargarBtn": "Top up",

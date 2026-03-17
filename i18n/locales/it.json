@@ -183,7 +183,8 @@
     "saving": "Salvataggio...",
     "import": "Importa",
     "actions": "Azioni",
-    "deleteQuestion": "Eliminare?"
+    "deleteQuestion": "Eliminare?",
+    "change": "Modifica"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Fase",
       "colEstado": "Stato",
       "colProduccion": "Produzione",
+      "colAcciones": "Azioni",
       "filtroActivo": "Filtro attivo: {{estados}}",
       "quitarFiltro": "Rimuovi filtro",
       "finalizado": "Completato",
@@ -411,6 +413,11 @@
       "modulosHint": "Attiva o disattiva le funzionalità opzionali dell'applicazione.",
       "moduloConsumoMaterial": "Consumo di materiale",
       "moduloConsumoMaterialHint": "Registra il consumo di materiale quando si contrassegna un lavoro come stampato.",
+      "moduloProduccion": "Produzione",
+      "moduloProduccionHint": "Attiva la coda di produzione e la scheda Produzione.",
+      "moduloProduccionTrigger": "Stato che attiva il selettore macchina:",
+      "seleccionarTriggerEstado": "Seleziona stato trigger",
+      "seleccionarTriggerEstadoHint": "Avanzando a questo stato si aprirà il selettore macchina.",
       "creditosTitle": "Crediti",
       "sinPermisoCreditosMsg": "Il tuo ruolo non ha il permesso di gestire le ricariche.",
       "recargarBtn": "Ricarica",

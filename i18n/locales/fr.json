@@ -183,7 +183,8 @@
     "saving": "Enregistrement...",
     "import": "Importer",
     "actions": "Actions",
-    "deleteQuestion": "Supprimer ?"
+    "deleteQuestion": "Supprimer ?",
+    "change": "Modifier"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Phase",
       "colEstado": "État",
       "colProduccion": "Production",
+      "colAcciones": "Actions",
       "filtroActivo": "Filtre actif : {{estados}}",
       "quitarFiltro": "Effacer le filtre",
       "finalizado": "Terminé",
@@ -557,6 +559,11 @@
       "modulosHint": "Activez ou désactivez les fonctionnalités optionnelles de l'application.",
       "moduloConsumoMaterial": "Consommation de matériau",
       "moduloConsumoMaterialHint": "Enregistre la consommation de matériau lors du marquage d'un travail comme imprimé.",
+      "moduloProduccion": "Production",
+      "moduloProduccionHint": "Active la file de production et l'onglet Production.",
+      "moduloProduccionTrigger": "État qui déclenche le sélecteur de machine :",
+      "seleccionarTriggerEstado": "Sélectionner l'état déclencheur",
+      "seleccionarTriggerEstadoHint": "En avançant à cet état, le sélecteur de machine s'ouvrira.",
       "creditosTitle": "Crédits",
       "sinPermisoCreditosMsg": "Votre rôle n'a pas l'autorisation de gérer les recharges.",
       "recargarBtn": "Recharger",

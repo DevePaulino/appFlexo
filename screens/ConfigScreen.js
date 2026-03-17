@@ -32,6 +32,7 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'manage_usuarios', title: 'Gestionar usuarios', hint: 'Permite añadir, editar y eliminar usuarios del sistema.' },
   { key: 'manage_session_timeout', title: 'Gestionar tiempo de sesión', hint: 'Permite configurar el tiempo de inactividad por usuario antes del cierre automático.' },
   { key: 'manage_estados_pedido', title: 'Editar estados de pedidos', hint: 'Permite crear, modificar y eliminar estados disponibles.' },
+  { key: 'editar_estado_finalizado', title: 'Editar Estado de trabajos Finalizados', hint: 'Permite avanzar o retroceder el estado de pedidos que ya están finalizados.' },
   { key: 'edit_clientes', title: 'Editar clientes', hint: 'Alta, edición y eliminación de clientes.' },
   { key: 'edit_maquinas', title: 'Editar máquinas', hint: 'Alta, edición y eliminación de máquinas.' },
   { key: 'edit_pedidos', title: 'Editar pedidos', hint: 'Creación y cambios de pedidos y trabajos.' },

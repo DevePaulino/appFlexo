@@ -377,6 +377,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const [openSubmenu, setOpenSubmenu] = React.useState(null); // null | 'Setting' | 'Activos'
   const { modulos } = useModulos();
   const consumoModuloActivo = modulos.consumo_material !== false;
+  const produccionModuloActivo = modulos.produccion === true;
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
   const activosTabRef = React.useRef(null);
@@ -427,7 +428,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
       <View style={styles.tabsBar}>
         <View style={styles.tabsList}>
           {state.routes
-            .filter((route) => VISIBLE_TOP_TABS.includes(route.name))
+            .filter((route) => VISIBLE_TOP_TABS.includes(route.name) && (route.name !== 'Producción' || produccionModuloActivo))
             .map((route) => {
               const options = descriptors[route.key]?.options || {};
               const label = options.tabBarLabel || options.title || route.name;

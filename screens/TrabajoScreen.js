@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
@@ -11,6 +11,7 @@ import useToast from '../components/useToast';
 import EmptyState from '../components/EmptyState';
 import { useSettings } from '../SettingsContext';
 import { useMaquinas } from '../MaquinasContext';
+import { useModulos } from '../ModulosContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -319,19 +320,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  actionBtnProduccion: {
-    backgroundColor: '#8E44AD',
-    paddingHorizontal: 6,
+  navBtn: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 5,
+    marginHorizontal: 2,
   },
-  actionBtnDisabled: {
-    backgroundColor: '#94A3B8',
+  navBtnDisabled: {
+    opacity: 0.3,
   },
-  actionBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFF',
+  navBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -589,7 +593,9 @@ export default function TrabajoScreen({ currentUser }) {
   const [trabajoParaProduccion, setTrabajoParaProduccion] = useState(null);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
   const [hoverNuevo, setHoverNuevo] = useState(false);
-  const [canChangeEstado, setCanChangeEstado] = useState(true);
+  const canChangeEstado = usePermission('manage_estados_pedido');
+  const puedeEditarFinalizado = usePermission('editar_estado_finalizado');
+  const { modulos } = useModulos();
   const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHdrs: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
   const hoverNuevoTimerRef = useRef(null);
   const { actualizacionPedidos } = React.useContext(PedidosContext);
@@ -805,58 +811,10 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setTrabajos([]));
   };
 
-  // Verificar si el rol actual puede cambiar estados
-  const checkCanChangeEstado = () => {
-    const rolActual = typeof window !== 'undefined' && window.localStorage
-      ? window.localStorage.getItem('PFP_SELECTED_ROLE')
-      : null;
-    
-    // Si no hay rol seleccionado, permitir por defecto
-    if (!rolActual) {
-      setCanChangeEstado(true);
-      return;
-    }
-    
-    // Preguntar al backend si el rol tiene permiso
-    fetch('http://localhost:8080/api/auth/verify-role-permission', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        role: rolActual,
-        permission: 'manage_estados_pedido'
-      })
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setCanChangeEstado(data && data.allowed === true);
-      })
-      .catch(() => setCanChangeEstado(false));
-  };
-
   // Cargar pedidos al montar el componente
   useEffect(() => {
     cargarPedidos();
-    checkCanChangeEstado();
   }, []);
-
-  // Revalidar permisos al cambiar el rol activo sin refrescar la página
-  useEffect(() => {
-    const handler = () => checkCanChangeEstado();
-    if (typeof window !== 'undefined' && window.addEventListener) {
-      window.addEventListener('pfp-role-changed', handler);
-    }
-    return () => {
-      if (typeof window !== 'undefined' && window.removeEventListener) {
-        window.removeEventListener('pfp-role-changed', handler);
-      }
-    };
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      checkCanChangeEstado();
-    }, [])
-  );
 
   // Recargar pedidos cuando se crea uno nuevo desde Presupuestos
   useEffect(() => {
@@ -995,28 +953,30 @@ export default function TrabajoScreen({ currentUser }) {
     }
   };
 
-  const puedeEnviarAProduccion = (trabajo) => {
-    const estado = normalizarEstadoValue(trabajo?.estado || '');
-    const bloqueados = estadoRules.bloqueados_produccion || [];
-    const enCola = estadoRules.en_cola_produccion || [];
-    return !estaEnColaVisual(trabajo) && ![
-      ...bloqueados,
-      ...enCola,
-    ].includes(estado);
+  // Devuelve el label del estado resultante de avanzar (+1) o retroceder (-1)
+  const resolveStateLabel = (estadoActualSlug, direction) => {
+    const idx = estadosDisponibles.findIndex((e) => e.value === estadoActualSlug);
+    const currentIdx = idx === -1 ? 0 : idx;
+    const newIdx = Math.max(0, Math.min(estadosDisponibles.length - 1, currentIdx + direction));
+    return estadosDisponibles[newIdx]?.label || null;
   };
 
-  const estaEnColaVisual = (trabajo) => {
-    const estado = normalizarEstadoValue(trabajo?.estado || '');
-    return !!trabajo?.en_produccion || (estadoRules.en_cola_produccion || []).includes(estado);
-  };
-
-  const handleAbrirSelectorProduccion = (trabajo) => {
-    if (!puedeEnviarAProduccion(trabajo)) {
-      showToast(t('screens.trabajos.noEnviarProduccion'), 'warning');
+  const handleNavigateEstado = (trabajo, direction) => {
+    const estadoActual = normalizarEstadoValue(trabajo?.estado || '');
+    const newLabel = resolveStateLabel(estadoActual, direction);
+    if (!newLabel) return;
+    // Si el módulo de producción está activo y el estado destino es el trigger → abrir selector de máquina
+    if (
+      direction === 1 &&
+      modulos.produccion === true &&
+      modulos.produccion_trigger_estado &&
+      slugifyEstado(newLabel) === slugifyEstado(modulos.produccion_trigger_estado)
+    ) {
+      setTrabajoParaProduccion(trabajo);
+      setModalMaquinasVisible(true);
       return;
     }
-    setTrabajoParaProduccion(trabajo);
-    setModalMaquinasVisible(true);
+    handleCambiarEstado(trabajo, newLabel);
   };
 
   const handleEnviarAProduccion = async (maquinaId, maquinaNombre, force = false) => {
@@ -1205,20 +1165,17 @@ export default function TrabajoScreen({ currentUser }) {
               <Text style={styles.headerText}>{t('screens.trabajos.colEstado')}</Text>
             </View>
             <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colProduccion')}</Text>
+              <Text style={styles.headerText}>{t('screens.trabajos.colAcciones')}</Text>
             </View>
           </View>
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
-            const estadoColor = getEstadoDotColor(estadoTrabajoActual);
             const esFinalizado = (estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado']).includes(estadoTrabajoActual);
-            const envioBloqueado = !puedeEnviarAProduccion(trabajo);
-            let textoBoton;
-            if (estadoTrabajoActual === 'parado' || estadoTrabajoActual === 'cancelado') {
-              textoBoton = estadoTrabajoActual; // mostrar el nombre del estado tal cual (parado/cancelado)
-            } else {
-              textoBoton = esFinalizado ? t('screens.trabajos.finalizado') : (estaEnColaVisual(trabajo) ? t('screens.trabajos.enCola') : t('screens.trabajos.produccion'));
-            }
+            const currentIdx = estadosDisponibles.findIndex((e) => e.value === estadoTrabajoActual);
+            const resolvedIdx = currentIdx === -1 ? 0 : currentIdx;
+            const isAtFirst = resolvedIdx === 0;
+            const isAtLast = resolvedIdx === estadosDisponibles.length - 1;
+            const showNavBtns = canChangeEstado && (!esFinalizado || puedeEditarFinalizado);
 
             return (
               <View key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`} style={[styles.tableRow, (idx + (paginaPedidos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
@@ -1263,45 +1220,34 @@ export default function TrabajoScreen({ currentUser }) {
                   </View>
                 </View>
                 <View style={[styles.tableCell, styles.colEstado]}>
-                  <select
-                    disabled={!canChangeEstado || esFinalizado}
-                    style={{
-                      paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
-                      borderRadius: 10,
-                      border: `1px solid ${estadoColor}66`,
-                      backgroundColor: estadoColor + '33',
-                      fontSize: 13,
-                      fontWeight: '600',
-                      cursor: (canChangeEstado && !esFinalizado) ? 'pointer' : 'not-allowed',
-                      width: '100%',
-                      color: estadoColor,
-                      outlineWidth: 0,
-                      opacity: (canChangeEstado && !esFinalizado) ? 1 : 0.65,
-                      pointerEvents: (canChangeEstado && !esFinalizado) ? 'auto' : 'none',
-                    }}
-                    value={normalizarEstadoValue(trabajo.estado)}
-                    onChange={(e) => handleCambiarEstado(trabajo, e.target.value)}
-                  >
-                    {estadosDisponibles.map((estado) => (
-                      <option key={estado.value} value={estado.value}>
-                        {estado.label}
-                      </option>
-                    ))}
-                  </select>
+                  {(() => {
+                    const [badgeStyle, badgeTextStyle] = getStatusColor(trabajo.estado);
+                    return (
+                      <View style={badgeStyle}>
+                        <Text style={badgeTextStyle} numberOfLines={1}>{getStatusLabel(trabajo.estado)}</Text>
+                      </View>
+                    );
+                  })()}
                 </View>
                 <View style={[styles.tableCell, styles.colAcciones]}>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionBtnProduccion,
-                      esFinalizado && { backgroundColor: ESTADO_FINALIZADO_COLOR },
-                      envioBloqueado && !esFinalizado && styles.actionBtnDisabled
-                    ]}
-                    title="Enviar a Producción"
-                    onPress={() => !envioBloqueado && handleAbrirSelectorProduccion(trabajo)}
-                    disabled={envioBloqueado}
-                  >
-                    <Text style={styles.actionBtnText}>{textoBoton}</Text>
-                  </TouchableOpacity>
+                  {showNavBtns && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.navBtn, isAtFirst && styles.navBtnDisabled]}
+                        disabled={isAtFirst}
+                        onPress={() => handleNavigateEstado(trabajo, -1)}
+                      >
+                        <Text style={styles.navBtnText}>‹</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.navBtn, isAtLast && styles.navBtnDisabled]}
+                        disabled={isAtLast}
+                        onPress={() => handleNavigateEstado(trabajo, 1)}
+                      >
+                        <Text style={styles.navBtnText}>›</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </View>
             );

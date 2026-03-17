@@ -183,7 +183,8 @@
     "saving": "Guardando...",
     "import": "Importar",
     "actions": "Acciones",
-    "deleteQuestion": "¿Eliminar?"
+    "deleteQuestion": "¿Eliminar?",
+    "change": "Cambiar"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Fase",
       "colEstado": "Estado",
       "colProduccion": "Producción",
+      "colAcciones": "Acciones",
       "filtroActivo": "Filtro activo: {{estados}}",
       "quitarFiltro": "Quitar filtro",
       "finalizado": "Finalizado",
@@ -557,6 +559,11 @@
       "modulosHint": "Activa o desactiva funcionalidades opcionales de la aplicación.",
       "moduloConsumoMaterial": "Consumo de material",
       "moduloConsumoMaterialHint": "Registra el consumo de material al marcar un trabajo como impreso.",
+      "moduloProduccion": "Producción",
+      "moduloProduccionHint": "Activa la cola de producción y la pestaña de Producción.",
+      "moduloProduccionTrigger": "Estado que lanza el selector de máquina:",
+      "seleccionarTriggerEstado": "Selecciona el estado trigger",
+      "seleccionarTriggerEstadoHint": "Al avanzar a este estado se abrirá el selector de máquina.",
       "creditosTitle": "Créditos",
       "sinPermisoCreditosMsg": "Tu rol no tiene permiso para gestionar recargas.",
       "recargarBtn": "Recargar",

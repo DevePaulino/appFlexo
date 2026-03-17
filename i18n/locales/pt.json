@@ -183,7 +183,8 @@
     "saving": "A guardar...",
     "import": "Importar",
     "actions": "Ações",
-    "deleteQuestion": "Eliminar?"
+    "deleteQuestion": "Eliminar?",
+    "change": "Alterar"
   },
   "screens": {
     "clientes": {
@@ -301,6 +302,7 @@
       "colFase": "Fase",
       "colEstado": "Estado",
       "colProduccion": "Produção",
+      "colAcciones": "Ações",
       "filtroActivo": "Filtro ativo: {{estados}}",
       "quitarFiltro": "Limpar filtro",
       "finalizado": "Concluído",
@@ -557,6 +559,11 @@
       "modulosHint": "Ative ou desative funcionalidades opcionais da aplicação.",
       "moduloConsumoMaterial": "Consumo de material",
       "moduloConsumoMaterialHint": "Regista o consumo de material ao marcar um trabalho como impresso.",
+      "moduloProduccion": "Produção",
+      "moduloProduccionHint": "Ativa a fila de produção e o separador Produção.",
+      "moduloProduccionTrigger": "Estado que aciona o seletor de máquina:",
+      "seleccionarTriggerEstado": "Selecionar estado gatilho",
+      "seleccionarTriggerEstadoHint": "Ao avançar para este estado, o seletor de máquina abrirá.",
       "creditosTitle": "Créditos",
       "sinPermisoCreditosMsg": "A sua função não tem permissão para gerir recargas.",
       "recargarBtn": "Recarregar",
