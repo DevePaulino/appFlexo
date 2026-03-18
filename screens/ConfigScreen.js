@@ -2207,7 +2207,7 @@ export default function ConfigScreen({ route, currentUser }) {
                       {itemColor && (
                         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: itemColor, marginRight: 8, flexShrink: 0 }} />
                       )}
-                      <Text style={[styles.chipText, { flex: 1 }, categoryKey === 'roles' && itemColor && { color: itemColor }]}>
+                      <Text style={[styles.chipText, { flex: 1 }]}>
                         {categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}
                       </Text>
                       <TouchableOpacity
