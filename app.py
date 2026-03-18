@@ -56,7 +56,7 @@ def resolve_fogra_path():
 FOGRA_PATH = resolve_fogra_path()
 
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
  
@@ -460,6 +460,8 @@ REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30
 MFA_CODE_TTL_SECONDS = 5 * 60
 MFA_REQUIRED_ROLES = {'root', 'administrador', 'admin'}
 DEV_EXPOSE_MFA_CODE = os.environ.get('DEV_EXPOSE_MFA_CODE', '0').strip().lower() in {'1', 'true', 'yes'}
+RESET_CODE_TTL_SECONDS = 15 * 60
+DEV_EXPOSE_RESET_CODE = os.environ.get('DEV_EXPOSE_RESET_CODE', '0').strip().lower() in {'1', 'true', 'yes'}
 SMTP_HOST = os.environ.get('SMTP_HOST', '').strip()
 SMTP_PORT = int(os.environ.get('SMTP_PORT', '587') or 587)
 SMTP_USER = os.environ.get('SMTP_USER', '').strip()
@@ -631,6 +633,60 @@ def send_mfa_code_email(to_email, code, expires_seconds, recipient_name=''):
         f"Tu código de verificación es: {code}\n"
         f"Este código expira en {max(1, int(expires_seconds // 60))} minuto(s).\n\n"
         "Si no has solicitado este acceso, ignora este mensaje."
+    )
+
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = SMTP_FROM
+    msg['To'] = to_email
+    msg.set_content(body)
+
+    try:
+        if SMTP_USE_SSL:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                if SMTP_USER:
+                    server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                if SMTP_USE_TLS:
+                    server.starttls()
+                if SMTP_USER:
+                    server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def validate_password_strength(password):
+    """Devuelve (True, None) si la contraseña cumple los requisitos, o (False, mensaje_error)."""
+    import re as _re
+    if len(password) < 8:
+        return False, 'La contraseña debe tener al menos 8 caracteres'
+    if not _re.search(r'[A-Z]', password):
+        return False, 'La contraseña debe incluir al menos una letra mayúscula'
+    if not _re.search(r'[a-z]', password):
+        return False, 'La contraseña debe incluir al menos una letra minúscula'
+    if not _re.search(r'\d', password):
+        return False, 'La contraseña debe incluir al menos un número'
+    if not _re.search(r'[^A-Za-z0-9]', password):
+        return False, 'La contraseña debe incluir al menos un carácter especial (!@#$%...)'
+    return True, None
+
+
+def send_reset_code_email(to_email, code, expires_seconds, recipient_name=''):
+    # Desconectado temporalmente para desarrollo web — activar configurando SMTP_HOST
+    if not SMTP_HOST:
+        return True, None
+
+    subject = 'Código para restablecer contraseña - PrintForge Pro'
+    saludo = f'Hola {recipient_name},' if recipient_name else 'Hola,'
+    body = (
+        f"{saludo}\n\n"
+        f"Tu código de verificación para restablecer la contraseña es: {code}\n"
+        f"Este código expira en {max(1, int(expires_seconds // 60))} minuto(s).\n\n"
+        "Si no has solicitado este cambio, ignora este mensaje. Tu contraseña no será modificada."
     )
 
     msg = EmailMessage()
@@ -1946,8 +2002,9 @@ def register_public_user():
             return jsonify({'error': 'Email requerido'}), 400
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify({'error': 'Email no válido'}), 400
-        if len(password) < 6:
-            return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
+        pwd_ok, pwd_err = validate_password_strength(password)
+        if not pwd_ok:
+            return jsonify({'error': pwd_err}), 400
 
         col = get_empresa_collection('usuarios', None)
         if col.find_one({'email': email}):
@@ -2200,6 +2257,104 @@ def verify_public_user_mfa():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    """Solicitar un código de 6 dígitos para restablecer la contraseña."""
+    try:
+        data = request.get_json() or {}
+        email = str(data.get('email') or '').strip().lower()
+
+        if not email:
+            return jsonify({'error': 'Email requerido'}), 400
+
+        # Rate limit: 3 solicitudes por email cada 15 minutos
+        if is_auth_rate_limited('forgot_password', email, limit=3, window_seconds=900):
+            return jsonify({'error': 'Demasiados intentos. Espera unos minutos.'}), 429
+
+        col_usuarios = get_empresa_collection('usuarios', None)
+        usuario = col_usuarios.find_one({'email': email})
+
+        # Seguridad: no revelar si el email existe o no
+        if not usuario:
+            resp = {'message': 'Si el email existe en el sistema, recibirás un código de verificación.'}
+            if DEV_EXPOSE_RESET_CODE:
+                resp['dev_note'] = 'Email no encontrado'
+            return jsonify(resp), 200
+
+        # Generar código de 6 dígitos criptográficamente seguro
+        code = str(secrets.randbelow(900000) + 100000)
+        expires_at = datetime.now() + timedelta(seconds=RESET_CODE_TTL_SECONDS)
+
+        col_resets = get_empresa_collection('password_resets', None)
+        # Invalidar códigos anteriores para este email
+        col_resets.delete_many({'email': email})
+        col_resets.insert_one({
+            'email': email,
+            'code': code,
+            'expires_at': expires_at,
+            'used': False,
+            'created_at': datetime.now().isoformat(),
+        })
+
+        nombre = str(usuario.get('nombre') or '')
+        send_reset_code_email(email, code, RESET_CODE_TTL_SECONDS, nombre)
+
+        resp = {'message': 'Si el email existe en el sistema, recibirás un código de verificación.'}
+        if DEV_EXPOSE_RESET_CODE:
+            resp['dev_reset_code'] = code
+        return jsonify(resp), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Confirmar código y establecer nueva contraseña."""
+    try:
+        data = request.get_json() or {}
+        email = str(data.get('email') or '').strip().lower()
+        code = str(data.get('code') or '').strip()
+        new_password = str(data.get('new_password') or '')
+
+        if not email:
+            return jsonify({'error': 'Email requerido'}), 400
+        if not code or len(code) != 6 or not code.isdigit():
+            return jsonify({'error': 'Código inválido'}), 400
+        pwd_ok, pwd_err = validate_password_strength(new_password)
+        if not pwd_ok:
+            return jsonify({'error': pwd_err}), 400
+
+        # Rate limit: 5 intentos por email cada 15 minutos
+        if is_auth_rate_limited('reset_password', email, limit=5, window_seconds=900):
+            return jsonify({'error': 'Demasiados intentos. Espera unos minutos.'}), 429
+
+        col_resets = get_empresa_collection('password_resets', None)
+        reset_doc = col_resets.find_one({'email': email, 'code': code, 'used': False})
+
+        if not reset_doc:
+            return jsonify({'error': 'Código inválido o expirado'}), 400
+
+        if datetime.now() > reset_doc['expires_at']:
+            col_resets.delete_one({'_id': reset_doc['_id']})
+            return jsonify({'error': 'El código ha expirado. Solicita uno nuevo.'}), 400
+
+        # Actualizar contraseña
+        col_usuarios = get_empresa_collection('usuarios', None)
+        new_hash = hash_password(new_password)
+        col_usuarios.update_one({'email': email}, {'$set': {'password_hash': new_hash}})
+
+        # Marcar el código como usado
+        col_resets.update_one({'_id': reset_doc['_id']}, {'$set': {'used': True}})
+
+        try:
+            log_audit('reset_password', {'email': email}, {})
+        except Exception:
+            pass
+
+        return jsonify({'message': 'Contraseña actualizada correctamente'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/service-account', methods=['POST'])

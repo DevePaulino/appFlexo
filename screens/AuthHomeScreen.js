@@ -456,6 +456,14 @@ const s = StyleSheet.create({
     textDecorationColor: 'rgba(232,82,42,0.35)',
   },
 
+  // ── Forgot password link ─────────────────────────────────────────────────
+  forgotLink: {
+    fontSize: 12,
+    color: P.fTextMuted,
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(15,23,42,0.20)',
+  },
+
   // ── Legal ────────────────────────────────────────────────────────────────
   legalConsent: {
     marginTop: 14,
@@ -504,8 +512,66 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [focusedField, setFocusedField] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetDevCode, setResetDevCode] = useState('');
+  const [resetStep, setResetStep] = useState('request'); // 'request' | 'confirm'
 
   const inp = (field) => [s.input, focusedField === field && s.inputFocused];
+
+  // ── Fortaleza de contraseña ────────────────────────────────────────────────
+  const getPasswordStrength = (pwd) => {
+    if (!pwd) return 0;
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    return score; // 0-5
+  };
+
+  const validatePassword = (pwd) => {
+    if (pwd.length < 8) return t('auth.errorPasswordLength');
+    if (!/[A-Z]/.test(pwd)) return t('auth.errorPasswordUppercase');
+    if (!/[a-z]/.test(pwd)) return t('auth.errorPasswordLowercase');
+    if (!/\d/.test(pwd)) return t('auth.errorPasswordDigit');
+    if (!/[^A-Za-z0-9]/.test(pwd)) return t('auth.errorPasswordSpecial');
+    return null;
+  };
+
+  const PasswordStrengthBar = ({ pwd }) => {
+    const score = getPasswordStrength(pwd);
+    if (!pwd) return null;
+    const LEVELS = [
+      { color: '#EF4444', label: t('auth.strengthWeak') },
+      { color: '#EF4444', label: t('auth.strengthWeak') },
+      { color: '#F97316', label: t('auth.strengthFair') },
+      { color: '#EAB308', label: t('auth.strengthGood') },
+      { color: '#22C55E', label: t('auth.strengthStrong') },
+      { color: '#16A34A', label: t('auth.strengthVeryStrong') },
+    ];
+    const level = LEVELS[score] || LEVELS[0];
+    return (
+      <View style={{ marginTop: 6 }}>
+        <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <View
+              key={i}
+              style={{
+                flex: 1, height: 3, borderRadius: 2,
+                backgroundColor: i <= score ? level.color : P.fSurfaceAlt,
+              }}
+            />
+          ))}
+        </View>
+        <Text style={{ fontSize: 11, color: score >= 4 ? level.color : P.fTextMuted }}>
+          {level.label}
+        </Text>
+      </View>
+    );
+  };
 
   // ── Login ─────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
@@ -577,7 +643,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     if (!cifNorm) { setError(t('auth.errorCif')); return; }
     if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
     if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
-    if (password.length < 6) { setError(t('auth.errorPasswordLength')); return; }
+    const pwdErr = validatePassword(password);
+    if (pwdErr) { setError(pwdErr); return; }
     // RGPD Art. 7 — consentimiento explícito obligatorio antes de registrar
     if (!acceptTerms || !acceptPrivacy) { setError(t('legal.errorConsent')); return; }
     setLoading(true);
@@ -606,6 +673,64 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       });
     } catch (e) {
       setError(t('auth.errorLogin'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Forgot password ───────────────────────────────────────────────────────
+  const handleForgotPassword = async () => {
+    setError('');
+    if (!resetEmail.trim()) { setError(t('auth.errorEmail')); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorResetRequest')); return; }
+      setResetDevCode(String(data.dev_reset_code || ''));
+      setResetStep('confirm');
+    } catch (e) {
+      setError(t('auth.errorResetRequest'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Reset password ────────────────────────────────────────────────────────
+  const handleResetPassword = async () => {
+    setError('');
+    if (!resetCode.trim()) { setError(t('auth.errorResetCode')); return; }
+    const pwdErr = validatePassword(resetNewPassword);
+    if (pwdErr) { setError(pwdErr); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail.trim().toLowerCase(),
+          code: resetCode.trim(),
+          new_password: resetNewPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorResetCode')); return; }
+      // Éxito — volver al login con email pre-rellenado
+      setEmail(resetEmail.trim().toLowerCase());
+      setPassword('');
+      setAuthMode('login');
+      setResetStep('request');
+      setResetEmail('');
+      setResetCode('');
+      setResetNewPassword('');
+      setResetDevCode('');
+      setError('');
+    } catch (e) {
+      setError(t('auth.errorResetCode'));
     } finally {
       setLoading(false);
     }
@@ -647,6 +772,84 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     </>
   );
 
+  // ── Forgot password view (paso 1: introducir email) ───────────────────────
+  const ForgotView = () => (
+    <>
+      <Text style={s.formTitle}>{t('auth.forgotTitle')}</Text>
+      <Text style={s.formSub}>{t('auth.forgotSubtitle')}</Text>
+      <Text style={s.label}>{t('auth.emailLabel')}</Text>
+      <TextInput
+        style={inp('resetEmail')}
+        value={resetEmail}
+        onChangeText={setResetEmail}
+        placeholder={t('auth.emailPlaceholder')}
+        placeholderTextColor={P.fTextMuted}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        onFocus={() => setFocusedField('resetEmail')}
+        onBlur={() => setFocusedField('')}
+        onSubmitEditing={handleForgotPassword}
+      />
+      {!!resetDevCode && (
+        <View style={s.mfaDevBadge}>
+          <Text style={s.mfaDevText}>Código de dev: {resetDevCode}</Text>
+        </View>
+      )}
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.7 }]} onPress={handleForgotPassword} disabled={loading}>
+        <Text style={s.submitBtnText}>{loading ? t('auth.forgotBtnLoading') : t('auth.forgotBtn')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={s.backBtn} onPress={() => { setAuthMode('login'); setResetStep('request'); setResetEmail(''); setError(''); }}>
+        <Text style={s.backBtnText}>{t('auth.backToLogin')}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  // ── Reset password view (paso 2: código + nueva contraseña) ───────────────
+  const ResetView = () => (
+    <>
+      <Text style={s.formTitle}>{t('auth.resetTitle')}</Text>
+      <Text style={s.formSub}>{t('auth.resetSubtitle', { email: resetEmail })}</Text>
+      {!!resetDevCode && (
+        <View style={s.mfaDevBadge}>
+          <Text style={s.mfaDevText}>Código de dev: {resetDevCode}</Text>
+        </View>
+      )}
+      <Text style={s.label}>{t('auth.resetCodeLabel')}</Text>
+      <TextInput
+        style={inp('resetCode')}
+        value={resetCode}
+        onChangeText={setResetCode}
+        placeholder={t('auth.resetCodePlaceholder')}
+        placeholderTextColor={P.fTextMuted}
+        keyboardType="number-pad"
+        maxLength={6}
+        onFocus={() => setFocusedField('resetCode')}
+        onBlur={() => setFocusedField('')}
+      />
+      <Text style={s.label}>{t('auth.resetNewPasswordLabel')}</Text>
+      <TextInput
+        style={inp('resetNewPassword')}
+        value={resetNewPassword}
+        onChangeText={setResetNewPassword}
+        placeholder={t('auth.passwordPlaceholder')}
+        placeholderTextColor={P.fTextMuted}
+        secureTextEntry
+        onFocus={() => setFocusedField('resetNewPassword')}
+        onBlur={() => setFocusedField('')}
+        onSubmitEditing={handleResetPassword}
+      />
+      <PasswordStrengthBar pwd={resetNewPassword} />
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+      <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.7 }]} onPress={handleResetPassword} disabled={loading}>
+        <Text style={s.submitBtnText}>{loading ? t('auth.resetBtnLoading') : t('auth.resetBtn')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={s.backBtn} onPress={() => { setResetStep('request'); setResetCode(''); setResetNewPassword(''); setError(''); }}>
+        <Text style={s.backBtnText}>{t('auth.resetBackToEmail')}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   // ── Login view ────────────────────────────────────────────────────────────
   const LoginView = () => (
     <>
@@ -680,6 +883,12 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <TouchableOpacity style={[s.submitBtn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading}>
         <Text style={s.submitBtnText}>{loading ? t('auth.loginBtnLoading') : t('auth.loginBtn')}</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={{ marginTop: 14, alignItems: 'center' }}
+        onPress={() => { setAuthMode('forgot'); setResetEmail(email); setResetStep('request'); setError(''); }}
+      >
+        <Text style={s.forgotLink}>{t('auth.forgotPassword')}</Text>
+      </TouchableOpacity>
     </>
   );
 
@@ -698,6 +907,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <TextInput style={inp('email')} value={email} onChangeText={setEmail} placeholder={t('auth.emailPlaceholder')} placeholderTextColor={P.fTextMuted} autoCapitalize="none" keyboardType="email-address" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
       <TextInput style={inp('password')} value={password} onChangeText={setPassword} placeholder={t('auth.passwordPlaceholder')} placeholderTextColor={P.fTextMuted} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField('')} />
+      <PasswordStrengthBar pwd={password} />
       <Text style={[s.label, { marginTop: 16 }]}>{t('auth.billingLabel')}</Text>
       <View style={s.billingRow}>
         <Pressable style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]} onPress={() => setBillingModel('creditos')}>
@@ -803,6 +1013,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           <View style={s.formCard}>
             {mfaChallengeId ? (
               <MfaView />
+            ) : authMode === 'forgot' ? (
+              resetStep === 'confirm' ? <ResetView /> : <ForgotView />
             ) : (
               <>
                 <View style={s.tabs}>
