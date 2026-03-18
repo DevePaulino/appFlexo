@@ -1307,6 +1307,7 @@ export default function ConfigScreen({ route, currentUser }) {
       return {
         key,
         label: String(item?.label || item?.valor || item?.key || raw).trim(),
+        color: item?.color || null,
       };
     })
     .filter((r) => r.key);
