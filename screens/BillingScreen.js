@@ -24,15 +24,15 @@ const C = {
   text:        '#0F172A',
   textSec:     '#475569',
   textMuted:   '#94A3B8',
-  accent:      '#E8522A',
-  accentDim:   'rgba(232,82,42,0.10)',
-  accentBorder:'rgba(232,82,42,0.25)',
+  accent:      '#3B82F6',
+  accentDim:   'rgba(59,130,246,0.08)',
+  accentBorder:'rgba(59,130,246,0.22)',
   green:       '#16A34A',
   greenDim:    'rgba(22,163,74,0.10)',
   greenBorder: 'rgba(22,163,74,0.25)',
-  blue:        '#2563EB',
-  blueDim:     'rgba(37,99,235,0.08)',
-  blueBorder:  'rgba(37,99,235,0.20)',
+  blue:        '#3B82F6',
+  blueDim:     'rgba(59,130,246,0.08)',
+  blueBorder:  'rgba(59,130,246,0.22)',
   warn:        '#D97706',
   warnDim:     'rgba(217,119,6,0.08)',
   warnBorder:  'rgba(217,119,6,0.22)',
@@ -146,8 +146,8 @@ export default function BillingScreen({ navigation, currentUser }) {
         <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
 
           {/* ── Plan actual ────────────────────────────────────────────── */}
-          <Text style={s.sectionLabel}>{t('billing.currentPlan')}</Text>
-          <View style={s.card}>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t('billing.currentPlan')}</Text>
             <View style={s.planRow}>
               <View style={[s.modeBadge, isSub ? s.modeBadgeSub : s.modeBadgeCredits]}>
                 <Text style={[s.modeBadgeText, isSub ? s.modeBadgeTextSub : s.modeBadgeTextCredits]}>
@@ -176,33 +176,35 @@ export default function BillingScreen({ navigation, currentUser }) {
           </View>
 
           {/* ── Cambiar plan ───────────────────────────────────────────── */}
-          <Text style={s.sectionLabel}>{t('billing.changePlan')}</Text>
-          <View style={s.planToggleRow}>
-            <TouchableOpacity
-              style={[s.planToggleBtn, isCredits && s.planToggleBtnActive]}
-              onPress={() => !isCredits && handleChangePlan('creditos')}
-              disabled={isCredits || changingPlan}
-            >
-              <Text style={[s.planToggleBtnText, isCredits && s.planToggleBtnTextActive]}>
-                {t('billing.modeCredits')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.planToggleBtn, isSub && s.planToggleBtnActive]}
-              onPress={() => !isSub && handleChangePlan('suscripcion')}
-              disabled={isSub || changingPlan}
-            >
-              <Text style={[s.planToggleBtnText, isSub && s.planToggleBtnTextActive]}>
-                {t('billing.modeSubscription')}
-              </Text>
-            </TouchableOpacity>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t('billing.changePlan')}</Text>
+            <View style={s.planToggleRow}>
+              <TouchableOpacity
+                style={[s.planToggleBtn, isCredits && s.planToggleBtnActive]}
+                onPress={() => !isCredits && handleChangePlan('creditos')}
+                disabled={isCredits || changingPlan}
+              >
+                <Text style={[s.planToggleBtnText, isCredits && s.planToggleBtnTextActive]}>
+                  {t('billing.modeCredits')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.planToggleBtn, isSub && s.planToggleBtnActive]}
+                onPress={() => !isSub && handleChangePlan('suscripcion')}
+                disabled={isSub || changingPlan}
+              >
+                <Text style={[s.planToggleBtnText, isSub && s.planToggleBtnTextActive]}>
+                  {t('billing.modeSubscription')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* ── Coste de acciones (solo créditos) ─────────────────────── */}
           {isCredits && (
             <>
-              <Text style={s.sectionLabel}>{t('billing.costsTitle')}</Text>
-              <View style={s.card}>
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>{t('billing.costsTitle')}</Text>
                 <View style={s.costRow}>
                   <Text style={s.costIcon}>📋</Text>
                   <View style={s.costInfo}>
@@ -223,46 +225,48 @@ export default function BillingScreen({ navigation, currentUser }) {
                     <Text style={s.costBadgeText}>{status?.credit_cost_features ?? 10} {t('billing.credits')}</Text>
                   </View>
                 </View>
+
+                {/* Aviso pasarela simulada */}
+                {!status?.stripe_enabled && (
+                  <View style={s.warnBox}>
+                    <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
+                  </View>
+                )}
               </View>
 
-              {/* ── Aviso pasarela simulada ──────────────────────────── */}
-              {!status?.stripe_enabled && (
-                <View style={s.warnBox}>
-                  <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
-                </View>
-              )}
-
               {/* ── Comprar créditos ──────────────────────────────────── */}
-              <Text style={s.sectionLabel}>{t('billing.buyCredits')}</Text>
-              <View style={s.packagesGrid}>
-                {(status?.credit_packages || []).map((pkg) => (
-                  <View key={pkg.id} style={[s.packageCard, pkg.popular && s.packageCardPopular]}>
-                    {pkg.popular && (
-                      <View style={s.popularBadge}>
-                        <Text style={s.popularBadgeText}>{t('billing.popular')}</Text>
-                      </View>
-                    )}
-                    <Text style={s.packageCredits}>{pkg.credits}</Text>
-                    <Text style={s.packageCreditsLabel}>{t('billing.credits')}</Text>
-                    <Text style={s.packagePrice}>{pkg.price_eur?.toFixed(2)} €</Text>
-                    <TouchableOpacity
-                      style={[s.buyBtn, pkg.popular && s.buyBtnPopular, buying === pkg.id && { opacity: 0.6 }]}
-                      onPress={() => handleBuy(pkg)}
-                      disabled={!!buying}
-                    >
-                      <Text style={[s.buyBtnText, pkg.popular && s.buyBtnTextPopular]}>
-                        {buying === pkg.id ? t('billing.buying') : t('billing.buy')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>{t('billing.buyCredits')}</Text>
+                <View style={s.packagesGrid}>
+                  {(status?.credit_packages || []).map((pkg) => (
+                    <View key={pkg.id} style={[s.packageCard, pkg.popular && s.packageCardPopular]}>
+                      {pkg.popular && (
+                        <View style={s.popularBadge}>
+                          <Text style={s.popularBadgeText}>{t('billing.popular')}</Text>
+                        </View>
+                      )}
+                      <Text style={s.packageCredits}>{pkg.credits}</Text>
+                      <Text style={s.packageCreditsLabel}>{t('billing.credits')}</Text>
+                      <Text style={s.packagePrice}>{pkg.price_eur?.toFixed(2)} €</Text>
+                      <TouchableOpacity
+                        style={[s.buyBtn, pkg.popular && s.buyBtnPopular, buying === pkg.id && { opacity: 0.6 }]}
+                        onPress={() => handleBuy(pkg)}
+                        disabled={!!buying}
+                      >
+                        <Text style={[s.buyBtnText, pkg.popular && s.buyBtnTextPopular]}>
+                          {buying === pkg.id ? t('billing.buying') : t('billing.buy')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
               </View>
             </>
           )}
 
           {/* ── Historial ─────────────────────────────────────────────── */}
-          <Text style={s.sectionLabel}>{t('billing.historyTitle')}</Text>
-          <View style={s.card}>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t('billing.historyTitle')}</Text>
             {history.length === 0 ? (
               <Text style={s.emptyHistory}>{t('billing.historyEmpty')}</Text>
             ) : (
@@ -307,6 +311,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
+    minHeight: 96,
     borderBottomWidth: 1,
     borderBottomColor: C.headerBorder,
     shadowColor: '#0F172A',
@@ -314,6 +319,7 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
+    justifyContent: 'center',
   },
   headerRow: {
     flexDirection: 'row',
@@ -334,19 +340,36 @@ const s = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '900',
     color: '#F1F5F9',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
     textAlign: 'center',
   },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 14 },
+  scrollContent: { padding: 12, paddingTop: 14 },
 
-  sectionLabel: {
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
     color: '#F1F5F9',
@@ -355,24 +378,11 @@ const s = StyleSheet.create({
     backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 8,
-    marginTop: 16,
-    alignSelf: 'flex-start',
-  },
-
-  card: {
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 4,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    marginHorizontal: -12,
+    marginTop: -12,
+    marginBottom: 14,
+    borderTopLeftRadius: 13,
+    borderTopRightRadius: 13,
   },
 
   // Plan
@@ -389,14 +399,14 @@ const s = StyleSheet.create({
   modeBadgeTextCredits: { color: C.accent },
   modeBadgeTextSub:     { color: C.green },
   balanceNumber: {
-    fontSize: 56,
+    fontSize: 40,
     fontWeight: '900',
     color: C.accent,
-    lineHeight: 62,
-    letterSpacing: -2,
+    lineHeight: 46,
+    letterSpacing: -1,
   },
   balanceLabel: { fontSize: 13, color: C.textSec, marginTop: 2 },
-  unlimitedText: { fontSize: 22, fontWeight: '800', color: C.green },
+  unlimitedText: { fontSize: 18, fontWeight: '800', color: C.green },
   planDesc: { fontSize: 13, color: C.textSec, marginTop: 6, lineHeight: 20 },
   planPriceLabel: { fontSize: 13, fontWeight: '600', color: C.textMuted },
 
@@ -423,10 +433,9 @@ const s = StyleSheet.create({
     backgroundColor: C.warnDim,
     borderWidth: 1,
     borderColor: C.warnBorder,
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 10,
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 14,
   },
   warnText: { fontSize: 11, color: C.warn, lineHeight: 17 },
 
@@ -435,27 +444,22 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 4,
   },
   packageCard: {
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: C.border,
     padding: 14,
     alignItems: 'center',
     width: Platform.OS === 'web' ? '22%' : '47%',
     minWidth: 130,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
     position: 'relative',
   },
   packageCardPopular: {
     borderColor: C.accentBorder,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    backgroundColor: C.blueDim,
   },
   popularBadge: {
     position: 'absolute',
@@ -466,16 +470,16 @@ const s = StyleSheet.create({
     paddingVertical: 2,
   },
   popularBadgeText: { fontSize: 10, fontWeight: '700', color: '#FFF' },
-  packageCredits: { fontSize: 32, fontWeight: '900', color: C.text, lineHeight: 38 },
+  packageCredits: { fontSize: 28, fontWeight: '900', color: C.text, lineHeight: 34 },
   packageCreditsLabel: { fontSize: 11, color: C.textMuted, marginBottom: 4 },
-  packagePrice: { fontSize: 15, fontWeight: '700', color: C.textSec, marginBottom: 10 },
+  packagePrice: { fontSize: 14, fontWeight: '700', color: C.textSec, marginBottom: 10 },
   buyBtn: {
     width: '100%',
     paddingVertical: 9,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.bg,
+    borderWidth: 1.5,
+    borderColor: C.borderStrong,
+    backgroundColor: 'transparent',
     alignItems: 'center',
   },
   buyBtnPopular: { backgroundColor: C.accent, borderColor: C.accent },
@@ -501,16 +505,15 @@ const s = StyleSheet.create({
   // Plan toggle
   planToggleRow: {
     flexDirection: 'row',
-    backgroundColor: C.surface,
-    borderRadius: 12,
+    backgroundColor: '#EEF2F8',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: C.border,
     overflow: 'hidden',
-    marginBottom: 4,
   },
   planToggleBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 11,
     alignItems: 'center',
   },
   planToggleBtnActive: {

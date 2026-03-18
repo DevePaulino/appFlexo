@@ -3254,7 +3254,17 @@ def api_roles_permissions():
                 except Exception:
                     parsed = None
             if not isinstance(parsed, dict):
-                parsed = ROLE_PERMISSIONS_DEFAULT
+                parsed = dict(ROLE_PERMISSIONS_DEFAULT)
+
+            # Backfill any permission keys missing from stored data using defaults
+            # (handles new permissions added after initial save, e.g. manage_billing)
+            for role_key, default_perms in ROLE_PERMISSIONS_DEFAULT.items():
+                if role_key not in parsed:
+                    parsed[role_key] = dict(default_perms)
+                else:
+                    for perm_key, default_val in default_perms.items():
+                        if perm_key not in parsed[role_key]:
+                            parsed[role_key][perm_key] = default_val
 
             # Also return the list of known permissions and available roles
             col_roles = get_empresa_collection('config_opciones', empresa_id)
@@ -3653,7 +3663,7 @@ def update_settings_catalogo_item(item_id):
         if valor_actual.strip().lower() == nuevo_valor.strip().lower():
             # Name unchanged — but color might still need updating
             nuevo_color_check = (data.get('color') or '').strip()
-            if categoria == 'estados_pedido' and nuevo_color_check:
+            if nuevo_color_check and categoria in ('estados_pedido', 'roles'):
                 col.update_one({'_id': ObjectId(item_id)}, {'$set': {'color': nuevo_color_check}})
                 return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': True}), 200
             return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': False}), 200
@@ -3681,7 +3691,7 @@ def update_settings_catalogo_item(item_id):
         # Actualizar valor, label y color (si se provee y es un estado de pedido)
         update_fields = {'valor': nuevo_valor, 'label': nuevo_label}
         nuevo_color = (data.get('color') or '').strip()
-        if categoria == 'estados_pedido' and nuevo_color:
+        if nuevo_color and categoria in ('estados_pedido', 'roles'):
             update_fields['color'] = nuevo_color
         col.update_one({'_id': ObjectId(item_id)}, {'$set': update_fields})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan

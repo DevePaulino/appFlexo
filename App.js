@@ -24,6 +24,7 @@ import ProduccionScreen from './screens/ProduccionScreen';
 import NewQuoteScreen from './screens/NewQuoteScreen';
 import ConfigScreen from './screens/ConfigScreen';
 import MaterialScreen from './screens/MaterialScreen';
+import CatalogoMaterialesScreen from './screens/CatalogoMaterialesScreen';
 import SettingMenuScreen from './screens/SettingMenuScreen';
 import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
@@ -71,6 +72,7 @@ const buildActivosSubmenu = (t) => [
   { key: 'activos-clientes', label: t('nav.clientes'), target: { type: 'stack', tab: 'Activos', route: 'ActivosClientes' } },
   { key: 'activos-maquinas', label: t('nav.maquinas'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMaquinas' } },
   { key: 'activos-materiales', label: t('nav.materiales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMateriales' } },
+  { key: 'activos-gestion-materiales', label: t('nav.gestionMateriales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosGestionMateriales' } },
   { key: 'activos-troqueles', label: t('nav.troqueles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosTroqueles' } },
 ];
 
@@ -88,6 +90,7 @@ const linking = {
               ActivosClientes: 'activos/clientes',
               ActivosMaquinas: 'activos/maquinas',
               ActivosMateriales: 'activos/materiales',
+              ActivosGestionMateriales: 'activos/gestion-materiales',
               ActivosTroqueles: 'activos/troqueles',
               ActivosUsuariosRoles: 'activos/usuarios-roles',
             },
@@ -431,7 +434,10 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
         return true;
       })
     : openSubmenu === 'Activos'
-      ? buildActivosSubmenu(t).filter(item => consumoModuloActivo || item.key !== 'activos-materiales')
+      ? buildActivosSubmenu(t).filter(item => {
+          if (item.key === 'activos-gestion-materiales') return consumoModuloActivo;
+          return true;
+        })
       : [];
 
   return (
@@ -555,6 +561,10 @@ function ActivosNavigator({ currentUser }) {
       />
       <ActivosStack.Screen
         name="ActivosMateriales"
+        children={(props) => <CatalogoMaterialesScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
+        name="ActivosGestionMateriales"
         children={(props) => <MaterialScreen {...props} currentUser={currentUser} />}
       />
       <ActivosStack.Screen

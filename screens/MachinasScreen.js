@@ -89,29 +89,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  mainBlock: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    marginHorizontal: 12,
-    marginVertical: 12,
-  },
   tableContainer: {
     flex: 1,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#1E293B',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 10,
-    marginBottom: 4,
+    marginBottom: 6,
     borderRadius: 10,
+    minHeight: 44,
     alignItems: 'center',
   },
   tableRow: {
@@ -119,7 +111,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF2F8',
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 3,
     alignItems: 'center',
     minHeight: 46,
   },
@@ -131,11 +126,9 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   headerText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#F1F5F9',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
   },
 
   // ── Columnas ──────────────────────────────────────────
@@ -399,8 +392,7 @@ export default function MachinasScreen({ currentUser }) {
         />
       </View>
 
-      <View style={styles.mainBlock}>
-        {filtrados.length === 0 ? (
+      {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
             <EmptyState
               icon="🖨️"
@@ -567,7 +559,6 @@ export default function MachinasScreen({ currentUser }) {
             )}
           </ScrollView>
         )}
-      </View>
 
       <NuevaMaquinaModal
         visible={modalVisible}

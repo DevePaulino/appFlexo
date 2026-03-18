@@ -31,11 +31,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const consumoModuloActivo = modulos.consumo_material !== false;
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('catalogo'); // 'catalogo' | 'stock' | 'historial'
+  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'stock' | 'historial' | 'proveedores'
 
   useEffect(() => {
     AsyncStorage.getItem('MaterialScreen_activeTab')
-      .then(v => { if (v && (v !== 'historial' || consumoModuloActivo)) setActiveTab(v); })
+      .then(v => { if (v && v !== 'catalogo' && (v !== 'historial' || consumoModuloActivo)) setActiveTab(v); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -188,8 +188,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
   // Load on focus
   useFocusEffect(
     React.useCallback(() => {
+      loadCatalogo(); // always load for stock form dropdowns
       if (activeTab === 'resumen' || activeTab === 'stock') loadStock();
-      if (activeTab === 'catalogo') loadCatalogo();
       if (activeTab === 'historial') loadConsumos(1);
       if (activeTab === 'proveedores') loadProveedores();
     }, [activeTab, loadCatalogo, loadStock, loadConsumos, loadProveedores])
@@ -198,7 +198,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
   // Load when tab changes
   useEffect(() => {
     if (activeTab === 'resumen' || activeTab === 'stock') loadStock();
-    else if (activeTab === 'catalogo') loadCatalogo();
     else if (activeTab === 'historial') loadConsumos(1);
     else if (activeTab === 'proveedores') loadProveedores();
   }, [activeTab]);
@@ -1560,7 +1559,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
       <View style={styles.pageHeader}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.pageTitle}>{t('nav.materiales')}</Text>
+          <Text style={styles.pageTitle}>{t('nav.gestionMateriales')}</Text>
           <View style={{ width: 38 }} />
         </View>
         {activeTab === 'stock' && (
@@ -1576,7 +1575,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {['resumen', 'catalogo', 'stock', 'proveedores', ...(consumoModuloActivo ? ['historial'] : [])].map(tab => (
+        {['resumen', 'stock', 'proveedores', ...(consumoModuloActivo ? ['historial'] : [])].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
@@ -1584,7 +1583,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
           >
             <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
               {tab === 'resumen' ? t('screens.materiales.tabResumen')
-                : tab === 'catalogo' ? t('screens.materiales.tabCatalogo')
                 : tab === 'stock' ? t('screens.materiales.tabStock')
                 : tab === 'proveedores' ? t('screens.materiales.tabProveedores')
                 : t('screens.materiales.tabHistorial')}
@@ -1595,13 +1593,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
       {/* Tab content */}
       {activeTab === 'resumen' && renderResumenTab()}
-      {activeTab === 'catalogo' && renderCatalogoTab()}
       {activeTab === 'stock' && renderStockTab()}
       {activeTab === 'proveedores' && renderProveedoresTab()}
       {activeTab === 'historial' && consumoModuloActivo && renderHistorialTab()}
 
       {/* Modals */}
-      {catModal.visible && renderCatModal()}
       {stockModal.visible && renderStockModal()}
       {consumoModal.visible && renderConsumoModal()}
       {provModal.visible && renderProvModal()}
@@ -1619,6 +1615,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
+    minHeight: 96,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.07)',
     shadowColor: '#0F172A',
@@ -1626,6 +1623,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
+    justifyContent: 'center',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1721,7 +1719,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 2,
   },
-  th: { fontSize: 12, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
+  th: { fontSize: 12, fontWeight: '800', color: '#F1F5F9' },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',

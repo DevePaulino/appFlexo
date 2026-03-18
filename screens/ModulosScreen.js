@@ -14,6 +14,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
+    minHeight: 96,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.07)',
     shadowColor: '#0F172A',
@@ -21,6 +22,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
+    justifyContent: 'center',
   },
   headerTopRow: {
     flexDirection: 'row',

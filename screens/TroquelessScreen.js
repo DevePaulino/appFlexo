@@ -244,15 +244,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
-  mainBlock: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    marginHorizontal: 12,
-    marginVertical: 12,
-  },
   tableContent: {
     width: '100%',
     minWidth: 1200,
@@ -367,14 +358,14 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   statusBadge: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#fff',
-    backgroundColor: '#E55A2B',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 999,
     textAlign: 'center',
+    alignSelf: 'flex-start',
   },
   content: {
     padding: 16,
@@ -988,8 +979,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
         />
       </View>
 
-      <View style={styles.mainBlock}>
-        {filtrados.length === 0 ? (
+      {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
             <EmptyState
               icon="✂️"
@@ -1062,7 +1052,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                     <Text style={styles.cellText} numberOfLines={1}>{troquele.distanciaSesgado || '-'}</Text>
                   </View>
                   <View style={[styles.tableCell, styles.colEstado]}>
-                    <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#16A34A' : '#FF9800' }]}>
+                    <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#16A34A' : '#D97706' }]}>
                       {troquele.estado}
                     </Text>
                   </View>
@@ -1109,7 +1099,6 @@ export default function TroquelessScreen({ currentUser, navigation }) {
             </ScrollView>
           </ScrollView>
         )}
-      </View>
 
       <NuevoTroquelModal
         visible={modalVisible}
@@ -1136,7 +1125,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
               <>
                 <View style={styles.detailHeadRow}>
                   <Text style={styles.detailTitle}>{troquelSeleccionado.numero}</Text>
-                  <Text style={[styles.statusBadge, { backgroundColor: troquelSeleccionado.estado === 'Disponible' ? '#16A34A' : '#FF9800' }]}>
+                  <Text style={[styles.statusBadge, { backgroundColor: troquelSeleccionado.estado === 'Disponible' ? '#16A34A' : '#D97706' }]}>
                     {troquelSeleccionado.estado}
                   </Text>
                 </View>
