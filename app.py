@@ -3539,8 +3539,8 @@ def crear_config_opcion():
             'empresa_id': empresa_id,
             'fecha_creacion': datetime.now().isoformat()
         }
-        # Guardar color si es un estado de pedido o un rol nuevo
-        if categoria == 'estados_pedido' and color:
+        # Guardar color si la categoría lo soporta
+        if color and categoria in ('estados_pedido', 'acabados', 'tintas_especiales'):
             doc['color'] = color
         elif categoria == 'roles':
             import random as _random
@@ -3732,7 +3732,7 @@ def update_settings_catalogo_item(item_id):
         if valor_actual.strip().lower() == nuevo_valor.strip().lower():
             # Name unchanged — but color might still need updating
             nuevo_color_check = (data.get('color') or '').strip()
-            if nuevo_color_check and categoria in ('estados_pedido', 'roles'):
+            if nuevo_color_check and categoria in ('estados_pedido', 'roles', 'acabados', 'tintas_especiales'):
                 col.update_one({'_id': ObjectId(item_id)}, {'$set': {'color': nuevo_color_check}})
                 return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': True}), 200
             return jsonify({'success': True, 'id': item_id, 'valor': valor_actual, 'changed': False}), 200
@@ -3757,10 +3757,10 @@ def update_settings_catalogo_item(item_id):
             for row in col.find({'categoria': categoria, '_id': {'$ne': ObjectId(item_id)}, 'empresa_id': empresa_id}):
                 if slugify_estado(row.get('valor')) == slug_nuevo:
                     return jsonify({'error': 'Ya existe un valor equivalente en esa categoría'}), 409
-        # Actualizar valor, label y color (si se provee y es un estado de pedido)
+        # Actualizar valor, label y color (si se provee)
         update_fields = {'valor': nuevo_valor, 'label': nuevo_label}
         nuevo_color = (data.get('color') or '').strip()
-        if nuevo_color and categoria in ('estados_pedido', 'roles'):
+        if nuevo_color and categoria in ('estados_pedido', 'roles', 'acabados', 'tintas_especiales'):
             update_fields['color'] = nuevo_color
         col.update_one({'_id': ObjectId(item_id)}, {'$set': update_fields})
         # TODO: cascade_role_key_rename y cascade_estado_slug_rename deben adaptarse a MongoDB si se usan
