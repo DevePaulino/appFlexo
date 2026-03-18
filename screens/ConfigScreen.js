@@ -809,6 +809,15 @@ function ColorPickerInput({ value, onChange }) {
   const displayColor = value || '#94A3B8';
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {Platform.OS === 'web' && (
+        <input
+          ref={inputRef}
+          type="color"
+          value={value || '#3B82F6'}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+        />
+      )}
       <TouchableOpacity
         onPress={() => inputRef.current?.click?.()}
         style={{
@@ -823,23 +832,14 @@ function ColorPickerInput({ value, onChange }) {
           borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
         }} />
         <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
-          {value ? value.toUpperCase() : 'Sin color'}
+          {value ? 'Color' : 'Sin color'}
         </Text>
       </TouchableOpacity>
       {value ? (
-        <TouchableOpacity onPress={() => onChange('')}>
-          <Text style={{ fontSize: 11, color: '#94A3B8' }}>✕</Text>
+        <TouchableOpacity onPress={() => onChange('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '700' }}>✕</Text>
         </TouchableOpacity>
       ) : null}
-      {Platform.OS === 'web' && (
-        <input
-          ref={inputRef}
-          type="color"
-          value={value || '#3B82F6'}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-        />
-      )}
     </View>
   );
 }
