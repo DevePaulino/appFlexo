@@ -115,14 +115,14 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   groupTitle: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#F1F5F9',
     marginBottom: 10,
     marginTop: 0,
     alignSelf: 'flex-start',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#1E293B',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -147,10 +147,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -382,7 +382,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderBottomWidth: 1,
+    backgroundColor: '#1E293B',
+    borderBottomWidth: 0,
     gap: 7,
   },
   matrixGroupDot: {
@@ -395,6 +396,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
+    color: '#F1F5F9',
   },
   matrixRow: {
     flexDirection: 'row',
@@ -2421,9 +2423,9 @@ export default function ConfigScreen({ route, currentUser }) {
                     return (
                       <View key={group.key} style={[styles.matrixGroup, { borderColor: group.border }]}>
                         {/* Cabecera del grupo */}
-                        <View style={[styles.matrixGroupHeader, { backgroundColor: group.bg, borderBottomColor: group.border }]}>
+                        <View style={styles.matrixGroupHeader}>
                           <View style={[styles.matrixGroupDot, { backgroundColor: group.color }]} />
-                          <Text style={[styles.matrixGroupLabel, { color: group.color }]}>{group.label}</Text>
+                          <Text style={styles.matrixGroupLabel}>{group.label}</Text>
                         </View>
 
                         {/* Filas del grupo */}

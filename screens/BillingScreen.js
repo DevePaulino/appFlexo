@@ -348,13 +348,17 @@ const s = StyleSheet.create({
 
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: C.textMuted,
-    letterSpacing: 1.5,
+    fontWeight: '800',
+    color: '#F1F5F9',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
     marginBottom: 8,
     marginTop: 16,
-    paddingHorizontal: 2,
+    alignSelf: 'flex-start',
   },
 
   card: {
