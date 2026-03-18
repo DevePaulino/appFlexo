@@ -806,9 +806,9 @@ const ESTADO_RULE_CONFIG = [
 
 function ColorPickerInput({ value, onChange }) {
   const inputRef = React.useRef(null);
-  const displayColor = value || '#94A3B8';
+  const displayColor = value || '#E2E8F0';
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View>
       {Platform.OS === 'web' && (
         <input
           ref={inputRef}
@@ -818,28 +818,13 @@ function ColorPickerInput({ value, onChange }) {
           style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
         />
       )}
-      <TouchableOpacity
-        onPress={() => inputRef.current?.click?.()}
-        style={{
-          flexDirection: 'row', alignItems: 'center', gap: 8,
-          backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
-          borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
-        }}
-      >
+      <TouchableOpacity onPress={() => inputRef.current?.click?.()}>
         <View style={{
-          width: 20, height: 20, borderRadius: 10,
+          width: 24, height: 24, borderRadius: 12,
           backgroundColor: displayColor,
           borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
         }} />
-        <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
-          {value ? 'Color' : 'Sin color'}
-        </Text>
       </TouchableOpacity>
-      {value ? (
-        <TouchableOpacity onPress={() => onChange('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '700' }}>✕</Text>
-        </TouchableOpacity>
-      ) : null}
     </View>
   );
 }
