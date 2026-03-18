@@ -804,6 +804,46 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
+function ColorPickerInput({ value, onChange }) {
+  const inputRef = React.useRef(null);
+  const displayColor = value || '#94A3B8';
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <TouchableOpacity
+        onPress={() => inputRef.current?.click?.()}
+        style={{
+          flexDirection: 'row', alignItems: 'center', gap: 8,
+          backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
+          borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+        }}
+      >
+        <View style={{
+          width: 20, height: 20, borderRadius: 10,
+          backgroundColor: displayColor,
+          borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
+        }} />
+        <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
+          {value ? value.toUpperCase() : 'Sin color'}
+        </Text>
+      </TouchableOpacity>
+      {value ? (
+        <TouchableOpacity onPress={() => onChange('')}>
+          <Text style={{ fontSize: 11, color: '#94A3B8' }}>✕</Text>
+        </TouchableOpacity>
+      ) : null}
+      {Platform.OS === 'web' && (
+        <input
+          ref={inputRef}
+          type="color"
+          value={value || '#3B82F6'}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+        />
+      )}
+    </View>
+  );
+}
+
 function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette }) {
   const { t } = useTranslation();
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
@@ -848,20 +888,8 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
               <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingBottom: 2 }}>
-            {(palette || []).map(color => (
-              <TouchableOpacity
-                key={color}
-                onPress={() => onEditColorChange(color)}
-                style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  backgroundColor: color,
-                  borderWidth: editing.color === color ? 2 : 1,
-                  borderColor: editing.color === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
-                  transform: editing.color === color ? [{ scale: 1.2 }] : [],
-                }}
-              />
-            ))}
+          <View style={{ marginTop: 10, paddingBottom: 2 }}>
+            <ColorPickerInput value={editing.color || displayColor} onChange={onEditColorChange} />
           </View>
         </View>
       ) : (
@@ -1659,7 +1687,7 @@ export default function ConfigScreen({ route, currentUser }) {
       // Generar color para categorías que lo soporten
       let color = '';
       if (COLOR_CATS.includes(categoria)) {
-        color = newItemColors[categoria] || generateColorFromHash(valor);
+        color = newItemColors[categoria] || (categoria === 'estados_pedido' ? generateColorFromHash(valor) : '');
         setNewItemColors((prev) => ({ ...prev, [categoria]: '' }));
       }
 
@@ -2107,26 +2135,11 @@ export default function ConfigScreen({ route, currentUser }) {
           </TouchableOpacity>
         </View>
         {['estados_pedido', 'acabados', 'tintas_especiales'].includes(categoryKey) && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
-            {ESTADO_PALETTE.map(color => (
-              <TouchableOpacity
-                key={color}
-                onPress={() => setNewItemColors(prev => ({ ...prev, [categoryKey]: prev[categoryKey] === color ? '' : color }))}
-                style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  backgroundColor: color,
-                  borderWidth: newItemColors[categoryKey] === color ? 2 : 1,
-                  borderColor: newItemColors[categoryKey] === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
-                  transform: newItemColors[categoryKey] === color ? [{ scale: 1.2 }] : [],
-                }}
-              />
-            ))}
-            {inputs[categoryKey] ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newItemColors[categoryKey] || generateColorFromHash(inputs[categoryKey]), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
-                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>{t('screens.config.preview')}</Text>
-              </View>
-            ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <ColorPickerInput
+              value={newItemColors[categoryKey] || ''}
+              onChange={(color) => setNewItemColors(prev => ({ ...prev, [categoryKey]: color }))}
+            />
           </View>
         )}
 
@@ -2196,20 +2209,11 @@ export default function ConfigScreen({ route, currentUser }) {
                         </TouchableOpacity>
                       </View>
                       {COLOR_CATS_ITEM.has(categoryKey) && (
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingBottom: 2 }}>
-                          {ESTADO_PALETTE.map(color => (
-                            <TouchableOpacity
-                              key={color}
-                              onPress={() => setEditing((prev) => ({ ...prev, color }))}
-                              style={{
-                                width: 22, height: 22, borderRadius: 11,
-                                backgroundColor: color,
-                                borderWidth: editColor === color ? 2 : 1,
-                                borderColor: editColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
-                                transform: editColor === color ? [{ scale: 1.2 }] : [],
-                              }}
-                            />
-                          ))}
+                        <View style={{ marginTop: 10, paddingBottom: 2 }}>
+                          <ColorPickerInput
+                            value={editing.color || item.color || ''}
+                            onChange={(color) => setEditing((prev) => ({ ...prev, color }))}
+                          />
                         </View>
                       )}
                     </View>
