@@ -27,21 +27,56 @@ const PEDIDO_RULES_EXPANDED_KEY = 'config_pedido_rules_expanded';
 const ROLE_RULES_EXPANDED_KEY = 'config_role_rules_expanded';
 
 const ROLE_PERMISSION_CONFIG = [
-  { key: 'manage_app_settings', title: 'Editar configuración de la app', hint: 'Permite modificar catálogos y reglas globales.' },
-  { key: 'manage_roles_permissions', title: 'Editar roles y permisos', hint: 'Permite cambiar el rol activo y la matriz de permisos.' },
-  { key: 'manage_usuarios', title: 'Gestionar usuarios', hint: 'Permite añadir, editar y eliminar usuarios del sistema.' },
-  { key: 'manage_session_timeout', title: 'Gestionar tiempo de sesión', hint: 'Permite configurar el tiempo de inactividad por usuario antes del cierre automático.' },
-  { key: 'manage_estados_pedido', title: 'Editar estados de pedidos', hint: 'Permite crear, modificar y eliminar estados disponibles.' },
-  { key: 'editar_estado_finalizado', title: 'Editar Estado de trabajos Finalizados', hint: 'Permite avanzar o retroceder el estado de pedidos que ya están finalizados.' },
-  { key: 'edit_clientes', title: 'Editar clientes', hint: 'Alta, edición y eliminación de clientes.' },
-  { key: 'edit_maquinas', title: 'Editar máquinas', hint: 'Alta, edición y eliminación de máquinas.' },
-  { key: 'edit_pedidos', title: 'Editar pedidos', hint: 'Creación y cambios de pedidos y trabajos.' },
-  { key: 'edit_presupuestos', title: 'Editar presupuestos', hint: 'Creación, edición y aprobación de presupuestos.' },
-  { key: 'edit_produccion', title: 'Editar producción', hint: 'Enviar, mover, reordenar y cambiar estado en producción.' },
-  { key: 'eliminar_archivos', title: 'Eliminar archivos de pedidos', hint: 'Permite borrar artes y versiones unitario en el detalle de un pedido.' },
-  { key: 'edit_modo_creacion', title: 'Cambiar modo de creación de pedidos', hint: 'Permite alternar entre modo manual y automático en la configuración.' },
-  { key: 'manage_billing', title: 'Gestionar facturación', hint: 'Permite acceder y configurar el plan de pago, créditos e historial de facturación.' },
-  { key: 'manage_modulos', title: 'Gestionar módulos', hint: 'Permite activar o desactivar módulos opcionales de la aplicación.' },
+  { key: 'manage_app_settings',    title: 'Editar configuración de la app',           hint: 'Modificar catálogos y reglas globales.' },
+  { key: 'manage_roles_permissions',title: 'Editar roles y permisos',                  hint: 'Cambiar el rol activo y la matriz de permisos.' },
+  { key: 'manage_usuarios',         title: 'Gestionar usuarios',                       hint: 'Añadir, editar y eliminar usuarios.' },
+  { key: 'manage_session_timeout',  title: 'Tiempo de sesión',                         hint: 'Configurar el timeout de inactividad por usuario.' },
+  { key: 'manage_billing',          title: 'Facturación',                              hint: 'Plan de pago, créditos e historial.' },
+  { key: 'manage_modulos',          title: 'Módulos',                                  hint: 'Activar o desactivar módulos opcionales.' },
+  { key: 'edit_pedidos',            title: 'Editar pedidos',                           hint: 'Creación y cambios de pedidos y trabajos.' },
+  { key: 'edit_presupuestos',       title: 'Editar presupuestos',                      hint: 'Creación, edición y aprobación de presupuestos.' },
+  { key: 'manage_estados_pedido',   title: 'Editar estados de pedidos',                hint: 'Crear, modificar y eliminar estados.' },
+  { key: 'editar_estado_finalizado',title: 'Editar pedidos finalizados',               hint: 'Avanzar o retroceder el estado de pedidos finalizados.' },
+  { key: 'edit_modo_creacion',      title: 'Modo de creación',                         hint: 'Alternar entre modo manual y automático.' },
+  { key: 'edit_produccion',         title: 'Editar producción',                        hint: 'Enviar, mover, reordenar y cambiar estado.' },
+  { key: 'eliminar_archivos',       title: 'Eliminar archivos',                        hint: 'Borrar artes y versiones en el detalle de un pedido.' },
+  { key: 'edit_clientes',           title: 'Editar clientes',                          hint: 'Alta, edición y eliminación de clientes.' },
+  { key: 'edit_maquinas',           title: 'Editar máquinas',                          hint: 'Alta, edición y eliminación de máquinas.' },
+];
+
+const PERMISSION_GROUPS = [
+  {
+    key: 'admin',
+    label: 'Administración',
+    color: '#6D28D9',
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
+    permissions: ['manage_app_settings', 'manage_roles_permissions', 'manage_usuarios', 'manage_session_timeout', 'manage_billing', 'manage_modulos'],
+  },
+  {
+    key: 'pedidos',
+    label: 'Pedidos y presupuestos',
+    color: '#1D4ED8',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    permissions: ['edit_pedidos', 'edit_presupuestos', 'manage_estados_pedido', 'editar_estado_finalizado', 'edit_modo_creacion'],
+  },
+  {
+    key: 'produccion',
+    label: 'Producción',
+    color: '#065F46',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    permissions: ['edit_produccion', 'eliminar_archivos'],
+  },
+  {
+    key: 'activos',
+    label: 'Activos',
+    color: '#92400E',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+    permissions: ['edit_clientes', 'edit_maquinas'],
+  },
 ];
 
 const styles = StyleSheet.create({
@@ -326,6 +361,140 @@ const styles = StyleSheet.create({
   selectChipTextProtected: {
     color: '#FF9500',
   },
+  // ── Matriz de permisos ────────────────────────────────────────────────
+  matrixHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  matrixGroup: {
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  matrixGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    gap: 7,
+  },
+  matrixGroupDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  matrixGroupLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  matrixRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  matrixRowAlt: {
+    backgroundColor: '#FAFBFD',
+  },
+  matrixPermCol: {
+    flex: 1,
+    minWidth: 130,
+    paddingRight: 10,
+    paddingLeft: 8,
+  },
+  matrixPermTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 16,
+  },
+  matrixPermHint: {
+    fontSize: 10,
+    color: '#94A3B8',
+    lineHeight: 13,
+    marginTop: 2,
+  },
+  matrixRoleCol: {
+    width: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matrixRoleHeader: {
+    paddingHorizontal: 4,
+    paddingVertical: 5,
+    borderRadius: 7,
+    backgroundColor: '#EEF2F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 48,
+  },
+  matrixRoleHeaderProtected: {
+    backgroundColor: '#FFF7ED',
+  },
+  matrixRoleHeaderText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 12,
+  },
+  matrixRoleHeaderTextProtected: {
+    color: '#D97706',
+  },
+  matrixDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matrixDotActive: {
+    backgroundColor: '#E8522A',
+    borderColor: '#E8522A',
+  },
+  matrixDotProtected: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FED7AA',
+  },
+  matrixDotReadonly: {
+    opacity: 0.45,
+  },
+  matrixCheck: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 15,
+    marginTop: 1,
+  },
+  matrixLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  matrixLegendText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+  // ─────────────────────────────────────────────────────────────────────
   rulesHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2224,42 +2393,83 @@ export default function ConfigScreen({ route, currentUser }) {
             <EmptyState variant="inline" icon="📌" title={t('screens.config.sinRoles')} message={t('screens.config.addRolesFirst')} />
           ) : (
             <>
-              {ROLE_PERMISSION_CONFIG.map((perm) => {
-                return (
-                  <View key={`perm-rule-${perm.key}`} style={styles.ruleGroup}>
-                    <Text style={styles.ruleTitle}>{perm.title}</Text>
-                    <Text style={styles.ruleHint}>{perm.hint}</Text>
-                    <View style={styles.chipList}>
-                      {(availableRoles || []).map((role) => {
-                        const roleKey = String(role?.key || '').toLowerCase();
-                        const rolePerms = rolePermissions[roleKey] || {};
-                        const active = !!rolePerms[perm.key];
-                        const isAdministrador = roleKey === 'administrador';
-                        return (
-                          <TouchableOpacity
-                            key={`${perm.key}-${roleKey}`}
-                            style={[
-                              styles.selectChip, 
-                              active && styles.selectChipActive,
-                              !puedeEditarRolesPermisos && styles.selectChipDisabled,
-                              isAdministrador && styles.selectChipProtected
-                            ]}
-                            onPress={() => toggleRolePermission(roleKey, perm.key)}
-                            disabled={!puedeEditarRolesPermisos || isAdministrador}
-                          >
-                            <Text style={[
-                              styles.selectChipText, 
-                              active && styles.selectChipTextActive,
-                              !puedeEditarRolesPermisos && styles.selectChipTextDisabled,
-                              isAdministrador && styles.selectChipTextProtected
-                            ]}>{capitalizeFirst(role?.label || roleKey)}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minWidth: '100%' }}>
+                <View style={{ flex: 1 }}>
+
+                  {/* Cabecera de roles fija */}
+                  <View style={styles.matrixHeader}>
+                    <View style={styles.matrixPermCol} />
+                    {(availableRoles || []).map((role) => {
+                      const roleKey = String(role?.key || '').toLowerCase();
+                      const isAdmin = roleKey === 'administrador';
+                      const label = capitalizeFirst(role?.label || roleKey);
+                      return (
+                        <View key={roleKey} style={styles.matrixRoleCol}>
+                          <View style={[styles.matrixRoleHeader, isAdmin && styles.matrixRoleHeaderProtected]}>
+                            <Text style={[styles.matrixRoleHeaderText, isAdmin && styles.matrixRoleHeaderTextProtected]} numberOfLines={2} adjustsFontSizeToFit>
+                              {label}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
-                );
-              })}
+
+                  {/* Grupos de permisos */}
+                  {PERMISSION_GROUPS.map((group) => {
+                    const groupPerms = ROLE_PERMISSION_CONFIG.filter(p => group.permissions.includes(p.key));
+                    return (
+                      <View key={group.key} style={[styles.matrixGroup, { borderColor: group.border }]}>
+                        {/* Cabecera del grupo */}
+                        <View style={[styles.matrixGroupHeader, { backgroundColor: group.bg, borderBottomColor: group.border }]}>
+                          <View style={[styles.matrixGroupDot, { backgroundColor: group.color }]} />
+                          <Text style={[styles.matrixGroupLabel, { color: group.color }]}>{group.label}</Text>
+                        </View>
+
+                        {/* Filas del grupo */}
+                        {groupPerms.map((perm, i) => (
+                          <View key={perm.key} style={[styles.matrixRow, i % 2 === 0 && styles.matrixRowAlt]}>
+                            <View style={styles.matrixPermCol}>
+                              <Text style={styles.matrixPermTitle}>{perm.title}</Text>
+                              <Text style={styles.matrixPermHint} numberOfLines={2}>{perm.hint}</Text>
+                            </View>
+                            {(availableRoles || []).map((role) => {
+                              const roleKey = String(role?.key || '').toLowerCase();
+                              const active = !!(rolePermissions[roleKey] || {})[perm.key];
+                              const isAdmin = roleKey === 'administrador';
+                              const disabled = !puedeEditarRolesPermisos || isAdmin;
+                              return (
+                                <TouchableOpacity
+                                  key={`${perm.key}-${roleKey}`}
+                                  style={styles.matrixRoleCol}
+                                  onPress={() => toggleRolePermission(roleKey, perm.key)}
+                                  disabled={disabled}
+                                  activeOpacity={disabled ? 1 : 0.6}
+                                >
+                                  <View style={[
+                                    styles.matrixDot,
+                                    active && [styles.matrixDotActive, { backgroundColor: group.color, borderColor: group.color }],
+                                    isAdmin && styles.matrixDotProtected,
+                                    !puedeEditarRolesPermisos && !isAdmin && styles.matrixDotReadonly,
+                                  ]}>
+                                    {active && <Text style={styles.matrixCheck}>✓</Text>}
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {/* Leyenda */}
+              <View style={styles.matrixLegend}>
+                <View style={[styles.matrixDot, styles.matrixDotProtected, { width: 14, height: 14, borderRadius: 4 }]} />
+                <Text style={styles.matrixLegendText}>Administrador — siempre activo (protegido)</Text>
+              </View>
             </>
           )}
         </View>
