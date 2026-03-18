@@ -804,8 +804,9 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
-function ColorPickerInput({ value, onChange }) {
-  const inputRef = React.useRef(null);
+function ColorPickerInput({ value, onChange, inputRef: externalRef }) {
+  const internalRef = React.useRef(null);
+  const inputRef = externalRef || internalRef;
 
   return (
     <View>
@@ -815,6 +816,7 @@ function ColorPickerInput({ value, onChange }) {
           type="color"
           value={value || '#3B82F6'}
           onChange={(e) => onChange(e.target.value)}
+          onInput={(e) => onChange(e.target.value)}
           style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
         />
       )}
@@ -830,7 +832,7 @@ function ColorPickerInput({ value, onChange }) {
   );
 }
 
-function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette }) {
+function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette, editColorInputRef }) {
   const { t } = useTranslation();
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: item.id });
@@ -875,7 +877,7 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
             </TouchableOpacity>
           </View>
           <View style={{ marginTop: 10, paddingBottom: 2 }}>
-            <ColorPickerInput value={editing.color || displayColor} onChange={onEditColorChange} />
+            <ColorPickerInput value={editing.color || displayColor} onChange={onEditColorChange} inputRef={editColorInputRef} />
           </View>
         </View>
       ) : (
@@ -942,6 +944,8 @@ export default function ConfigScreen({ route, currentUser }) {
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
   const [editing, setEditing] = useState({ category: null, id: null, text: '', color: '' });
+  const currentEditingColorRef = React.useRef('');
+  const editColorInputRef = React.useRef(null);
   const [newItemColors, setNewItemColors] = useState({});
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState('30');
@@ -1863,11 +1867,14 @@ export default function ConfigScreen({ route, currentUser }) {
 
     // Activate inline editing state (works on web and native)
     const currentColor = item?.color || '';
+    currentEditingColorRef.current = currentColor;
     setEditing({ category: categoria, id: item.id, text: String(item?.valor || ''), color: currentColor });
   };
 
   const saveEditedValor = async () => {
-    const { category, id, text, color } = editing;
+    const { category, id, text } = editing;
+    const domColor = Platform.OS === 'web' ? (editColorInputRef.current?.value || '') : '';
+    const color = domColor || editing.color || currentEditingColorRef.current;
     if (!category || !id) {
       setEditing({ category: null, id: null, text: '', color: '' });
       return;
@@ -1884,10 +1891,11 @@ export default function ConfigScreen({ route, currentUser }) {
       return;
     }
     try {
+      const body = { valor: nuevo || originalValor, label: nuevo || originalValor, ...(color ? { color } : {}) };
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valor: nuevo || originalValor, label: nuevo || originalValor, ...(color ? { color } : {}) }),
+        body: JSON.stringify(body),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -1902,6 +1910,7 @@ export default function ConfigScreen({ route, currentUser }) {
     } catch (e) {
       Alert.alert('Error', `${t('screens.config.errEditValueFailed')}: ${e.message}`);
     } finally {
+      currentEditingColorRef.current = '';
       setEditing({ category: null, id: null, text: '', color: '' });
     }
   };
@@ -2147,9 +2156,10 @@ export default function ConfigScreen({ route, currentUser }) {
                       getColor={getEstadoColor}
                       editing={editing}
                       onEditChange={(t) => setEditing((prev) => ({ ...prev, text: t }))}
-                      onEditColorChange={(c) => setEditing((prev) => ({ ...prev, color: c }))}
+                      onEditColorChange={(c) => { currentEditingColorRef.current = c; setEditing((prev) => ({ ...prev, color: c })); }}
                       onEditSave={saveEditedValor}
                       palette={ESTADO_PALETTE}
+                      editColorInputRef={editColorInputRef}
                     />
                   );
                 })}
@@ -2190,7 +2200,7 @@ export default function ConfigScreen({ route, currentUser }) {
                         <TouchableOpacity style={styles.chipEdit} onPress={saveEditedValor}>
                           <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.chipEdit} onPress={() => setEditing({ category: null, id: null, text: '', color: '' })}>
+                        <TouchableOpacity style={styles.chipEdit} onPress={() => { currentEditingColorRef.current = ''; setEditing({ category: null, id: null, text: '', color: '' }); }}>
                           <Text style={styles.chipEditText}>✕</Text>
                         </TouchableOpacity>
                       </View>
@@ -2198,7 +2208,8 @@ export default function ConfigScreen({ route, currentUser }) {
                         <View style={{ marginTop: 10, paddingBottom: 2 }}>
                           <ColorPickerInput
                             value={editing.color || item.color || ''}
-                            onChange={(color) => setEditing((prev) => ({ ...prev, color }))}
+                            onChange={(c) => { currentEditingColorRef.current = c; setEditing((prev) => ({ ...prev, color: c })); }}
+                            inputRef={editColorInputRef}
                           />
                         </View>
                       )}
