@@ -930,6 +930,8 @@
     "balanceAfter": "Balance: {{n}}",
     "topupSuccessTitle": "Credits added!",
     "topupSuccess": "{{amount}} credits added. New balance: {{balance}}.",
+    "cancelTitle": "Payment cancelled",
+    "cancelMsg": "The purchase was cancelled. You can try again whenever you want.",
     "errorTitle": "Error",
     "insufficientCredits": "Insufficient credits",
     "insufficientCreditsMsg": "You need {{required}} credits to create an order. Current balance: {{balance}}. Go to Settings › Billing to top up.",

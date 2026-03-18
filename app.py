@@ -504,6 +504,7 @@ SMTP_USE_SSL = os.environ.get('SMTP_USE_SSL', '0').strip().lower() in {'1', 'tru
 SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', '1').strip().lower() in {'1', 'true', 'yes'}
 INTEGRATION_API_KEY = os.environ.get('INTEGRATION_API_KEY', '').strip()
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '').strip()
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '').strip()
 STRIPE_CURRENCY = os.environ.get('STRIPE_CURRENCY', 'eur').strip().lower() or 'eur'
 STRIPE_PRICE_PER_CREDIT_CENTS = int(os.environ.get('STRIPE_PRICE_PER_CREDIT_CENTS', '100') or 100)
 STRIPE_CHECKOUT_SUCCESS_URL = os.environ.get('STRIPE_CHECKOUT_SUCCESS_URL', 'http://localhost:8081/?billing=success&session_id={CHECKOUT_SESSION_ID}').strip()
@@ -515,7 +516,8 @@ AUTH_PUBLIC_PATHS = (
     '/api/auth/refresh',
     '/api/auth/logout',
     '/api/auth/verify-role-permission',
-    '/api/billing/config'
+    '/api/billing/config',
+    '/api/billing/webhook',
 )
 AUTH_ATTEMPTS = defaultdict(list)
 
@@ -2927,56 +2929,55 @@ def create_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
+        email = str(request_user.get('email') or '').strip().lower()
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         data = request.get_json() or {}
 
-        usuario_id = int(data.get('usuario_id') or request_user.get('id') or 0)
-        creditos = int(data.get('creditos') or 0)
-        payment_method = normalize_payment_method(data.get('payment_method') or data.get('metodo_pago') or 'tarjeta')
-        success_url = str(data.get('success_url') or STRIPE_CHECKOUT_SUCCESS_URL).strip()
-        cancel_url = str(data.get('cancel_url') or STRIPE_CHECKOUT_CANCEL_URL).strip()
+        package_id = str(data.get('package_id') or '').strip()
+        pkg = next((p for p in CREDIT_PACKAGES if p['id'] == package_id), None)
+        if not pkg:
+            return jsonify({'error': 'Paquete no válido'}), 400
 
-        if usuario_id <= 0:
-            return jsonify({'error': 'usuario_id inválido'}), 400
-        if creditos <= 0:
-            return jsonify({'error': 'creditos debe ser mayor que 0'}), 400
-        if creditos > 50000:
-            return jsonify({'error': 'creditos excede el máximo permitido por operación'}), 400
-        if payment_method not in {'paypal', 'tarjeta'}:
-            return jsonify({'error': 'metodo_pago no válido (paypal|tarjeta)'}), 400
-        if not success_url.startswith('http://') and not success_url.startswith('https://'):
-            return jsonify({'error': 'success_url debe ser http(s)'}), 400
-        if not cancel_url.startswith('http://') and not cancel_url.startswith('https://'):
-            return jsonify({'error': 'cancel_url debe ser http(s)'}), 400
-
-        # Lógica MongoDB pendiente si es necesario
-        return jsonify({'error': 'Usuario no encontrado'}), 404
-
-        method_types = ['card'] if payment_method == 'tarjeta' else ['paypal']
-        amount_cents = int(creditos * STRIPE_PRICE_PER_CREDIT_CENTS)
+        credits = int(pkg['credits'])
+        price_cents = int(round(pkg['price_eur'] * 100))
+        success_url = STRIPE_CHECKOUT_SUCCESS_URL
+        cancel_url = STRIPE_CHECKOUT_CANCEL_URL
 
         stripe_payload = {
             'mode': 'payment',
             'success_url': success_url,
             'cancel_url': cancel_url,
-            'client_reference_id': str(usuario_id),
+            'client_reference_id': email,
             'line_items[0][price_data][currency]': STRIPE_CURRENCY,
-            'line_items[0][price_data][unit_amount]': str(STRIPE_PRICE_PER_CREDIT_CENTS),
-            'line_items[0][price_data][product_data][name]': f'Recarga de {creditos} créditos',
-            'line_items[0][quantity]': str(creditos),
-            'metadata[usuario_id]': str(usuario_id),
+            'line_items[0][price_data][unit_amount]': str(price_cents),
+            'line_items[0][price_data][product_data][name]': pkg['label'],
+            'line_items[0][quantity]': '1',
+            'metadata[email]': email,
             'metadata[empresa_id]': str(empresa_id),
-            'metadata[creditos]': str(creditos),
-            'metadata[payment_method]': payment_method,
+            'metadata[package_id]': package_id,
+            'metadata[credits]': str(credits),
+            'payment_method_types[]': 'card',
         }
-        stripe_payload['payment_method_types[]'] = method_types
 
         session = stripe_api_request('/checkout/sessions', method='POST', payload=stripe_payload)
         session_id = str(session.get('id') or '').strip()
         session_url = str(session.get('url') or '').strip()
         if not session_id or not session_url:
-            # Lógica MongoDB pendiente si es necesario
             return jsonify({'error': 'No se pudo crear la sesión de Stripe'}), 500
+
+        col = get_empresa_collection('stripe_checkouts', None)
+        col.insert_one({
+            'session_id': session_id,
+            'email': email,
+            'empresa_id': str(empresa_id),
+            'package_id': package_id,
+            'credits': credits,
+            'price_eur': pkg['price_eur'],
+            'status': 'pending',
+            'created_at': datetime.now().isoformat(),
+        })
+
+        return jsonify({'session_id': session_id, 'session_url': session_url}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2991,20 +2992,88 @@ def confirm_billing_checkout_session():
         if not stripe_enabled():
             return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
 
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        email = str(request_user.get('email') or '').strip().lower()
         data = request.get_json() or {}
         session_id = str(data.get('checkout_session_id') or data.get('session_id') or '').strip()
         if not session_id:
             return jsonify({'error': 'checkout_session_id requerido'}), 400
-        # Aquí deberías consultar la transacción en la colección MongoDB correspondiente
-        # Si no existe:
-        # return jsonify({'error': 'Sesión de checkout no encontrada'}), 404
-        # Aquí deberías consultar y actualizar la transacción en MongoDB
 
-        # Lógica de créditos adaptada a MongoDB pendiente de implementar si es necesario
-        # return jsonify({...}), 200
+        col = get_empresa_collection('stripe_checkouts', None)
+        record = col.find_one({'session_id': session_id})
+        if not record:
+            return jsonify({'error': 'Sesión de checkout no encontrada'}), 404
+
+        # Idempotency: already completed
+        if record.get('status') == 'completed':
+            status = get_billing_status_for_user(email)
+            return jsonify({'already_credited': True, 'credits_added': record['credits'], 'new_balance': status['creditos'] if status else 0}), 200
+
+        # Verify with Stripe
+        stripe_session = stripe_api_request(f'/checkout/sessions/{session_id}', method='GET')
+        payment_status = str(stripe_session.get('payment_status') or '').strip()
+        if payment_status != 'paid':
+            return jsonify({'error': f'Pago no completado (estado: {payment_status})'}), 402
+
+        # Add credits
+        credits = int(record.get('credits') or 0)
+        new_balance, err = add_credits(
+            record['email'],
+            credits,
+            action='purchase',
+            metadata={'package_id': record.get('package_id'), 'price_eur': record.get('price_eur'), 'stripe_session_id': session_id},
+        )
+        if err:
+            return jsonify({'error': err}), 400
+
+        col.update_one({'session_id': session_id}, {'$set': {'status': 'completed', 'completed_at': datetime.now().isoformat()}})
+
+        return jsonify({'credits_added': credits, 'new_balance': new_balance}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=False)
+    sig_header = request.headers.get('Stripe-Signature', '')
+
+    if STRIPE_WEBHOOK_SECRET:
+        # Verify signature: t=timestamp,v1=signature
+        try:
+            parts = {k: v for k, v in (p.split('=', 1) for p in sig_header.split(',') if '=' in p)}
+            timestamp = parts.get('t', '')
+            signature = parts.get('v1', '')
+            signed_payload = f'{timestamp}.'.encode('utf-8') + payload
+            expected = hmac.new(STRIPE_WEBHOOK_SECRET.encode('utf-8'), signed_payload, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(expected, signature):
+                return jsonify({'error': 'Invalid signature'}), 400
+        except Exception:
+            return jsonify({'error': 'Signature verification failed'}), 400
+
+    try:
+        event = json.loads(payload.decode('utf-8'))
+    except Exception:
+        return jsonify({'error': 'Invalid payload'}), 400
+
+    if event.get('type') == 'checkout.session.completed':
+        stripe_session = event.get('data', {}).get('object', {})
+        session_id = str(stripe_session.get('id') or '').strip()
+        payment_status = str(stripe_session.get('payment_status') or '').strip()
+
+        if session_id and payment_status == 'paid':
+            col = get_empresa_collection('stripe_checkouts', None)
+            record = col.find_one({'session_id': session_id})
+            if record and record.get('status') != 'completed':
+                credits = int(record.get('credits') or 0)
+                add_credits(
+                    record['email'],
+                    credits,
+                    action='purchase',
+                    metadata={'package_id': record.get('package_id'), 'price_eur': record.get('price_eur'), 'stripe_session_id': session_id, 'via': 'webhook'},
+                )
+                col.update_one({'session_id': session_id}, {'$set': {'status': 'completed', 'completed_at': datetime.now().isoformat()}})
+
+    return jsonify({'received': True}), 200
 
 
 @app.route('/api/usuarios/<usuario_id>/creditos', methods=['GET'])

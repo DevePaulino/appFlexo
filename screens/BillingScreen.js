@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -75,20 +76,72 @@ export default function BillingScreen({ navigation, currentUser }) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const confirmCheckout = useCallback(async (sessionId) => {
+    try {
+      const res = await fetch(`${API}/api/billing/checkout-confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      if (res.ok && !data.already_credited) {
+        Alert.alert(t('billing.topupSuccessTitle'), t('billing.topupSuccess', { amount: data.credits_added, balance: data.new_balance }));
+      }
+      load();
+    } catch (_) {}
+  }, [authHeader, load]);
+
+  // Detect return from Stripe checkout (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const url = new URL(window.location.href);
+    const billing = url.searchParams.get('billing');
+    const sessionId = url.searchParams.get('session_id');
+    if (billing === 'success' && sessionId) {
+      url.searchParams.delete('billing');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.toString());
+      confirmCheckout(sessionId);
+    } else if (billing === 'cancel') {
+      url.searchParams.delete('billing');
+      window.history.replaceState({}, '', url.toString());
+      Alert.alert(t('billing.cancelTitle'), t('billing.cancelMsg'));
+    }
+  }, []);
+
   const handleBuy = async (pkg) => {
     setBuying(pkg.id);
     try {
-      const res = await fetch(`${API}/api/billing/creditos/topup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({ package_id: pkg.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        Alert.alert(t('billing.errorTitle'), data.error || t('common.error'));
+      if (status?.stripe_enabled) {
+        const res = await fetch(`${API}/api/billing/checkout-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ package_id: pkg.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          Alert.alert(t('billing.errorTitle'), data.error || t('common.error'));
+        } else {
+          if (Platform.OS === 'web') {
+            window.location.href = data.session_url;
+          } else {
+            Linking.openURL(data.session_url);
+          }
+        }
       } else {
-        Alert.alert(t('billing.topupSuccessTitle'), t('billing.topupSuccess', { amount: pkg.credits, balance: data.new_balance }));
-        load();
+        // Simulated topup (no Stripe configured)
+        const res = await fetch(`${API}/api/billing/creditos/topup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ package_id: pkg.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          Alert.alert(t('billing.errorTitle'), data.error || t('common.error'));
+        } else {
+          Alert.alert(t('billing.topupSuccessTitle'), t('billing.topupSuccess', { amount: pkg.credits, balance: data.new_balance }));
+          load();
+        }
       }
     } catch (e) {
       Alert.alert(t('billing.errorTitle'), t('common.error'));

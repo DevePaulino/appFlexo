@@ -780,6 +780,8 @@
     "balanceAfter": "Saldo: {{n}}",
     "topupSuccessTitle": "Crediti aggiunti!",
     "topupSuccess": "{{amount}} crediti aggiunti. Nuovo saldo: {{balance}}.",
+    "cancelTitle": "Pagamento annullato",
+    "cancelMsg": "L'acquisto è stato annullato. Puoi riprovare quando vuoi.",
     "errorTitle": "Errore",
     "insufficientCredits": "Crediti insufficienti",
     "insufficientCreditsMsg": "Servono {{required}} crediti per creare un ordine. Saldo attuale: {{balance}}. Vai a Impostazioni › Fatturazione per ricaricare.",
