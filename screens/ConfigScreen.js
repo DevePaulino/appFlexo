@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   matrixRoleHeaderProtected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#78350F',
   },
   matrixRoleHeaderText: {
     fontSize: 10,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
   matrixRoleHeaderTextProtected: {
-    color: '#D97706',
+    color: '#FDE68A',
   },
   matrixDot: {
     width: 26,
@@ -471,8 +471,8 @@ const styles = StyleSheet.create({
     borderColor: '#E8522A',
   },
   matrixDotProtected: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FED7AA',
+    backgroundColor: '#78350F',
+    borderColor: '#92400E',
   },
   matrixDotReadonly: {
     opacity: 0.45,
