@@ -2152,7 +2152,7 @@ export default function ConfigScreen({ route, currentUser }) {
               return (
                 <View key={item.id} style={[
                   styles.chip,
-                  rolColor && { borderColor: rolColor },
+                  rolColor && { borderColor: rolColor, backgroundColor: rolColor + '1A' },
                 ]}>
                   {rolColor && (
                     <View style={[styles.chipColorDot, { backgroundColor: rolColor }]} />
@@ -2168,7 +2168,9 @@ export default function ConfigScreen({ route, currentUser }) {
                       returnKeyType="done"
                     />
                   ) : (
-                    <Text style={styles.chipText}>{categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}</Text>
+                    <Text style={[styles.chipText, rolColor && { color: rolColor }]}>
+                      {categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}
+                    </Text>
                   )}
                   <TouchableOpacity
                     style={[styles.chipEdit, esRolProtegido && styles.chipEditDisabled]}
@@ -2476,8 +2478,7 @@ export default function ConfigScreen({ route, currentUser }) {
                                 >
                                   <View style={[
                                     styles.matrixDot,
-                                    active && role.color && { backgroundColor: role.color, borderColor: role.color },
-                                    active && !role.color && styles.matrixDotActive,
+                                    active && { backgroundColor: role.color || '#E8522A', borderColor: role.color || '#E8522A' },
                                     isAdmin && styles.matrixDotProtected,
                                     !puedeEditarRolesPermisos && !isAdmin && styles.matrixDotReadonly,
                                   ]}>
