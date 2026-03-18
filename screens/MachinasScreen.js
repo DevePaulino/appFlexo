@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   btnPlusText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hoverHintText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1.5,
     borderColor: '#E6DAD0',
     paddingVertical: 8,
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   rowAlternate: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   tableCell: {
     justifyContent: 'center',
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 
   // ── Acciones ──────────────────────────────────────────
   actionBtn: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E6DAD0',
     paddingHorizontal: 8,

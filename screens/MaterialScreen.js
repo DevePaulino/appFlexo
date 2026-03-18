@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1709,7 +1709,7 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
   filterLabel: { fontSize: 13, color: '#475569', fontWeight: '500' },
   filterSelectWrap: { flex: 1, maxWidth: 260 },
-  filterSelect: { width: '100%', height: 32, border: '1px solid #E6DAD0', borderRadius: 10, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 13, backgroundColor: '#F2EAE0', color: '#0F172A', cursor: 'pointer', outlineWidth: 0 },
+  filterSelect: { width: '100%', height: 32, border: '1px solid #E6DAD0', borderRadius: 10, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 13, backgroundColor: '#F1F5F9', color: '#0F172A', cursor: 'pointer', outlineWidth: 0 },
   filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
 
   // Table
@@ -1862,7 +1862,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
     fontSize: 13,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     color: '#0F172A',
     cursor: 'pointer',
     outlineWidth: 0,

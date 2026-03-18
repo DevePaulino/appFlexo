@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#F2EAE0',
+    color: '#F1F5F9',
   },
   closeBtn: {
     position: 'absolute',
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontSize: 20,
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '900',
   },
   sectionCard: {
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#CFC0AE',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   versionTabActive: {
     backgroundColor: '#111014',
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   versionTabTextActive: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
   },
   versionDate: {
     fontSize: 10,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   lightboxCloseBtnText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontSize: 20,
     fontWeight: '900',
   },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E6DAD0',
     flexBasis: '47%',
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E6DAD0',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     overflow: 'hidden',
   },
   eskoBtn: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   bottomEditBtnText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '600',
     fontSize: 13,
   },

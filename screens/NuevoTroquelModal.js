@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderWidth: 1,
     borderColor: '#CFC0AE',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 10,

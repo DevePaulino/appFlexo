@@ -17,7 +17,7 @@ export const C = {
   // Backgrounds
   bg:            '#F8F3EE',  // crema cálido claro  (app background)
   surface:       '#FFFFFF',  // white               (cards, modals, panels)
-  surfaceAlt:    '#F2EAE0',  // crema medio         (alternate rows, input bg)
+  surfaceAlt:    '#F1F5F9',  // slate-100           (alternate rows, input bg)
 
   // Borders
   border:        '#E6DAD0',  // borde cálido claro  (cards, sections)

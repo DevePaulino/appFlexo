@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(248,250,252,0.2)',
   },
   btnPlusText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hoverHintText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1.5,
     borderColor: '#E6DAD0',
     paddingVertical: 10,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   rowAlternate: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   tableCell: {
     justifyContent: 'center',
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
   statusCancelado: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   statusCanceladoText: {
     color: '#475569',
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     borderColor: '#E6DAD0',
     borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   maquinaItemAtenuada: {
     opacity: 0.45,

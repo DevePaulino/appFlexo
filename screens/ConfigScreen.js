@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   section: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E6DAD0',
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CFC0AE',
     borderRadius: 10,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6DAD0',
     borderRadius: 999,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     paddingLeft: 10,
     paddingRight: 6,
     paddingVertical: 6,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modeBtnTextActive: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
   },
   codeTitle: {
     marginTop: 10,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     borderWidth: 1,
     borderColor: '#E6DAD0',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderRadius: 10,
     padding: 10,
   },
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   usersBtnPlusText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   usersFieldInput: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#CFC0AE',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CFC0AE',
     borderRadius: 10,
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   usersTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderBottomWidth: 1.5,
     borderBottomColor: '#E6DAD0',
     paddingHorizontal: 10,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   usersTableRowAlt: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   usersColNombre: {
     flex: 0.30,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#94A3B8',
   },
   usersPaginationBtnText: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   usersActionBtn: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E6DAD0',
     borderRadius: 6,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
   },
   usersActionBtnBilling: {
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
     borderColor: '#E6DAD0',
   },
   usersActionBtnText: {

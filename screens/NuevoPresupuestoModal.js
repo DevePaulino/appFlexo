@@ -75,7 +75,7 @@ const styles = {
         fontSize: 14,
         borderWidth: 1,
         borderColor: borderColorState(value, isRequired, isNumeric, submitted),
-        backgroundColor: '#F2EAE0',
+        backgroundColor: '#F1F5F9',
         paddingVertical: 10,
         paddingHorizontal: 10,
         borderRadius: 10,
@@ -95,7 +95,7 @@ const styles = {
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 10, paddingVertical: 8,
-        backgroundColor: active ? '#E6DAD0' : '#F2EAE0',
+        backgroundColor: active ? '#E6DAD0' : '#F1F5F9',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E6DAD0',
@@ -134,7 +134,7 @@ const styles = {
     modalHeaderTitle: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#F2EAE0',
+        color: '#F1F5F9',
     },
     modalCloseBtn: {
         position: 'absolute',
@@ -144,7 +144,7 @@ const styles = {
     },
     modalCloseText: {
         fontSize: 20,
-        color: '#F2EAE0',
+        color: '#F1F5F9',
         fontWeight: '900',
     },
     clientePickerBtn: {
@@ -268,7 +268,7 @@ const BotonSelector = ({
                     style={{
                         paddingHorizontal: small ? 10 : 14,
                         paddingVertical: small ? 6 : 8,
-                        backgroundColor: active ? '#E6DAD0' : '#F2EAE0',
+                        backgroundColor: active ? '#E6DAD0' : '#F1F5F9',
                         borderRadius: 10,
                         borderWidth: 1,
                         borderColor: border,
@@ -389,14 +389,14 @@ const TintasSelector = ({
                     marginBottom: 8,
                     borderWidth: 1,
                     borderColor: addingMatchHex ? 'transparent' : '#E6DAD0',
-                    backgroundColor: addingMatchHex || '#F2EAE0',
+                    backgroundColor: addingMatchHex || '#F1F5F9',
                     color: addingMatchHex ? '#FFF' : '#0F172A',
                     fontSize: 13,
                 }}
             />
         ) : (
             <TouchableOpacity
-                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F2EAE0', borderWidth: 1, borderColor: '#E6DAD0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
+                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E6DAD0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
                 onPress={() => {
                     if (disabled) return;
                     if (typeof onStartAdd === 'function') onStartAdd();
@@ -1142,7 +1142,7 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>{t('forms.comercial')}</Text>
                                         {Platform.OS === 'web' ? (
-                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F2EAE0', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
+                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
                                                 <select
                                                     value={vendedor}
                                                     onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
@@ -1184,7 +1184,7 @@ export default function NuevoPresupuestoModal({
                                     <View style={{ borderWidth: 1, borderColor: '#E6DAD0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
                                         <TouchableOpacity
                                             onPress={() => setClienteExpandido(v => !v)}
-                                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F2EAE0' }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F1F5F9' }}
                                         >
                                             <Text style={{ fontSize: 12, color: '#64748B', flex: 1 }} numberOfLines={1}>
                                                 {[cif, personasContacto, email].filter(Boolean).join(' · ')}
@@ -1290,7 +1290,7 @@ export default function NuevoPresupuestoModal({
                                     <View style={{
                                         borderWidth: 1,
                                         borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
-                                        backgroundColor: '#F2EAE0',
+                                        backgroundColor: '#F1F5F9',
                                         borderRadius: 10,
                                         marginBottom: 8,
                                         overflow: 'hidden'
@@ -1380,7 +1380,7 @@ export default function NuevoPresupuestoModal({
                             {troquelesCat.length === 0 ? (
                                 <EmptyState variant="inline" icon="✂️" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
                             ) : Platform.OS === 'web' ? (
-                                <View style={{ borderWidth: 1, borderColor: '#E6DAD0', backgroundColor: '#F2EAE0', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                <View style={{ borderWidth: 1, borderColor: '#E6DAD0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                                     <select
                                         style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }}
                                         value={troquelSel?._id || troquelSel?.id || ''}
@@ -1425,7 +1425,7 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
                     {troquelSel && (
-                        <View style={{ backgroundColor: '#F2EAE0', borderRadius: 10, borderWidth: 1, borderColor: '#E6DAD0', padding: 12, marginBottom: 10 }}>
+                        <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, borderWidth: 1, borderColor: '#E6DAD0', padding: 12, marginBottom: 10 }}>
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                                 {[
                                     { label: 'Número', value: troquelSel.numero },

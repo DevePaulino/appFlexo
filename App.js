@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E6DAD0',
-    backgroundColor: '#F2EAE0',
+    backgroundColor: '#F1F5F9',
   },
   userPanelLangBtnActive: {
     borderColor: C.primary,
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   settingsSubmenuItemTextActive: {
-    color: '#F2EAE0',
+    color: '#F1F5F9',
     fontWeight: '700',
   },
   settingsSubmenuIndicator: {

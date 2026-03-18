@@ -488,7 +488,7 @@ export default function NewQuoteScreen({ maquinas = maquinasEjemplo }) {
                                     fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
                                     color: '#0F172A',
                                     border: '1px solid #E6DAD0',
-                                    backgroundColor: '#F2EAE0',
+                                    backgroundColor: '#F1F5F9',
                                     borderRadius: 10,
                                     minHeight: 39,
                                     outlineWidth: 0,
