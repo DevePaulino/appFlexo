@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#1E293B',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingVertical: 10,
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: '#F1F5F9',
     textAlign: 'center',
   },
   cellText: {

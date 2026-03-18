@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#1E293B',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     paddingVertical: 10,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#475569',
+    color: '#F1F5F9',
   },
   colPos: {
     width: '5%',
