@@ -40,6 +40,8 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'edit_produccion', title: 'Editar producción', hint: 'Enviar, mover, reordenar y cambiar estado en producción.' },
   { key: 'eliminar_archivos', title: 'Eliminar archivos de pedidos', hint: 'Permite borrar artes y versiones unitario en el detalle de un pedido.' },
   { key: 'edit_modo_creacion', title: 'Cambiar modo de creación de pedidos', hint: 'Permite alternar entre modo manual y automático en la configuración.' },
+  { key: 'manage_billing', title: 'Gestionar facturación', hint: 'Permite acceder y configurar el plan de pago, créditos e historial de facturación.' },
+  { key: 'manage_modulos', title: 'Gestionar módulos', hint: 'Permite activar o desactivar módulos opcionales de la aplicación.' },
 ];
 
 const styles = StyleSheet.create({

@@ -12,7 +12,8 @@
     "usuariosRoles": "Usuarios y roles",
     "impresion": "Impresión",
     "pedidosConfig": "Configuración de pedidos",
-    "modulos": "Módulos"
+    "modulos": "Módulos",
+    "billing": "Facturación"
   },
   "user": {
     "changePhoto": "Cambiar foto de perfil",
@@ -782,44 +783,154 @@
       "title": "Política de Privacidad",
       "lastUpdated": "Última actualización: marzo de 2026",
       "sections": [
-        { "title": "1. Responsable del tratamiento", "body": "PrintForgePro (en adelante, «el Responsable»).\nEmail: [EMAIL_CONTACTO]\nDirección: [DIRECCIÓN_EMPRESA]\nDPD: [EMAIL_DPD] (si aplica)\n\nCumple el RGPD (UE) 2016/679, la LO 3/2018 (LOPDGDD) y la LSSI-CE." },
-        { "title": "2. Datos tratados y finalidades", "body": "Datos de registro: nombre, email, empresa, NIF/CIF.\nRegistros de actividad en la aplicación.\nModelo de facturación (pagos gestionados por proveedor PCI DSS).\n\nFinalidades: (a) prestación del servicio; (b) gestión contractual y facturación; (c) comunicaciones esenciales del servicio." },
-        { "title": "3. Base jurídica", "body": "· Ejecución del contrato (Art. 6.1.b RGPD): prestación del servicio.\n· Obligación legal (Art. 6.1.c RGPD): conservación de facturas.\n· Consentimiento (Art. 6.1.a RGPD): comunicaciones opcionales, revocable en cualquier momento." },
-        { "title": "4. Plazo de conservación", "body": "Durante la vigencia del contrato y hasta que prescriban las acciones legales aplicables (máx. 5 años). Datos de facturación: 5 años por obligación fiscal (Ley 58/2003)." },
-        { "title": "5. Destinatarios", "body": "No cedemos datos salvo a proveedores de infraestructura cloud bajo contrato DPA, o cuando lo exija la ley. No realizamos cesiones comerciales." },
-        { "title": "6. Transferencias internacionales", "body": "Datos almacenados en [UBICACIÓN_SERVIDORES]. Toda transferencia fuera del EEE se realiza mediante las Cláusulas Contractuales Tipo (CCT) aprobadas por la Comisión Europea (Decisión 2021/914)." },
-        { "title": "7. Tus derechos", "body": "Envía tu solicitud a [EMAIL_CONTACTO]:\n· Acceso, rectificación, supresión, limitación, portabilidad (en Ajustes de cuenta) y oposición.\n\nPlazo de respuesta: 30 días. Puedes reclamar ante la AEPD: www.aepd.es" },
-        { "title": "8. Cookies y almacenamiento local", "body": "Usamos localStorage solo para mantener la sesión y la preferencia de idioma. Sin cookies de seguimiento ni publicidad. Revoca tu consentimiento desde el banner de cookies o borrando los datos del navegador." },
-        { "title": "9. Modificaciones", "body": "Notificaremos cambios materiales con al menos 30 días de antelación por email o aviso en la aplicación." }
+        {
+          "title": "1. Responsable del tratamiento",
+          "body": "PrintForgePro (en adelante, «el Responsable»).\nEmail: [EMAIL_CONTACTO]\nDirección: [DIRECCIÓN_EMPRESA]\nDPD: [EMAIL_DPD] (si aplica)\n\nCumple el RGPD (UE) 2016/679, la LO 3/2018 (LOPDGDD) y la LSSI-CE."
+        },
+        {
+          "title": "2. Datos tratados y finalidades",
+          "body": "Datos de registro: nombre, email, empresa, NIF/CIF.\nRegistros de actividad en la aplicación.\nModelo de facturación (pagos gestionados por proveedor PCI DSS).\n\nFinalidades: (a) prestación del servicio; (b) gestión contractual y facturación; (c) comunicaciones esenciales del servicio."
+        },
+        {
+          "title": "3. Base jurídica",
+          "body": "· Ejecución del contrato (Art. 6.1.b RGPD): prestación del servicio.\n· Obligación legal (Art. 6.1.c RGPD): conservación de facturas.\n· Consentimiento (Art. 6.1.a RGPD): comunicaciones opcionales, revocable en cualquier momento."
+        },
+        {
+          "title": "4. Plazo de conservación",
+          "body": "Durante la vigencia del contrato y hasta que prescriban las acciones legales aplicables (máx. 5 años). Datos de facturación: 5 años por obligación fiscal (Ley 58/2003)."
+        },
+        {
+          "title": "5. Destinatarios",
+          "body": "No cedemos datos salvo a proveedores de infraestructura cloud bajo contrato DPA, o cuando lo exija la ley. No realizamos cesiones comerciales."
+        },
+        {
+          "title": "6. Transferencias internacionales",
+          "body": "Datos almacenados en [UBICACIÓN_SERVIDORES]. Toda transferencia fuera del EEE se realiza mediante las Cláusulas Contractuales Tipo (CCT) aprobadas por la Comisión Europea (Decisión 2021/914)."
+        },
+        {
+          "title": "7. Tus derechos",
+          "body": "Envía tu solicitud a [EMAIL_CONTACTO]:\n· Acceso, rectificación, supresión, limitación, portabilidad (en Ajustes de cuenta) y oposición.\n\nPlazo de respuesta: 30 días. Puedes reclamar ante la AEPD: www.aepd.es"
+        },
+        {
+          "title": "8. Cookies y almacenamiento local",
+          "body": "Usamos localStorage solo para mantener la sesión y la preferencia de idioma. Sin cookies de seguimiento ni publicidad. Revoca tu consentimiento desde el banner de cookies o borrando los datos del navegador."
+        },
+        {
+          "title": "9. Modificaciones",
+          "body": "Notificaremos cambios materiales con al menos 30 días de antelación por email o aviso en la aplicación."
+        }
       ]
     },
     "tos": {
       "title": "Términos de Uso",
       "lastUpdated": "Última actualización: marzo de 2026",
       "sections": [
-        { "title": "1. Descripción del servicio", "body": "PrintForgePro es una plataforma de gestión para empresas de artes gráficas: pedidos, presupuestos, producción, materiales, maquinaria y equipos." },
-        { "title": "2. Acceso y registro", "body": "Reservado a empresas y profesionales con capacidad legal para contratar (mayores de 18 años). Eres responsable de la confidencialidad de tus credenciales y de todas las actividades realizadas bajo tu cuenta." },
-        { "title": "3. Obligaciones del usuario", "body": "· Usar el servicio conforme a la ley y estos Términos.\n· Proporcionar información veraz en el registro.\n· No compartir el acceso con terceros no autorizados.\n· Notificarnos cualquier uso no autorizado de tu cuenta." },
-        { "title": "4. Usos prohibidos", "body": "· Ingeniería inversa o descompilación del software.\n· Uso para actividades ilegales o fraudulentas.\n· Acceso a datos o cuentas de otros usuarios.\n· Sobrecarga o interferencia con la infraestructura.\n· Reventa o sublicencia del acceso sin autorización escrita." },
-        { "title": "5. Propiedad intelectual", "body": "PrintForgePro, su diseño, código y marca son propiedad del Responsable. Los datos del usuario son de su exclusiva propiedad." },
-        { "title": "6. Limitación de responsabilidad", "body": "No respondemos por pérdidas indirectas ni lucro cesante. Responsabilidad máxima: cantidades abonadas en los 12 meses previos al evento causante del daño." },
-        { "title": "7. Disponibilidad", "body": "Nos esforzamos por ofrecer disponibilidad continua, sin garantía de ausencia de interrupciones. Los mantenimientos se comunicarán con antelación." },
-        { "title": "8. Cancelación", "body": "Puedes cancelar desde los ajustes de la aplicación. Sin reembolso de períodos abonados, salvo normativa imperativa. Podemos suspender cuentas que incumplan estos Términos, previo aviso salvo infracción grave." },
-        { "title": "9. Modificaciones", "body": "Cambios con 30 días de preaviso. El uso continuado implica aceptación. Puedes cancelar si no aceptas los cambios." },
-        { "title": "10. Ley aplicable y jurisdicción", "body": "Ley española. Disputas entre empresas: juzgados de [CIUDAD_JURISDICCIÓN]. Consumidores: fuero de su domicilio. ODR europeo: https://ec.europa.eu/consumers/odr" },
-        { "title": "11. Contacto", "body": "[EMAIL_CONTACTO]" }
+        {
+          "title": "1. Descripción del servicio",
+          "body": "PrintForgePro es una plataforma de gestión para empresas de artes gráficas: pedidos, presupuestos, producción, materiales, maquinaria y equipos."
+        },
+        {
+          "title": "2. Acceso y registro",
+          "body": "Reservado a empresas y profesionales con capacidad legal para contratar (mayores de 18 años). Eres responsable de la confidencialidad de tus credenciales y de todas las actividades realizadas bajo tu cuenta."
+        },
+        {
+          "title": "3. Obligaciones del usuario",
+          "body": "· Usar el servicio conforme a la ley y estos Términos.\n· Proporcionar información veraz en el registro.\n· No compartir el acceso con terceros no autorizados.\n· Notificarnos cualquier uso no autorizado de tu cuenta."
+        },
+        {
+          "title": "4. Usos prohibidos",
+          "body": "· Ingeniería inversa o descompilación del software.\n· Uso para actividades ilegales o fraudulentas.\n· Acceso a datos o cuentas de otros usuarios.\n· Sobrecarga o interferencia con la infraestructura.\n· Reventa o sublicencia del acceso sin autorización escrita."
+        },
+        {
+          "title": "5. Propiedad intelectual",
+          "body": "PrintForgePro, su diseño, código y marca son propiedad del Responsable. Los datos del usuario son de su exclusiva propiedad."
+        },
+        {
+          "title": "6. Limitación de responsabilidad",
+          "body": "No respondemos por pérdidas indirectas ni lucro cesante. Responsabilidad máxima: cantidades abonadas en los 12 meses previos al evento causante del daño."
+        },
+        {
+          "title": "7. Disponibilidad",
+          "body": "Nos esforzamos por ofrecer disponibilidad continua, sin garantía de ausencia de interrupciones. Los mantenimientos se comunicarán con antelación."
+        },
+        {
+          "title": "8. Cancelación",
+          "body": "Puedes cancelar desde los ajustes de la aplicación. Sin reembolso de períodos abonados, salvo normativa imperativa. Podemos suspender cuentas que incumplan estos Términos, previo aviso salvo infracción grave."
+        },
+        {
+          "title": "9. Modificaciones",
+          "body": "Cambios con 30 días de preaviso. El uso continuado implica aceptación. Puedes cancelar si no aceptas los cambios."
+        },
+        {
+          "title": "10. Ley aplicable y jurisdicción",
+          "body": "Ley española. Disputas entre empresas: juzgados de [CIUDAD_JURISDICCIÓN]. Consumidores: fuero de su domicilio. ODR europeo: https://ec.europa.eu/consumers/odr"
+        },
+        {
+          "title": "11. Contacto",
+          "body": "[EMAIL_CONTACTO]"
+        }
       ]
     },
     "notice": {
       "title": "Aviso Legal",
       "lastUpdated": "",
       "sections": [
-        { "title": "Datos del titular (LSSI-CE Art. 10)", "body": "Denominación social: [RAZÓN_SOCIAL]\nNIF/CIF: [NIF_CIF]\nDomicilio: [DIRECCIÓN_COMPLETA]\nEmail: [EMAIL_CONTACTO]\nTeléfono: [TELÉFONO]\nRegistro Mercantil: [DATOS_REGISTRO] (si aplica)" },
-        { "title": "Objeto", "body": "El presente aviso legal regula el acceso y uso de la aplicación PrintForgePro, titular de los derechos indicados." },
-        { "title": "Propiedad intelectual", "body": "Todos los contenidos (código, diseño, textos, imágenes y marca) están protegidos por la legislación de propiedad intelectual. Queda prohibida su reproducción sin autorización expresa." },
-        { "title": "Limitación de responsabilidad", "body": "El titular no garantiza disponibilidad continua ni se responsabiliza de daños por uso indebido." },
-        { "title": "Resolución de litigios en línea", "body": "Conforme al Reglamento (UE) 524/2013, puedes acceder a la plataforma ODR: https://ec.europa.eu/consumers/odr" }
+        {
+          "title": "Datos del titular (LSSI-CE Art. 10)",
+          "body": "Denominación social: [RAZÓN_SOCIAL]\nNIF/CIF: [NIF_CIF]\nDomicilio: [DIRECCIÓN_COMPLETA]\nEmail: [EMAIL_CONTACTO]\nTeléfono: [TELÉFONO]\nRegistro Mercantil: [DATOS_REGISTRO] (si aplica)"
+        },
+        {
+          "title": "Objeto",
+          "body": "El presente aviso legal regula el acceso y uso de la aplicación PrintForgePro, titular de los derechos indicados."
+        },
+        {
+          "title": "Propiedad intelectual",
+          "body": "Todos los contenidos (código, diseño, textos, imágenes y marca) están protegidos por la legislación de propiedad intelectual. Queda prohibida su reproducción sin autorización expresa."
+        },
+        {
+          "title": "Limitación de responsabilidad",
+          "body": "El titular no garantiza disponibilidad continua ni se responsabiliza de daños por uso indebido."
+        },
+        {
+          "title": "Resolución de litigios en línea",
+          "body": "Conforme al Reglamento (UE) 524/2013, puedes acceder a la plataforma ODR: https://ec.europa.eu/consumers/odr"
+        }
       ]
     }
+  },
+  "billing": {
+    "title": "Facturación",
+    "currentPlan": "Plan actual",
+    "modeCredits": "Pago por uso",
+    "modeSubscription": "Suscripción mensual",
+    "creditsAvailable": "créditos disponibles",
+    "credits": "créditos",
+    "unlimited": "Uso ilimitado",
+    "subscriptionDesc": "Acceso ilimitado a todas las funcionalidades.",
+    "perMonth": "mes",
+    "priceOnRequest": "Precio a consultar",
+    "costsTitle": "Coste por acción",
+    "costOrder": "Crear pedido",
+    "costFeatures": "Funcionalidades premium",
+    "costFeaturesHint": "PDF report, repetidora, trapping, troquel — cobrado una sola vez por pedido",
+    "changePlan": "Cambiar plan",
+    "buyCredits": "Comprar créditos",
+    "popular": "Más popular",
+    "buy": "Comprar",
+    "buying": "Procesando...",
+    "simulatedNotice": "⚠ Pasarela de pago pendiente de configuración. Las compras son simuladas.",
+    "historyTitle": "Historial de uso",
+    "historyEmpty": "Sin actividad aún.",
+    "order": "Pedido",
+    "balanceAfter": "Saldo: {{n}}",
+    "topupSuccessTitle": "¡Créditos añadidos!",
+    "topupSuccess": "{{amount}} créditos añadidos. Nuevo saldo: {{balance}}.",
+    "errorTitle": "Error",
+    "insufficientCredits": "Créditos insuficientes",
+    "insufficientCreditsMsg": "Necesitas {{required}} créditos para crear un pedido. Saldo actual: {{balance}}. Ve a Ajustes › Facturación para recargar.",
+    "action_pedido": "Pedido creado",
+    "action_features": "Funcionalidades premium",
+    "action_purchase": "Recarga de créditos",
+    "action_signup_bonus": "Créditos de bienvenida"
   }
 }

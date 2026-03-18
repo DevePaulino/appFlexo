@@ -125,7 +125,17 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       });
       const dataPedido = await respPedido.json();
       if (!respPedido.ok) {
-        Alert.alert(t('common.error'), dataPedido.error || t('common.error'));
+        if (respPedido.status === 402) {
+          Alert.alert(
+            t('billing.insufficientCredits'),
+            t('billing.insufficientCreditsMsg', {
+              required: dataPedido.required ?? '',
+              balance: dataPedido.balance ?? '',
+            })
+          );
+        } else {
+          Alert.alert(t('common.error'), dataPedido.error || t('common.error'));
+        }
         return;
       }
 

@@ -13,6 +13,7 @@ import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { C, paperThemeColors } from './screens/theme';
 import { useTranslation } from 'react-i18next';
 import { initI18n, changeLanguage, LANGUAGES } from './i18n/index';
+import { usePermission } from './screens/usePermission';
 
 import TrabajoScreen from './screens/TrabajoScreen';
 import MachinasScreen from './screens/MachinasScreen';
@@ -26,6 +27,7 @@ import MaterialScreen from './screens/MaterialScreen';
 import SettingMenuScreen from './screens/SettingMenuScreen';
 import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
+import BillingScreen from './screens/BillingScreen';
 import CookieBanner from './components/CookieBanner';
 
 // Inject global web CSS: placeholder text italic + muted color
@@ -58,6 +60,7 @@ const DROPDOWN_TABS = ['Setting', 'Activos'];
 const MIGRATED_TO_ACTIVOS = ['Clientes', 'Máquinas', 'Troqueles', 'Materiales'];
 
 const buildSettingsSubmenu = (t) => [
+  { key: 'settings-billing', label: t('nav.billing'), target: { type: 'stack', tab: 'Setting', route: 'SettingsBilling' } },
   { key: 'settings-impresion', label: t('nav.impresion'), target: { type: 'stack', tab: 'Setting', route: 'SettingsImpresion' } },
   { key: 'settings-funcionalidades', label: t('nav.pedidosConfig'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFuncionalidades' } },
   { key: 'settings-modulos', label: t('nav.modulos'), target: { type: 'stack', tab: 'Setting', route: 'SettingsModulos' } },
@@ -380,6 +383,8 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const { modulos } = useModulos();
   const consumoModuloActivo = modulos.consumo_material !== false;
   const produccionModuloActivo = modulos.produccion === true;
+  const canManageBilling = usePermission('manage_billing');
+  const canManageModulos = usePermission('manage_modulos');
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
   const settingTabRef = React.useRef(null);
   const activosTabRef = React.useRef(null);
@@ -420,7 +425,11 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   };
 
   const currentSubmenuItems = openSubmenu === 'Setting'
-    ? buildSettingsSubmenu(t)
+    ? buildSettingsSubmenu(t).filter(item => {
+        if (item.key === 'settings-billing') return canManageBilling;
+        if (item.key === 'settings-modulos') return canManageModulos;
+        return true;
+      })
     : openSubmenu === 'Activos'
       ? buildActivosSubmenu(t).filter(item => consumoModuloActivo || item.key !== 'activos-materiales')
       : [];
@@ -505,6 +514,10 @@ function SettingsNavigator({ currentUser }) {
       <SettingsStack.Screen
         name="SettingsMenu"
         children={(props) => <SettingMenuScreen {...props} currentUser={currentUser} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsBilling"
+        children={(props) => <BillingScreen {...props} currentUser={currentUser} />}
       />
       <SettingsStack.Screen
         name="SettingsFuncionalidades"

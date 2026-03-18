@@ -12,7 +12,8 @@
     "usuariosRoles": "Benutzer & Rollen",
     "impresion": "Druck",
     "pedidosConfig": "Auftragseinstellungen",
-    "modulos": "Module"
+    "modulos": "Module",
+    "billing": "Abrechnung"
   },
   "user": {
     "changePhoto": "Profilfoto ändern",
@@ -636,44 +637,154 @@
       "title": "Datenschutzerklärung",
       "lastUpdated": "Letzte Aktualisierung: März 2026",
       "sections": [
-        { "title": "1. Verantwortlicher", "body": "PrintForgePro (nachfolgend «der Verantwortliche»).\nKontakt-E-Mail: [KONTAKT_EMAIL]\nAnschrift: [UNTERNEHMENSADRESSE]\nDSB: [DSB_EMAIL] (falls bestellt)\n\nEntspricht DSGVO (EU) 2016/679, BDSG und TTDSG." },
-        { "title": "2. Verarbeitete Daten und Zwecke", "body": "Registrierungsdaten: Name, E-Mail, Unternehmensname, USt-IdNr./Steuernummer.\nAktivitätsprotokolle in der Anwendung.\nAbrechnungsmodell (Zahlungsdaten durch PCI-DSS-konformen Anbieter).\n\nZwecke: (a) Erbringung des Dienstes; (b) Vertragsabwicklung und Rechnungsstellung; (c) wesentliche Dienstkommunikation." },
-        { "title": "3. Rechtsgrundlage", "body": "· Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO): Erbringung des Dienstes.\n· Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO): Aufbewahrung von Rechnungen.\n· Einwilligung (Art. 6 Abs. 1 lit. a DSGVO): optionale Mitteilungen, jederzeit widerrufbar." },
-        { "title": "4. Speicherdauer", "body": "Für die Vertragsdauer und danach bis zum Ablauf gesetzlicher Verjährungsfristen (bis zu 10 Jahre gemäß § 147 AO und § 257 HGB für Rechnungsdaten)." },
-        { "title": "5. Empfänger", "body": "Keine Weitergabe an Dritte außer Cloud-Infrastrukturanbietern als Auftragsverarbeiter (AVV) oder bei gesetzlicher Verpflichtung. Keine kommerzielle Weitergabe." },
-        { "title": "6. Internationale Übermittlungen", "body": "Daten auf Servern in [SERVERSTANDORT]. Übermittlungen außerhalb des EWR auf Basis der Standardvertragsklauseln (SCC, Beschluss 2021/914)." },
-        { "title": "7. Ihre Rechte", "body": "Anfragen an [KONTAKT_EMAIL]:\n· Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit (in den Kontoeinstellungen) und Widerspruch.\n\nAntwort innerhalb von 30 Tagen. Beschwerderecht beim Bundesbeauftragten für den Datenschutz: www.bfdi.bund.de" },
-        { "title": "8. Cookies und lokaler Speicher", "body": "localStorage nur für die Sitzung und Spracheinstellung gemäß § 25 TTDSG. Keine Tracking-Cookies oder Werbung. Widerruf über das Cookie-Banner oder durch Löschen der Browserdaten." },
-        { "title": "9. Änderungen", "body": "Wesentliche Änderungen werden mindestens 30 Tage im Voraus per E-Mail oder In-App-Benachrichtigung mitgeteilt." }
+        {
+          "title": "1. Verantwortlicher",
+          "body": "PrintForgePro (nachfolgend «der Verantwortliche»).\nKontakt-E-Mail: [KONTAKT_EMAIL]\nAnschrift: [UNTERNEHMENSADRESSE]\nDSB: [DSB_EMAIL] (falls bestellt)\n\nEntspricht DSGVO (EU) 2016/679, BDSG und TTDSG."
+        },
+        {
+          "title": "2. Verarbeitete Daten und Zwecke",
+          "body": "Registrierungsdaten: Name, E-Mail, Unternehmensname, USt-IdNr./Steuernummer.\nAktivitätsprotokolle in der Anwendung.\nAbrechnungsmodell (Zahlungsdaten durch PCI-DSS-konformen Anbieter).\n\nZwecke: (a) Erbringung des Dienstes; (b) Vertragsabwicklung und Rechnungsstellung; (c) wesentliche Dienstkommunikation."
+        },
+        {
+          "title": "3. Rechtsgrundlage",
+          "body": "· Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO): Erbringung des Dienstes.\n· Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO): Aufbewahrung von Rechnungen.\n· Einwilligung (Art. 6 Abs. 1 lit. a DSGVO): optionale Mitteilungen, jederzeit widerrufbar."
+        },
+        {
+          "title": "4. Speicherdauer",
+          "body": "Für die Vertragsdauer und danach bis zum Ablauf gesetzlicher Verjährungsfristen (bis zu 10 Jahre gemäß § 147 AO und § 257 HGB für Rechnungsdaten)."
+        },
+        {
+          "title": "5. Empfänger",
+          "body": "Keine Weitergabe an Dritte außer Cloud-Infrastrukturanbietern als Auftragsverarbeiter (AVV) oder bei gesetzlicher Verpflichtung. Keine kommerzielle Weitergabe."
+        },
+        {
+          "title": "6. Internationale Übermittlungen",
+          "body": "Daten auf Servern in [SERVERSTANDORT]. Übermittlungen außerhalb des EWR auf Basis der Standardvertragsklauseln (SCC, Beschluss 2021/914)."
+        },
+        {
+          "title": "7. Ihre Rechte",
+          "body": "Anfragen an [KONTAKT_EMAIL]:\n· Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit (in den Kontoeinstellungen) und Widerspruch.\n\nAntwort innerhalb von 30 Tagen. Beschwerderecht beim Bundesbeauftragten für den Datenschutz: www.bfdi.bund.de"
+        },
+        {
+          "title": "8. Cookies und lokaler Speicher",
+          "body": "localStorage nur für die Sitzung und Spracheinstellung gemäß § 25 TTDSG. Keine Tracking-Cookies oder Werbung. Widerruf über das Cookie-Banner oder durch Löschen der Browserdaten."
+        },
+        {
+          "title": "9. Änderungen",
+          "body": "Wesentliche Änderungen werden mindestens 30 Tage im Voraus per E-Mail oder In-App-Benachrichtigung mitgeteilt."
+        }
       ]
     },
     "tos": {
       "title": "Nutzungsbedingungen",
       "lastUpdated": "Letzte Aktualisierung: März 2026",
       "sections": [
-        { "title": "1. Beschreibung des Dienstes", "body": "PrintForgePro ist eine Verwaltungsplattform für Unternehmen im Druck- und Grafikbereich: Aufträge, Angebote, Produktion, Materialien, Maschinen und Teams." },
-        { "title": "2. Zugang und Registrierung", "body": "Vorbehalten für Unternehmen und Fachleute mit Rechtsfähigkeit (ab 18 Jahren). Sie sind für die Vertraulichkeit Ihrer Zugangsdaten und alle Kontoaktivitäten verantwortlich." },
-        { "title": "3. Nutzerpflichten", "body": "· Den Dienst gesetzeskonform und gemäß diesen Bedingungen nutzen.\n· Wahrheitsgemäße Angaben bei der Registrierung machen.\n· Zugang nicht an Unbefugte weitergeben.\n· Unbefugte Nutzung des Kontos unverzüglich melden." },
-        { "title": "4. Verbotene Nutzungen", "body": "· Reverse Engineering oder Dekompilierung der Software.\n· Nutzung für illegale oder betrügerische Zwecke.\n· Zugriff auf Daten oder Konten anderer Nutzer.\n· Überlastung oder Störung der Dienstinfrastruktur.\n· Weiterverkauf oder Unterlizenzierung ohne schriftliche Genehmigung." },
-        { "title": "5. Geistiges Eigentum", "body": "PrintForgePro, sein Design, Code und die Marke sind Eigentum des Verantwortlichen. Nutzerdaten bleiben ausschließliches Eigentum des Nutzers." },
-        { "title": "6. Haftungsbeschränkung", "body": "Soweit gesetzlich zulässig keine Haftung für mittelbare Schäden oder entgangenen Gewinn. Gesamthaftung nicht höher als die in den letzten 12 Monaten gezahlten Beträge." },
-        { "title": "7. Verfügbarkeit", "body": "Wir streben kontinuierliche Verfügbarkeit an, ohne sie zu garantieren. Geplante Wartungen werden nach Möglichkeit vorab angekündigt." },
-        { "title": "8. Kündigung", "body": "Kündigung jederzeit über die App-Einstellungen oder per Kontaktaufnahme. Keine Erstattung bereits bezahlter Zeiträume außer bei zwingenden gesetzlichen Vorschriften. Konten bei Verstößen können nach Vorankündigung gesperrt werden." },
-        { "title": "9. Änderungen", "body": "Änderungen mit 30 Tagen Vorlaufzeit. Weitere Nutzung gilt als Zustimmung. Kündigung möglich bei Ablehnung der Änderungen." },
-        { "title": "10. Anwendbares Recht und Gerichtsstand", "body": "Spanisches Recht. Unternehmensstreitigkeiten: Gerichte in [GERICHTSSTAND]. Verbraucher können am Gericht ihres Wohnsitzes klagen. EU-Online-Streitbeilegung: https://ec.europa.eu/consumers/odr" },
-        { "title": "11. Kontakt", "body": "[KONTAKT_EMAIL]" }
+        {
+          "title": "1. Beschreibung des Dienstes",
+          "body": "PrintForgePro ist eine Verwaltungsplattform für Unternehmen im Druck- und Grafikbereich: Aufträge, Angebote, Produktion, Materialien, Maschinen und Teams."
+        },
+        {
+          "title": "2. Zugang und Registrierung",
+          "body": "Vorbehalten für Unternehmen und Fachleute mit Rechtsfähigkeit (ab 18 Jahren). Sie sind für die Vertraulichkeit Ihrer Zugangsdaten und alle Kontoaktivitäten verantwortlich."
+        },
+        {
+          "title": "3. Nutzerpflichten",
+          "body": "· Den Dienst gesetzeskonform und gemäß diesen Bedingungen nutzen.\n· Wahrheitsgemäße Angaben bei der Registrierung machen.\n· Zugang nicht an Unbefugte weitergeben.\n· Unbefugte Nutzung des Kontos unverzüglich melden."
+        },
+        {
+          "title": "4. Verbotene Nutzungen",
+          "body": "· Reverse Engineering oder Dekompilierung der Software.\n· Nutzung für illegale oder betrügerische Zwecke.\n· Zugriff auf Daten oder Konten anderer Nutzer.\n· Überlastung oder Störung der Dienstinfrastruktur.\n· Weiterverkauf oder Unterlizenzierung ohne schriftliche Genehmigung."
+        },
+        {
+          "title": "5. Geistiges Eigentum",
+          "body": "PrintForgePro, sein Design, Code und die Marke sind Eigentum des Verantwortlichen. Nutzerdaten bleiben ausschließliches Eigentum des Nutzers."
+        },
+        {
+          "title": "6. Haftungsbeschränkung",
+          "body": "Soweit gesetzlich zulässig keine Haftung für mittelbare Schäden oder entgangenen Gewinn. Gesamthaftung nicht höher als die in den letzten 12 Monaten gezahlten Beträge."
+        },
+        {
+          "title": "7. Verfügbarkeit",
+          "body": "Wir streben kontinuierliche Verfügbarkeit an, ohne sie zu garantieren. Geplante Wartungen werden nach Möglichkeit vorab angekündigt."
+        },
+        {
+          "title": "8. Kündigung",
+          "body": "Kündigung jederzeit über die App-Einstellungen oder per Kontaktaufnahme. Keine Erstattung bereits bezahlter Zeiträume außer bei zwingenden gesetzlichen Vorschriften. Konten bei Verstößen können nach Vorankündigung gesperrt werden."
+        },
+        {
+          "title": "9. Änderungen",
+          "body": "Änderungen mit 30 Tagen Vorlaufzeit. Weitere Nutzung gilt als Zustimmung. Kündigung möglich bei Ablehnung der Änderungen."
+        },
+        {
+          "title": "10. Anwendbares Recht und Gerichtsstand",
+          "body": "Spanisches Recht. Unternehmensstreitigkeiten: Gerichte in [GERICHTSSTAND]. Verbraucher können am Gericht ihres Wohnsitzes klagen. EU-Online-Streitbeilegung: https://ec.europa.eu/consumers/odr"
+        },
+        {
+          "title": "11. Kontakt",
+          "body": "[KONTAKT_EMAIL]"
+        }
       ]
     },
     "notice": {
       "title": "Impressum",
       "lastUpdated": "",
       "sections": [
-        { "title": "Angaben gemäß § 5 TMG", "body": "Unternehmensname: [FIRMENNAME]\nUSt-IdNr.: [UST_ID]\nAnschrift: [VOLLSTÄNDIGE_ADRESSE]\nE-Mail: [KONTAKT_EMAIL]\nTelefon: [TELEFONNUMMER]\nHandelsregister: [HRB_NUMMER], Amtsgericht [REGISTERGERICHT] (falls eingetragen)\nVertreten durch: [GESCHÄFTSFÜHRER]" },
-        { "title": "Inhaltlich Verantwortlicher gemäß § 55 Abs. 2 RStV", "body": "[NAME_VERANTWORTLICHER]\n[ADRESSE_VERANTWORTLICHER]" },
-        { "title": "EU-Streitschlichtung", "body": "Die EU-Kommission stellt eine OS-Plattform bereit: https://ec.europa.eu/consumers/odr\nUnsere E-Mail-Adresse finden Sie oben im Impressum." },
-        { "title": "Haftung für Inhalte", "body": "Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte verantwortlich. Nach §§ 8–10 TMG keine Überwachungspflicht für fremde Inhalte." },
-        { "title": "Urheberrecht", "body": "Die erstellten Inhalte und Werke unterliegen dem deutschen Urheberrecht. Vervielfältigung und Verbreitung bedürfen der schriftlichen Zustimmung." }
+        {
+          "title": "Angaben gemäß § 5 TMG",
+          "body": "Unternehmensname: [FIRMENNAME]\nUSt-IdNr.: [UST_ID]\nAnschrift: [VOLLSTÄNDIGE_ADRESSE]\nE-Mail: [KONTAKT_EMAIL]\nTelefon: [TELEFONNUMMER]\nHandelsregister: [HRB_NUMMER], Amtsgericht [REGISTERGERICHT] (falls eingetragen)\nVertreten durch: [GESCHÄFTSFÜHRER]"
+        },
+        {
+          "title": "Inhaltlich Verantwortlicher gemäß § 55 Abs. 2 RStV",
+          "body": "[NAME_VERANTWORTLICHER]\n[ADRESSE_VERANTWORTLICHER]"
+        },
+        {
+          "title": "EU-Streitschlichtung",
+          "body": "Die EU-Kommission stellt eine OS-Plattform bereit: https://ec.europa.eu/consumers/odr\nUnsere E-Mail-Adresse finden Sie oben im Impressum."
+        },
+        {
+          "title": "Haftung für Inhalte",
+          "body": "Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte verantwortlich. Nach §§ 8–10 TMG keine Überwachungspflicht für fremde Inhalte."
+        },
+        {
+          "title": "Urheberrecht",
+          "body": "Die erstellten Inhalte und Werke unterliegen dem deutschen Urheberrecht. Vervielfältigung und Verbreitung bedürfen der schriftlichen Zustimmung."
+        }
       ]
     }
+  },
+  "billing": {
+    "title": "Abrechnung",
+    "currentPlan": "Aktueller Plan",
+    "modeCredits": "Nutzungsbasierte Abrechnung",
+    "modeSubscription": "Monatsabonnement",
+    "creditsAvailable": "Guthaben verfügbar",
+    "credits": "Guthaben",
+    "unlimited": "Unbegrenzte Nutzung",
+    "subscriptionDesc": "Unbegrenzter Zugang zu allen Funktionen.",
+    "perMonth": "Monat",
+    "priceOnRequest": "Preis auf Anfrage",
+    "costsTitle": "Kosten pro Aktion",
+    "costOrder": "Auftrag erstellen",
+    "costFeatures": "Premium-Funktionen",
+    "costFeaturesHint": "PDF-Report, Wiederholung, Trapping, Stanzung — einmalig pro Auftrag berechnet",
+    "changePlan": "Plan wechseln",
+    "buyCredits": "Guthaben kaufen",
+    "popular": "Beliebteste",
+    "buy": "Kaufen",
+    "buying": "Wird verarbeitet...",
+    "simulatedNotice": "⚠ Zahlungsgateway noch nicht konfiguriert. Käufe werden simuliert.",
+    "historyTitle": "Nutzungsverlauf",
+    "historyEmpty": "Noch keine Aktivität.",
+    "order": "Auftrag",
+    "balanceAfter": "Guthaben: {{n}}",
+    "topupSuccessTitle": "Guthaben aufgeladen!",
+    "topupSuccess": "{{amount}} Guthaben aufgeladen. Neues Guthaben: {{balance}}.",
+    "errorTitle": "Fehler",
+    "insufficientCredits": "Guthaben nicht ausreichend",
+    "insufficientCreditsMsg": "Sie benötigen {{required}} Guthaben, um einen Auftrag zu erstellen. Aktuelles Guthaben: {{balance}}. Gehen Sie zu Einstellungen › Abrechnung zum Aufladen.",
+    "action_pedido": "Auftrag erstellt",
+    "action_features": "Premium-Funktionen",
+    "action_purchase": "Guthaben aufgeladen",
+    "action_signup_bonus": "Willkommensguthaben"
   }
 }

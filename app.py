@@ -291,6 +291,8 @@ PERMISSION_KEYS = [
     'edit_produccion',
     'eliminar_archivos',
     'edit_modo_creacion',
+    'manage_billing',
+    'manage_modulos',
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
@@ -307,6 +309,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': True,
         'eliminar_archivos': False,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
     'administrador': {
         'manage_app_settings': True,
@@ -322,6 +326,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': True,
         'eliminar_archivos': True,
         'edit_modo_creacion': True,
+        'manage_billing': True,
+        'manage_modulos': True,
     },
     'root': {
         'manage_app_settings': True,
@@ -337,6 +343,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': True,
         'eliminar_archivos': True,
         'edit_modo_creacion': True,
+        'manage_billing': True,
+        'manage_modulos': True,
     },
     # Department roles
     'comercial': {
@@ -353,6 +361,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': False,
         'eliminar_archivos': True,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
     'diseno': {
         'manage_app_settings': False,
@@ -368,6 +378,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': False,
         'eliminar_archivos': True,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
     'impresion': {
         'manage_app_settings': False,
@@ -383,6 +395,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': True,
         'eliminar_archivos': False,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
     'post-impresion': {
         'manage_app_settings': False,
@@ -398,6 +412,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': True,
         'eliminar_archivos': False,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
     'oficina': {
         'manage_app_settings': False,
@@ -413,6 +429,8 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_produccion': False,
         'eliminar_archivos': False,
         'edit_modo_creacion': False,
+        'manage_billing': False,
+        'manage_modulos': False,
     },
 }
 
@@ -444,12 +462,21 @@ ESTADOS_RULES_DEFAULT = {
 }
 
 FREE_SIGNUP_CREDITS = 50
-CREDIT_COSTS = {
+CREDIT_COST_PEDIDO   = 5    # créditos por crear un nuevo pedido
+CREDIT_COST_FEATURES = 10   # créditos por usar funcionalidades premium en un pedido (cobro único por pedido)
+CREDIT_COSTS = {            # legacy — costes individuales por feature
     'report': 7,
     'repetidora': 16,
     'trapping': 4,
     'troquel': 9,
 }
+CREDIT_PACKAGES = [
+    {'id': 'pack_50',  'credits': 50,  'price_eur': 4.99,  'label': '50 créditos'},
+    {'id': 'pack_100', 'credits': 100, 'price_eur': 8.99,  'label': '100 créditos', 'popular': True},
+    {'id': 'pack_250', 'credits': 250, 'price_eur': 19.99, 'label': '250 créditos'},
+    {'id': 'pack_500', 'credits': 500, 'price_eur': 34.99, 'label': '500 créditos'},
+]
+SUBSCRIPTION_PRICE_EUR = 29.99  # mensual, placeholder
 ALLOWED_BILLING_MODELS = {'creditos', 'suscripcion'}
 ALLOWED_PAYMENT_METHODS = {'paypal', 'tarjeta'}
 SESSION_TIMEOUT_MINUTES_DEFAULT = 30
@@ -673,6 +700,92 @@ def validate_password_strength(password):
     if not _re.search(r'[^A-Za-z0-9]', password):
         return False, 'La contraseña debe incluir al menos un carácter especial (!@#$%...)'
     return True, None
+
+
+def deduct_credits(email, amount, action, pedido_id=None, metadata=None):
+    """Descuenta créditos de forma atómica. Solo descuenta si hay suficiente saldo.
+    Devuelve (nuevo_saldo, error_str). Si error_str es None, la operación fue exitosa."""
+    col_usuarios = get_empresa_collection('usuarios', None)
+    col_tx = get_empresa_collection('credit_transactions', None)
+    result = col_usuarios.find_one_and_update(
+        {'email': email, 'creditos': {'$gte': amount}},
+        {'$inc': {'creditos': -amount}},
+        return_document=pymongo.ReturnDocument.AFTER,
+    )
+    if result is None:
+        user = col_usuarios.find_one({'email': email})
+        if not user:
+            return None, 'Usuario no encontrado'
+        current = int(user.get('creditos') or 0)
+        return current, f'Créditos insuficientes (tienes {current}, necesitas {amount})'
+    new_balance = int(result.get('creditos') or 0)
+    col_tx.insert_one({
+        'email': email,
+        'empresa_id': str(result.get('empresa_id') or ''),
+        'action': action,
+        'amount': -amount,
+        'balance_after': new_balance,
+        'pedido_id': pedido_id,
+        'metadata': metadata or {},
+        'created_at': datetime.now().isoformat(),
+    })
+    return new_balance, None
+
+
+def add_credits(email, amount, action='purchase', metadata=None):
+    """Añade créditos. Devuelve (nuevo_saldo, error_str)."""
+    col_usuarios = get_empresa_collection('usuarios', None)
+    col_tx = get_empresa_collection('credit_transactions', None)
+    result = col_usuarios.find_one_and_update(
+        {'email': email},
+        {'$inc': {'creditos': amount}},
+        return_document=pymongo.ReturnDocument.AFTER,
+    )
+    if result is None:
+        return None, 'Usuario no encontrado'
+    new_balance = int(result.get('creditos') or 0)
+    col_tx.insert_one({
+        'email': email,
+        'empresa_id': str(result.get('empresa_id') or ''),
+        'action': action,
+        'amount': amount,
+        'balance_after': new_balance,
+        'metadata': metadata or {},
+        'created_at': datetime.now().isoformat(),
+    })
+    return new_balance, None
+
+
+def resolve_billing_email(email, empresa_id=None):
+    """Dev-mode helper: if email is blank, find the first user in the empresa and return their email."""
+    if email:
+        return email
+    if empresa_id:
+        col = get_empresa_collection('usuarios', None)
+        norm_eid = normalize_empresa_id(empresa_id)
+        user = col.find_one({'empresa_id': norm_eid}, {'email': 1})
+        if user:
+            return str(user.get('email') or '')
+    return ''
+
+
+def get_billing_status_for_user(email, empresa_id=None):
+    """Devuelve un dict con billing_model, creditos y datos del plan."""
+    col = get_empresa_collection('usuarios', None)
+    user = None
+    if email:
+        user = col.find_one({'email': email}, {'creditos': 1, 'billing_model': 1, 'nombre': 1})
+    # Dev-mode fallback: no email → pick any user in the empresa
+    if not user and empresa_id:
+        norm_eid = normalize_empresa_id(empresa_id)
+        user = col.find_one({'empresa_id': norm_eid}, {'creditos': 1, 'billing_model': 1, 'nombre': 1})
+    if not user:
+        return None
+    return {
+        'billing_model': str(user.get('billing_model') or 'creditos'),
+        'creditos': int(user.get('creditos') or 0),
+        'nombre': str(user.get('nombre') or ''),
+    }
 
 
 def send_reset_code_email(to_email, code, expires_seconds, recipient_name=''):
@@ -2681,7 +2794,11 @@ def serve_avatar(filename):
 def get_billing_config():
     return jsonify({
         'free_signup_credits': FREE_SIGNUP_CREDITS,
+        'credit_cost_pedido': CREDIT_COST_PEDIDO,
+        'credit_cost_features': CREDIT_COST_FEATURES,
         'pricing_credits': CREDIT_COSTS,
+        'credit_packages': CREDIT_PACKAGES,
+        'subscription_price_eur': SUBSCRIPTION_PRICE_EUR,
         'checkout_enabled': stripe_enabled(),
         'checkout_provider': 'stripe',
         'currency': STRIPE_CURRENCY,
@@ -2695,6 +2812,99 @@ def get_billing_config():
             {'key': 'tarjeta', 'label': 'Tarjeta bancaria'},
         ],
     }), 200
+
+
+@app.route('/api/billing/status', methods=['GET'])
+def get_billing_status():
+    """Estado de facturación del usuario autenticado: plan, saldo, info."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email = str(request_user.get('email') or '').strip().lower()
+        status = get_billing_status_for_user(email, empresa_id=request_user.get('empresa_id'))
+        if not status:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        model = status['billing_model']
+        resp = {
+            'billing_model': model,
+            'creditos': status['creditos'],
+            'credit_cost_pedido': CREDIT_COST_PEDIDO,
+            'credit_cost_features': CREDIT_COST_FEATURES,
+            'credit_packages': CREDIT_PACKAGES,
+            'subscription_price_eur': SUBSCRIPTION_PRICE_EUR,
+            'stripe_enabled': stripe_enabled(),
+        }
+        return jsonify(resp), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/history', methods=['GET'])
+def get_billing_history():
+    """Historial de transacciones de créditos del usuario autenticado."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email = resolve_billing_email(
+            str(request_user.get('email') or '').strip().lower(),
+            empresa_id=request_user.get('empresa_id'),
+        )
+        col_tx = get_empresa_collection('credit_transactions', None)
+        limit = min(int(request.args.get('limit', 50)), 200)
+        txs = list(col_tx.find({'email': email}, {'_id': 0}).sort('created_at', -1).limit(limit))
+        return jsonify({'transactions': txs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/creditos/topup', methods=['POST'])
+def topup_credits():
+    """Recarga de créditos (simulada mientras no esté configurada la pasarela de pago)."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email = resolve_billing_email(
+            str(request_user.get('email') or '').strip().lower(),
+            empresa_id=request_user.get('empresa_id'),
+        )
+        data = request.get_json() or {}
+        package_id = str(data.get('package_id') or '').strip()
+        pkg = next((p for p in CREDIT_PACKAGES if p['id'] == package_id), None)
+        if not pkg:
+            return jsonify({'error': 'Paquete no válido'}), 400
+        amount = int(pkg['credits'])
+        new_balance, err = add_credits(email, amount, action='purchase', metadata={'package_id': package_id, 'price_eur': pkg['price_eur'], 'simulated': True})
+        if err:
+            return jsonify({'error': err}), 400
+        return jsonify({'credits_added': amount, 'new_balance': new_balance, 'simulated': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/change-plan', methods=['POST'])
+def change_billing_plan():
+    """Cambia el modelo de facturación del usuario entre 'creditos' y 'suscripcion'."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email = str(request_user.get('email') or '').strip().lower()
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        new_plan = str(data.get('plan') or '').strip().lower()
+        if new_plan not in ('creditos', 'suscripcion'):
+            return jsonify({'error': 'plan debe ser "creditos" o "suscripcion"'}), 400
+        col = get_empresa_collection('usuarios', None)
+        query = {'email': email} if email else {'empresa_id': empresa_id}
+        result = col.update_one(query, {'$set': {'billing_model': new_plan}})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        return jsonify({'billing_model': new_plan}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/billing/checkout-session', methods=['POST'])
@@ -2787,71 +2997,62 @@ def confirm_billing_checkout_session():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/usuarios/<int:usuario_id>/creditos', methods=['GET'])
+@app.route('/api/usuarios/<usuario_id>/creditos', methods=['GET'])
 def get_creditos_usuario(usuario_id):
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
-
-        # TODO: Implementar consulta de créditos con MongoDB
-        return jsonify({'error': 'No implementado: migrar consulta de créditos a MongoDB'}), 501
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/usuarios/<int:usuario_id>/creditos/cargar', methods=['POST'])
-def cargar_creditos_usuario(usuario_id):
-    try:
-        request_user, auth_error = require_request_user()
-        if auth_error:
-            return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
-
-        data = request.get_json() or {}
-        creditos = int(data.get('creditos') or 0)
-        payment_method = normalize_payment_method(data.get('payment_method') or data.get('metodo_pago'))
-
-        if creditos <= 0:
-            return jsonify({'error': 'creditos debe ser mayor que 0'}), 400
-        if not payment_method:
-            return jsonify({'error': 'metodo_pago no válido (paypal|tarjeta)'}), 400
-
-        # TODO: Implementar carga de créditos con MongoDB
-        return jsonify({'error': 'No implementado: migrar carga de créditos a MongoDB'}), 501
+        email = str(request_user.get('email') or '').strip().lower()
+        status = get_billing_status_for_user(email, empresa_id=request_user.get('empresa_id'))
+        if not status:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        return jsonify({'creditos': status['creditos'], 'billing_model': status['billing_model']}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/billing/consumir', methods=['POST'])
 def consumir_creditos_billing():
+    """Consume créditos por el uso de funcionalidades premium.
+    Aplica cobro único por pedido: si el pedido ya fue cobrado por features, no se vuelve a cobrar."""
     try:
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        email = resolve_billing_email(
+            str(request_user.get('email') or '').strip().lower(),
+            empresa_id=request_user.get('empresa_id'),
+        )
 
         data = request.get_json() or {}
-        usuario_id = int(data.get('usuario_id') or 0)
-        usuario_email = str(data.get('usuario_email') or '').strip().lower()
-        usuario_nombre = str(data.get('usuario_nombre') or '').strip()
         accion = str(data.get('accion') or '').strip().lower()
-        referencia = str(data.get('referencia') or '').strip() or None
+        pedido_id = str(data.get('pedido_id') or '').strip() or None
         metadata = data.get('metadata') if isinstance(data.get('metadata'), dict) else {}
 
-        if usuario_id <= 0 and not usuario_email and not usuario_nombre:
-            return jsonify({'error': 'Debes enviar usuario_id, usuario_email o usuario_nombre'}), 400
-        if accion not in CREDIT_COSTS:
-            return jsonify({'error': 'accion no válida. Usa report|repetidora|trapping|troquel'}), 400
+        VALID_ACTIONS = {'report', 'repetidora', 'trapping', 'troquel'}
+        if accion not in VALID_ACTIONS:
+            return jsonify({'error': f'accion no válida. Usa: {"|".join(sorted(VALID_ACTIONS))}'}), 400
 
-        cost = int(CREDIT_COSTS[accion])
-        # TODO: Implementar consumo de créditos con MongoDB
-        return jsonify({'error': 'No implementado: migrar consumo de créditos a MongoDB'}), 501
-    # Lógica MongoDB pendiente si es necesario
+        # Verificar si el plan es suscripción → sin coste
+        status = get_billing_status_for_user(email, empresa_id=request_user.get('empresa_id'))
+        if not status:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        if status['billing_model'] == 'suscripcion':
+            return jsonify({'charged': False, 'reason': 'subscription', 'balance': status['creditos']}), 200
 
-            # Lógica MongoDB pendiente si es necesario
-        return jsonify({'error': 'No se pudo registrar el consumo'}), 500
+        # Cobro único por pedido: si ya se cobró features en este pedido, no repetir
+        if pedido_id:
+            col_tx = get_empresa_collection('credit_transactions', None)
+            already = col_tx.find_one({'email': email, 'pedido_id': pedido_id, 'action': 'features'})
+            if already:
+                return jsonify({'charged': False, 'reason': 'already_charged', 'balance': status['creditos']}), 200
+
+        cost = CREDIT_COST_FEATURES
+        new_balance, err = deduct_credits(email, cost, 'features', pedido_id=pedido_id, metadata={'accion': accion, **metadata})
+        if err:
+            return jsonify({'error': err, 'balance': status['creditos'], 'required': cost}), 402
+        return jsonify({'charged': True, 'amount': cost, 'balance': new_balance}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -5486,6 +5687,18 @@ def crear_pedido():
         if modo_creacion == 'automatico':
             return jsonify({'error': 'La creación manual de pedidos está deshabilitada en modo automático.'}), 403
 
+        # ── Verificación y cobro de créditos ──────────────────────────────────
+        email = str(request_user.get('email') or '').strip().lower()
+        billing = get_billing_status_for_user(email, empresa_id=request_user.get('empresa_id'))
+        if billing and billing['billing_model'] == 'creditos':
+            if billing['creditos'] < CREDIT_COST_PEDIDO:
+                return jsonify({
+                    'error': 'Créditos insuficientes para crear un pedido',
+                    'balance': billing['creditos'],
+                    'required': CREDIT_COST_PEDIDO,
+                    'billing_model': 'creditos',
+                }), 402
+
         data = request.get_json() or {}
         trabajo_id = data.get('trabajo_id')
         numero_pedido = data.get('numero_pedido')
@@ -5557,7 +5770,21 @@ def crear_pedido():
             update_fields = {k: v for k, v in doc.items() if k != '_id'}
             col.update_one({'_id': existing['_id']}, {'$set': update_fields})
             pedido_id = str(existing['_id'])
-        return jsonify({'success': True, 'pedido_id': pedido_id, 'numero_pedido': numero_pedido}), 201
+        # Descontar créditos si aplica (post-inserción para no bloquear en caso de error)
+        credits_deducted = 0
+        credits_balance = None
+        if billing and billing['billing_model'] == 'creditos':
+            new_bal, _ = deduct_credits(email, CREDIT_COST_PEDIDO, 'pedido', pedido_id=pedido_id, metadata={'numero_pedido': numero_pedido})
+            credits_deducted = CREDIT_COST_PEDIDO
+            credits_balance = new_bal
+
+        return jsonify({
+            'success': True,
+            'pedido_id': pedido_id,
+            'numero_pedido': numero_pedido,
+            'credits_deducted': credits_deducted,
+            'credits_balance': credits_balance,
+        }), 201
     except Exception as e:
         _traceback.print_exc()
         return jsonify({'error': str(e)}), 500
