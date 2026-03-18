@@ -206,6 +206,15 @@ const styles = StyleSheet.create({
     marginRight: 7,
     flexShrink: 0,
   },
+  rolEditContainer: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 4,
+  },
   chipText: { color: '#0F172A', fontSize: 13, fontWeight: '600', marginRight: 6 },
   chipDelete: {
     width: 22,
@@ -2150,6 +2159,50 @@ export default function ConfigScreen({ route, currentUser }) {
             {items.map((item) => {
               const esRolProtegido = categoryKey === 'roles' && rolesProtegidos.has(slugifyEstado(item?.valor || ''));
               const rolColor = categoryKey === 'roles' ? (item.color || null) : null;
+              const isEditingThis = editing.id === item.id && editing.category === categoryKey;
+
+              // ── Modo edición expandido para roles (con paleta de color) ──────────
+              if (isEditingThis && categoryKey === 'roles') {
+                const editColor = editing.color || rolColor || '#64748B';
+                return (
+                  <View key={item.id} style={styles.rolEditContainer}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: editColor, flexShrink: 0 }} />
+                      <TextInput
+                        style={[styles.input, { flex: 1, paddingVertical: 4, marginBottom: 0 }]}
+                        value={editing.text}
+                        onChangeText={(t) => setEditing((prev) => ({ ...prev, text: t }))}
+                        onSubmitEditing={saveEditedValor}
+                        autoFocus
+                        returnKeyType="done"
+                      />
+                      <TouchableOpacity style={styles.chipEdit} onPress={saveEditedValor}>
+                        <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.chipEdit} onPress={() => setEditing({ category: null, id: null, text: '', color: '' })}>
+                        <Text style={styles.chipEditText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                      {ESTADO_PALETTE.map(color => (
+                        <TouchableOpacity
+                          key={color}
+                          onPress={() => setEditing((prev) => ({ ...prev, color }))}
+                          style={{
+                            width: 24, height: 24, borderRadius: 12,
+                            backgroundColor: color,
+                            borderWidth: editColor === color ? 2.5 : 1,
+                            borderColor: editColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
+                            transform: editColor === color ? [{ scale: 1.15 }] : [],
+                          }}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                );
+              }
+
+              // ── Vista normal del chip ─────────────────────────────────────────────
               return (
                 <View key={item.id} style={[
                   styles.chip,
@@ -2158,7 +2211,7 @@ export default function ConfigScreen({ route, currentUser }) {
                   {rolColor && (
                     <View style={[styles.chipColorDot, { backgroundColor: rolColor }]} />
                   )}
-                  {editing.id === item.id && editing.category === categoryKey ? (
+                  {isEditingThis ? (
                     <TextInput
                       style={[styles.input, { minWidth: 120, paddingVertical: 6 }]}
                       value={editing.text}
