@@ -804,34 +804,21 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
-const COLOR_SWATCHES = [
-  '#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E',
-  '#10B981','#14B8A6','#06B6D4','#3B82F6','#6366F1','#8B5CF6',
-  '#A855F7','#EC4899','#F43F5E','#DC2626','#EA580C','#D97706',
-  '#16A34A','#0D9488','#2563EB','#4F46E5','#9333EA','#DB2777',
-  '#7F1D1D','#134E4A','#1E3A8A','#4C1D95','#64748B','#1E293B',
-];
-
 function ColorPickerInput({ value, onChange }) {
-  const [open, setOpen] = React.useState(false);
-  const [pos, setPos] = React.useState({ top: 0, left: 0 });
-  const triggerRef = React.useRef(null);
-
-  const handleOpen = () => {
-    triggerRef.current?.measureInWindow?.((x, y, w, h) => {
-      setPos({ top: y + h + 6, left: x });
-      setOpen(true);
-    });
-  };
-
-  const select = (color) => {
-    onChange(color);
-    setOpen(false);
-  };
+  const inputRef = React.useRef(null);
 
   return (
-    <View ref={triggerRef}>
-      <TouchableOpacity onPress={handleOpen}>
+    <View>
+      {Platform.OS === 'web' && (
+        <input
+          ref={inputRef}
+          type="color"
+          value={value || '#3B82F6'}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+        />
+      )}
+      <TouchableOpacity onPress={() => inputRef.current?.click?.()}>
         <View style={{
           width: 24, height: 24, borderRadius: 12,
           backgroundColor: value || '#E2E8F0',
@@ -839,33 +826,6 @@ function ColorPickerInput({ value, onChange }) {
           borderColor: value ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.12)',
         }} />
       </TouchableOpacity>
-      <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setOpen(false)}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={{
-              position: 'absolute', top: pos.top, left: pos.left,
-              backgroundColor: '#FFFFFF', borderRadius: 10,
-              padding: 8, borderWidth: 1, borderColor: '#E2E8F0',
-              flexDirection: 'row', flexWrap: 'wrap', gap: 5, width: 162,
-              shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12,
-              shadowOffset: { width: 0, height: 4 }, elevation: 10,
-            }}
-          >
-            {COLOR_SWATCHES.map(color => (
-              <TouchableOpacity key={color} onPress={() => select(color)}>
-                <View style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  backgroundColor: color,
-                  borderWidth: value === color ? 2.5 : 1,
-                  borderColor: value === color ? '#0F172A' : 'rgba(0,0,0,0.1)',
-                  transform: value === color ? [{ scale: 1.15 }] : [],
-                }} />
-              </TouchableOpacity>
-            ))}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
