@@ -804,27 +804,64 @@ const ESTADO_RULE_CONFIG = [
   { key: 'ocultar_grafica', title: 'Ocultar en gráfica', hint: 'No se cuentan en la gráfica de estados.' },
 ];
 
+const COLOR_PICKER_PALETTE = [
+  '#EF4444','#F97316','#F59E0B','#EAB308','#84CC16',
+  '#22C55E','#10B981','#14B8A6','#06B6D4','#3B82F6',
+  '#6366F1','#8B5CF6','#A855F7','#EC4899','#F43F5E',
+  '#DC2626','#EA580C','#D97706','#CA8A04','#65A30D',
+  '#16A34A','#059669','#0D9488','#0891B2','#2563EB',
+  '#4F46E5','#7C3AED','#9333EA','#DB2777','#E11D48',
+  '#1E293B','#334155','#475569','#64748B','#94A3B8',
+];
+
 function ColorPickerInput({ value, onChange }) {
-  const inputRef = React.useRef(null);
+  const [open, setOpen] = React.useState(false);
   const displayColor = value || '#E2E8F0';
+
+  const select = (color) => {
+    onChange(color);
+    setOpen(false);
+  };
+
   return (
-    <View>
-      {Platform.OS === 'web' && (
-        <input
-          ref={inputRef}
-          type="color"
-          value={value || '#3B82F6'}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+    <View style={{ position: 'relative' }}>
+      {open && (
+        <TouchableOpacity
+          onPress={() => setOpen(false)}
+          activeOpacity={1}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
         />
       )}
-      <TouchableOpacity onPress={() => inputRef.current?.click?.()}>
+      <TouchableOpacity onPress={() => setOpen(o => !o)}>
         <View style={{
           width: 24, height: 24, borderRadius: 12,
           backgroundColor: displayColor,
-          borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
+          borderWidth: value ? 2 : 1.5,
+          borderColor: value ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.12)',
         }} />
       </TouchableOpacity>
+      {open && (
+        <View style={{
+          position: 'absolute', top: 30, left: 0, zIndex: 1000,
+          backgroundColor: '#FFFFFF', borderRadius: 10,
+          padding: 8, borderWidth: 1, borderColor: '#E2E8F0',
+          flexDirection: 'row', flexWrap: 'wrap', gap: 5, width: 165,
+          shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 }, elevation: 10,
+        }}>
+          {COLOR_PICKER_PALETTE.map(color => (
+            <TouchableOpacity key={color} onPress={() => select(color)}>
+              <View style={{
+                width: 22, height: 22, borderRadius: 11,
+                backgroundColor: color,
+                borderWidth: value === color ? 2.5 : 1,
+                borderColor: value === color ? '#0F172A' : 'rgba(0,0,0,0.1)',
+                transform: value === color ? [{ scale: 1.2 }] : [],
+              }} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
