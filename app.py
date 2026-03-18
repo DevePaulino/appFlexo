@@ -267,6 +267,12 @@ ROLE_LABELS = {
 }
 PROTECTED_ROLE_ORDER = ['administrador']
 PROTECTED_ROLE_KEYS = {'administrador'}
+ROLE_COLOR_PALETTE = [
+    '#1D4ED8', '#0F766E', '#7C3AED', '#BE185D', '#D97706',
+    '#047857', '#C026D3', '#0369A1', '#B45309', '#4338CA',
+    '#065F46', '#9333EA', '#DC2626', '#0891B2', '#15803D',
+    '#6D28D9', '#B91C1C', '#0284C7', '#A21CAF', '#0F9D9D',
+]
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'en-diseno',
     'finalizado',
@@ -2071,6 +2077,10 @@ def seed_empresa_defaults(empresa_id):
                         {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
                         {'$set': {'color': color}}
                     )
+        # Backfill color for existing roles that don't have one yet
+        import random as _random
+        for role_doc in col_op.find({'categoria': 'roles', 'empresa_id': empresa_id, 'color': {'$in': [None, '', 0, False]}}):
+            col_op.update_one({'_id': role_doc['_id']}, {'$set': {'color': _random.choice(ROLE_COLOR_PALETTE)}})
 
     config_gen_defaults = [
         ('role_permissions', json.dumps(ROLE_PERMISSIONS_DEFAULT)),
@@ -3143,6 +3153,10 @@ def get_settings_catalogo():
                                 {'categoria': cat, 'valor': valor, 'empresa_id': empresa_id, 'color': None},
                                 {'$set': {'color': color}}
                             )
+            # Backfill color for roles that don't have one yet
+            import random as _random
+            for role_doc in col.find({'categoria': 'roles', 'empresa_id': empresa_id, 'color': {'$in': [None, '', 0, False]}}):
+                col.update_one({'_id': role_doc['_id']}, {'$set': {'color': _random.choice(ROLE_COLOR_PALETTE)}})
 
         if categoria:
             if categoria not in ALLOWED_SETTINGS_CATEGORIES:
@@ -3250,7 +3264,7 @@ def api_roles_permissions():
                 label = (r.get('valor') or '').strip()
                 key = slugify_estado(label)
                 if label and key:
-                    roles.append({'key': key, 'label': label})
+                    roles.append({'key': key, 'label': label, 'color': str(r.get('color') or '')})
 
             return jsonify({'permissions': PERMISSION_KEYS, 'roles_permissions': parsed, 'roles': roles}), 200
 
@@ -3446,9 +3460,12 @@ def crear_config_opcion():
             'empresa_id': empresa_id,
             'fecha_creacion': datetime.now().isoformat()
         }
-        # Guardar color si es un estado de pedido
+        # Guardar color si es un estado de pedido o un rol nuevo
         if categoria == 'estados_pedido' and color:
             doc['color'] = color
+        elif categoria == 'roles':
+            import random as _random
+            doc['color'] = _random.choice(ROLE_COLOR_PALETTE)
         result = col.insert_one(doc)
         try:
             log_audit('create_setting_item', request_user, {'categoria': categoria, 'valor': valor, 'id': str(result.inserted_id)})

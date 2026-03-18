@@ -199,6 +199,13 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     paddingVertical: 6,
   },
+  chipColorDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    marginRight: 7,
+    flexShrink: 0,
+  },
   chipText: { color: '#0F172A', fontSize: 13, fontWeight: '600', marginRight: 6 },
   chipDelete: {
     width: 22,
@@ -2141,8 +2148,15 @@ export default function ConfigScreen({ route, currentUser }) {
           <View style={styles.chipList}>
             {items.map((item) => {
               const esRolProtegido = categoryKey === 'roles' && rolesProtegidos.has(slugifyEstado(item?.valor || ''));
+              const rolColor = categoryKey === 'roles' ? (item.color || null) : null;
               return (
-                <View key={item.id} style={styles.chip}>
+                <View key={item.id} style={[
+                  styles.chip,
+                  rolColor && { borderColor: rolColor },
+                ]}>
+                  {rolColor && (
+                    <View style={[styles.chipColorDot, { backgroundColor: rolColor }]} />
+                  )}
                   {editing.id === item.id && editing.category === categoryKey ? (
                     <TextInput
                       style={[styles.input, { minWidth: 120, paddingVertical: 6 }]}
@@ -2409,8 +2423,18 @@ export default function ConfigScreen({ route, currentUser }) {
                       const label = capitalizeFirst(role?.label || roleKey);
                       return (
                         <View key={roleKey} style={styles.matrixRoleCol}>
-                          <View style={[styles.matrixRoleHeader, isAdmin && styles.matrixRoleHeaderProtected]}>
-                            <Text style={[styles.matrixRoleHeaderText, isAdmin && styles.matrixRoleHeaderTextProtected]} numberOfLines={2} adjustsFontSizeToFit>
+                          <View style={[
+                            styles.matrixRoleHeader,
+                            isAdmin
+                              ? styles.matrixRoleHeaderProtected
+                              : role.color && { backgroundColor: role.color },
+                          ]}>
+                            <Text style={[
+                              styles.matrixRoleHeaderText,
+                              isAdmin
+                                ? styles.matrixRoleHeaderTextProtected
+                                : role.color && { color: '#FFFFFF' },
+                            ]} numberOfLines={2} adjustsFontSizeToFit>
                               {label}
                             </Text>
                           </View>
@@ -2452,7 +2476,8 @@ export default function ConfigScreen({ route, currentUser }) {
                                 >
                                   <View style={[
                                     styles.matrixDot,
-                                    active && [styles.matrixDotActive, { backgroundColor: group.color, borderColor: group.color }],
+                                    active && role.color && { backgroundColor: role.color, borderColor: role.color },
+                                    active && !role.color && styles.matrixDotActive,
                                     isAdmin && styles.matrixDotProtected,
                                     !puedeEditarRolesPermisos && !isAdmin && styles.matrixDotReadonly,
                                   ]}>
