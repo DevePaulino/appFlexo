@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -12,14 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { R, S } from './theme';
-
-// URLs de documentos legales (actualizar cuando estén publicados)
-const LEGAL_URLS = {
-  privacy: 'https://printforgepro.com/legal/privacidad',
-  terms:   'https://printforgepro.com/legal/terminos',
-  legal:   'https://printforgepro.com/legal/aviso-legal',
-};
-const openUrl = (url) => { try { Linking.openURL(url); } catch (_) {} };
+import LegalModal from '../components/LegalModal';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -443,6 +435,11 @@ const s = StyleSheet.create({
     color: P.textSec,
     lineHeight: 18,
   },
+  legalLink: {
+    color: 'rgba(232,82,42,0.80)',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(232,82,42,0.35)',
+  },
 
   // ── Legal ────────────────────────────────────────────────────────────────
   legalConsent: {
@@ -450,18 +447,6 @@ const s = StyleSheet.create({
     fontSize: 10.5,
     color: P.textMuted,
     lineHeight: 16,
-    textAlign: 'center',
-  },
-  legalLink: {
-    color: 'rgba(232,82,42,0.70)',
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(232,82,42,0.35)',
-  },
-  legalGdpr: {
-    marginTop: 6,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.18)',
-    lineHeight: 15,
     textAlign: 'center',
   },
   legalDivider: {
@@ -482,37 +467,13 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: 'rgba(255,255,255,0.18)',
   },
-  legalFooterLink: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.28)',
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(255,255,255,0.15)',
-  },
-  legalBrandFooter: {
-    marginTop: 'auto',
-    paddingTop: 32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  legalBrandFooterText: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.20)',
-  },
-  legalBrandFooterLink: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.28)',
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(255,255,255,0.12)',
-  },
 });
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AuthHomeScreen({ onAuthSuccess }) {
   const { t } = useTranslation();
   const [authMode, setAuthMode] = useState('login');
+  const [legalModal, setLegalModal] = useState({ visible: false, tab: 'pp' });
   const [billingModel, setBillingModel] = useState('creditos');
   const [nombre, setNombre] = useState('');
   const [nombreEmpresa, setNombreEmpresa] = useState('');
@@ -742,7 +703,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           </View>
           <Text style={s.consentText}>
             {t('legal.acceptTermsPre')}{' '}
-            <Text style={s.legalLink} onPress={() => openUrl(LEGAL_URLS.terms)}>{t('legal.terms')}</Text>
+            <Text style={s.legalLink} onPress={() => setLegalModal({ visible: true, tab: 'tos' })}>{t('legal.terms')}</Text>
           </Text>
         </Pressable>
         <Pressable style={s.consentRow} onPress={() => setAcceptPrivacy((v) => !v)}>
@@ -751,7 +712,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           </View>
           <Text style={s.consentText}>
             {t('legal.acceptPrivacyPre')}{' '}
-            <Text style={s.legalLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
+            <Text style={s.legalLink} onPress={() => setLegalModal({ visible: true, tab: 'pp' })}>{t('legal.privacy')}</Text>
           </Text>
         </Pressable>
       </View>
@@ -764,13 +725,17 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       >
         <Text style={s.submitBtnText}>{loading ? t('auth.registerBtnLoading') : t('auth.registerBtn')}</Text>
       </TouchableOpacity>
-      <Text style={s.legalGdpr}>{t('legal.gdprNote')}</Text>
     </>
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={s.root}>
+      <LegalModal
+        visible={legalModal.visible}
+        initialTab={legalModal.tab}
+        onClose={() => setLegalModal({ visible: false, tab: 'pp' })}
+      />
       <View style={s.split}>
 
         {/* ── Panel de marca ─────────────────────────────────────────────── */}
@@ -812,15 +777,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             <Text style={s.modulesCaptionAccent}>{t('auth.modulesCaptionAccent')}</Text>
           </Text>
 
-          {/* Pie del panel de marca — sutil, solo visible en web */}
-          {Platform.OS === 'web' && (
-            <View style={s.legalBrandFooter}>
-              <Text style={s.legalBrandFooterText}>{t('legal.dataController')}</Text>
-              <Text style={s.legalBrandFooterLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
-              <Text style={s.legalBrandFooterText}>·</Text>
-              <Text style={s.legalBrandFooterLink} onPress={() => openUrl(LEGAL_URLS.legal)}>{t('legal.legalNotice')}</Text>
-            </View>
-          )}
 
         </View>
 
@@ -846,13 +802,10 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               </>
             )}
 
-            {/* Pie legal del formulario */}
+            {/* Pie del formulario */}
             <View style={s.legalDivider} />
             <View style={s.legalFooter}>
               <Text style={s.legalFooterText}>© {new Date().getFullYear()} PrintForgePro</Text>
-              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.privacy)}>{t('legal.privacy')}</Text>
-              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.terms)}>{t('legal.terms')}</Text>
-              <Text style={s.legalFooterLink} onPress={() => openUrl(LEGAL_URLS.legal)}>{t('legal.legalNotice')}</Text>
             </View>
           </View>
         </ScrollView>

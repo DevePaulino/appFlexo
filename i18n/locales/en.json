@@ -752,6 +752,53 @@
     "cookieTitle": "We use local storage",
     "cookieBody": "We save your language preference on your device. We do not use tracking or advertising cookies.",
     "cookieAccept": "Accept",
-    "cookieReject": "Essential only"
+    "cookieReject": "Essential only",
+    "tabPrivacy": "Privacy",
+    "tabTerms": "Terms",
+    "tabNotice": "Legal Notice",
+    "placeholderWarning": "⚠ Data in [brackets] are placeholders that must be replaced with real information before publishing this document.",
+    "pp": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: March 2026",
+      "sections": [
+        { "title": "1. Data Controller", "body": "PrintForgePro (hereinafter, «the Controller»).\nEmail: [CONTACT_EMAIL]\nAddress: [COMPANY_ADDRESS]\nDPO: [DPO_EMAIL] (if applicable)\n\nThis policy complies with EU GDPR 2016/679. UK users: also applies under the UK GDPR and Data Protection Act 2018." },
+        { "title": "2. Data Collected and Purposes", "body": "Registration data: name, email, company name, VAT/tax ID.\nApplication activity logs.\nBilling model (payments managed by PCI DSS-compliant provider).\n\nPurposes: (a) providing the contracted service; (b) contract management and invoicing; (c) essential service communications." },
+        { "title": "3. Legal Basis", "body": "· Performance of contract (Art. 6.1.b GDPR): to provide the service.\n· Legal obligation (Art. 6.1.c GDPR): invoice retention.\n· Consent (Art. 6.1.a GDPR): optional communications, withdrawable at any time." },
+        { "title": "4. Retention Period", "body": "Data retained for the duration of the contract, then until applicable limitation periods expire (typically 5–6 years). Invoice data retained 5 years for tax compliance." },
+        { "title": "5. Recipients", "body": "We do not sell or share your data except to cloud infrastructure providers under a DPA, or when required by law. No commercial data sharing." },
+        { "title": "6. International Transfers", "body": "Data stored on servers at [SERVER_LOCATION]. Transfers outside the EEA use Standard Contractual Clauses (SCCs, Decision 2021/914). UK users: transfers comply with UK IDTA or equivalent safeguards." },
+        { "title": "7. Your Rights", "body": "Submit requests to [CONTACT_EMAIL]:\n· Access, rectification, erasure, restriction, portability (see Account Settings) and objection.\n\nWe respond within 30 days. EU users may complain to their national authority. UK users: ICO at www.ico.org.uk" },
+        { "title": "8. Cookies and Local Storage", "body": "We use localStorage only to maintain your session and language preference. No tracking cookies, third-party analytics or advertising. Withdraw consent via the cookie banner or by clearing browser data." },
+        { "title": "9. Changes", "body": "Material changes notified at least 30 days in advance by email or in-app notice." }
+      ]
+    },
+    "tos": {
+      "title": "Terms of Use",
+      "lastUpdated": "Last updated: March 2026",
+      "sections": [
+        { "title": "1. Service Description", "body": "PrintForgePro is a print job management platform for businesses in the graphic arts sector: orders, quotes, production, materials, machinery and team management." },
+        { "title": "2. Access and Registration", "body": "Reserved for businesses and professionals with legal capacity to contract (aged 18+). You are responsible for keeping your credentials confidential and for all activities under your account." },
+        { "title": "3. User Obligations", "body": "· Use the service in compliance with applicable law and these Terms.\n· Provide accurate information during registration.\n· Not share access with unauthorised third parties.\n· Notify us immediately of any unauthorised use of your account." },
+        { "title": "4. Prohibited Uses", "body": "· Reverse engineering, decompiling or disassembling the software.\n· Using the service for illegal or fraudulent purposes.\n· Attempting to access other users' data or accounts.\n· Overloading or disrupting service infrastructure.\n· Reselling or sublicensing access without written authorisation." },
+        { "title": "5. Intellectual Property", "body": "PrintForgePro, its design, code and brand are the property of the Controller. Data entered by users remains their exclusive property." },
+        { "title": "6. Limitation of Liability", "body": "To the maximum extent permitted by law, the Controller is not liable for indirect or consequential losses. Total maximum liability shall not exceed amounts paid in the 12 months prior to the event giving rise to the claim." },
+        { "title": "7. Service Availability", "body": "We strive for continuous availability but do not guarantee uninterrupted access. Scheduled maintenance will be communicated in advance where possible." },
+        { "title": "8. Cancellation", "body": "Cancel your account from Account Settings or by contacting us. No refund for periods already paid except under mandatory law. We may suspend accounts breaching these Terms, with prior notice except for serious breaches." },
+        { "title": "9. Modifications", "body": "Changes notified 30 days in advance. Continued use constitutes acceptance. You may cancel if you do not accept the changes." },
+        { "title": "10. Governing Law and Jurisdiction", "body": "Governed by Spanish law. Business disputes: courts of [JURISDICTION_CITY]. Consumer users retain the right to proceedings in their place of domicile. EU ODR: https://ec.europa.eu/consumers/odr\nUK users may also contact CTSI for alternative dispute resolution." },
+        { "title": "11. Contact", "body": "[CONTACT_EMAIL]" }
+      ]
+    },
+    "notice": {
+      "title": "Legal Notice",
+      "lastUpdated": "",
+      "sections": [
+        { "title": "Service Provider", "body": "Company name: [COMPANY_LEGAL_NAME]\nVAT/Tax ID: [VAT_NUMBER]\nRegistered address: [FULL_ADDRESS]\nEmail: [CONTACT_EMAIL]\nPhone: [PHONE_NUMBER]\nCompany registration: [REGISTRATION_DETAILS] (if applicable)" },
+        { "title": "Purpose", "body": "This legal notice governs access to and use of the PrintForgePro application." },
+        { "title": "Intellectual Property", "body": "All content in this application (code, design, text, images and brand) is protected by applicable intellectual property law. Reproduction or distribution without express authorisation is prohibited." },
+        { "title": "Limitation of Liability", "body": "The Controller does not guarantee continuous availability and is not responsible for damage arising from misuse of the application." },
+        { "title": "Online Dispute Resolution", "body": "Under EU Regulation 524/2013, EU users may access the ODR platform: https://ec.europa.eu/consumers/odr" }
+      ]
+    }
   }
 }

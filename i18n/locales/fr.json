@@ -748,6 +748,53 @@
     "cookieTitle": "Nous utilisons le stockage local",
     "cookieBody": "Nous sauvegardons votre préférence de langue sur votre appareil. Nous n'utilisons pas de cookies de suivi ou publicitaires.",
     "cookieAccept": "Accepter",
-    "cookieReject": "Essentiel uniquement"
+    "cookieReject": "Essentiel uniquement",
+    "tabPrivacy": "Confidentialité",
+    "tabTerms": "Conditions",
+    "tabNotice": "Mentions légales",
+    "placeholderWarning": "⚠ Les données entre [crochets] sont des espaces réservés qui doivent être remplacés par des informations réelles avant la publication.",
+    "pp": {
+      "title": "Politique de confidentialité",
+      "lastUpdated": "Dernière mise à jour : mars 2026",
+      "sections": [
+        { "title": "1. Responsable du traitement", "body": "PrintForgePro (ci-après, «le Responsable»).\nE-mail : [EMAIL_CONTACT]\nAdresse : [ADRESSE_ENTREPRISE]\nDPD : [EMAIL_DPD] (si applicable)\n\nConforme au RGPD (UE) 2016/679 et à la loi Informatique et Libertés n° 78-17 du 6 janvier 1978 modifiée." },
+        { "title": "2. Données collectées et finalités", "body": "Données d'inscription : nom, e-mail, raison sociale, numéro TVA/SIRET.\nJournaux d'activité dans l'application.\nModèle de facturation (paiements gérés par un prestataire PCI DSS).\n\nFinalités : (a) fourniture du service ; (b) gestion contractuelle et facturation ; (c) communications essentielles du service." },
+        { "title": "3. Base juridique", "body": "· Exécution du contrat (Art. 6.1.b RGPD) : pour fournir le service.\n· Obligation légale (Art. 6.1.c RGPD) : conservation des factures.\n· Consentement (Art. 6.1.a RGPD) : communications optionnelles, révocable à tout moment." },
+        { "title": "4. Durée de conservation", "body": "Pendant la durée du contrat et jusqu'à expiration des délais de prescription légaux (jusqu'à 5 ans). Données de facturation : 5 ans par obligation fiscale." },
+        { "title": "5. Destinataires", "body": "Aucune cession à des tiers sauf fournisseurs d'infrastructure cloud sous DPA ou obligation légale. Aucune cession à des fins commerciales." },
+        { "title": "6. Transferts internationaux", "body": "Données stockées sur des serveurs à [EMPLACEMENT_SERVEURS]. Tout transfert hors EEE via les Clauses Contractuelles Types (CCT, Décision 2021/914)." },
+        { "title": "7. Vos droits", "body": "Envoyez votre demande à [EMAIL_CONTACT] :\n· Accès, rectification, suppression, limitation, portabilité (dans Paramètres du compte) et opposition.\n\nRéponse sous 30 jours. Reclamation auprès de la CNIL : www.cnil.fr" },
+        { "title": "8. Cookies et stockage local", "body": "Nous utilisons localStorage uniquement pour la session et la préférence de langue. Aucun cookie de suivi ni publicité. Révocation via le bandeau cookies ou en effaçant les données du navigateur." },
+        { "title": "9. Modifications", "body": "Changements notifiés au moins 30 jours à l'avance par e-mail ou notification dans l'application." }
+      ]
+    },
+    "tos": {
+      "title": "Conditions d'utilisation",
+      "lastUpdated": "Dernière mise à jour : mars 2026",
+      "sections": [
+        { "title": "1. Description du service", "body": "PrintForgePro est une plateforme de gestion pour les entreprises du secteur des arts graphiques : commandes, devis, production, matériaux, machines et équipes." },
+        { "title": "2. Accès et inscription", "body": "Réservé aux entreprises et professionnels ayant la capacité juridique de contracter (18 ans ou plus). Vous êtes responsable de la confidentialité de vos identifiants et de toutes les activités sous votre compte." },
+        { "title": "3. Obligations de l'utilisateur", "body": "· Utiliser le service conformément à la loi et aux présentes Conditions.\n· Fournir des informations exactes à l'inscription.\n· Ne pas partager l'accès avec des tiers non autorisés.\n· Nous informer de toute utilisation non autorisée de votre compte." },
+        { "title": "4. Utilisations interdites", "body": "· Ingénierie inverse ou décompilation du logiciel.\n· Utilisation à des fins illégales ou frauduleuses.\n· Tentative d'accès aux données ou comptes d'autres utilisateurs.\n· Surcharge ou interférence avec l'infrastructure.\n· Revente ou sous-licence sans autorisation écrite." },
+        { "title": "5. Propriété intellectuelle", "body": "PrintForgePro, sa conception, son code et sa marque sont la propriété du Responsable. Les données saisies par l'utilisateur lui appartiennent exclusivement." },
+        { "title": "6. Limitation de responsabilité", "body": "Dans la mesure maximale permise par la loi, le Responsable n'est pas responsable des pertes indirectes ou manques à gagner. Responsabilité maximale : montants payés au cours des 12 mois précédant l'événement." },
+        { "title": "7. Disponibilité", "body": "Nous nous efforçons d'assurer une disponibilité continue sans la garantir. Les maintenances seront communiquées à l'avance." },
+        { "title": "8. Résiliation", "body": "Résiliation depuis les Paramètres ou en nous contactant. Sans remboursement des périodes payées sauf disposition légale impérative. Nous pouvons suspendre des comptes en infraction, avec préavis sauf infraction grave." },
+        { "title": "9. Modifications", "body": "Changements avec 30 jours de préavis. L'utilisation continue vaut acceptation. Vous pouvez résilier si vous refusez les modifications." },
+        { "title": "10. Droit applicable et juridiction", "body": "Droit espagnol applicable. Litiges entre entreprises : tribunaux de [VILLE_JURIDICTION]. Consommateurs : for du domicile. ODR européen : https://ec.europa.eu/consumers/odr" },
+        { "title": "11. Contact", "body": "[EMAIL_CONTACT]" }
+      ]
+    },
+    "notice": {
+      "title": "Mentions légales",
+      "lastUpdated": "",
+      "sections": [
+        { "title": "Éditeur du service", "body": "Raison sociale : [RAISON_SOCIALE]\nNuméro TVA/SIRET : [NUMÉRO_TVA]\nSiège social : [ADRESSE_COMPLÈTE]\nE-mail : [EMAIL_CONTACT]\nTéléphone : [NUMÉRO_TÉLÉPHONE]\nImmatriculation : [DONNÉES_REGISTRE] (si applicable)" },
+        { "title": "Objet", "body": "Les présentes mentions légales régissent l'accès et l'utilisation de l'application PrintForgePro." },
+        { "title": "Propriété intellectuelle", "body": "Tous les contenus (code, design, textes, images et marque) sont protégés par la législation sur la propriété intellectuelle. Toute reproduction sans autorisation est interdite." },
+        { "title": "Limitation de responsabilité", "body": "Le Responsable ne garantit pas la disponibilité continue et décline toute responsabilité pour dommages résultant d'une utilisation abusive." },
+        { "title": "Résolution des litiges en ligne", "body": "Conformément au Règlement (UE) 524/2013 : https://ec.europa.eu/consumers/odr" }
+      ]
+    }
   }
 }
