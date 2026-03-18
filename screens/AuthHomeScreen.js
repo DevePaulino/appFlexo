@@ -36,9 +36,9 @@ const P = {
   dangerBorder:'rgba(248,113,113,0.25)',
 
   // Panel derecho (formulario) — tono cálido claro
-  fBg:         '#F5EFE8',   // fondo panel: marfil cálido
+  fBg:         '#F8F3EE',   // fondo panel: crema claro (igual que app bg)
   fSurface:    '#FFFFFF',   // card: blanco puro
-  fSurfaceAlt: '#F0EAE2',   // inputs, pills: ligeramente más oscuro
+  fSurfaceAlt: '#F2EAE0',   // inputs, pills: ligeramente más oscuro
   fBorder:     'rgba(30,14,6,0.09)',
   fBorderInput:'rgba(30,14,6,0.13)',
   fText:       '#1E0E06',   // texto principal: negro-cálido

@@ -15,30 +15,30 @@ export const C = {
   headerText:    '#F8FAFC',  // slate-50
 
   // Backgrounds
-  bg:            '#F1F5F9',  // slate-100  (app background)
-  surface:       '#FFFFFF',  // white      (cards, modals, panels)
-  surfaceAlt:    '#F8FAFC',  // slate-50   (alternate rows, input bg)
+  bg:            '#F8F3EE',  // crema cálido claro  (app background)
+  surface:       '#FFFFFF',  // white               (cards, modals, panels)
+  surfaceAlt:    '#F2EAE0',  // crema medio         (alternate rows, input bg)
 
   // Borders
-  border:        '#E2E8F0',  // slate-200  (cards, sections)
-  borderStrong:  '#CBD5E1',  // slate-300  (inputs default)
+  border:        '#E6DAD0',  // borde cálido claro  (cards, sections)
+  borderStrong:  '#CFC0AE',  // borde cálido medio  (inputs default)
   borderFocus:   '#475569',  // primary focus ring
 
   // Brand / Action
   action:        '#1E293B',  // slate-800 — minimal dark action
   actionDark:    '#0F172A',  // pressed / hover
-  actionBg:      '#F1F5F9',  // fondo claro para chips/badges de acción
+  actionBg:      '#F8F3EE',  // fondo claro para chips/badges de acción
   actionText:    '#F8FAFC',
 
   // Brand / Primary (navegación, encabezados secundarios)
   primary:       '#475569',  // slate-600
   primaryDark:   '#334155',  // slate-700
-  primaryLight:  '#F1F5F9',  // slate-100
+  primaryLight:  '#F8F3EE',  // crema claro
   primaryText:   '#FFFFFF',
 
   // Secondary action
   secondary:     '#475569',  // slate-600  (secondary buttons, icon buttons)
-  secondaryBg:   '#F1F5F9',  // slate-100  (cancel bg)
+  secondaryBg:   '#F8F3EE',  // crema claro (cancel bg)
   secondaryText: '#374151',  // gray-700
 
   // Danger / Destructive
@@ -56,7 +56,7 @@ export const C = {
   successText:   '#16A34A',  successBg: '#F0FDF4',
   warningText:   '#D97706',  warningBg: '#FFFBEB',
   errorText:     '#DC2626',  errorBg:   '#FEF2F2',
-  infoText:      '#475569',  infoBg:    '#F1F5F9',
+  infoText:      '#475569',  infoBg:    '#F8F3EE',
   purpleText:    '#7C3AED',  purpleBg:  '#F5F3FF',
   tealText:      '#0D9488',  tealBg:    '#F0FDFA',
 };
