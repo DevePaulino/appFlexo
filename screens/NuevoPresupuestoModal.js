@@ -250,53 +250,62 @@ const BotonSelector = ({
 }) => (
     <View style={styles.selectorRow}>
         {opciones.map((opcion) => {
+            // Support both plain strings and {label, color} objects
+            const label = typeof opcion === 'string' ? opcion : (opcion.label || '');
+            const itemColor = typeof opcion === 'object' ? (opcion.color || null) : null;
+
             const active = multiple
-                ? (Array.isArray(valorSeleccionado) && valorSeleccionado.includes(opcion))
-                : valorSeleccionado === opcion;
+                ? (Array.isArray(valorSeleccionado) && valorSeleccionado.includes(label))
+                : valorSeleccionado === label;
             const sinSeleccion = multiple
                 ? !(Array.isArray(valorSeleccionado) && valorSeleccionado.length > 0)
                 : !valorSeleccionado;
-            const border =
-                active
-                    ? '#94A3B8'
-                    : (sinSeleccion && required && submitted
-                        ? '#D21820'
-                        : '#E2E8F0');
+
+            const activeBg = itemColor ? itemColor + '22' : '#E2E8F0';
+            const activeBorder = itemColor || '#94A3B8';
+            const borderColor = active
+                ? activeBorder
+                : (sinSeleccion && required && submitted ? '#D21820' : '#E2E8F0');
+
             return (
                 <TouchableOpacity
-                    key={opcion}
+                    key={label}
                     style={{
                         paddingHorizontal: small ? 10 : 14,
                         paddingVertical: small ? 6 : 8,
-                        backgroundColor: active ? '#E2E8F0' : '#F1F5F9',
+                        backgroundColor: active ? activeBg : '#F1F5F9',
                         borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: border,
+                        borderWidth: active ? 1.5 : 1,
+                        borderColor: borderColor,
                         marginRight: 8,
                         marginBottom: 8,
                         minWidth: small ? 55 : 70,
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        gap: 5,
                     }}
                     onPress={() => {
                         if (disabled) return;
                         if (!multiple) {
-                            onSelect(opcion);
+                            onSelect(label);
                             return;
                         }
-
                         const actuales = Array.isArray(valorSeleccionado) ? valorSeleccionado : [];
                         const siguientes = active
-                            ? actuales.filter((item) => item !== opcion)
-                            : [...actuales, opcion];
+                            ? actuales.filter((item) => item !== label)
+                            : [...actuales, label];
                         onSelect(siguientes);
                     }}
                 >
+                    {active && itemColor && (
+                        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: itemColor }} />
+                    )}
                     <Text style={{
-                        color: active ? '#0F172A' : '#475569',
+                        color: active ? (itemColor || '#0F172A') : '#475569',
                         fontWeight: active ? '700' : '500',
                         fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"',
                         fontSize: 13
-                    }}>{opcion}</Text>
+                    }}>{label}</Text>
                 </TouchableOpacity>
             );
         })}
@@ -587,8 +596,8 @@ export default function NuevoPresupuestoModal({
 
     const comerciales = (usuariosComerciales || []).map((item) => item.nombre);
     const materiales = (catalogos.materiales || []).map((item) => item.valor).filter(Boolean);
-    const acabados = (catalogos.acabados || []).map((item) => item.valor).filter(Boolean);
-    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => item.valor).filter(Boolean);
+    const acabados = (catalogos.acabados || []).map((item) => ({ label: item.valor || '', color: item.color || null })).filter((o) => o.label);
+    const tintasEspeciales = (catalogos.tintas_especiales || []).map((item) => ({ label: item.valor || '', color: item.color || null })).filter((o) => o.label);
     const tintasEspecialesCount = Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.length : (detalleTintaEspecial ? 1 : 0);
     const numeroTintasSeleccionadas = selectedTintas.length + tintasEspecialesCount;
     const puedeSeleccionarMaquina = (itemMaquina) => {
