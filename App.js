@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
   },
   userPanelRolePill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -883,8 +883,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
   },
   userPanelLangBtnActive: {
     borderColor: C.primary,
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   settingsSubmenuItemTextActive: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '700',
   },
   settingsSubmenuIndicator: {

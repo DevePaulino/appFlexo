@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 16,
     marginBottom: 10,
     shadowColor: '#0F172A',

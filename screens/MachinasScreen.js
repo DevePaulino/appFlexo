@@ -10,7 +10,7 @@ import { useMaquinas } from '../MaquinasContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   btnPlusText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hoverHintText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 14,
     marginHorizontal: 12,
     marginVertical: 12,
@@ -105,9 +105,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingVertical: 8,
     paddingHorizontal: 10,
     marginBottom: 4,
@@ -119,12 +119,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8F3EE',
     alignItems: 'center',
     minHeight: 46,
   },
   rowAlternate: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   tableCell: {
     justifyContent: 'center',
@@ -187,9 +187,9 @@ const styles = StyleSheet.create({
 
   // ── Acciones ──────────────────────────────────────────
   actionBtn: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,

@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 16,
     flexDirection: 'column',
   },
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
   },
   closeBtn: {
     position: 'absolute',
@@ -57,13 +57,13 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontSize: 20,
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '900',
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,15 +221,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8F3EE',
   },
   fileIcon: {
     width: 30,
     height: 30,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#CFC0AE',
+    backgroundColor: '#F2EAE0',
   },
   versionTabActive: {
     backgroundColor: '#111014',
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   versionTabTextActive: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
   },
   versionDate: {
     fontSize: 10,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   lightboxCloseBtnText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 20,
     fontWeight: '900',
   },
@@ -401,9 +401,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     flexBasis: '47%',
     flexGrow: 1,
   },
@@ -476,8 +476,8 @@ const styles = StyleSheet.create({
     minWidth: 90,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
     overflow: 'hidden',
   },
   eskoBtn: {
@@ -496,17 +496,17 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   eskoOutputEmptyText: {
     fontSize: 10,
-    color: '#CBD5E1',
+    color: '#CFC0AE',
     fontStyle: 'italic',
   },
   eskoOutputBoxFilled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     alignItems: 'flex-start',
   },
   eskoFileName: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   // ── Tabs navegación ──────────────────────────────────────────────────
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderRadius: 10,
     padding: 3,
     marginBottom: 12,
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   tabText: {
     fontSize: 13,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   fileCountBadge: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   },
   filesSeparator: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     marginVertical: 14,
   },
   // ── Barra de acciones inferior ────────────────────────────────────
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
     marginTop: 4,
   },
   bottomMainBtns: {
@@ -642,17 +642,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   bottomEditBtnText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '600',
     fontSize: 13,
   },
   bottomCancelBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     alignItems: 'center',
     minWidth: 130,
   },
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   },
   inkColBorder: {
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: '#E6DAD0',
     paddingLeft: 12,
   },
   inkColTitle: {
@@ -1371,7 +1371,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
                                     v{u.version}
                                   </Text>
-                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
+                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CFC0AE' }]}>{fecha}</Text> : null}
                                 </TouchableOpacity>
                                 {canDelete && (
                                   confirmingDeleteArchivo === u.id ? (
@@ -1463,7 +1463,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   {pdfMetaLoading ? (
                                     <ActivityIndicator size="small" color="#94A3B8" />
                                   ) : pdfSeps.length === 0 ? (
-                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
+                                    <Text style={{ fontSize: 11, color: '#CFC0AE', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
                                   ) : (
                                     <>
                                       <View style={styles.sepChipsWrap}>
@@ -1471,7 +1471,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                           const warn = extraEnPdfSet.has(s.nombre);
                                           return (
                                             <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
-                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
+                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CFC0AE' }]} />
                                               <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
                                               {warn && <Text style={styles.sepWarnIcon}>⚠</Text>}
                                             </View>

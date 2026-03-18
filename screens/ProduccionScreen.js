@@ -12,7 +12,7 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 12,
     marginHorizontal: 10,
     marginTop: 10,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   verticalBarItemActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   verticalBarValue: {
     fontSize: 12,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   verticalBarTrack: {
     width: 32,
     height: 56,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     backgroundColor: '#FFF',
   },
   filterClearText: {
@@ -175,9 +175,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -259,11 +259,11 @@ const styles = StyleSheet.create({
   selectButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   selectButtonText: {
     fontSize: 12,
@@ -274,13 +274,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderBottomColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
     marginBottom: 1,
     alignItems: 'center',
   },
   rowAlternate: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   tableCell: {
     justifyContent: 'center',
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
   },
   maquinaOptionText: {
     fontSize: 14,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   closeButton: {
     marginTop: 16,
     paddingVertical: 10,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderRadius: 6,
     alignItems: 'center',
   },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
   statusCancelado: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   statusCanceladoText: {
     color: '#94A3B8',
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     marginHorizontal: 10,
     marginTop: 6,
     marginBottom: 16,
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   impresosTitleRow: {
     flexDirection: 'row',
@@ -472,10 +472,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   impresosBusqueda: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   },
   impresosTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 6,
@@ -507,10 +507,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8F3EE',
   },
   impresosTableRowAlt: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   impresosCell: {
     fontSize: 12,
@@ -1008,7 +1008,7 @@ export default function ProduccionScreen() {
 
   if (!maquinas || maquinas.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+      <View style={{ flex: 1, backgroundColor: '#F8F3EE' }}>
         <EmptyState
           icon="⚙️"
           title={t('screens.maquinas.noMaquinas')}

@@ -1613,7 +1613,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 // STYLES
 // ═══════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  container: { flex: 1, backgroundColor: '#F8F3EE' },
   pageHeader: {
     backgroundColor: '#111014',
     paddingHorizontal: 12,
@@ -1637,7 +1637,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1664,7 +1664,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
     paddingHorizontal: 12,
     paddingTop: 6,
     gap: 4,
@@ -1709,7 +1709,7 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
   filterLabel: { fontSize: 13, color: '#475569', fontWeight: '500' },
   filterSelectWrap: { flex: 1, maxWidth: 260 },
-  filterSelect: { width: '100%', height: 32, border: '1px solid #E2E8F0', borderRadius: 10, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 13, backgroundColor: '#F8FAFC', color: '#0F172A', cursor: 'pointer', outlineWidth: 0 },
+  filterSelect: { width: '100%', height: 32, border: '1px solid #E6DAD0', borderRadius: 10, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 13, backgroundColor: '#F2EAE0', color: '#0F172A', cursor: 'pointer', outlineWidth: 0 },
   filterInput: { height: 32, borderWidth: 1, borderColor: '#DDD', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, backgroundColor: '#FFF' },
 
   // Table
@@ -1740,7 +1740,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
   },
   expandedEmpty: { color: '#94A3B8', fontSize: 12, fontStyle: 'italic' },
   fabRow: { marginBottom: 8 },
@@ -1789,7 +1789,7 @@ const styles = StyleSheet.create({
   // Primary/secondary buttons
   btnPrimary: {
     borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     backgroundColor: 'transparent',
     borderRadius: 8,
     paddingHorizontal: 14,
@@ -1802,12 +1802,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   btnCancelText: { color: '#64748B', fontWeight: '600', fontSize: 13 },
   btnSecondarySmall: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     backgroundColor: 'transparent',
     borderRadius: 6,
     paddingHorizontal: 10,
@@ -1858,11 +1858,11 @@ const styles = StyleSheet.create({
   fieldSelect: {
     width: '100%',
     height: 36,
-    border: '1px solid #E2E8F0',
+    border: '1px solid #E6DAD0',
     borderRadius: 10,
     paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8,
     fontSize: 13,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     color: '#0F172A',
     cursor: 'pointer',
     outlineWidth: 0,
@@ -1901,7 +1901,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
   },
 
   // ── Resumen tab ─────────────────────────────────────────────────────────
@@ -1936,7 +1936,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   rollCardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
   rollCardTitle: { fontSize: 14, fontWeight: '700', color: '#222' },
@@ -1951,7 +1951,7 @@ const styles = StyleSheet.create({
   // Progress bar
   progressBarBg: {
     height: 8,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     borderRadius: 6,
     overflow: 'hidden',
   },
@@ -2018,7 +2018,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
   },
   cantidadLabel: { fontSize: 13, fontWeight: '600', color: '#475569' },
   cantidadControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -2050,7 +2050,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   provCardMain: { flexDirection: 'row', alignItems: 'flex-start' },
   provCardNombre: { fontSize: 15, fontWeight: '700', color: '#1A1A2E', marginBottom: 3 },

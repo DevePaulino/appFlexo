@@ -124,7 +124,7 @@ const API_TROQUELES = 'http://localhost:8080/api/troqueles';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -173,14 +173,14 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
     alignItems: 'center',
   },
   btnNew: {
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
   },
   btnNewText: {
     color: '#1E293B',
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnImportTopText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   btnPlusText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hoverHintText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 14,
     marginHorizontal: 12,
     marginVertical: 12,
@@ -259,9 +259,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -274,13 +274,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     marginBottom: 3,
   },
   rowAlternate: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   tableCell: {
     justifyContent: 'center',
@@ -350,9 +350,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardDetails: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderRadius: 10,
     padding: 10,
     marginTop: 10,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 16,
   },
   modalTitle: {
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   btnCancel: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   detailHeadRow: {
     flexDirection: 'row',

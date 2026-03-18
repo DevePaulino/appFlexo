@@ -16,7 +16,7 @@ import { useModulos } from '../ModulosContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     marginHorizontal: 10,
     marginTop: 10,
     marginBottom: 10,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   chartTrack: {
     height: 10,
     borderRadius: 6,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     overflow: 'hidden',
   },
   chartStackRow: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     overflow: 'visible',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     marginBottom: 12,
     paddingVertical: 1,
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterClearBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   btn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(248,250,252,0.2)',
   },
   btnPlusText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hoverHintText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -257,9 +257,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -272,13 +272,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     marginBottom: 3,
   },
   rowAlternate: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   tableCell: {
     justifyContent: 'center',
@@ -321,9 +321,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 5,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
   statusCancelado: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   statusCanceladoText: {
     color: '#475569',
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   maquinaItemAtenuada: {
     opacity: 0.45,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCloseBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 6,

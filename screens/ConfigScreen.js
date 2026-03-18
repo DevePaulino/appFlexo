@@ -43,7 +43,7 @@ const ROLE_PERMISSION_CONFIG = [
 ];
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  container: { flex: 1, backgroundColor: '#F8F3EE' },
   header: {
     backgroundColor: '#111014',
     paddingHorizontal: 12,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 0,
     alignSelf: 'flex-start',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -94,16 +94,16 @@ const styles = StyleSheet.create({
   blockContainer: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 14,
     padding: 10,
     marginBottom: 14,
   },
   section: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 12,
     marginBottom: 12,
   },
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -126,9 +126,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     backgroundColor: 'transparent',
     borderRadius: 8,
     paddingHorizontal: 14,
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 999,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     paddingLeft: 10,
     paddingRight: 6,
     paddingVertical: 6,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 4,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   },
   modeBtn: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modeBtnTextActive: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
   },
   codeTitle: {
     marginTop: 10,
@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
   codeBlock: {
     marginTop: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
     borderRadius: 10,
     padding: 10,
   },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
   },
   ruleTitle: {
     fontSize: 13,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   selectChip: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -337,9 +337,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rulesToggleBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   usersBtnPlusText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -387,10 +387,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   usersFieldInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 14,
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
   },
   usersSearchInput: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: '#0F172A',
@@ -417,15 +417,15 @@ const styles = StyleSheet.create({
   usersTableWrap: {
     maxHeight: 280,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 10,
     overflow: 'hidden',
   },
   usersTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderBottomWidth: 1.5,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6DAD0',
     paddingHorizontal: 10,
     paddingVertical: 10,
     minHeight: 44,
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
     backgroundColor: '#FFF',
     alignItems: 'center',
   },
   usersTableRowAlt: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
   },
   usersColNombre: {
     flex: 0.30,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#94A3B8',
   },
   usersPaginationBtnText: {
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -518,9 +518,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   usersActionBtn: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -530,8 +530,8 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
   },
   usersActionBtnBilling: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#F2EAE0',
+    borderColor: '#E6DAD0',
   },
   usersActionBtnText: {
     color: '#475569',
@@ -548,14 +548,14 @@ const styles = StyleSheet.create({
   usersBtn: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 8,
     alignItems: 'center',
   },
   usersBtnPrimary: {
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
   },
   usersBtnText: {
     color: '#64748B',
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 16,
     maxWidth: 480,
     width: '100%',
@@ -1927,7 +1927,7 @@ export default function ConfigScreen({ route, currentUser }) {
               />
             ))}
             {inputs.estados_pedido ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E6DAD0' }}>
                 <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newEstadoColor || generateColorFromHash(inputs.estados_pedido), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
                 <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>{t('screens.config.preview')}</Text>
               </View>

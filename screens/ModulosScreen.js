@@ -7,7 +7,7 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F3EE',
   },
   header: {
     backgroundColor: '#111014',
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#F2EAE0',
     letterSpacing: 0.4,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     padding: 16,
     marginBottom: 10,
     shadowColor: '#0F172A',
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8F3EE',
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 0,
     marginTop: 4,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2EAE0',
     borderRadius: 8,
     paddingHorizontal: 10,
   },
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   triggerBtn: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6DAD0',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
   },
   modalCancelBtnText: {
     fontSize: 14,
@@ -248,7 +248,7 @@ export default function ModulosScreen() {
             <Switch
               value={!!modulos.consumo_material}
               onValueChange={(v) => setModulo('consumo_material', v)}
-              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              trackColor={{ false: '#CFC0AE', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -262,7 +262,7 @@ export default function ModulosScreen() {
             <Switch
               value={!!modulos.produccion}
               onValueChange={handleToggleProduccion}
-              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              trackColor={{ false: '#CFC0AE', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
           </View>

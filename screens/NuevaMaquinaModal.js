@@ -145,7 +145,7 @@ export default function NuevaMaquinaModal({
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
                     {['Activa', 'Inactiva'].map((op) => (
                       <TouchableOpacity key={op} onPress={() => set('estado', op)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: form.estado === op ? '#475569' : '#F1F5F9' }}>
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: form.estado === op ? '#475569' : '#F8F3EE' }}>
                         <Text style={{ color: form.estado === op ? '#fff' : '#475569', fontSize: 13 }}>{op}</Text>
                       </TouchableOpacity>
                     ))}
@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: '#F8FAFC' },
-  headerClose: { color: '#F8FAFC', fontSize: 20, fontWeight: '900', padding: 4 },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#F2EAE0' },
+  headerClose: { color: '#F2EAE0', fontSize: 20, fontWeight: '900', padding: 4 },
   body: { padding: 20 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   field: { flex: 1, minWidth: 140 },
@@ -256,8 +256,8 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
     paddingVertical: 9,
     paddingHorizontal: 10,
     borderRadius: 10,
@@ -266,8 +266,8 @@ const styles = StyleSheet.create({
   },
   selectWrap: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E6DAD0',
+    backgroundColor: '#F2EAE0',
     borderRadius: 10,
     marginBottom: 10,
     overflow: 'hidden',
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6DAD0',
   },
   btnCancel: {
     paddingHorizontal: 18,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6DAD0',
   },
   btnCancelText: { color: '#64748B', fontWeight: '600' },
   btnSave: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    borderColor: '#CFC0AE',
   },
   btnSaveText: { color: '#1E293B', fontWeight: '700' },
 });
