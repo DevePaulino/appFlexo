@@ -124,10 +124,10 @@ const API_TROQUELES = 'http://localhost:8080/api/troqueles';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -173,14 +173,14 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
     alignItems: 'center',
   },
   btnNew: {
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
   },
   btnNewText: {
     color: '#1E293B',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     marginHorizontal: 12,
     marginVertical: 12,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E6DAD0',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     marginBottom: 3,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     padding: 16,
   },
   modalTitle: {
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   btnCancel: {
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   detailHeadRow: {
     flexDirection: 'row',

@@ -3,8 +3,8 @@ import { Modal, View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform }
 import { useTranslation } from 'react-i18next';
 
 const P = {
-  bg:          '#0E0E10',
-  surface:     '#141416',
+  bg:          '#1E293B',
+  surface:     '#253347',
   border:      'rgba(255,255,255,0.08)',
   accent:      '#E8522A',
   text:        '#FFFFFF',

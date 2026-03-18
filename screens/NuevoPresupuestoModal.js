@@ -26,7 +26,7 @@ function borderColorState(value, isRequired, isNumeric = false, submitted = fals
     if ((value === undefined || value === null || value === '') && submitted) return '#D21820';
     if (isNumeric && value !== '' && !/^[0-9]+$/.test(value)) return '#D21820';
     if ((typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return submitted ? '#D21820' : '#CCC';
-    return '#CFC0AE';
+    return '#CBD5E1';
 }
 
 function isValidEmail(value) {
@@ -50,7 +50,7 @@ const styles = {
         borderRadius: 14,
         padding: 12,
         borderWidth: 1.5,
-        borderColor: '#E6DAD0'
+        borderColor: '#E2E8F0'
     },
     sectionTitle: {
         fontSize: 11,
@@ -58,7 +58,7 @@ const styles = {
         color: '#64748B',
         letterSpacing: 0.8,
         textTransform: 'uppercase',
-        backgroundColor: '#E6DAD0',
+        backgroundColor: '#E2E8F0',
         paddingHorizontal: 12,
         paddingVertical: 8,
         marginHorizontal: -12,
@@ -87,7 +87,7 @@ const styles = {
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
         backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 11,
-        borderRadius: 10, borderWidth: 1.5, borderColor: '#E6DAD0',
+        borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0',
         alignItems: 'center', minWidth: 130
     },
     bigBtnText: {
@@ -95,15 +95,15 @@ const styles = {
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 10, paddingVertical: 8,
-        backgroundColor: active ? '#E6DAD0' : '#F1F5F9',
+        backgroundColor: active ? '#E2E8F0' : '#F1F5F9',
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E6DAD0',
+        borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E2E8F0',
         marginRight: 8, marginBottom: 8, minWidth: 40, alignItems: 'center'
     }),
     tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 13, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     tintaCounter: {
-        marginTop: -4, marginBottom: 8, backgroundColor: '#E6DAD0', alignSelf: 'flex-start', paddingHorizontal: 18,
+        marginTop: -4, marginBottom: 8, backgroundColor: '#E2E8F0', alignSelf: 'flex-start', paddingHorizontal: 18,
         paddingVertical: 7, borderRadius: 14, fontWeight: '700', fontSize: 16, color: '#444', letterSpacing: 0.5
     },
     coverageRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, marginBottom: 8 },
@@ -115,14 +115,14 @@ const styles = {
     submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
         backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 10,
-        borderRadius: 10, borderColor: '#CFC0AE',
+        borderRadius: 10, borderColor: '#CBD5E1',
         alignItems: 'center',
     },
     submitText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#111014',
+        backgroundColor: '#1E293B',
         paddingVertical: 14,
         paddingHorizontal: 16,
         position: 'relative',
@@ -149,7 +149,7 @@ const styles = {
     },
     clientePickerBtn: {
         borderWidth: 1,
-        borderColor: '#CFC0AE',
+        borderColor: '#CBD5E1',
         backgroundColor: '#FBFBFD',
         borderRadius: 10,
         paddingVertical: 10,
@@ -177,7 +177,7 @@ const styles = {
         backgroundColor: '#FFF',
         borderRadius: 14,
         borderWidth: 1.5,
-        borderColor: '#E6DAD0',
+        borderColor: '#E2E8F0',
         maxHeight: '75%',
         padding: 14,
     },
@@ -261,14 +261,14 @@ const BotonSelector = ({
                     ? '#94A3B8'
                     : (sinSeleccion && required && submitted
                         ? '#D21820'
-                        : '#E6DAD0');
+                        : '#E2E8F0');
             return (
                 <TouchableOpacity
                     key={opcion}
                     style={{
                         paddingHorizontal: small ? 10 : 14,
                         paddingVertical: small ? 6 : 8,
-                        backgroundColor: active ? '#E6DAD0' : '#F1F5F9',
+                        backgroundColor: active ? '#E2E8F0' : '#F1F5F9',
                         borderRadius: 10,
                         borderWidth: 1,
                         borderColor: border,
@@ -388,7 +388,7 @@ const TintasSelector = ({
                     marginRight: 8,
                     marginBottom: 8,
                     borderWidth: 1,
-                    borderColor: addingMatchHex ? 'transparent' : '#E6DAD0',
+                    borderColor: addingMatchHex ? 'transparent' : '#E2E8F0',
                     backgroundColor: addingMatchHex || '#F1F5F9',
                     color: addingMatchHex ? '#FFF' : '#0F172A',
                     fontSize: 13,
@@ -396,7 +396,7 @@ const TintasSelector = ({
             />
         ) : (
             <TouchableOpacity
-                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E6DAD0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
+                style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8, marginBottom: 8, minWidth: 36, alignItems: 'center' }}
                 onPress={() => {
                     if (disabled) return;
                     if (typeof onStartAdd === 'function') onStartAdd();
@@ -985,7 +985,7 @@ export default function NuevoPresupuestoModal({
     return (
         <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 10 }}>
-                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E6DAD0', overflow: 'hidden', flexDirection: 'column' }}>
+                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', overflow: 'hidden', flexDirection: 'column' }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>
@@ -1003,7 +1003,7 @@ export default function NuevoPresupuestoModal({
                                     <View style={styles.col}>
                                         <Text style={styles.label}>{t('forms.cliente')}</Text>
                                         <TouchableOpacity
-                                            style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#F8F3EE' } : null]}
+                                            style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#EEF2F8' } : null]}
                                             onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
                                         >
                                             <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>
@@ -1181,7 +1181,7 @@ export default function NuevoPresupuestoModal({
                                     </View>
                                 </View>
                                 {cliente ? (
-                                    <View style={{ borderWidth: 1, borderColor: '#E6DAD0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
+                                    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
                                         <TouchableOpacity
                                             onPress={() => setClienteExpandido(v => !v)}
                                             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F1F5F9' }}
@@ -1280,7 +1280,7 @@ export default function NuevoPresupuestoModal({
                                     {!isReadOnly && (
                                         <TouchableOpacity
                                             onPress={() => setShowMaquinaCreate(true)}
-                                            style={{ backgroundColor: '#F8F3EE', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                            style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                         >
                                             <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevaMaquina')}</Text>
                                         </TouchableOpacity>
@@ -1371,7 +1371,7 @@ export default function NuevoPresupuestoModal({
                                 {!isReadOnly && (
                                     <TouchableOpacity
                                         onPress={() => setShowTroquelCreate(true)}
-                                        style={{ backgroundColor: '#F8F3EE', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                                        style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                                     >
                                         <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevoTroquel')}</Text>
                                     </TouchableOpacity>
@@ -1380,7 +1380,7 @@ export default function NuevoPresupuestoModal({
                             {troquelesCat.length === 0 ? (
                                 <EmptyState variant="inline" icon="✂️" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
                             ) : Platform.OS === 'web' ? (
-                                <View style={{ borderWidth: 1, borderColor: '#E6DAD0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                                     <select
                                         style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }}
                                         value={troquelSel?._id || troquelSel?.id || ''}
@@ -1403,7 +1403,7 @@ export default function NuevoPresupuestoModal({
                                     <TouchableOpacity
                                         disabled={isReadOnly}
                                         onPress={() => handleTroquelSelect(null)}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#F8F3EE' }}
+                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#EEF2F8' }}
                                     >
                                         <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>{t('forms.sinTroquel')}</Text>
                                     </TouchableOpacity>
@@ -1414,7 +1414,7 @@ export default function NuevoPresupuestoModal({
                                                 key={t._id || t.id || i}
                                                 disabled={isReadOnly}
                                                 onPress={() => handleTroquelSelect(t)}
-                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#475569' : '#F8F3EE' }}
+                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#475569' : '#EEF2F8' }}
                                             >
                                                 <Text style={{ color: isSelected ? '#fff' : '#475569', fontSize: 13 }}>{t.numero}</Text>
                                             </TouchableOpacity>
@@ -1425,7 +1425,7 @@ export default function NuevoPresupuestoModal({
                         </View>
                     </View>
                     {troquelSel && (
-                        <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, borderWidth: 1, borderColor: '#E6DAD0', padding: 12, marginBottom: 10 }}>
+                        <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 10 }}>
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                                 {[
                                     { label: 'Número', value: troquelSel.numero },
@@ -1559,7 +1559,7 @@ export default function NuevoPresupuestoModal({
                 </ScrollView>
 
                 {/* ── Barra de acciones inferior ── */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E6DAD0' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
                     <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
                         <Text style={styles.bigBtnText}>{t('forms.cancel')}</Text>
                     </TouchableOpacity>

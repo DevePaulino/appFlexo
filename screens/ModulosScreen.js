@@ -7,10 +7,10 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     padding: 16,
     marginBottom: 10,
     shadowColor: '#0F172A',
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F3EE',
+    borderBottomColor: '#EEF2F8',
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   triggerBtn: {
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
   },
   modalCancelBtnText: {
     fontSize: 14,
@@ -248,7 +248,7 @@ export default function ModulosScreen() {
             <Switch
               value={!!modulos.consumo_material}
               onValueChange={(v) => setModulo('consumo_material', v)}
-              trackColor={{ false: '#CFC0AE', true: '#3B82F6' }}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -262,7 +262,7 @@ export default function ModulosScreen() {
             <Switch
               value={!!modulos.produccion}
               onValueChange={handleToggleProduccion}
-              trackColor={{ false: '#CFC0AE', true: '#3B82F6' }}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
           </View>

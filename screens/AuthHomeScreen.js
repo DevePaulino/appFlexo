@@ -18,10 +18,10 @@ const API_BASE = 'http://localhost:8080';
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const P = {
   // Panel izquierdo (marca) — permanece oscuro
-  bg:          '#0A0A0C',
-  bgPanel:     '#0E0E10',
-  surface:     '#141416',
-  surfaceAlt:  '#1C1C1F',
+  bg:          '#1E293B',
+  bgPanel:     '#1E293B',
+  surface:     '#253347',
+  surfaceAlt:  '#2E3F55',
   border:      'rgba(255,255,255,0.08)',
   borderInput: 'rgba(255,255,255,0.12)',
   borderFocus: '#E8522A',
@@ -35,15 +35,15 @@ const P = {
   dangerBg:    'rgba(248,113,113,0.10)',
   dangerBorder:'rgba(248,113,113,0.25)',
 
-  // Panel derecho (formulario) — tono cálido claro
-  fBg:         '#F8F3EE',   // fondo panel: crema claro (igual que app bg)
+  // Panel derecho (formulario) — azul claro
+  fBg:         '#EEF2F8',   // fondo panel: azul muy claro
   fSurface:    '#FFFFFF',   // card: blanco puro
-  fSurfaceAlt: '#EEF2F8',   // inputs, pills: slate azul suave
-  fBorder:     'rgba(30,14,6,0.09)',
-  fBorderInput:'rgba(30,14,6,0.13)',
-  fText:       '#1E0E06',   // texto principal: negro-cálido
-  fTextSec:    'rgba(30,14,6,0.55)',
-  fTextMuted:  'rgba(30,14,6,0.38)',
+  fSurfaceAlt: '#E2E8F0',   // inputs, pills: slate-200
+  fBorder:     'rgba(15,23,42,0.10)',
+  fBorderInput:'rgba(15,23,42,0.14)',
+  fText:       '#0F172A',   // texto principal: slate-900
+  fTextSec:    'rgba(15,23,42,0.55)',
+  fTextMuted:  'rgba(15,23,42,0.38)',
 };
 
 // ─── Módulos de la app ────────────────────────────────────────────────────────
@@ -198,8 +198,8 @@ const s = StyleSheet.create({
   // ── Separador vertical ───────────────────────────────────────────────────
   divider: {
     ...(Platform.OS === 'web'
-      ? { width: 1, backgroundColor: 'rgba(120,80,50,0.12)' }
-      : { height: 1, backgroundColor: 'rgba(120,80,50,0.12)', marginHorizontal: 28 }),
+      ? { width: 1, backgroundColor: 'rgba(30,41,59,0.18)' }
+      : { height: 1, backgroundColor: 'rgba(30,41,59,0.18)', marginHorizontal: 28 }),
   },
 
   // ── Panel derecho (formulario) ───────────────────────────────────────────
@@ -218,7 +218,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: P.fBorder,
     padding: 30,
-    shadowColor: '#1E0E06',
+    shadowColor: '#0F172A',
     shadowOpacity: 0.10,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
@@ -427,7 +427,7 @@ const s = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: 'rgba(30,14,6,0.25)',
+    borderColor: 'rgba(15,23,42,0.22)',
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',

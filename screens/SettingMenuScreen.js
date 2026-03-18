@@ -5,10 +5,10 @@ import { useNavigation } from '@react-navigation/native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     padding: 16,
     marginBottom: 10,
     shadowColor: '#0F172A',

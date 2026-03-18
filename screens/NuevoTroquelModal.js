@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
     backgroundColor: '#F1F5F9',
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
   },
   btnCancelText: {
     color: '#64748B',
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
   },
   btnSaveText: {
     color: '#1E293B',

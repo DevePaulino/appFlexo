@@ -145,7 +145,7 @@ export default function NuevaMaquinaModal({
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
                     {['Activa', 'Inactiva'].map((op) => (
                       <TouchableOpacity key={op} onPress={() => set('estado', op)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: form.estado === op ? '#475569' : '#F8F3EE' }}>
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: form.estado === op ? '#475569' : '#EEF2F8' }}>
                         <Text style={{ color: form.estado === op ? '#fff' : '#475569', fontSize: 13 }}>{op}</Text>
                       </TouchableOpacity>
                     ))}
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingVertical: 14,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
     paddingVertical: 9,
     paddingHorizontal: 10,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   selectWrap: {
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
     borderRadius: 10,
     marginBottom: 10,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E6DAD0',
+    borderTopColor: '#E2E8F0',
   },
   btnCancel: {
     paddingHorizontal: 18,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
   },
   btnCancelText: { color: '#64748B', fontWeight: '600' },
   btnSave: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
   },
   btnSaveText: { color: '#1E293B', fontWeight: '700' },
 });

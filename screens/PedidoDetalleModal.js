@@ -32,12 +32,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     padding: 16,
     flexDirection: 'column',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingVertical: 14,
     paddingHorizontal: 16,
     position: 'relative',
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,15 +221,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F3EE',
+    borderBottomColor: '#EEF2F8',
   },
   fileIcon: {
     width: 30,
     height: 30,
     borderRadius: 6,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -286,11 +286,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
     backgroundColor: '#F1F5F9',
   },
   versionTabActive: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     borderColor: '#1E293B',
   },
   versionTabDeleteBtn: {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   lightboxContent: {
     width: '92%',
     height: '92%',
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     flexBasis: '47%',
     flexGrow: 1,
   },
@@ -476,14 +476,14 @@ const styles = StyleSheet.create({
     minWidth: 90,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
     overflow: 'hidden',
   },
   eskoBtn: {
     paddingVertical: 9,
     paddingHorizontal: 10,
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     alignItems: 'center',
   },
   eskoBtnText: {
@@ -502,11 +502,11 @@ const styles = StyleSheet.create({
   },
   eskoOutputEmptyText: {
     fontSize: 10,
-    color: '#CFC0AE',
+    color: '#CBD5E1',
     fontStyle: 'italic',
   },
   eskoOutputBoxFilled: {
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     alignItems: 'flex-start',
   },
   eskoFileName: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   // ── Tabs navegación ──────────────────────────────────────────────────
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     borderRadius: 10,
     padding: 3,
     marginBottom: 12,
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 3,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
   },
   tabText: {
     fontSize: 13,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   fileCountBadge: {
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   },
   filesSeparator: {
     height: 1,
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     marginVertical: 14,
   },
   // ── Barra de acciones inferior ────────────────────────────────────
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E6DAD0',
+    borderTopColor: '#E2E8F0',
     marginTop: 4,
   },
   bottomMainBtns: {
@@ -647,12 +647,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bottomCancelBtn: {
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     minWidth: 130,
   },
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   },
   inkColBorder: {
     borderLeftWidth: 1,
-    borderLeftColor: '#E6DAD0',
+    borderLeftColor: '#E2E8F0',
     paddingLeft: 12,
   },
   inkColTitle: {
@@ -1371,7 +1371,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
                                     v{u.version}
                                   </Text>
-                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CFC0AE' }]}>{fecha}</Text> : null}
+                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
                                 </TouchableOpacity>
                                 {canDelete && (
                                   confirmingDeleteArchivo === u.id ? (
@@ -1463,7 +1463,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   {pdfMetaLoading ? (
                                     <ActivityIndicator size="small" color="#94A3B8" />
                                   ) : pdfSeps.length === 0 ? (
-                                    <Text style={{ fontSize: 11, color: '#CFC0AE', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
+                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
                                   ) : (
                                     <>
                                       <View style={styles.sepChipsWrap}>
@@ -1471,7 +1471,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                           const warn = extraEnPdfSet.has(s.nombre);
                                           return (
                                             <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
-                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CFC0AE' }]} />
+                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
                                               <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
                                               {warn && <Text style={styles.sepWarnIcon}>⚠</Text>}
                                             </View>

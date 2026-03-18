@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   tabsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E0E10',
+    backgroundColor: '#1E293B',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.07)',
     position: 'relative',
@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
   },
   userPanelRolePill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
   },
   userPanelLangBtnActive: {
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
   },
   settingsSubmenuWrap: {
     position: 'absolute',
-    backgroundColor: '#18161A',
+    backgroundColor: '#1A2942',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     borderRadius: 12,

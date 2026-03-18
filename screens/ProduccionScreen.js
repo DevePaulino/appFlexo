@@ -12,10 +12,10 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   header: {
-    backgroundColor: '#111014',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CFC0AE',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 11,
     paddingVertical: 5,
     fontSize: 12,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     padding: 12,
     marginHorizontal: 10,
     marginTop: 10,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   verticalBarItemActive: {
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   verticalBarValue: {
     fontSize: 12,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   verticalBarTrack: {
     width: 32,
     height: 56,
-    backgroundColor: '#E6DAD0',
+    backgroundColor: '#E2E8F0',
     borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFF',
   },
   filterClearText: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderWidth: 1.5,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   selectButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -274,13 +274,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E6DAD0',
+    borderBottomColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
     marginBottom: 1,
     alignItems: 'center',
   },
   rowAlternate: {
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
   },
   tableCell: {
     justifyContent: 'center',
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E6DAD0',
+    borderBottomColor: '#E2E8F0',
   },
   maquinaOptionText: {
     fontSize: 14,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   closeButton: {
     marginTop: 16,
     paddingVertical: 10,
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     borderRadius: 6,
     alignItems: 'center',
   },
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     marginHorizontal: 10,
     marginTop: 6,
     marginBottom: 16,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E6DAD0',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   },
   impresosTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8F3EE',
+    backgroundColor: '#EEF2F8',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 6,
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F3EE',
+    borderBottomColor: '#EEF2F8',
   },
   impresosTableRowAlt: {
     backgroundColor: '#F1F5F9',
@@ -1008,7 +1008,7 @@ export default function ProduccionScreen() {
 
   if (!maquinas || maquinas.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8F3EE' }}>
+      <View style={{ flex: 1, backgroundColor: '#EEF2F8' }}>
         <EmptyState
           icon="⚙️"
           title={t('screens.maquinas.noMaquinas')}
