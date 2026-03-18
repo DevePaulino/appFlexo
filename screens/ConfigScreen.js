@@ -928,7 +928,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [guardandoRole, setGuardandoRole] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
   const [editing, setEditing] = useState({ category: null, id: null, text: '', color: '' });
-  const [newEstadoColor, setNewEstadoColor] = useState('');
+  const [newItemColors, setNewItemColors] = useState({});
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState('30');
   const [sessionTimeoutMin, setSessionTimeoutMin] = useState(5);
@@ -1654,12 +1654,13 @@ export default function ConfigScreen({ route, currentUser }) {
     const valor = (inputs[categoria] || '').trim();
     if (!valor) return;
 
+    const COLOR_CATS = ['estados_pedido', 'acabados', 'tintas_especiales'];
     try {
-      // Generar color para estados_pedido
+      // Generar color para categorías que lo soporten
       let color = '';
-      if (categoria === 'estados_pedido') {
-        color = newEstadoColor || generateColorFromHash(valor);
-        setNewEstadoColor('');
+      if (COLOR_CATS.includes(categoria)) {
+        color = newItemColors[categoria] || generateColorFromHash(valor);
+        setNewItemColors((prev) => ({ ...prev, [categoria]: '' }));
       }
 
       // Backend expects creation via /api/settings/opcion with query params
@@ -2105,24 +2106,24 @@ export default function ConfigScreen({ route, currentUser }) {
             <Text style={styles.addBtnText}>{t('screens.config.addBtn')}</Text>
           </TouchableOpacity>
         </View>
-        {categoryKey === 'estados_pedido' && (
+        {['estados_pedido', 'acabados', 'tintas_especiales'].includes(categoryKey) && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
             {ESTADO_PALETTE.map(color => (
               <TouchableOpacity
                 key={color}
-                onPress={() => setNewEstadoColor(prev => prev === color ? '' : color)}
+                onPress={() => setNewItemColors(prev => ({ ...prev, [categoryKey]: prev[categoryKey] === color ? '' : color }))}
                 style={{
                   width: 22, height: 22, borderRadius: 11,
                   backgroundColor: color,
-                  borderWidth: newEstadoColor === color ? 2 : 1,
-                  borderColor: newEstadoColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
-                  transform: newEstadoColor === color ? [{ scale: 1.2 }] : [],
+                  borderWidth: newItemColors[categoryKey] === color ? 2 : 1,
+                  borderColor: newItemColors[categoryKey] === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
+                  transform: newItemColors[categoryKey] === color ? [{ scale: 1.2 }] : [],
                 }}
               />
             ))}
-            {inputs.estados_pedido ? (
+            {inputs[categoryKey] ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newEstadoColor || generateColorFromHash(inputs.estados_pedido), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: newItemColors[categoryKey] || generateColorFromHash(inputs[categoryKey]), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
                 <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>{t('screens.config.preview')}</Text>
               </View>
             ) : null}
@@ -2157,97 +2158,91 @@ export default function ConfigScreen({ route, currentUser }) {
             </SortableContext>
           </DndContext>
         ) : (
-          <View style={styles.chipList}>
+          <View style={styles.estadoChipList}>
             {items.map((item) => {
+              const COLOR_CATS_ITEM = new Set(['roles', 'acabados', 'tintas_especiales']);
               const esRolProtegido = categoryKey === 'roles' && rolesProtegidos.has(slugifyEstado(item?.valor || ''));
-              const rolColor = categoryKey === 'roles' ? (item.color || null) : null;
+              const itemColor = COLOR_CATS_ITEM.has(categoryKey) ? (item.color || generateColorFromHash(item.valor || '')) : null;
               const isEditingThis = editing.id === item.id && editing.category === categoryKey;
+              const editColor = editing.color || item.color || generateColorFromHash(item.valor || '');
 
-              // ── Modo edición expandido para roles (con paleta de color) ──────────
-              if (isEditingThis && categoryKey === 'roles') {
-                const editColor = editing.color || rolColor || '#64748B';
-                return (
-                  <View key={item.id} style={styles.rolEditContainer}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: editColor, flexShrink: 0 }} />
-                      <TextInput
-                        style={[styles.input, { flex: 1, paddingVertical: 4, marginBottom: 0 }]}
-                        value={editing.text}
-                        onChangeText={(t) => setEditing((prev) => ({ ...prev, text: t }))}
-                        onSubmitEditing={saveEditedValor}
-                        autoFocus
-                        returnKeyType="done"
-                      />
-                      <TouchableOpacity style={styles.chipEdit} onPress={saveEditedValor}>
-                        <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.chipEdit} onPress={() => setEditing({ category: null, id: null, text: '', color: '' })}>
-                        <Text style={styles.chipEditText}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                      {ESTADO_PALETTE.map(color => (
-                        <TouchableOpacity
-                          key={color}
-                          onPress={() => setEditing((prev) => ({ ...prev, color }))}
-                          style={{
-                            width: 24, height: 24, borderRadius: 12,
-                            backgroundColor: color,
-                            borderWidth: editColor === color ? 2.5 : 1,
-                            borderColor: editColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
-                            transform: editColor === color ? [{ scale: 1.15 }] : [],
-                          }}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                );
-              }
-
-              // ── Vista normal del chip ─────────────────────────────────────────────
               return (
-                <View key={item.id} style={[
-                  styles.chip,
-                  rolColor && { borderColor: rolColor, backgroundColor: rolColor + '1A' },
-                ]}>
-                  {rolColor && (
-                    <View style={[styles.chipColorDot, { backgroundColor: rolColor }]} />
-                  )}
+                <View
+                  key={item.id}
+                  style={[
+                    styles.estadoChipRow,
+                    isEditingThis && { flexDirection: 'column', alignItems: 'stretch' },
+                  ]}
+                >
                   {isEditingThis ? (
-                    <TextInput
-                      style={[styles.input, { minWidth: 120, paddingVertical: 6 }]}
-                      value={editing.text}
-                      onChangeText={(t) => setEditing((prev) => ({ ...prev, text: t }))}
-                      onBlur={() => saveEditedValor()}
-                      onSubmitEditing={() => saveEditedValor()}
-                      autoFocus
-                      returnKeyType="done"
-                    />
+                    <View style={{ width: '100%' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {COLOR_CATS_ITEM.has(categoryKey) && (
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: editColor, flexShrink: 0 }} />
+                        )}
+                        <TextInput
+                          style={[styles.input, { flex: 1, paddingVertical: 4, marginBottom: 0 }]}
+                          value={editing.text}
+                          onChangeText={(t) => setEditing((prev) => ({ ...prev, text: t }))}
+                          onSubmitEditing={saveEditedValor}
+                          autoFocus
+                          returnKeyType="done"
+                        />
+                        <TouchableOpacity style={styles.chipEdit} onPress={saveEditedValor}>
+                          <Text style={[styles.chipEditText, { color: '#16A34A' }]}>✓</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.chipEdit} onPress={() => setEditing({ category: null, id: null, text: '', color: '' })}>
+                          <Text style={styles.chipEditText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {COLOR_CATS_ITEM.has(categoryKey) && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingBottom: 2 }}>
+                          {ESTADO_PALETTE.map(color => (
+                            <TouchableOpacity
+                              key={color}
+                              onPress={() => setEditing((prev) => ({ ...prev, color }))}
+                              style={{
+                                width: 22, height: 22, borderRadius: 11,
+                                backgroundColor: color,
+                                borderWidth: editColor === color ? 2 : 1,
+                                borderColor: editColor === color ? '#0F172A' : 'rgba(0,0,0,0.12)',
+                                transform: editColor === color ? [{ scale: 1.2 }] : [],
+                              }}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </View>
                   ) : (
-                    <Text style={[styles.chipText, rolColor && { color: rolColor }]}>
-                      {categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}
-                    </Text>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.chipEdit, esRolProtegido && styles.chipEditDisabled]}
-                    disabled={esRolProtegido}
-                    onPress={() => editarValor(item, categoryKey)}
-                  >
-                    <Text style={styles.chipEditText}>✎</Text>
-                  </TouchableOpacity>
-                  {confirmingDeleteValor === item.id ? (
-                    <DeleteConfirmRow
-                      onCancel={() => setConfirmingDeleteValor(null)}
-                      onConfirm={() => { setConfirmingDeleteValor(null); eliminarValor(item.id); }}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.chipDelete, esRolProtegido && styles.chipDeleteDisabled]}
-                      disabled={esRolProtegido}
-                      onPress={() => setConfirmingDeleteValor(item.id)}
-                    >
-                      <Text style={styles.chipDeleteText}>✕</Text>
-                    </TouchableOpacity>
+                    <>
+                      {itemColor && (
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: itemColor, marginRight: 8, flexShrink: 0 }} />
+                      )}
+                      <Text style={[styles.chipText, { flex: 1 }, categoryKey === 'roles' && itemColor && { color: itemColor }]}>
+                        {categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.chipEdit, esRolProtegido && styles.chipEditDisabled]}
+                        disabled={esRolProtegido}
+                        onPress={() => editarValor(item, categoryKey)}
+                      >
+                        <Text style={styles.chipEditText}>✎</Text>
+                      </TouchableOpacity>
+                      {confirmingDeleteValor === item.id ? (
+                        <DeleteConfirmRow
+                          onCancel={() => setConfirmingDeleteValor(null)}
+                          onConfirm={() => { setConfirmingDeleteValor(null); eliminarValor(item.id); }}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.chipDelete, esRolProtegido && styles.chipDeleteDisabled]}
+                          disabled={esRolProtegido}
+                          onPress={() => setConfirmingDeleteValor(item.id)}
+                        >
+                          <Text style={styles.chipDeleteText}>✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
                 </View>
               );
