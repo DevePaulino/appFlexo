@@ -17,6 +17,7 @@ const API_BASE = 'http://localhost:8080';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const P = {
+  // Panel izquierdo (marca) — permanece oscuro
   bg:          '#0A0A0C',
   bgPanel:     '#0E0E10',
   surface:     '#141416',
@@ -33,6 +34,16 @@ const P = {
   danger:      '#F87171',
   dangerBg:    'rgba(248,113,113,0.10)',
   dangerBorder:'rgba(248,113,113,0.25)',
+
+  // Panel derecho (formulario) — tono cálido claro
+  fBg:         '#F5EFE8',   // fondo panel: marfil cálido
+  fSurface:    '#FFFFFF',   // card: blanco puro
+  fSurfaceAlt: '#F0EAE2',   // inputs, pills: ligeramente más oscuro
+  fBorder:     'rgba(30,14,6,0.09)',
+  fBorderInput:'rgba(30,14,6,0.13)',
+  fText:       '#1E0E06',   // texto principal: negro-cálido
+  fTextSec:    'rgba(30,14,6,0.55)',
+  fTextMuted:  'rgba(30,14,6,0.38)',
 };
 
 // ─── Módulos de la app ────────────────────────────────────────────────────────
@@ -187,8 +198,8 @@ const s = StyleSheet.create({
   // ── Separador vertical ───────────────────────────────────────────────────
   divider: {
     ...(Platform.OS === 'web'
-      ? { width: 1, backgroundColor: 'rgba(255,255,255,0.05)' }
-      : { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 28 }),
+      ? { width: 1, backgroundColor: 'rgba(120,80,50,0.12)' }
+      : { height: 1, backgroundColor: 'rgba(120,80,50,0.12)', marginHorizontal: 28 }),
   },
 
   // ── Panel derecho (formulario) ───────────────────────────────────────────
@@ -197,26 +208,30 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: Platform.OS === 'web' ? 48 : 24,
-    backgroundColor: P.bgPanel,
+    backgroundColor: P.fBg,
   },
   formCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: P.surface,
+    backgroundColor: P.fSurface,
     borderRadius: R.xl,
     borderWidth: 1,
-    borderColor: P.border,
+    borderColor: P.fBorder,
     padding: 30,
-    ...S.modal,
+    shadowColor: '#1E0E06',
+    shadowOpacity: 0.10,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
 
   // ── Tabs login / registro ────────────────────────────────────────────────
   tabs: {
     flexDirection: 'row',
-    backgroundColor: P.surfaceAlt,
+    backgroundColor: P.fSurfaceAlt,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: P.border,
+    borderColor: P.fBorder,
     overflow: 'hidden',
     marginBottom: 28,
     padding: 3,
@@ -234,7 +249,7 @@ const s = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: P.textMuted,
+    color: P.fTextMuted,
     letterSpacing: 0.2,
   },
   tabTextActive: {
@@ -246,13 +261,13 @@ const s = StyleSheet.create({
   formTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: P.text,
+    color: P.fText,
     marginBottom: 6,
     letterSpacing: -0.4,
   },
   formSub: {
     fontSize: 13,
-    color: P.textSec,
+    color: P.fTextSec,
     lineHeight: 20,
     marginBottom: 24,
   },
@@ -261,7 +276,7 @@ const s = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '700',
-    color: P.textSec,
+    color: P.fTextSec,
     marginBottom: 6,
     marginTop: 12,
     letterSpacing: 0.8,
@@ -269,16 +284,16 @@ const s = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: P.borderInput,
+    borderColor: P.fBorderInput,
     borderRadius: R.md,
-    backgroundColor: P.surfaceAlt,
+    backgroundColor: P.fSurfaceAlt,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: P.text,
+    color: P.fText,
     fontSize: 14,
   },
   inputFocused: {
-    borderColor: P.borderFocus,
+    borderColor: P.accent,
     backgroundColor: 'rgba(232,82,42,0.04)',
   },
 
@@ -293,18 +308,18 @@ const s = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: P.border,
-    backgroundColor: P.surfaceAlt,
+    borderColor: P.fBorder,
+    backgroundColor: P.fSurfaceAlt,
     alignItems: 'center',
   },
   billingBtnActive: {
     borderColor: P.accentBorder,
-    backgroundColor: P.accentDim,
+    backgroundColor: 'rgba(232,82,42,0.08)',
   },
   billingBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: P.textSec,
+    color: P.fTextSec,
   },
   billingBtnTextActive: {
     color: P.accent,
@@ -312,16 +327,16 @@ const s = StyleSheet.create({
   },
   billingDesc: {
     fontSize: 11,
-    color: P.textMuted,
+    color: P.fTextMuted,
     marginTop: 6,
     lineHeight: 16,
   },
 
   // ── Error ────────────────────────────────────────────────────────────────
   errorBox: {
-    backgroundColor: P.dangerBg,
+    backgroundColor: 'rgba(220,38,38,0.07)',
     borderWidth: 1,
-    borderColor: P.dangerBorder,
+    borderColor: 'rgba(220,38,38,0.20)',
     borderRadius: R.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -330,7 +345,7 @@ const s = StyleSheet.create({
   errorText: {
     fontSize: 12,
     fontWeight: '600',
-    color: P.danger,
+    color: '#C0170D',
   },
 
   // ── Botón principal ──────────────────────────────────────────────────────
@@ -342,7 +357,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: P.accent,
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.30,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
   },
@@ -359,13 +374,13 @@ const s = StyleSheet.create({
     minHeight: 40,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: P.border,
+    borderColor: P.fBorder,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   backBtnText: {
-    color: P.textSec,
+    color: P.fTextSec,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -373,14 +388,14 @@ const s = StyleSheet.create({
   // ── MFA ──────────────────────────────────────────────────────────────────
   mfaHelper: {
     fontSize: 11,
-    color: P.textMuted,
+    color: P.fTextMuted,
     marginTop: 5,
     lineHeight: 16,
   },
   mfaDevBadge: {
-    backgroundColor: 'rgba(217,119,6,0.12)',
+    backgroundColor: 'rgba(217,119,6,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(217,119,6,0.30)',
+    borderColor: 'rgba(217,119,6,0.25)',
     borderRadius: R.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -388,17 +403,17 @@ const s = StyleSheet.create({
   },
   mfaDevText: {
     fontSize: 12,
-    color: '#F59E0B',
+    color: '#B45309',
     fontWeight: '600',
   },
 
   // ── Checkboxes de consentimiento ─────────────────────────────────────────
   consentBox: {
     marginTop: 16,
-    backgroundColor: 'rgba(232,82,42,0.06)',
+    backgroundColor: 'rgba(232,82,42,0.05)',
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: 'rgba(232,82,42,0.18)',
+    borderColor: 'rgba(232,82,42,0.15)',
     padding: 12,
     gap: 10,
   },
@@ -412,7 +427,7 @@ const s = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(30,14,6,0.25)',
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
@@ -432,11 +447,11 @@ const s = StyleSheet.create({
   consentText: {
     flex: 1,
     fontSize: 12,
-    color: P.textSec,
+    color: P.fTextSec,
     lineHeight: 18,
   },
   legalLink: {
-    color: 'rgba(232,82,42,0.80)',
+    color: P.accent,
     textDecorationLine: 'underline',
     textDecorationColor: 'rgba(232,82,42,0.35)',
   },
@@ -445,13 +460,13 @@ const s = StyleSheet.create({
   legalConsent: {
     marginTop: 14,
     fontSize: 10.5,
-    color: P.textMuted,
+    color: P.fTextMuted,
     lineHeight: 16,
     textAlign: 'center',
   },
   legalDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: P.fBorder,
     marginHorizontal: -30,
     marginTop: 24,
     marginBottom: 14,
@@ -465,7 +480,7 @@ const s = StyleSheet.create({
   },
   legalFooterText: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.18)',
+    color: P.fTextMuted,
   },
 });
 
@@ -617,7 +632,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         value={mfaCode}
         onChangeText={setMfaCode}
         placeholder={t('auth.mfaCodePlaceholder')}
-        placeholderTextColor={P.textMuted}
+        placeholderTextColor={P.fTextMuted}
         keyboardType="number-pad"
         onFocus={() => setFocusedField('mfa')}
         onBlur={() => setFocusedField('')}
@@ -643,7 +658,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         value={email}
         onChangeText={setEmail}
         placeholder={t('auth.emailPlaceholder')}
-        placeholderTextColor={P.textMuted}
+        placeholderTextColor={P.fTextMuted}
         autoCapitalize="none"
         keyboardType="email-address"
         onFocus={() => setFocusedField('email')}
@@ -655,7 +670,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         value={password}
         onChangeText={setPassword}
         placeholder={t('auth.passwordPlaceholder')}
-        placeholderTextColor={P.textMuted}
+        placeholderTextColor={P.fTextMuted}
         secureTextEntry
         onFocus={() => setFocusedField('password')}
         onBlur={() => setFocusedField('')}
@@ -674,15 +689,15 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <Text style={s.formTitle}>{t('auth.registerTitle')}</Text>
       <Text style={s.formSub}>{t('auth.registerSubtitle')}</Text>
       <Text style={s.label}>{t('auth.nameLabel')}</Text>
-      <TextInput style={inp('nombre')} value={nombre} onChangeText={setNombre} placeholder={t('auth.namePlaceholder')} placeholderTextColor={P.textMuted} onFocus={() => setFocusedField('nombre')} onBlur={() => setFocusedField('')} />
+      <TextInput style={inp('nombre')} value={nombre} onChangeText={setNombre} placeholder={t('auth.namePlaceholder')} placeholderTextColor={P.fTextMuted} onFocus={() => setFocusedField('nombre')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.companyLabel')}</Text>
-      <TextInput style={inp('empresa')} value={nombreEmpresa} onChangeText={setNombreEmpresa} placeholder={t('auth.companyPlaceholder')} placeholderTextColor={P.textMuted} onFocus={() => setFocusedField('empresa')} onBlur={() => setFocusedField('')} />
+      <TextInput style={inp('empresa')} value={nombreEmpresa} onChangeText={setNombreEmpresa} placeholder={t('auth.companyPlaceholder')} placeholderTextColor={P.fTextMuted} onFocus={() => setFocusedField('empresa')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.cifLabel')}</Text>
-      <TextInput style={inp('cif')} value={cif} onChangeText={setCif} placeholder={t('auth.cifPlaceholder')} placeholderTextColor={P.textMuted} autoCapitalize="characters" onFocus={() => setFocusedField('cif')} onBlur={() => setFocusedField('')} />
+      <TextInput style={inp('cif')} value={cif} onChangeText={setCif} placeholder={t('auth.cifPlaceholder')} placeholderTextColor={P.fTextMuted} autoCapitalize="characters" onFocus={() => setFocusedField('cif')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.emailLabel')}</Text>
-      <TextInput style={inp('email')} value={email} onChangeText={setEmail} placeholder={t('auth.emailPlaceholder')} placeholderTextColor={P.textMuted} autoCapitalize="none" keyboardType="email-address" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField('')} />
+      <TextInput style={inp('email')} value={email} onChangeText={setEmail} placeholder={t('auth.emailPlaceholder')} placeholderTextColor={P.fTextMuted} autoCapitalize="none" keyboardType="email-address" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
-      <TextInput style={inp('password')} value={password} onChangeText={setPassword} placeholder={t('auth.passwordPlaceholder')} placeholderTextColor={P.textMuted} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField('')} />
+      <TextInput style={inp('password')} value={password} onChangeText={setPassword} placeholder={t('auth.passwordPlaceholder')} placeholderTextColor={P.fTextMuted} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField('')} />
       <Text style={[s.label, { marginTop: 16 }]}>{t('auth.billingLabel')}</Text>
       <View style={s.billingRow}>
         <Pressable style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]} onPress={() => setBillingModel('creditos')}>
