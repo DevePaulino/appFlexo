@@ -2052,7 +2052,6 @@ def seed_empresa_defaults(empresa_id):
             'Pendiente de Impresión', 'Pendiente Post-Impresión',
             'Finalizado', 'Parado', 'Cancelado',
         ],
-        'materiales': ['Polipropileno', 'Papel', 'PVC', 'PE', 'PET'],
         'acabados': ['Barniz', 'Stamping', 'Laminado', 'Sin acabado'],
         'tintas_especiales': ['P1', 'P2', 'P3', 'P4', 'P5'],
     }
@@ -2097,8 +2096,6 @@ def seed_empresa_defaults(empresa_id):
                 'fecha_creacion': datetime.now().isoformat(),
             })
 
-    # Seed catálogo de materiales enriquecido
-    _seed_catalogo_materiales_defaults(empresa_id)
 
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -2200,7 +2197,8 @@ def register_public_user():
             'id': usuario_id,
             'creditos': FREE_SIGNUP_CREDITS,
             'billing_model': billing_model,
-            'token': token,
+            'access_token': token,
+            'refresh_token': token,
             'usuario': {
                 'id': usuario_id,
                 'nombre': nombre,
@@ -3473,7 +3471,7 @@ def api_settings_modulos():
         col_general = get_empresa_collection('config_general', empresa_id)
 
         MODULOS_DEFAULT = {
-            'consumo_material': True,
+            'consumo_material': False,
             'produccion': False,
             'produccion_trigger_estado': '',
         }

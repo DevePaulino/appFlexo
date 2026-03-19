@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 const API_MODULOS_URL = 'http://localhost:8080/api/settings/modulos';
 
 const MODULOS_DEFAULT = {
-  consumo_material: true,
+  consumo_material: false,
   produccion: false,
   produccion_trigger_estado: '',
 };
