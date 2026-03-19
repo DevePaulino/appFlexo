@@ -15,6 +15,51 @@ import LegalModal from '../components/LegalModal';
 
 const API_BASE = 'http://localhost:8080';
 
+// ─── Fuera del componente para evitar pérdida de foco en inputs ───────────────
+const getPasswordStrength = (pwd) => {
+  if (!pwd) return 0;
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[a-z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  return score;
+};
+
+function PasswordStrengthBar({ pwd }) {
+  const { t } = useTranslation();
+  const score = getPasswordStrength(pwd);
+  if (!pwd) return null;
+  const LEVELS = [
+    { color: '#EF4444', label: t('auth.strengthWeak') },
+    { color: '#EF4444', label: t('auth.strengthWeak') },
+    { color: '#F97316', label: t('auth.strengthFair') },
+    { color: '#EAB308', label: t('auth.strengthGood') },
+    { color: '#22C55E', label: t('auth.strengthStrong') },
+    { color: '#16A34A', label: t('auth.strengthVeryStrong') },
+  ];
+  const level = LEVELS[score] || LEVELS[0];
+  return (
+    <View style={{ marginTop: 6 }}>
+      <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <View
+            key={i}
+            style={{
+              flex: 1, height: 3, borderRadius: 2,
+              backgroundColor: i <= score ? level.color : P.fSurfaceAlt,
+            }}
+          />
+        ))}
+      </View>
+      <Text style={{ fontSize: 11, color: score >= 4 ? level.color : P.fTextMuted }}>
+        {level.label}
+      </Text>
+    </View>
+  );
+}
+
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const P = {
   // Panel izquierdo (marca) — permanece oscuro
@@ -520,18 +565,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
 
   const inp = (field) => [s.input, focusedField === field && s.inputFocused];
 
-  // ── Fortaleza de contraseña ────────────────────────────────────────────────
-  const getPasswordStrength = (pwd) => {
-    if (!pwd) return 0;
-    let score = 0;
-    if (pwd.length >= 8) score++;
-    if (/[A-Z]/.test(pwd)) score++;
-    if (/[a-z]/.test(pwd)) score++;
-    if (/\d/.test(pwd)) score++;
-    if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    return score; // 0-5
-  };
-
   const validatePassword = (pwd) => {
     if (pwd.length < 8) return t('auth.errorPasswordLength');
     if (!/[A-Z]/.test(pwd)) return t('auth.errorPasswordUppercase');
@@ -539,38 +572,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     if (!/\d/.test(pwd)) return t('auth.errorPasswordDigit');
     if (!/[^A-Za-z0-9]/.test(pwd)) return t('auth.errorPasswordSpecial');
     return null;
-  };
-
-  const PasswordStrengthBar = ({ pwd }) => {
-    const score = getPasswordStrength(pwd);
-    if (!pwd) return null;
-    const LEVELS = [
-      { color: '#EF4444', label: t('auth.strengthWeak') },
-      { color: '#EF4444', label: t('auth.strengthWeak') },
-      { color: '#F97316', label: t('auth.strengthFair') },
-      { color: '#EAB308', label: t('auth.strengthGood') },
-      { color: '#22C55E', label: t('auth.strengthStrong') },
-      { color: '#16A34A', label: t('auth.strengthVeryStrong') },
-    ];
-    const level = LEVELS[score] || LEVELS[0];
-    return (
-      <View style={{ marginTop: 6 }}>
-        <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <View
-              key={i}
-              style={{
-                flex: 1, height: 3, borderRadius: 2,
-                backgroundColor: i <= score ? level.color : P.fSurfaceAlt,
-              }}
-            />
-          ))}
-        </View>
-        <Text style={{ fontSize: 11, color: score >= 4 ? level.color : P.fTextMuted }}>
-          {level.label}
-        </Text>
-      </View>
-    );
   };
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -908,18 +909,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
       <TextInput style={inp('password')} value={password} onChangeText={setPassword} placeholder={t('auth.passwordPlaceholder')} placeholderTextColor={P.fTextMuted} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField('')} />
       <PasswordStrengthBar pwd={password} />
-      <Text style={[s.label, { marginTop: 16 }]}>{t('auth.billingLabel')}</Text>
-      <View style={s.billingRow}>
-        <Pressable style={[s.billingBtn, billingModel === 'creditos' && s.billingBtnActive]} onPress={() => setBillingModel('creditos')}>
-          <Text style={[s.billingBtnText, billingModel === 'creditos' && s.billingBtnTextActive]}>{t('auth.billingCredits')}</Text>
-        </Pressable>
-        <Pressable style={[s.billingBtn, billingModel === 'suscripcion' && s.billingBtnActive]} onPress={() => setBillingModel('suscripcion')}>
-          <Text style={[s.billingBtnText, billingModel === 'suscripcion' && s.billingBtnTextActive]}>{t('auth.billingSubscription')}</Text>
-        </Pressable>
-      </View>
-      <Text style={s.billingDesc}>
-        {billingModel === 'creditos' ? t('auth.billingCreditsDesc') : t('auth.billingSubscriptionDesc')}
-      </Text>
       {/* Consentimiento explícito RGPD Art. 7 — checkboxes obligatorios */}
       <View style={s.consentBox}>
         <Pressable style={s.consentRow} onPress={() => setAcceptTerms((v) => !v)}>
@@ -1012,9 +1001,9 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={s.formPanel} keyboardShouldPersistTaps="handled">
           <View style={s.formCard}>
             {mfaChallengeId ? (
-              <MfaView />
+              MfaView()
             ) : authMode === 'forgot' ? (
-              resetStep === 'confirm' ? <ResetView /> : <ForgotView />
+              resetStep === 'confirm' ? ResetView() : ForgotView()
             ) : (
               <>
                 <View style={s.tabs}>
@@ -1025,7 +1014,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
                     <Text style={[s.tabText, authMode === 'register' && s.tabTextActive]}>{t('auth.switchToRegister')}</Text>
                   </Pressable>
                 </View>
-                {authMode === 'login' ? <LoginView /> : <RegisterView />}
+                {authMode === 'login' ? LoginView() : RegisterView()}
               </>
             )}
 
