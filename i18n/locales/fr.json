@@ -598,7 +598,7 @@
       "estadosPedidoTitle": "États de commande",
       "modulosTitle": "Modules",
       "modulosHint": "Activez ou désactivez les fonctionnalités optionnelles de l'application.",
-      "moduloConsumoMaterial": "Consommation de matériau",
+      "moduloConsumoMaterial": "Gestion des matériaux",
       "moduloConsumoMaterialHint": "Enregistre la consommation de matériau lors du marquage d'un travail comme imprimé.",
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Active la file de production et l'onglet Production.",

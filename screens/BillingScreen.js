@@ -183,9 +183,7 @@ export default function BillingScreen({ navigation, currentUser }) {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerRow}>
-          <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack?.()}>
-            <Text style={s.backIcon}>‹</Text>
-          </TouchableOpacity>
+          <View style={{ width: 38 }} />
           <Text style={s.headerTitle}>{t('billing.title')}</Text>
           <View style={{ width: 38 }} />
         </View>

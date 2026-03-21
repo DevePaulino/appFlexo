@@ -2225,7 +2225,7 @@ export default function ConfigScreen({ route, currentUser }) {
             {items.map((item) => {
               const COLOR_CATS_ITEM = new Set(['roles', 'acabados', 'tintas_especiales']);
               const esRolProtegido = categoryKey === 'roles' && rolesProtegidos.has(slugifyEstado(item?.valor || ''));
-              const itemColor = COLOR_CATS_ITEM.has(categoryKey) ? (item.color || generateColorFromHash(item.valor || '')) : null;
+              const itemColor = COLOR_CATS_ITEM.has(categoryKey) ? (esRolProtegido ? '#1E293B' : (item.color || generateColorFromHash(item.valor || ''))) : null;
               const isEditingThis = editing.id === item.id && editing.category === categoryKey;
               const editColor = editing.color || item.color || generateColorFromHash(item.valor || '');
 

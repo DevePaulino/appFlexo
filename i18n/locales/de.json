@@ -598,7 +598,7 @@
       "estadosPedidoTitle": "Auftragsstatus",
       "modulosTitle": "Module",
       "modulosHint": "Aktivieren oder deaktivieren Sie optionale Anwendungsfunktionen.",
-      "moduloConsumoMaterial": "Materialverbrauch",
+      "moduloConsumoMaterial": "Materialverwaltung",
       "moduloConsumoMaterialHint": "Erfasst den Materialverbrauch beim Markieren eines Auftrags als gedruckt.",
       "moduloProduccion": "Produktion",
       "moduloProduccionHint": "Aktiviert die Produktionswarteschlange und den Reiter Produktion.",

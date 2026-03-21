@@ -602,7 +602,7 @@
       "estadosPedidoTitle": "Order statuses",
       "modulosTitle": "Modules",
       "modulosHint": "Enable or disable optional application features.",
-      "moduloConsumoMaterial": "Material consumption",
+      "moduloConsumoMaterial": "Material management",
       "moduloConsumoMaterialHint": "Tracks material usage when marking a job as printed.",
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Enables the production queue and the Production tab.",

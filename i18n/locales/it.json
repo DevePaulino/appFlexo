@@ -598,7 +598,7 @@
       "estadosPedidoTitle": "Stati dell'ordine",
       "modulosTitle": "Moduli",
       "modulosHint": "Attiva o disattiva le funzionalità opzionali dell'applicazione.",
-      "moduloConsumoMaterial": "Consumo di materiale",
+      "moduloConsumoMaterial": "Gestione materiali",
       "moduloConsumoMaterialHint": "Registra il consumo di materiale quando si contrassegna un lavoro come stampato.",
       "moduloProduccion": "Produzione",
       "moduloProduccionHint": "Attiva la coda di produzione e la scheda Produzione.",

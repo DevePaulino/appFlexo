@@ -598,7 +598,7 @@
       "estadosPedidoTitle": "Estados de pedido",
       "modulosTitle": "Módulos",
       "modulosHint": "Ative ou desative funcionalidades opcionais da aplicação.",
-      "moduloConsumoMaterial": "Consumo de material",
+      "moduloConsumoMaterial": "Gestão de materiais",
       "moduloConsumoMaterialHint": "Regista o consumo de material ao marcar um trabalho como impresso.",
       "moduloProduccion": "Produção",
       "moduloProduccionHint": "Ativa a fila de produção e o separador Produção.",
