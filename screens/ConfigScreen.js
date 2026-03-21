@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   matrixRoleHeaderProtected: {
-    backgroundColor: '#78350F',
+    backgroundColor: '#1E293B',
   },
   matrixRoleHeaderText: {
     fontSize: 10,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
   matrixRoleHeaderTextProtected: {
-    color: '#FDE68A',
+    color: '#F1F5F9',
   },
   matrixDot: {
     width: 26,
@@ -489,8 +489,8 @@ const styles = StyleSheet.create({
     borderColor: '#E8522A',
   },
   matrixDotProtected: {
-    backgroundColor: '#78350F',
-    borderColor: '#92400E',
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
   matrixDotReadonly: {
     opacity: 0.45,
@@ -784,6 +784,32 @@ const styles = StyleSheet.create({
     marginTop: -4,
     marginBottom: 8,
   },
+  // ── Tab bar (usuarios / roles) ────────────────────────────────────────────
+  usrRolTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 10,
+  },
+  usrRolTabBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  usrRolTabBtnActive: {
+    borderBottomColor: '#1E293B',
+  },
+  usrRolTabBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  usrRolTabBtnTextActive: {
+    color: '#1E293B',
+  },
 });
 
 const ESTADO_RULE_DEFAULTS = {
@@ -929,6 +955,10 @@ export default function ConfigScreen({ route, currentUser }) {
   const [usuarios, setUsuarios] = useState([]);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
   const [paginaUsuarios, setPaginaUsuarios] = useState(1);
+  const [activeTabUsRol, setActiveTabUsRol] = useState('usuarios'); // 'usuarios' | 'roles'
+  const [modalNuevoRolVisible, setModalNuevoRolVisible] = useState(false);
+  const [nuevoRolNombre, setNuevoRolNombre] = useState('');
+  const [nuevoRolColor, setNuevoRolColor] = useState('');
   const [modalUsuarioVisible, setModalUsuarioVisible] = useState(false);
   const [usuarioEditandoId, setUsuarioEditandoId] = useState(null);
   const [nuevoUsuarioNombre, setNuevoUsuarioNombre] = useState('');
@@ -1707,6 +1737,28 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
+  const guardarNuevoRol = async () => {
+    const valor = nuevoRolNombre.trim();
+    if (!valor) return;
+    try {
+      let url = `${API_OPCION_URL}?categoria=roles&valor=${encodeURIComponent(valor)}`;
+      if (nuevoRolColor) url += `&color=${encodeURIComponent(nuevoRolColor)}`;
+      const response = await fetch(url, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        Alert.alert('Error', data.error || t('screens.config.errSaveValue'));
+        return;
+      }
+      setNuevoRolNombre('');
+      setNuevoRolColor('');
+      setModalNuevoRolVisible(false);
+      await cargarSettings();
+      await cargarPermisosRoles();
+    } catch (e) {
+      Alert.alert('Error', `${t('screens.config.errSaveValue')}: ${e.message}`);
+    }
+  };
+
   const eliminarValor = async (id) => {
     const esRol = (settings.roles || []).some((item) => item.id === id);
     const esEstado = (settings.estados_pedido || []).some((item) => item.id === id);
@@ -2117,18 +2169,20 @@ export default function ConfigScreen({ route, currentUser }) {
     return (
       <View key={categoryKey} style={[styles.section, sectionStyle]}>
         <Text style={styles.sectionTitle}>{categoryTitle}</Text>
-        <View style={styles.row}>
-          <TextInput
-            style={[styles.input, styles.submenuAddInput]}
-            value={inputs[categoryKey]}
-            onChangeText={(text) => setInputs((prev) => ({ ...prev, [categoryKey]: text }))}
-            placeholder={t('screens.config.addItemPlaceholder', { category: categoryTitle.toLowerCase() })}
-            placeholderTextColor="#94A3B8"
-          />
-          <TouchableOpacity style={styles.addBtn} onPress={() => agregarValor(categoryKey)}>
-            <Text style={styles.addBtnText}>{t('screens.config.addBtn')}</Text>
-          </TouchableOpacity>
-        </View>
+        {categoryKey !== 'roles' && (
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, styles.submenuAddInput]}
+              value={inputs[categoryKey]}
+              onChangeText={(text) => setInputs((prev) => ({ ...prev, [categoryKey]: text }))}
+              placeholder={t('screens.config.addItemPlaceholder', { category: categoryTitle.toLowerCase() })}
+              placeholderTextColor="#94A3B8"
+            />
+            <TouchableOpacity style={styles.addBtn} onPress={() => agregarValor(categoryKey)}>
+              <Text style={styles.addBtnText}>{t('screens.config.addBtn')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {['estados_pedido', 'acabados', 'tintas_especiales'].includes(categoryKey) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <ColorPickerInput
@@ -2260,9 +2314,13 @@ export default function ConfigScreen({ route, currentUser }) {
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
           <Text style={styles.title}>{pageTitle}</Text>
-          {showTopUsersPlus ? (
+          {showTopUsersPlus && activeTabUsRol === 'usuarios' ? (
             <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
               <Text style={styles.usersBtnPlusText}>{t('screens.config.newUserBtn')}</Text>
+            </TouchableOpacity>
+          ) : showTopUsersPlus && activeTabUsRol === 'roles' ? (
+            <TouchableOpacity style={[styles.usersBtnPlus, !puedeEditarRolesPermisos && { opacity: 0.45 }]} onPress={() => puedeEditarRolesPermisos && setModalNuevoRolVisible(true)} disabled={!puedeEditarRolesPermisos}>
+              <Text style={styles.usersBtnPlusText}>{t('screens.config.newRolBtn')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 38 }} />
@@ -2272,11 +2330,25 @@ export default function ConfigScreen({ route, currentUser }) {
       <View style={styles.contentWrap}>
 
       {showUsuariosRoles && (
+      <>
+      {/* Tab bar */}
+      <View style={styles.usrRolTabBar}>
+        {['usuarios', 'roles'].map(tab => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.usrRolTabBtn, activeTabUsRol === tab && styles.usrRolTabBtnActive]}
+            onPress={() => setActiveTabUsRol(tab)}
+          >
+            <Text style={[styles.usrRolTabBtnText, activeTabUsRol === tab && styles.usrRolTabBtnTextActive]}>
+              {tab === 'usuarios' ? t('screens.config.usuariosTitle') : t('screens.config.permisosRolesTab')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── Pestaña Usuarios ────────────────────────────────────────── */}
+      {activeTabUsRol === 'usuarios' && (
       <View style={styles.blockContainer}>
-        {showBlockTitles && <Text style={styles.groupTitle}>{t('screens.config.usuariosTitle')}</Text>}
-
-        {/* Active-role UI removed: app no longer depends on configurable active_role */}
-
         <View style={styles.section}>
 
               <TextInput
@@ -2444,24 +2516,24 @@ export default function ConfigScreen({ route, currentUser }) {
                 </View>
               </Modal>
 
+        </View>
+      </View>
+      )}
+
+      {/* ── Pestaña Roles ────────────────────────────────────────────── */}
+      {activeTabUsRol === 'roles' && (
+      <View style={styles.blockContainer}>
         <View>
-          {renderCategoria('roles', 'Roles')}
+          {renderCategoria('roles', t('screens.config.rolesUsuarioTitle'))}
           <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>{t('screens.config.rolesProtegidos')}</Text>
         </View>
 
         <View style={styles.section}>
-          <View style={styles.rulesHeaderRow}>
-            <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 6, alignSelf: 'flex-start' }]}>{t('screens.config.permisosTitle')}</Text>
-            <TouchableOpacity style={styles.rulesToggleBtn} onPress={toggleRoleRulesExpanded}>
-              <Text style={styles.rulesToggleBtnText}>{roleRulesExpanded ? t('screens.config.ocultar') : t('screens.config.expandir')}</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.sectionTitle}>{t('screens.config.permisosTitle')}</Text>
           {!puedeEditarRolesPermisos && (
             <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>{t('screens.config.errPermisoDenegadoEditarReglas')}</Text>
           )}
-          {!roleRulesExpanded ? (
-            <Text style={styles.muted}>{t('screens.config.clickExpandir')}</Text>
-          ) : (availableRoles || []).length === 0 ? (
+          {(availableRoles || []).length === 0 ? (
             <EmptyState variant="inline" title={t('screens.config.sinRoles')} message={t('screens.config.addRolesFirst')} />
           ) : (
             <>
@@ -2479,15 +2551,11 @@ export default function ConfigScreen({ route, currentUser }) {
                         <View key={roleKey} style={styles.matrixRoleCol}>
                           <View style={[
                             styles.matrixRoleHeader,
-                            isAdmin
-                              ? styles.matrixRoleHeaderProtected
-                              : role.color && { backgroundColor: role.color },
+                            isAdmin && styles.matrixRoleHeaderProtected,
                           ]}>
                             <Text style={[
                               styles.matrixRoleHeaderText,
-                              isAdmin
-                                ? styles.matrixRoleHeaderTextProtected
-                                : role.color && { color: '#FFFFFF' },
+                              isAdmin && styles.matrixRoleHeaderTextProtected,
                             ]} numberOfLines={2} adjustsFontSizeToFit>
                               {label}
                             </Text>
@@ -2556,9 +2624,46 @@ export default function ConfigScreen({ route, currentUser }) {
           )}
         </View>
 
-        </View>
+        {/* Modal Nuevo Rol */}
+        <Modal visible={modalNuevoRolVisible} transparent animationType="fade" onRequestClose={() => { setNuevoRolNombre(''); setNuevoRolColor(''); setModalNuevoRolVisible(false); }}>
+          <View style={styles.usersModalBackdrop}>
+            <View style={styles.usersModalCard}>
+              <Text style={styles.usersFormTitle}>{t('screens.config.newRolTitle')}</Text>
+
+              <Text style={styles.usersFieldLabel}>{t('screens.config.rolNombreLabel')}</Text>
+              <TextInput
+                style={styles.usersFieldInput}
+                value={nuevoRolNombre}
+                onChangeText={setNuevoRolNombre}
+                placeholder={t('screens.config.rolNombrePlaceholder')}
+                placeholderTextColor="#94A3B8"
+                autoFocus
+                onSubmitEditing={guardarNuevoRol}
+                returnKeyType="done"
+              />
+
+              <Text style={[styles.usersFieldLabel, { marginTop: 12 }]}>{t('screens.config.rolColorLabel')}</Text>
+              <ColorPickerInput
+                value={nuevoRolColor}
+                onChange={setNuevoRolColor}
+              />
+
+              <View style={styles.usersFormActions}>
+                <TouchableOpacity style={styles.usersBtn} onPress={() => { setNuevoRolNombre(''); setNuevoRolColor(''); setModalNuevoRolVisible(false); }}>
+                  <Text style={styles.usersBtnText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.usersBtn, styles.usersBtnPrimary]} onPress={guardarNuevoRol}>
+                  <Text style={[styles.usersBtnText, styles.usersBtnPrimaryText]}>{t('common.save')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
       </View>
+      )}
+
+      </>
       )}
 
       {section && (section === 'all' || section === 'funcionalidades') && (
