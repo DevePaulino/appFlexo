@@ -982,7 +982,6 @@ export default function TroquelessScreen({ currentUser, navigation }) {
       {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
             <EmptyState
-              icon="✂️"
               title={busqueda ? t('common.noResults') : t('screens.troqueles.noTroqueles')}
               message={busqueda ? t('common.noResultsMsg') : t('screens.troqueles.noItems')}
               action={!busqueda && puedeCrear ? t('screens.troqueles.newBtn') : undefined}

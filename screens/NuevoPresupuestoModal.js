@@ -1324,7 +1324,7 @@ export default function NuevoPresupuestoModal({
                                                     key={itemMaquina.id}
                                                     value={itemMaquina.nombre}
                                                 >
-                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} ${t('forms.colores')})${!puedeSeleccionarMaquina(itemMaquina) ? ` ⚠ ${t('forms.noCompatible')}` : ''}`}
+                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} ${t('forms.colores')})${!puedeSeleccionarMaquina(itemMaquina) ? ` ${t('forms.noCompatible')}` : ''}`}
                                                 </option>
                                             ))}
                                         </select>
@@ -1357,7 +1357,7 @@ export default function NuevoPresupuestoModal({
                                                         fontWeight: activa ? '700' : '500',
                                                         fontSize: 13,
                                                     }}>
-                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? ' ⚠' : ''}`}
+                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? '' : ''}`}
                                                     </Text>
                                                 </TouchableOpacity>
                                             );
@@ -1387,7 +1387,7 @@ export default function NuevoPresupuestoModal({
                                 )}
                             </View>
                             {troquelesCat.length === 0 ? (
-                                <EmptyState variant="inline" icon="✂️" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
+                                <EmptyState variant="inline" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
                             ) : Platform.OS === 'web' ? (
                                 <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                                     <select
@@ -1617,7 +1617,7 @@ export default function NuevoPresupuestoModal({
 
                             <ScrollView>
                                 {clientesFiltrados.length === 0 ? (
-                                    <EmptyState variant="inline" icon="🏢" title={t('forms.sinClientes')} message={t('forms.sinClientesMsg')} />
+                                    <EmptyState variant="inline" title={t('forms.sinClientes')} message={t('forms.sinClientesMsg')} />
                                 ) : (
                                     clientesFiltrados.map((item) => (
                                         <TouchableOpacity

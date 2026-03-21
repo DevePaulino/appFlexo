@@ -93,12 +93,12 @@ const P = {
 
 // ─── Módulos de la app ────────────────────────────────────────────────────────
 const MODULES = [
-  { icon: '📋', key: 'Pedidos' },
-  { icon: '💼', key: 'Presupuestos' },
-  { icon: '⚙️', key: 'Producción' },
-  { icon: '📦', key: 'Materiales' },
-  { icon: '🖨️', key: 'Máquinas' },
-  { icon: '👥', key: 'Roles y permisos' },
+  { key: 'Pedidos' },
+  { key: 'Presupuestos' },
+  { key: 'Producción' },
+  { key: 'Materiales' },
+  { key: 'Máquinas' },
+  { key: 'Roles y permisos' },
 ];
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
@@ -981,7 +981,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           <View style={s.modulesGrid}>
             {MODULES.map((m) => (
               <View key={m.key} style={s.moduleChip}>
-                <Text style={s.moduleChipIcon}>{m.icon}</Text>
                 <Text style={s.moduleChipText}>{m.key}</Text>
               </View>
             ))}

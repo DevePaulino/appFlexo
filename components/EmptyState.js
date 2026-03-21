@@ -5,20 +5,16 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
  * EmptyState — estado vacío reutilizable
  *
  * Props:
- *   icon      string    — emoji (ej. '📋', '🔍', '⚙️')
  *   title     string    — título principal
  *   message   string    — descripción secundaria
  *   action    string    — (opcional) etiqueta del botón CTA
  *   onAction  function  — (opcional) callback del botón CTA
  *   variant   string    — 'default' | 'inline'  (default: 'default')
  */
-export default function EmptyState({ icon = '—', title, message, action, onAction, variant = 'default' }) {
+export default function EmptyState({ title, message, action, onAction, variant = 'default' }) {
   if (variant === 'inline') {
     return (
       <View style={styles.inlineContainer}>
-        <View style={styles.inlineIconWrap}>
-          <Text style={styles.inlineIcon}>{icon}</Text>
-        </View>
         <View style={styles.inlineText}>
           {title   && <Text style={styles.inlineTitle}>{title}</Text>}
           {message && <Text style={styles.inlineMessage}>{message}</Text>}
@@ -34,11 +30,6 @@ export default function EmptyState({ icon = '—', title, message, action, onAct
 
   return (
     <View style={styles.container}>
-      <View style={styles.decorRing}>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>{icon}</Text>
-        </View>
-      </View>
       {title   && <Text style={styles.title}>{title}</Text>}
       {message && <Text style={styles.message}>{message}</Text>}
       {action && onAction && (

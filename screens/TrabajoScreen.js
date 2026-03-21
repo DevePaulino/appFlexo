@@ -1006,7 +1006,7 @@ export default function TrabajoScreen({ currentUser }) {
           if (a.tipo === 'ancho') return `• Ancho de material: necesita ${a.requerido} mm, máquina admite ${a.maximo} mm`;
           return `• ${a.tipo}`;
         }).join('\n');
-        const confirmar = window.confirm(`⚠ Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
+        const confirmar = window.confirm(`Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
         if (confirmar) handleEnviarAProduccion(maquinaId, maquinaNombre, true);
         return;
       }
@@ -1077,7 +1077,7 @@ export default function TrabajoScreen({ currentUser }) {
           const activos = conteos.filter((item) => item.cantidad > 0);
 
           if (trabajos.length === 0) {
-            return <EmptyState variant="inline" icon="📊" title={t('screens.trabajos.sinPedidosActivos')} message={t('screens.trabajos.sinPedidosMsg')} />;
+            return <EmptyState variant="inline" title={t('screens.trabajos.sinPedidosActivos')} message={t('screens.trabajos.sinPedidosMsg')} />;
           }
           if (total === 0) {
             return null;
@@ -1139,7 +1139,6 @@ export default function TrabajoScreen({ currentUser }) {
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
           <EmptyState
-            icon="📋"
             title={busqueda ? t('common.noResults') : t('screens.trabajos.noPedidos')}
             message={busqueda ? t('common.noResultsMsg') : t('screens.trabajos.noPedidosMsg')}
             action={!busqueda && puedeCrear ? t('screens.trabajos.newBtn') : undefined}

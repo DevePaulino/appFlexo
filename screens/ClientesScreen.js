@@ -522,7 +522,6 @@ export default function ClientesScreen({ currentUser }) {
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
           <EmptyState
-            icon="🏢"
             title={busqueda ? t('common.noResults') : t('nav.clientes')}
             message={busqueda ? t('screens.clientes.noResultsMsg') : t('screens.clientes.noItems')}
             action={!busqueda && puedeCrear ? t('screens.clientes.newBtn') : undefined}

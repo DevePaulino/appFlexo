@@ -226,7 +226,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           if (a.tipo === 'ancho') return `• Ancho de material: necesita ${a.requerido} mm, máquina admite ${a.maximo} mm`;
           return `• ${a.tipo}`;
         }).join('\n');
-        const confirmar = window.confirm(`⚠ Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
+        const confirmar = window.confirm(`Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
         if (!confirmar) {
           if (onRefresh) await onRefresh();
           setCambiandoMaquina(null);
@@ -373,7 +373,6 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     return (
       <EmptyState
         variant="inline"
-        icon="⚙️"
         title={t('screens.produccion.sinMaquinas')}
         message={t('screens.produccion.noMaquinas')}
       />
@@ -399,7 +398,6 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
     ? (
       <EmptyState
         variant="inline"
-        icon="📋"
         title={filtro ? t('screens.produccion.sinResultados') : t('screens.produccion.sinTrabajos')}
         message={filtro ? t('screens.produccion.sinResultadosBusqueda') : t('screens.produccion.noTrabajosFilro')}
       />
@@ -540,13 +538,12 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
                 <Text style={styles.consumoValue}>{typeof consumoModal.cliente === 'string' ? consumoModal.cliente : (consumoModal.cliente?.nombre || '-')}</Text>
                 {consumoPreview?.repetidora_nombre ? (
                   <View style={styles.consumoRepetidoraRow}>
-                    <Text style={styles.consumoRepetidoraIcon}>📄</Text>
-                    <Text style={styles.consumoRepetidoraNombre} numberOfLines={1}>{consumoPreview.repetidora_nombre}</Text>
+                                        <Text style={styles.consumoRepetidoraNombre} numberOfLines={1}>{consumoPreview.repetidora_nombre}</Text>
                   </View>
                 ) : null}
                 {sinRepetidora ? (
                   <Text style={styles.consumoWarningText}>
-                    ⚠ {t('screens.produccion.consumo.warnSinRepetidora')}
+                    {t('screens.produccion.consumo.warnSinRepetidora')}
                   </Text>
                 ) : consumoPreviewLoading ? (
                   <View style={styles.consumoPreviewLoading}>
@@ -616,7 +613,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
             {/* Error genérico */}
             {consumoError && (
               <View style={styles.consumoErrorBox}>
-                <Text style={styles.consumoErrorText}>⚠ {consumoError}</Text>
+                <Text style={styles.consumoErrorText}>{consumoError}</Text>
               </View>
             )}
 

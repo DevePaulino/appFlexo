@@ -1029,7 +1029,6 @@ export default function PresupuestoScreen({ currentUser }) {
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>
           <EmptyState
-            icon="📄"
             title={busqueda ? t('common.noResults') : t('screens.presupuesto.noPresupuestos')}
             message={busqueda ? t('common.noResultsMsg') : t('screens.presupuesto.noItems')}
             action={!busqueda && puedeCrear ? t('screens.presupuesto.newBtn') : undefined}

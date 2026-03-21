@@ -1010,7 +1010,6 @@ export default function ProduccionScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: '#EEF2F8' }}>
         <EmptyState
-          icon="⚙️"
           title={t('screens.maquinas.noMaquinas')}
           message={t('screens.produccion.sinMaquinas')}
         />

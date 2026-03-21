@@ -2139,7 +2139,7 @@ export default function ConfigScreen({ route, currentUser }) {
         )}
 
         {items.length === 0 ? (
-          <EmptyState variant="inline" icon="⚙️" title={t('screens.config.sinValores')} message={t('screens.config.noValoresConfigurados')} />
+          <EmptyState variant="inline" title={t('screens.config.sinValores')} message={t('screens.config.noValoresConfigurados')} />
         ) : categoryKey === 'estados_pedido' ? (
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleEstadosDragEnd}>
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
@@ -2288,7 +2288,7 @@ export default function ConfigScreen({ route, currentUser }) {
               />
 
               {usuariosFiltrados.length === 0 ? (
-                <EmptyState variant="inline" icon="👥" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
+                <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
               ) : (
                 <>
                   <View style={styles.usersTableWrap}>
@@ -2462,7 +2462,7 @@ export default function ConfigScreen({ route, currentUser }) {
           {!roleRulesExpanded ? (
             <Text style={styles.muted}>{t('screens.config.clickExpandir')}</Text>
           ) : (availableRoles || []).length === 0 ? (
-            <EmptyState variant="inline" icon="📌" title={t('screens.config.sinRoles')} message={t('screens.config.addRolesFirst')} />
+            <EmptyState variant="inline" title={t('screens.config.sinRoles')} message={t('screens.config.addRolesFirst')} />
           ) : (
             <>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minWidth: '100%' }}>
@@ -2684,7 +2684,7 @@ export default function ConfigScreen({ route, currentUser }) {
           />
 
           {usuariosFiltrados.length === 0 ? (
-            <EmptyState variant="inline" icon="👥" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
+            <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
           ) : (
             <>
               <View style={styles.usersTableWrap}>

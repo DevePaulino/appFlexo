@@ -1473,7 +1473,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                             <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
                                               <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
                                               <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
-                                              {warn && <Text style={styles.sepWarnIcon}>⚠</Text>}
                                             </View>
                                           );
                                         })}

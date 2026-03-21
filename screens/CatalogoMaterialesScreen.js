@@ -329,6 +329,12 @@ const styles = StyleSheet.create({
   },
   actionBtnDanger: { backgroundColor: '#FFEBEE' },
   actionBtnSmallText: { fontSize: 14, color: '#0F172A' },
+  // Tab bar
+  tabBar: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 10 },
+  tabBtn: { paddingHorizontal: 16, paddingVertical: 10, marginRight: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnActive: { borderBottomColor: '#1E293B' },
+  tabBtnText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  tabBtnTextActive: { color: '#1E293B' },
 });
 
 export default function CatalogoMaterialesScreen({ currentUser }) {
@@ -362,6 +368,12 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
   const [loadingProveedores, setLoadingProveedores] = useState(false);
   const [provModal, setProvModal] = useState({ visible: false, editing: null });
   const [provForm, setProvForm] = useState({ nombre: '', contacto: '', telefono: '', email: '', notas: '' });
+
+  // ── Búsqueda proveedores ─────────────────────────────────────────────────
+  const [busquedaProv, setBusquedaProv] = useState('');
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('catalogo'); // 'catalogo' | 'proveedores'
 
   // ── Delete confirmation ──────────────────────────────────────────────────
   const [confirmingDelete, setConfirmingDelete] = useState(null);
@@ -426,6 +438,16 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
         return m.nombre.toLowerCase().includes(q) || fabNames.toLowerCase().includes(q);
       })
     : catalogo;
+
+  // ── Filtered proveedores ─────────────────────────────────────────────────
+  const proveedoresFiltrados = busquedaProv.trim()
+    ? proveedores.filter(p => {
+        const q = busquedaProv.trim().toLowerCase();
+        return (p.nombre || '').toLowerCase().includes(q)
+          || (p.contacto || '').toLowerCase().includes(q)
+          || (p.email || '').toLowerCase().includes(q);
+      })
+    : proveedores;
 
   // ── Catálogo CRUD ─────────────────────────────────────────────────────────
 
@@ -576,36 +598,123 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>{t('nav.materiales')}</Text>
+          <Text style={styles.headerTitle}>
+            {activeTab === 'proveedores' ? t('screens.materiales.proveedoresMaterialTitle') : t('nav.materiales')}
+          </Text>
           <TouchableOpacity
             style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-            onPress={() => puedeCrear && openCatCreate()}
+            onPress={() => puedeCrear && (activeTab === 'catalogo' ? openCatCreate() : openProvCreate())}
             disabled={!puedeCrear}
           >
-            <Text style={styles.btnPlusText}>{t('screens.materiales.addMaterialBtn')}</Text>
+            <Text style={styles.btnPlusText}>
+              {activeTab === 'catalogo' ? t('screens.materiales.addMaterialBtn') : t('screens.materiales.addProveedorBtn')}
+            </Text>
           </TouchableOpacity>
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
-          value={busqueda}
-          onChangeText={setBusqueda}
+          value={activeTab === 'catalogo' ? busqueda : busquedaProv}
+          onChangeText={activeTab === 'catalogo' ? setBusqueda : setBusquedaProv}
           placeholderTextColor="#94A3B8"
         />
       </View>
 
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        {['catalogo', 'proveedores'].map(tab => (
+          <TouchableOpacity key={tab} style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]} onPress={() => setActiveTab(tab)}>
+            <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
+              {tab === 'catalogo' ? t('screens.materiales.tabCatalogo') : t('screens.materiales.tabProveedores')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Proveedores table */}
+      {activeTab === 'proveedores' && (
+        proveedoresFiltrados.length === 0 ? (
+          <View style={styles.tableContainer}>
+            <EmptyState
+              title={busquedaProv ? t('common.noResults') : t('screens.materiales.sinProveedores')}
+              message={busquedaProv ? t('common.noResultsMsg') : t('screens.materiales.noProveedores')}
+              action={!busquedaProv && puedeCrear ? t('screens.materiales.addProveedorBtn') : undefined}
+              onAction={!busquedaProv && puedeCrear ? openProvCreate : undefined}
+            />
+          </View>
+        ) : (
+          <ScrollView style={styles.tableContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ flexGrow: 1 }}>
+              <View style={styles.tableContent}>
+                {/* Table header */}
+                <View style={styles.tableHeader}>
+                  <View style={styles.colMaterial}>
+                    <Text style={styles.headerText}>{t('screens.materiales.proveedoresTitle')}</Text>
+                  </View>
+                  <View style={styles.colFabricantes}>
+                    <Text style={styles.headerText}>{t('screens.materiales.contactoLabel').replace(':', '')}</Text>
+                  </View>
+                  <View style={styles.colAcciones}>
+                    <Text style={styles.headerText}>{t('screens.materiales.colAcciones')}</Text>
+                  </View>
+                </View>
+
+                {/* Table rows */}
+                {proveedoresFiltrados.map((prov, idx) => (
+                  <View key={prov._id || prov.id || idx} style={[styles.tableRow, idx % 2 === 1 && styles.rowAlternate]}>
+                    <View style={styles.colMaterial}>
+                      <Text style={[styles.cellText, { fontWeight: '600' }]} numberOfLines={1}>{prov.nombre}</Text>
+                      {prov.notas ? <Text style={[styles.cellText, { color: '#94A3B8', fontSize: 11 }]} numberOfLines={1}>{prov.notas}</Text> : null}
+                    </View>
+                    <View style={styles.colFabricantes}>
+                      {prov.contacto ? <Text style={[styles.cellText, { color: '#475569' }]} numberOfLines={1}>{prov.contacto}</Text> : null}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {prov.telefono ? <Text style={[styles.cellText, { color: '#64748B', fontSize: 12 }]} numberOfLines={1}>{prov.telefono}</Text> : null}
+                        {prov.email ? <Text style={[styles.cellText, { color: '#64748B', fontSize: 12 }]} numberOfLines={1}>{prov.email}</Text> : null}
+                      </View>
+                    </View>
+                    <View style={styles.colAcciones}>
+                      <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => puedeCrear && openProvEdit(prov)}
+                        disabled={!puedeCrear}
+                      >
+                        <Text style={styles.actionBtnText}>{t('common.edit')}</Text>
+                      </TouchableOpacity>
+                      {confirmingDelete === (prov._id || prov.id) ? (
+                        <DeleteConfirmRow
+                          onCancel={() => setConfirmingDelete(null)}
+                          onConfirm={() => { setConfirmingDelete(null); deleteProveedor(prov); }}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => setConfirmingDelete(prov._id || prov.id)}
+                        >
+                          <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </ScrollView>
+        )
+      )}
+
       {/* Table */}
-      {catalogoFiltrado.length === 0 ? (
-        <View style={styles.tableContainer}>
-          <EmptyState
-            icon="🗂️"
-            title={busqueda ? t('common.noResults') : t('screens.materiales.sinCatalogoMateriales')}
-            message={busqueda ? t('common.noResultsMsg') : t('screens.materiales.noCatalogoMateriales')}
-            action={!busqueda && puedeCrear ? t('screens.materiales.addMaterialBtn') : undefined}
-            onAction={!busqueda && puedeCrear ? openCatCreate : undefined}
-          />
-        </View>
-      ) : (
+      {activeTab === 'catalogo' && (
+        catalogoFiltrado.length === 0 ? (
+          <View style={styles.tableContainer}>
+            <EmptyState
+              title={busqueda ? t('common.noResults') : t('screens.materiales.sinCatalogoMateriales')}
+              message={busqueda ? t('common.noResultsMsg') : t('screens.materiales.noCatalogoMateriales')}
+              action={!busqueda && puedeCrear ? t('screens.materiales.addMaterialBtn') : undefined}
+              onAction={!busqueda && puedeCrear ? openCatCreate : undefined}
+            />
+          </View>
+        ) : (
         <ScrollView style={styles.tableContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.tableContent}>
@@ -692,6 +801,7 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
             </View>
           </ScrollView>
         </ScrollView>
+        )
       )}
 
       {/* Modal: Catálogo crear/editar */}

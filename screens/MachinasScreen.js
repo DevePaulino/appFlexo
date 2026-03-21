@@ -395,7 +395,6 @@ export default function MachinasScreen({ currentUser }) {
       {filtrados.length === 0 ? (
           <View style={styles.tableContainer}>
             <EmptyState
-              icon="🖨️"
               title={busqueda ? t('common.noResults') : t('screens.maquinas.noMaquinas')}
               message={busqueda ? t('common.noResultsMsg') : t('screens.maquinas.noItems')}
               action={!busqueda && puedeCrear ? t('screens.maquinas.newBtn') : undefined}

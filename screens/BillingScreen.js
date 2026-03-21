@@ -40,10 +40,10 @@ const C = {
 };
 
 const ACTION_ICONS = {
-  pedido:   '📋',
-  features: '⚙️',
-  purchase: '💳',
-  signup_bonus: '🎁',
+  pedido:   '•',
+  features: '•',
+  purchase: '•',
+  signup_bonus: '•',
   default:  '•',
 };
 
@@ -217,7 +217,7 @@ export default function BillingScreen({ navigation, currentUser }) {
             )}
             {isSub && (
               <>
-                <Text style={s.unlimitedText}>✓ {t('billing.unlimited')}</Text>
+                <Text style={s.unlimitedText}>{t('billing.unlimited')}</Text>
                 <Text style={s.planDesc}>{t('billing.subscriptionDesc')}</Text>
                 <Text style={[s.planPriceLabel, { marginTop: 8 }]}>
                   {status?.subscription_price_eur
@@ -259,7 +259,7 @@ export default function BillingScreen({ navigation, currentUser }) {
               <View style={s.section}>
                 <Text style={s.sectionTitle}>{t('billing.costsTitle')}</Text>
                 <View style={s.costRow}>
-                  <Text style={s.costIcon}>📋</Text>
+                  <Text style={s.costIcon}>•</Text>
                   <View style={s.costInfo}>
                     <Text style={s.costName}>{t('billing.costOrder')}</Text>
                   </View>
@@ -269,7 +269,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                 </View>
                 <View style={s.costDivider} />
                 <View style={s.costRow}>
-                  <Text style={s.costIcon}>⚙️</Text>
+                  <Text style={s.costIcon}>•</Text>
                   <View style={s.costInfo}>
                     <Text style={s.costName}>{t('billing.costFeatures')}</Text>
                     <Text style={s.costHint}>{t('billing.costFeaturesHint')}</Text>

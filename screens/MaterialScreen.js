@@ -31,11 +31,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const consumoModuloActivo = modulos.consumo_material !== false;
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'stock' | 'historial' | 'proveedores'
+  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'stock' | 'historial'
 
   useEffect(() => {
     AsyncStorage.getItem('MaterialScreen_activeTab')
-      .then(v => { if (v && v !== 'catalogo' && (v !== 'historial' || consumoModuloActivo)) setActiveTab(v); })
+      .then(v => { if (v && v !== 'catalogo' && v !== 'proveedores' && (v !== 'historial' || consumoModuloActivo)) setActiveTab(v); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -88,11 +88,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
     stock_id: '', pedido_ref: '', ancho_trabajo_cm: '', largo_trabajo_m: '', crear_retal: false,
   });
 
-  // ── Proveedores ───────────────────────────────────────────────────────────
+  // ── Proveedores (data only, for catalog modal dropdowns) ─────────────────
   const [proveedores, setProveedores] = useState([]);
-  const [loadingProveedores, setLoadingProveedores] = useState(false);
-  const [provModal, setProvModal] = useState({ visible: false, editing: null });
-  const [provForm, setProvForm] = useState({ nombre: '', contacto: '', telefono: '', email: '', notas: '' });
 
   // ── Inline delete confirmation ────────────────────────────────────────────
   const [confirmingDelete, setConfirmingDelete] = useState(null);
@@ -173,15 +170,12 @@ export default function MaterialScreen({ currentUser, navigation }) {
   }, [authHeaders]);
 
   const loadProveedores = useCallback(async () => {
-    setLoadingProveedores(true);
     try {
       const resp = await fetch(`${API_BASE}/api/materiales/proveedores`, { headers: authHeaders() });
       const data = await resp.json();
       if (resp.ok) setProveedores(data.proveedores || []);
     } catch (e) {
       console.error('Error loading proveedores:', e);
-    } finally {
-      setLoadingProveedores(false);
     }
   }, [authHeaders]);
 
@@ -191,7 +185,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
       loadCatalogo(); // always load for stock form dropdowns
       if (activeTab === 'resumen' || activeTab === 'stock') loadStock();
       if (activeTab === 'historial') loadConsumos(1);
-      if (activeTab === 'proveedores') loadProveedores();
     }, [activeTab, loadCatalogo, loadStock, loadConsumos, loadProveedores])
   );
 
@@ -199,7 +192,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
   useEffect(() => {
     if (activeTab === 'resumen' || activeTab === 'stock') loadStock();
     else if (activeTab === 'historial') loadConsumos(1);
-    else if (activeTab === 'proveedores') loadProveedores();
   }, [activeTab]);
 
   // Chart data: group stock by material_nombre for Resumen tab
@@ -441,61 +433,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
     }
   };
 
-  // ── Proveedores CRUD ─────────────────────────────────────────────────────
-
-  const openProvCreate = () => {
-    setProvForm({ nombre: '', contacto: '', telefono: '', email: '', notas: '' });
-    setProvModal({ visible: true, editing: null });
-  };
-
-  const openProvEdit = (prov) => {
-    setProvForm({
-      nombre: prov.nombre || '',
-      contacto: prov.contacto || '',
-      telefono: prov.telefono || '',
-      email: prov.email || '',
-      notas: prov.notas || '',
-    });
-    setProvModal({ visible: true, editing: prov });
-  };
-
-  const saveProveedor = async () => {
-    const nombre = provForm.nombre.trim();
-    if (!nombre) return alert(t('screens.materiales.errProveedorRequired'));
-    try {
-      let resp;
-      if (provModal.editing) {
-        resp = await fetch(`${API_BASE}/api/materiales/proveedores/${provModal.editing._id || provModal.editing.id}`, {
-          method: 'PUT', headers: authHeaders(), body: JSON.stringify(provForm),
-        });
-      } else {
-        resp = await fetch(`${API_BASE}/api/materiales/proveedores`, {
-          method: 'POST', headers: authHeaders(), body: JSON.stringify(provForm),
-        });
-      }
-      const data = await resp.json();
-      if (!resp.ok) return alert(data.error || t('screens.materiales.errGuardandoProveedor'));
-      setProvModal({ visible: false, editing: null });
-      loadProveedores();
-    } catch (e) {
-      alert(t('screens.materiales.errConexion'));
-    }
-  };
-
-  const deleteProveedor = async (prov) => {
-    try {
-      const resp = await fetch(`${API_BASE}/api/materiales/proveedores/${prov._id || prov.id}`, {
-        method: 'DELETE', headers: authHeaders(),
-      });
-      if (resp.ok) loadProveedores();
-      else {
-        const d = await resp.json();
-        alert(d.error || t('screens.materiales.errEliminar'));
-      }
-    } catch (e) {
-      alert(t('screens.materiales.errConexion'));
-    }
-  };
 
   // ── Consumo ───────────────────────────────────────────────────────────────
 
@@ -636,7 +573,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
           {t('screens.materiales.materialesActivos', { count: materialesActivos.length })}
         </Text>
         {materialesActivos.length === 0 && !loadingStock && (
-          <EmptyState variant="inline" icon="📦" title={t('screens.materiales.sinMateriales')} message={t('screens.materiales.noMateriales')} />
+          <EmptyState variant="inline" title={t('screens.materiales.sinMateriales')} message={t('screens.materiales.noMateriales')} />
         )}
         {materialesActivos.map((entry, idx) => {
           const pct = entry.metros_total > 0 ? (entry.metros_disponibles / entry.metros_total) : 0;
@@ -676,7 +613,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
           {t('screens.materiales.retalesDisponibles', { count: retales.length })}
         </Text>
         {retales.length === 0 && (
-          <EmptyState variant="inline" icon="🧵" title={t('screens.materiales.sinRetales')} message={t('screens.materiales.noRetalesSaved')} />
+          <EmptyState variant="inline" title={t('screens.materiales.sinRetales')} message={t('screens.materiales.noRetalesSaved')} />
         )}
         <View style={styles.retalesGrid}>
           {retales.map((entry, idx) => {
@@ -721,7 +658,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
       </View>
 
       {catalogo.length === 0 && !loadingCatalogo && (
-        <EmptyState variant="inline" icon="🗂️" title={t('screens.materiales.sinCatalogoMateriales')} message={t('screens.materiales.noCatalogoMateriales')} />
+        <EmptyState variant="inline" title={t('screens.materiales.sinCatalogoMateriales')} message={t('screens.materiales.noCatalogoMateriales')} />
       )}
 
       {catalogo.map((mat, matIdx) => (
@@ -859,7 +796,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
       </View>
 
       {stockFiltrado.length === 0 && !loadingStock && (
-        <EmptyState variant="inline" icon="📦"
+        <EmptyState variant="inline"
           title={busquedaStock ? t('common.noResults') : t('screens.materiales.sinStockEntradas')}
           message={busquedaStock ? '' : t('screens.materiales.addToStart')}
         />
@@ -923,7 +860,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
         </View>
 
         {consumos.length === 0 && !loadingConsumos && (
-          <EmptyState variant="inline" icon="📊" title={t('screens.materiales.sinConsumos')} message={t('screens.materiales.noConsumos')} />
+          <EmptyState variant="inline" title={t('screens.materiales.sinConsumos')} message={t('screens.materiales.noConsumos')} />
         )}
 
         {consumos.map((c, idx) => (
@@ -960,54 +897,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
       </ScrollView>
     );
   };
-
-  const renderProveedoresTab = () => (
-    <ScrollView style={styles.tabContent}>
-      <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>{t('screens.materiales.proveedoresTitle')}</Text>
-        <TouchableOpacity style={styles.btnPrimary} onPress={openProvCreate}>
-          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addProveedorBtn')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loadingProveedores && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
-
-      {proveedores.length === 0 && !loadingProveedores && (
-        <EmptyState variant="inline" icon="🏭" title={t('screens.materiales.sinProveedores')} message={t('screens.materiales.noProveedores')} />
-      )}
-
-      {proveedores.map((prov, idx) => (
-        <View key={prov._id || prov.id || idx} style={styles.provCard}>
-          <View style={styles.provCardMain}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.provCardNombre}>{prov.nombre}</Text>
-              {prov.contacto ? <Text style={styles.provCardMeta}>{t('screens.materiales.contactoLabel')} {prov.contacto}</Text> : null}
-              <View style={styles.provCardRow}>
-                {prov.telefono ? <Text style={styles.provCardChip}>📞 {prov.telefono}</Text> : null}
-                {prov.email ? <Text style={styles.provCardChip}>✉ {prov.email}</Text> : null}
-              </View>
-              {prov.notas ? <Text style={styles.provCardNotas}>{prov.notas}</Text> : null}
-            </View>
-            <View style={styles.tdActions}>
-              <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openProvEdit(prov)}>
-                <Text style={styles.actionBtnSmallText}>✎</Text>
-              </TouchableOpacity>
-              {confirmingDelete === (prov._id || prov.id) ? (
-                <DeleteConfirmRow
-                  onCancel={() => setConfirmingDelete(null)}
-                  onConfirm={() => { setConfirmingDelete(null); deleteProveedor(prov); }}
-                />
-              ) : (
-                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(prov._id || prov.id)}>
-                  <Text style={styles.actionBtnSmallText}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
-  );
 
   // ═══════════════════════════════════════════════════════════════
   // MODAL: Catálogo crear/editar
@@ -1087,9 +976,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
             )}
             <TouchableOpacity style={styles.btnSecondarySmall} onPress={addFabricante}>
               <Text style={styles.btnSecondarySmallText}>{t('screens.materiales.addBtn')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnSecondarySmall, { marginLeft: 6 }]} onPress={openProvCreate}>
-              <Text style={styles.btnSecondarySmallText}>{t('screens.materiales.addProveedorBtn2')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -1434,7 +1320,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 </View>
                 {!suficiente && (
                   <Text style={styles.consumoPreviewWarning}>
-                    ⚠ {t('screens.materiales.stockInsuficiente', { disponible: selEntry.metros_disponibles?.toFixed(1) })}
+                    {t('screens.materiales.stockInsuficiente', { disponible: selEntry.metros_disponibles?.toFixed(1) })}
                   </Text>
                 )}
                 {showRetal && (
@@ -1452,7 +1338,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
                     ) : (
                       <TouchableOpacity onPress={() => setConsumoForm(p => ({ ...p, crear_retal: !p.crear_retal }))}>
                         <Text style={{ fontSize: 18, color: consumoForm.crear_retal ? '#1976D2' : '#999', marginLeft: 8 }}>
-                          {consumoForm.crear_retal ? '☑' : '☐'}
+                          {consumoForm.crear_retal ? 'ON' : 'OFF'}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -1474,82 +1360,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
       </Modal>
     );
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // MODAL: Proveedor crear/editar
-  // ═══════════════════════════════════════════════════════════════
-  const renderProvModal = () => (
-    <Modal visible={provModal.visible} transparent animationType="fade" onRequestClose={() => setProvModal({ visible: false, editing: null })}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>{provModal.editing ? t('screens.materiales.editProveedorTitle') : t('screens.materiales.newProveedorTitle')}</Text>
-
-          <Text style={styles.fieldLabel}>{t('screens.materiales.nombreProveedorLabel')}</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={provForm.nombre}
-            onChangeText={v => setProvForm(p => ({ ...p, nombre: v }))}
-            placeholder={t('screens.materiales.nombreProveedorEjemplo')}
-            placeholderTextColor="#94A3B8"
-            autoFocus
-          />
-
-          <Text style={styles.fieldLabel}>{t('screens.materiales.personaContactoLabel')}</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={provForm.contacto}
-            onChangeText={v => setProvForm(p => ({ ...p, contacto: v }))}
-            placeholder={t('screens.materiales.personaContactoPlaceholder')}
-            placeholderTextColor="#94A3B8"
-          />
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>{t('screens.materiales.telefonoLabel')}</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={provForm.telefono}
-                onChangeText={v => setProvForm(p => ({ ...p, telefono: v }))}
-                placeholder="+34 600 000 000"
-                placeholderTextColor="#94A3B8"
-                keyboardType="phone-pad"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>{t('screens.materiales.emailLabel')}</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={provForm.email}
-                onChangeText={v => setProvForm(p => ({ ...p, email: v }))}
-                placeholder="comercial@proveedor.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-              />
-            </View>
-          </View>
-
-          <Text style={styles.fieldLabel}>{t('screens.materiales.notasLabel')}</Text>
-          <TextInput
-            style={[styles.fieldInput, { minHeight: 50 }]}
-            value={provForm.notas}
-            onChangeText={v => setProvForm(p => ({ ...p, notas: v }))}
-            multiline
-            placeholder={t('screens.materiales.condicionesPlaceholder')}
-            placeholderTextColor="#94A3B8"
-          />
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity style={styles.btnCancel} onPress={() => setProvModal({ visible: false, editing: null })}>
-              <Text style={styles.btnCancelText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnPrimary} onPress={saveProveedor}>
-              <Text style={styles.btnPrimaryText}>{t('common.save')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
 
   // ═══════════════════════════════════════════════════════════════
   // MAIN RENDER
@@ -1575,7 +1385,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {['resumen', 'stock', 'proveedores', ...(consumoModuloActivo ? ['historial'] : [])].map(tab => (
+        {['resumen', 'stock', ...(consumoModuloActivo ? ['historial'] : [])].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
@@ -1584,7 +1394,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
             <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
               {tab === 'resumen' ? t('screens.materiales.tabResumen')
                 : tab === 'stock' ? t('screens.materiales.tabStock')
-                : tab === 'proveedores' ? t('screens.materiales.tabProveedores')
                 : t('screens.materiales.tabHistorial')}
             </Text>
           </TouchableOpacity>
@@ -1594,13 +1403,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
       {/* Tab content */}
       {activeTab === 'resumen' && renderResumenTab()}
       {activeTab === 'stock' && renderStockTab()}
-      {activeTab === 'proveedores' && renderProveedoresTab()}
       {activeTab === 'historial' && consumoModuloActivo && renderHistorialTab()}
 
       {/* Modals */}
       {stockModal.visible && renderStockModal()}
       {consumoModal.visible && renderConsumoModal()}
-      {provModal.visible && renderProvModal()}
     </View>
   );
 }

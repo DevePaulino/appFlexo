@@ -30,8 +30,6 @@ export default function DeleteConfirmRow({ onCancel, onConfirm, message, size = 
       }}
     >
       {/* Warning icon */}
-      <Text style={{ fontSize: sm ? 11 : 13, lineHeight: sm ? 16 : 20 }}>⚠️</Text>
-
       {/* Question */}
       <Text
         style={{
