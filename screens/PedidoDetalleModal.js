@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Modal,
   View,
   Text,
+  TextInput,
+  Image,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
@@ -71,10 +74,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -193,7 +196,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -203,17 +206,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
   },
   fileUploadIconBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#E2E8F0',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   fileUploadIconBtnText: {
-    fontSize: 16,
-    color: '#475569',
-    lineHeight: 20,
+    fontSize: 18,
+    color: '#FFFFFF',
+    lineHeight: 22,
     fontWeight: '600',
   },
   fileRow: {
@@ -282,8 +287,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
@@ -326,11 +331,11 @@ const styles = StyleSheet.create({
   },
   versionTabsCol: {
     flexDirection: 'column',
-    gap: 4,
-    minWidth: 62,
+    gap: 3,
+    minWidth: 54,
     flexShrink: 0,
-    paddingTop: 6,
-    paddingRight: 6,
+    paddingTop: 4,
+    paddingRight: 4,
   },
 
   // ── PDF Lightbox ─────────────────────────────────────────────────────────
@@ -370,12 +375,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pdfPreviewWrapper: {
-    width: '16%',
+    width: '38%',
     aspectRatio: 3 / 4,
     borderRadius: 6,
     overflow: 'hidden',
     flexShrink: 0,
     backgroundColor: '#FFFFFF',
+    position: 'relative',
   },
   metaColumn: {
     flex: 1,
@@ -392,35 +398,35 @@ const styles = StyleSheet.create({
   sepChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 4,
   },
   sepChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 3,
+    paddingHorizontal: 4,
+    flexBasis: '48%',
+    flexGrow: 1,
+    paddingVertical: 2,
+    borderRadius: 5,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    flexBasis: '47%',
-    flexGrow: 1,
   },
   sepChipWarn: {
     borderColor: '#F59E0B',
     backgroundColor: '#FFFBEB',
   },
   sepSwatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
+    width: 10,
+    height: 10,
+    borderRadius: 3,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.15)',
     flexShrink: 0,
   },
   sepNombre: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
     color: '#1E293B',
     flex: 1,
@@ -465,7 +471,435 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // ── Botones Esko ────────────────────────────────────────────────────────
+  // ── Comparador de PDF ───────────────────────────────────────────────────────
+  cmpSidePanel: {
+    flex: 1,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    paddingLeft: 12,
+  },
+  cmpRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  cmpColPdf: {
+    width: 120,
+    flexShrink: 0,
+  },
+  cmpColSearch: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cmpColTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 6,
+  },
+  cmpEmpty: {
+    fontSize: 11,
+    color: '#CBD5E1',
+    fontStyle: 'italic',
+  },
+  cmpPdfRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 4,
+  },
+  cmpPdfRowActive: {
+    backgroundColor: '#14532D',
+    borderColor: '#16A34A',
+  },
+  cmpPdfRowText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#475569',
+  },
+  cmpPdfRowTextActive: {
+    color: '#DCFCE7',
+    fontWeight: '600',
+  },
+  cmpSearchInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 6,
+  },
+  cmpDropdown: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  cmpDropdownEmpty: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    padding: 10,
+  },
+  cmpDropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cmpDropdownNum: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  cmpDropdownSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  cmpTargetChip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  cmpTargetChipNum: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  cmpTargetChipSub: {
+    fontSize: 11,
+    color: '#3B82F6',
+    marginTop: 2,
+  },
+  cmpClearBtn: {
+    padding: 2,
+    marginTop: 2,
+  },
+  cmpClearBtnText: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  cmpRunBtn: {
+    marginTop: 10,
+    backgroundColor: '#1E40AF',
+    borderRadius: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 18,
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  cmpRunBtnDisabled: {
+    backgroundColor: '#94A3B8',
+  },
+  cmpRunBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  cmpDiffArea: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 12,
+  },
+  cmpDiffHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  cmpDiffSimilarity: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  cmpPageNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cmpPageNavBtn: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#475569',
+    paddingHorizontal: 4,
+  },
+  cmpPageNavText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  cmpDiffImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+  },
+
+  // ── Comparador lightbox ─────────────────────────────────────────────────
+  cmpViewResultBtn: {
+    marginTop: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    gap: 2,
+  },
+  cmpViewResultBtnLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#475569',
+    letterSpacing: 0.8,
+  },
+  cmpViewResultBtnSim: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  cmpLightboxOverlay: {
+    flex: 1,
+    backgroundColor: '#0A0F1A',
+    flexDirection: 'column',
+  },
+  cmpLightboxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  cmpLightboxLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    justifyContent: 'flex-start',
+  },
+  cmpLightboxCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  cmpLightboxModeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  cmpLightboxModeBtnActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  cmpLightboxModeBtnAuto: {
+    backgroundColor: '#065F46',
+    borderColor: '#10B981',
+  },
+  cmpLightboxModeBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  cmpLightboxModeBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  cmpLightboxRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  cmpLightboxSimilarity: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  cmpLightboxCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cmpLightboxCloseBtnText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '700',
+  },
+  cmpSepDiffBar: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    flexWrap: 'wrap',
+  },
+  cmpSepDiffChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  cmpSepDiffChipAlert: {
+    backgroundColor: '#2D1515',
+    borderColor: '#EF4444',
+  },
+  cmpSepDiffSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
+    flexShrink: 0,
+  },
+  cmpSepDiffName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  cmpSepDiffPct: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  cmpSepDiffPctAlert: {
+    color: '#FCA5A5',
+    fontWeight: '700',
+  },
+  cmpSepDiffWarn: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#EF4444',
+  },
+  cmpLightboxBody: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  cmpChannelSidebar: {
+    width: 120,
+    backgroundColor: '#0D1525',
+    borderRightWidth: 1,
+    borderRightColor: '#1E293B',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    gap: 4,
+  },
+  cmpChannelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#1E2D45',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  cmpChannelBtnOff: {
+    backgroundColor: '#111827',
+    borderColor: '#1E293B',
+  },
+  cmpChannelBtnAlert: {
+    borderColor: '#EF4444',
+  },
+  cmpChannelSwatch: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    flexShrink: 0,
+  },
+  cmpChannelName: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    lineHeight: 13,
+  },
+  cmpChannelNameOff: {
+    color: '#475569',
+  },
+  cmpChannelPct: {
+    fontSize: 9,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  cmpChannelPctAlert: {
+    color: '#FCA5A5',
+    fontWeight: '700',
+  },
+  cmpChannelAlertIcon: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#EF4444',
+    flexShrink: 0,
+  },
+  cmpChannelOffIcon: {
+    fontSize: 8,
+    color: '#475569',
+    flexShrink: 0,
+  },
+  cmpImageArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cmpZoomBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 5,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cmpZoomBtnText: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  cmpZoomLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    minWidth: 34,
+    textAlign: 'center',
+  },
+  cmpLightboxImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+
+  // ── Contenedores Esko ───────────────────────────────────────────────────
   eskoActionsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -477,37 +911,51 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  eskoBtn: {
-    paddingVertical: 9,
+  eskoCardHeader: {
     paddingHorizontal: 10,
-    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
     alignItems: 'center',
   },
-  eskoBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
+  eskoCardLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
   },
   eskoOutputBox: {
-    minHeight: 52,
-    paddingVertical: 8,
+    minHeight: 64,
+    paddingVertical: 10,
     paddingHorizontal: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  eskoOutputEmptyText: {
-    fontSize: 10,
-    color: '#CBD5E1',
-    fontStyle: 'italic',
+    gap: 6,
   },
   eskoOutputBoxFilled: {
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F8FAFC',
     alignItems: 'flex-start',
+  },
+  eskoGenerateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#1E40AF',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  eskoGenerateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   eskoFileName: {
     fontSize: 10,
@@ -538,16 +986,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   eskoUploadBtn: {
-    paddingVertical: 10,
+    paddingVertical: 4,
     paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   eskoUploadBtnText: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
   },
   // ── Tabs navegación ──────────────────────────────────────────────────
   tabBar: {
@@ -592,12 +1042,12 @@ const styles = StyleSheet.create({
   filesSectionLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   fileCountBadge: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -606,7 +1056,7 @@ const styles = StyleSheet.create({
   fileCountBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#F1F5F9',
   },
   filesSeparator: {
     height: 1,
@@ -760,6 +1210,44 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const fileInputUnitarioRef   = useRef(null);
   const fileInputEskoRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
 
+  // PDF Comparador
+  const [comparadorAllPedidos, setComparadorAllPedidos] = useState(null);
+  const [comparadorSrcArchivoId, setComparadorSrcArchivoId] = useState(null);
+  const [comparadorSearchNumero, setComparadorSearchNumero] = useState('');
+  const [comparadorSearchCliente, setComparadorSearchCliente] = useState('');
+  const [comparadorSearchNombre, setComparadorSearchNombre] = useState('');
+  const [comparadorTargetPedido, setComparadorTargetPedido] = useState(null);
+  const [comparadorTargetFiles, setComparadorTargetFiles] = useState([]);
+  const [comparadorTargetArchivoId, setComparadorTargetArchivoId] = useState(null);
+  const [comparadorRunning, setComparadorRunning] = useState(false);
+  const [comparadorDiff, setComparadorDiff] = useState(null);
+  const [comparadorDiffPage, setComparadorDiffPage] = useState(0);
+  const [comparadorLightbox, setComparadorLightbox] = useState(false);
+  const [comparadorViewMode, setComparadorViewMode] = useState('diff'); // 'diff' | 'a' | 'b'
+  const [comparadorAutoPlay, setComparadorAutoPlay] = useState(false);
+  const comparadorAutoPlayRef = useRef(null);
+  const [comparadorActiveSeps, setComparadorActiveSeps] = useState(null); // null=all, Set=selected
+  const [comparadorZoom, setComparadorZoom] = useState(1.0);
+  const [comparadorPan, setComparadorPan] = useState({ x: 0, y: 0 });
+  const cmpCanvasRef = useRef(null);
+  const cmpCompositeIdRef = useRef(0);
+  const cmpPanRef = useRef({ x: 0, y: 0 });
+  const cmpPanStartRef = useRef({ x: 0, y: 0 });
+  const cmpZoomRef = useRef(1.0);
+
+  const cmpPanResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => cmpZoomRef.current > 1,
+    onMoveShouldSetPanResponder: () => cmpZoomRef.current > 1,
+    onPanResponderGrant: () => {
+      cmpPanStartRef.current = { ...cmpPanRef.current };
+    },
+    onPanResponderMove: (_, g) => {
+      const next = { x: cmpPanStartRef.current.x + g.dx, y: cmpPanStartRef.current.y + g.dy };
+      cmpPanRef.current = next;
+      setComparadorPan({ ...next });
+    },
+  }), []);
+
   // Carga metadatos XMP cuando cambia la versión seleccionada
   useEffect(() => {
     if (selectedVersion === null) { setPdfMeta(null); return; }
@@ -776,6 +1264,80 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       .finally(() => setPdfMetaLoading(false));
   }, [selectedVersion, archivos.unitario]);
 
+  // Auto-play A↔B cada 1.5s
+  useEffect(() => {
+    if (comparadorAutoPlay && comparadorDiff && comparadorDiff.length > 0) {
+      comparadorAutoPlayRef.current = setInterval(() => {
+        setComparadorViewMode((m) => (m === 'a' ? 'b' : 'a'));
+      }, 1500);
+    } else {
+      clearInterval(comparadorAutoPlayRef.current);
+    }
+    return () => clearInterval(comparadorAutoPlayRef.current);
+  }, [comparadorAutoPlay, comparadorDiff]);
+
+  // Canvas composite: renderiza canales activos con mezcla multiply
+  useEffect(() => {
+    if (!comparadorLightbox || !comparadorDiff || Platform.OS !== 'web') return;
+    if (comparadorViewMode === 'diff') return;
+    const page = comparadorDiff[comparadorDiffPage] || {};
+    const channels = comparadorViewMode === 'a' ? page.channels_a : page.channels_b;
+    if (!channels || !Object.keys(channels).length) return;
+    const allNames = (page.sep_diffs || []).map((s) => s.nombre);
+    const activeSeps = comparadorActiveSeps instanceof Set ? comparadorActiveSeps : new Set(allNames);
+    if (activeSeps.size === allNames.length) return; // usa imagen pre-renderizada
+    const id = ++cmpCompositeIdRef.current;
+    const colorMap = {};
+    (page.sep_diffs || []).forEach((s) => { colorMap[s.nombre] = s.color || '#1A1A1A'; });
+    const activeEntries = Object.entries(channels).filter(([n]) => activeSeps.has(n));
+    Promise.all(activeEntries.map(([name, b64]) =>
+      new Promise((resolve) => {
+        const img = new window.Image();
+        img.onload = () => resolve({ name, img });
+        img.onerror = () => resolve(null);
+        img.src = `data:image/jpeg;base64,${b64}`;
+      }),
+    )).then((results) => {
+      if (id !== cmpCompositeIdRef.current) return;
+      const valid = results.filter(Boolean);
+      if (!valid.length) return;
+      const canvas = cmpCanvasRef.current;
+      if (!canvas) return;
+      const w = valid[0].img.naturalWidth;
+      const h = valid[0].img.naturalHeight;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+      const off = document.createElement('canvas');
+      off.width = w; off.height = h;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+      for (const { name, img } of valid) {
+        if (id !== cmpCompositeIdRef.current) return;
+        octx.clearRect(0, 0, w, h);
+        octx.drawImage(img, 0, 0);
+        const data = octx.getImageData(0, 0, w, h);
+        const d = data.data;
+        const hex = (colorMap[name] || '#1A1A1A').replace('#', '');
+        const cr = parseInt(hex.slice(0, 2), 16) || 0;
+        const cg = parseInt(hex.slice(2, 4), 16) || 0;
+        const cb = parseInt(hex.slice(4, 6), 16) || 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const ink = (255 - d[i]) / 255; // 0=no ink 1=full ink
+          d[i]   = Math.round(255 - ink * (255 - cr));
+          d[i + 1] = Math.round(255 - ink * (255 - cg));
+          d[i + 2] = Math.round(255 - ink * (255 - cb));
+          d[i + 3] = 255;
+        }
+        octx.putImageData(data, 0, 0);
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(off, 0, 0);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }, [comparadorLightbox, comparadorDiff, comparadorDiffPage, comparadorViewMode, comparadorActiveSeps]);
+
   useEffect(() => {
     if (!visible) {
       setArchivos({ artes: [], unitario: [], esko: {} });
@@ -784,6 +1346,20 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       setPdfLightboxUrl(null);
       setConfirmingDeleteArchivo(null);
       setConfirmingDeletePedido(false);
+      // Liberar memoria de renders del comparador
+      setComparadorDiff(null);
+      setComparadorLightbox(false);
+      setComparadorAutoPlay(false);
+      setComparadorSrcArchivoId(null);
+      setComparadorTargetPedido(null);
+      setComparadorTargetFiles([]);
+      setComparadorTargetArchivoId(null);
+      setComparadorAllPedidos(null);
+      setComparadorSearchNumero('');
+      setComparadorSearchCliente('');
+      setComparadorSearchNombre('');
+      setComparadorActiveSeps(null);
+      setComparadorZoom(1.0);
       return;
     }
     if (pedidoId) {
@@ -833,6 +1409,79 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     const h = {};
     if (global.__MIAPP_ACCESS_TOKEN) h.Authorization = `Bearer ${global.__MIAPP_ACCESS_TOKEN}`;
     return h;
+  };
+
+  // ── Comparador PDF ───────────────────────────────────────────────────────────
+  const loadComparadorPedidos = async () => {
+    if (comparadorAllPedidos !== null) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/pedidos`, { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      setComparadorAllPedidos((data.pedidos || []).filter((p) => p.id !== pedidoId));
+    } catch (_) {}
+  };
+
+  const getFilteredComparadorPedidos = () => {
+    if (!comparadorAllPedidos) return [];
+    const qNum = comparadorSearchNumero.trim().toLowerCase();
+    const qCli = comparadorSearchCliente.trim().toLowerCase();
+    const qNom = comparadorSearchNombre.trim().toLowerCase();
+    if (!qNum && !qCli && !qNom) return [];
+    return comparadorAllPedidos.filter((p) => {
+      const matchNum = !qNum || String(p.numero_pedido || '').toLowerCase().includes(qNum);
+      const matchCli = !qCli || String(p.cliente?.nombre || '').toLowerCase().includes(qCli);
+      const matchNom = !qNom || String(p.referencia || p.datos_presupuesto?.referencia || '').toLowerCase().includes(qNom);
+      return matchNum && matchCli && matchNom;
+    }).slice(0, 10);
+  };
+
+  const selectTargetPedido = async (pedido) => {
+    setComparadorTargetPedido(pedido);
+    setComparadorTargetArchivoId(null);
+    setComparadorTargetFiles([]);
+    setComparadorDiff(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/pedidos/${pedido.id}/archivos`, { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      setComparadorTargetFiles(data.archivos || []);
+    } catch (_) {}
+  };
+
+  const clearTargetPedido = () => {
+    setComparadorTargetPedido(null);
+    setComparadorTargetFiles([]);
+    setComparadorTargetArchivoId(null);
+    setComparadorDiff(null);
+    setComparadorDiffPage(0);
+    setComparadorSearchNumero('');
+    setComparadorSearchCliente('');
+    setComparadorSearchNombre('');
+  };
+
+  const runComparison = async () => {
+    if (!comparadorSrcArchivoId || !comparadorTargetArchivoId) return;
+    setComparadorRunning(true);
+    setComparadorDiff(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/archivos/comparar-pdf`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archivo_id_a: comparadorSrcArchivoId, archivo_id_b: comparadorTargetArchivoId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComparadorDiff(data.pages || []);
+        setComparadorDiffPage(0);
+        setComparadorViewMode('diff');
+        setComparadorAutoPlay(false);
+        setComparadorActiveSeps(null);
+        setComparadorZoom(1.0);
+        setComparadorLightbox(true);
+      }
+    } catch (_) {}
+    setComparadorRunning(false);
   };
 
   const cargarArchivos = async () => {
@@ -1248,7 +1897,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}
                       onPress={() => setArtesExpanded(v => !v)}
                     >
-                      <Text style={{ fontSize: 9, color: '#94A3B8', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
+                      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
                       <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.artesTitle')}</Text>
                       {archivos.artes.length > 0 && (
                         <View style={styles.fileCountBadge}>
@@ -1257,7 +1906,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       )}
                     </TouchableOpacity>
                     {uploadingArtes
-                      ? <ActivityIndicator size="small" color="#94A3B8" />
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
                       : (
                         <TouchableOpacity
                           style={styles.fileUploadIconBtn}
@@ -1322,12 +1971,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                 </View>
 
-                {/* ── Unitario ── */}
-                <View style={styles.sectionCard}>
+                {/* ── Unitario + Comparador ── */}
+                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
+                <View style={[styles.sectionCard, { flex: 2 }]}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
                     {uploadingUnitario
-                      ? <ActivityIndicator size="small" color="#94A3B8" />
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
                       : (
                         <TouchableOpacity
                           style={styles.fileUploadIconBtn}
@@ -1355,7 +2005,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinUnitario')}</Text>
                   ) : (
                     <>
-                      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
 
                         {/* LEFT: Tabs de versión en vertical */}
                         <View style={styles.versionTabsCol}>
@@ -1393,7 +2043,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           })}
                         </View>
 
-                        {/* RIGHT: Preview + separaciones */}
+                        {/* MIDDLE: Preview + separaciones */}
                         <View style={{ flex: 1, minWidth: 0 }}>
 
                           {/* Fila: thumbnail + separaciones */}
@@ -1402,33 +2052,45 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             if (!selected) return null;
                             const inlineToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
                             const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline${inlineToken}`;
+                            const thumbnailUrl = `${API_BASE}/api/archivos/${selected.id}/thumbnail${inlineToken}`;
 
                             // ── Detección de mismatch tintas PDF vs pedido ──────────
-                            const CMYK_NORM = { c: 'cyan', m: 'magenta', y: 'yellow', k: 'black' };
+                            const CMYK_NORM = {
+                              // letras sueltas
+                              c: 'cyan', m: 'magenta', y: 'yellow', k: 'black',
+                              // nombres completos inglés
+                              cyan: 'cyan', magenta: 'magenta', yellow: 'yellow', black: 'black',
+                              // español
+                              cian: 'cyan', amarillo: 'yellow', negro: 'black',
+                              // francés / alemán comunes
+                              jaune: 'yellow', noir: 'black', schwarz: 'black',
+                            };
                             const inkKey = (name) => {
-                              const n = String(name).toLowerCase().trim();
+                              // Eliminar prefijo "Process " (ej. "Process Cyan" → "cyan")
+                              const n = String(name).toLowerCase().trim().replace(/^process\s+/, '');
                               if (CMYK_NORM[n]) return CMYK_NORM[n];
                               const digits = n.match(/\d+/);
                               return digits ? digits[0] : n;
                             };
                             const dp = pedido?.datos_presupuesto || {};
-                            const pedidoKeys = new Set([
-                              ...(dp.selectedTintas || []).map(inkKey),
-                              ...(dp.pantones || []).map((p) => inkKey(p.label || p.key || '')),
-                              ...(Array.isArray(dp.detalleTintaEspecial) ? dp.detalleTintaEspecial : []).map(inkKey),
+                            // Construir conjunto único de todas las tintas del pedido
+                            const pedidoLabels = new Set([
+                              ...(dp.selectedTintas || []),
+                              ...(dp.pantones || []).map((p) => p.label || p.key || '').filter(Boolean),
+                              ...(Array.isArray(dp.detalleTintaEspecial)
+                                ? dp.detalleTintaEspecial
+                                : dp.detalleTintaEspecial ? [String(dp.detalleTintaEspecial)] : []),
                             ]);
+                            const pedidoKeys = new Set([...pedidoLabels].map(inkKey));
                             const pdfSeps = pdfMeta?.separaciones || [];
                             const pdfKeys = new Set(pdfSeps.map((s) => inkKey(s.nombre)));
                             const hasPedidoInks = pedidoKeys.size > 0 && pdfSeps.length > 0;
                             const extraEnPdf = hasPedidoInks
                               ? pdfSeps.filter((s) => s.tipo !== 'especial' && !pedidoKeys.has(inkKey(s.nombre)))
                               : [];
+                            // Usar pedidoLabels (ya deduplicado) para evitar duplicados en el mensaje
                             const extraEnPedido = hasPedidoInks
-                              ? [
-                                  ...(dp.selectedTintas || []).filter((t) => !pdfKeys.has(inkKey(t))),
-                                  ...(dp.pantones || []).filter((p) => !pdfKeys.has(inkKey(p.label || p.key || ''))).map((p) => p.label || p.key),
-                                  ...(Array.isArray(dp.detalleTintaEspecial) ? dp.detalleTintaEspecial : []).filter((te) => te && !pdfKeys.has(inkKey(te))),
-                                ]
+                              ? [...pedidoLabels].filter((t) => t && !pdfKeys.has(inkKey(t)))
                               : [];
                             const extraEnPdfSet = new Set(extraEnPdf.map((s) => s.nombre));
 
@@ -1436,25 +2098,17 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                               <View style={styles.previewRow}>
                                 {/* Thumbnail PDF */}
                                 <View style={styles.pdfPreviewWrapper}>
-                                  {Platform.OS === 'web' ? (
-                                    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-                                      <iframe
-                                        key={selected.id}
-                                        src={`${inlineUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-                                        style={{ border: 'none', outline: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%', colorScheme: 'light', backgroundColor: '#FFFFFF' }}
-                                        title={`Unitario v${selected.version}`}
-                                      />
-                                      <div
-                                        onClick={() => setPdfLightboxUrl(inlineUrl)}
-                                        style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
-                                        title={t('screens.pedidoDetalle.ampliarPdf')}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                                      <Text style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center' }}>{selected.nombre_original}</Text>
-                                    </View>
-                                  )}
+                                  <Image
+                                    key={selected.id}
+                                    source={{ uri: thumbnailUrl }}
+                                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                    resizeMode="contain"
+                                  />
+                                  <TouchableOpacity
+                                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                    onPress={() => setPdfLightboxUrl(inlineUrl)}
+                                    activeOpacity={0.85}
+                                  />
                                 </View>
 
                                 {/* Columna separaciones */}
@@ -1503,11 +2157,142 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           })()}
 
                         </View>
+
+
                       </View>
                     </>
                   )}
 
-                </View>
+                </View>{/* fin unitario sectionCard */}
+
+                {/* ── Comparador de PDF ── */}
+                {(() => {
+                  const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
+                  const ESKO_LABELS = { report: 'Report', repetidora: 'Repetidora', trapping: 'Trapping', troquel: 'Troquel' };
+                  const srcOptions = [
+                    ...archivos.unitario.map((u) => ({ id: u.id, label: `Unitario v${u.version}` })),
+                    ...ESKO_TIPOS.filter((t) => archivos.esko[t]).map((t) => ({ id: archivos.esko[t].id, label: ESKO_LABELS[t] })),
+                  ];
+                  const targetOptions = [
+                    ...comparadorTargetFiles.filter((f) => f.tipo === 'unitario').map((u) => ({ id: u.id, label: `Unitario v${u.version}` })),
+                    ...ESKO_TIPOS.filter((t) => comparadorTargetFiles.some((f) => f.tipo === t)).map((t) => ({
+                      id: comparadorTargetFiles.find((f) => f.tipo === t).id, label: ESKO_LABELS[t],
+                    })),
+                  ];
+                  const filtered = getFilteredComparadorPedidos();
+                  return (
+                    <View style={[styles.sectionCard, { flex: 1 }]}>
+                      <View style={styles.fileSectionHeader}>
+                        <Text style={styles.filesSectionLabel}>⇄ Comparar PDF</Text>
+                      </View>
+
+                      <Text style={styles.cmpColTitle}>PDF origen</Text>
+                      {srcOptions.length === 0
+                        ? <Text style={styles.cmpEmpty}>Sin archivos</Text>
+                        : srcOptions.map((opt) => (
+                          <TouchableOpacity key={opt.id}
+                            style={[styles.cmpPdfRow, comparadorSrcArchivoId === opt.id && styles.cmpPdfRowActive]}
+                            onPress={() => setComparadorSrcArchivoId((id) => id === opt.id ? null : opt.id)}>
+                            <Text style={[styles.cmpPdfRowText, comparadorSrcArchivoId === opt.id && styles.cmpPdfRowTextActive]} numberOfLines={1}>{opt.label}</Text>
+                          </TouchableOpacity>
+                        ))
+                      }
+
+                      <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>Pedido destino</Text>
+                      {comparadorTargetPedido ? (
+                        <View style={styles.cmpTargetChip}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.cmpTargetChipNum}>{comparadorTargetPedido.numero_pedido}</Text>
+                            {(comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia)
+                              ? <Text style={styles.cmpTargetChipSub} numberOfLines={1}>{comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia}</Text>
+                              : null}
+                          </View>
+                          <TouchableOpacity onPress={clearTargetPedido} style={styles.cmpClearBtn}>
+                            <Text style={styles.cmpClearBtnText}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <>
+                          <TextInput
+                            style={styles.cmpSearchInput}
+                            placeholder="Nº pedido"
+                            placeholderTextColor="#94A3B8"
+                            value={comparadorSearchNumero}
+                            onChangeText={setComparadorSearchNumero}
+                            onFocus={loadComparadorPedidos}
+                          />
+                          <TextInput
+                            style={styles.cmpSearchInput}
+                            placeholder="Cliente"
+                            placeholderTextColor="#94A3B8"
+                            value={comparadorSearchCliente}
+                            onChangeText={setComparadorSearchCliente}
+                            onFocus={loadComparadorPedidos}
+                          />
+                          <TextInput
+                            style={styles.cmpSearchInput}
+                            placeholder="Referencia"
+                            placeholderTextColor="#94A3B8"
+                            value={comparadorSearchNombre}
+                            onChangeText={setComparadorSearchNombre}
+                            onFocus={loadComparadorPedidos}
+                          />
+                          {(comparadorSearchNumero.trim() || comparadorSearchCliente.trim() || comparadorSearchNombre.trim()) ? (
+                            <View style={styles.cmpDropdown}>
+                              {filtered.length === 0
+                                ? <Text style={styles.cmpDropdownEmpty}>Sin resultados</Text>
+                                : filtered.map((p) => (
+                                  <TouchableOpacity key={p.id} style={styles.cmpDropdownItem} onPress={() => selectTargetPedido(p)}>
+                                    <Text style={styles.cmpDropdownNum}>{p.numero_pedido}</Text>
+                                    {(p.referencia || p.datos_presupuesto?.referencia) ? (
+                                      <Text style={styles.cmpDropdownSub} numberOfLines={1}>{p.referencia || p.datos_presupuesto?.referencia}</Text>
+                                    ) : null}
+                                  </TouchableOpacity>
+                                ))
+                              }
+                            </View>
+                          ) : null}
+                        </>
+                      )}
+
+                      {comparadorTargetPedido && (
+                        <>
+                          <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>PDF destino</Text>
+                          {targetOptions.length === 0
+                            ? <Text style={styles.cmpEmpty}>Sin PDF</Text>
+                            : targetOptions.map((opt) => (
+                              <TouchableOpacity key={opt.id}
+                                style={[styles.cmpPdfRow, comparadorTargetArchivoId === opt.id && styles.cmpPdfRowActive]}
+                                onPress={() => setComparadorTargetArchivoId((id) => id === opt.id ? null : opt.id)}>
+                                <Text style={[styles.cmpPdfRowText, comparadorTargetArchivoId === opt.id && styles.cmpPdfRowTextActive]} numberOfLines={1}>{opt.label}</Text>
+                              </TouchableOpacity>
+                            ))
+                          }
+                        </>
+                      )}
+
+                      <TouchableOpacity
+                        style={[styles.cmpRunBtn, { marginTop: 12 }, (!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorRunning) && styles.cmpRunBtnDisabled]}
+                        onPress={runComparison}
+                        disabled={!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorRunning}
+                      >
+                        {comparadorRunning
+                          ? <ActivityIndicator size="small" color="#FFFFFF" />
+                          : <Text style={styles.cmpRunBtnText}>⇄ Comparar</Text>
+                        }
+                      </TouchableOpacity>
+
+                      {comparadorDiff && comparadorDiff.length > 0 && (
+                        <TouchableOpacity style={styles.cmpViewResultBtn} onPress={() => setComparadorLightbox(true)}>
+                          <Text style={styles.cmpViewResultBtnLabel}>VER RESULTADO</Text>
+                          <Text style={styles.cmpViewResultBtnSim}>{comparadorDiff[0]?.similarity}% similitud</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })()}
+
+                </View>{/* fin fila unitario+comparador */}
 
                 {/* ── Contenedores Esko ── */}
                 <View style={styles.sectionCard}>
@@ -1523,17 +2308,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       const eskoFile = archivos.esko[tipoKey] || null;
                       return (
                         <View key={title} style={styles.eskoToolCol}>
-                          <TouchableOpacity
-                            style={[styles.eskoBtn, isLoading && { opacity: 0.6 }]}
-                            onPress={() => handleDescargarTool(title)}
-                            disabled={!!isLoading}
-                          >
-                            <Text style={styles.eskoBtnText}>
-                              {isLoading ? '...' : title}
-                            </Text>
-                          </TouchableOpacity>
+                          {/* Label — sólo identifica el tipo, no es un botón */}
+                          <View style={styles.eskoCardHeader}>
+                            <Text style={styles.eskoCardLabel}>{title}</Text>
+                          </View>
 
-                          {/* Contenedor archivos procesados Esko */}
+                          {/* Cuerpo: acción generar o archivo resultante */}
                           <View style={[styles.eskoOutputBox, eskoFile && styles.eskoOutputBoxFilled]}>
                             {isUploading ? (
                               <ActivityIndicator size="small" color="#475569" />
@@ -1572,12 +2352,21 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                 )}
                               </>
                             ) : (
-                              <TouchableOpacity
-                                onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
-                                style={styles.eskoUploadBtn}
-                              >
-                                <Text style={styles.eskoUploadBtnText}>+ PDF</Text>
-                              </TouchableOpacity>
+                              <>
+                                <TouchableOpacity
+                                  style={[styles.eskoGenerateBtn, isLoading && { opacity: 0.6 }]}
+                                  onPress={() => handleDescargarTool(title)}
+                                  disabled={!!isLoading}
+                                >
+                                  <Text style={styles.eskoGenerateBtnText}>{isLoading ? '…' : '⬇ Generar'}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
+                                  style={styles.eskoUploadBtn}
+                                >
+                                  <Text style={styles.eskoUploadBtnText}>↑ Subir</Text>
+                                </TouchableOpacity>
+                              </>
                             )}
                           </View>
 
@@ -1595,6 +2384,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     })}
                   </View>
                 </View>
+
                 </>
               )}
 
@@ -1646,6 +2436,157 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           )}
         </View>
       </View>
+
+      {/* ── Lightbox Comparador ── */}
+      {comparadorLightbox && comparadorDiff && comparadorDiff.length > 0 && (() => {
+        const page = comparadorDiff[comparadorDiffPage] || {};
+        const allSeps = page.sep_diffs || [];
+        const allNames = allSeps.map((s) => s.nombre);
+        const activeSeps = comparadorActiveSeps instanceof Set ? comparadorActiveSeps : new Set(allNames);
+        const allActive = activeSeps.size === allNames.length;
+        const showCanvas = Platform.OS === 'web' && comparadorViewMode !== 'diff' && !allActive && page.channels_a;
+        const imgUri = comparadorViewMode === 'a'
+          ? `data:image/jpeg;base64,${page.page_a_base64}`
+          : comparadorViewMode === 'b'
+            ? `data:image/jpeg;base64,${page.page_b_base64}`
+            : `data:image/jpeg;base64,${page.diff_base64}`;
+        const closeLightbox = () => {
+          setComparadorLightbox(false);
+          setComparadorAutoPlay(false);
+          setComparadorActiveSeps(null);
+          cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
+          cmpPanRef.current = { x: 0, y: 0 }; setComparadorPan({ x: 0, y: 0 });
+        };
+        const setCmpZoom = (newZ) => {
+          cmpZoomRef.current = newZ;
+          setComparadorZoom(newZ);
+          if (newZ <= 1) { cmpPanRef.current = { x: 0, y: 0 }; setComparadorPan({ x: 0, y: 0 }); }
+        };
+        const toggleSep = (nombre) => {
+          const current = comparadorActiveSeps instanceof Set ? comparadorActiveSeps : new Set(allNames);
+          const next = new Set(current);
+          if (next.has(nombre)) { if (next.size > 1) next.delete(nombre); }
+          else next.add(nombre);
+          setComparadorActiveSeps(next.size === allNames.length ? null : next);
+        };
+        const isPanning = comparadorZoom > 1;
+        const imgTransform = [
+          { translateX: comparadorPan.x },
+          { translateY: comparadorPan.y },
+          { scale: comparadorZoom },
+        ];
+        return (
+          <Modal visible={true} transparent animationType="fade" onRequestClose={closeLightbox}>
+            <View style={styles.cmpLightboxOverlay}>
+              {/* Header — 3 columnas: izquierda | centro | derecha */}
+              <View style={styles.cmpLightboxHeader}>
+                {/* Izquierda: similitud + páginas */}
+                <View style={styles.cmpLightboxLeft}>
+                  <Text style={styles.cmpLightboxSimilarity}>{page.similarity}% similitud</Text>
+                  {comparadorDiff.length > 1 && (
+                    <View style={styles.cmpPageNav}>
+                      <TouchableOpacity onPress={() => setComparadorDiffPage((p) => Math.max(0, p - 1))} disabled={comparadorDiffPage === 0}>
+                        <Text style={[styles.cmpPageNavBtn, comparadorDiffPage === 0 && { color: '#64748B' }]}>‹</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.cmpPageNavText, { color: '#F1F5F9' }]}>{comparadorDiffPage + 1}/{comparadorDiff.length}</Text>
+                      <TouchableOpacity onPress={() => setComparadorDiffPage((p) => Math.min(comparadorDiff.length - 1, p + 1))} disabled={comparadorDiffPage === comparadorDiff.length - 1}>
+                        <Text style={[styles.cmpPageNavBtn, comparadorDiffPage === comparadorDiff.length - 1 && { color: '#64748B' }]}>›</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+                {/* Centro: botones de modo */}
+                <View style={styles.cmpLightboxCenter}>
+                  {[
+                    { key: 'diff', label: '⊕ Diferencias' },
+                    { key: 'a',    label: 'PDF A' },
+                    { key: 'b',    label: 'PDF B' },
+                  ].map((m) => (
+                    <TouchableOpacity key={m.key}
+                      style={[styles.cmpLightboxModeBtn, comparadorViewMode === m.key && styles.cmpLightboxModeBtnActive]}
+                      onPress={() => { setComparadorViewMode(m.key); setComparadorAutoPlay(false); }}>
+                      <Text style={[styles.cmpLightboxModeBtnText, comparadorViewMode === m.key && styles.cmpLightboxModeBtnTextActive]}>{m.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={[styles.cmpLightboxModeBtn, comparadorAutoPlay && styles.cmpLightboxModeBtnAuto]}
+                    onPress={() => {
+                      const next = !comparadorAutoPlay;
+                      setComparadorAutoPlay(next);
+                      if (next && comparadorViewMode === 'diff') setComparadorViewMode('a');
+                    }}>
+                    <Text style={[styles.cmpLightboxModeBtnText, comparadorAutoPlay && styles.cmpLightboxModeBtnTextActive]}>⟳ A↔B</Text>
+                  </TouchableOpacity>
+                </View>
+                {/* Derecha: zoom + cerrar */}
+                <View style={styles.cmpLightboxRight}>
+                  <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.min(4, parseFloat((comparadorZoom + 0.25).toFixed(2))))}>
+                    <Text style={styles.cmpZoomBtnText}>＋</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.cmpZoomBtn, { paddingHorizontal: 6, width: 'auto' }]} onPress={() => setCmpZoom(1.0)}>
+                    <Text style={[styles.cmpZoomBtnText, { fontSize: 10 }]}>100%</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.max(0.25, parseFloat((comparadorZoom - 0.25).toFixed(2))))}>
+                    <Text style={styles.cmpZoomBtnText}>－</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cmpLightboxCloseBtn} onPress={closeLightbox}>
+                    <Text style={styles.cmpLightboxCloseBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Body: sidebar izquierdo + imagen */}
+              <View style={styles.cmpLightboxBody}>
+                {/* Sidebar canales */}
+                {allSeps.length > 0 && (
+                  <View style={styles.cmpChannelSidebar}>
+                    {allSeps.map((s) => {
+                      const isActive = activeSeps.has(s.nombre);
+                      const canToggle = comparadorViewMode !== 'diff';
+                      return (
+                        <TouchableOpacity
+                          key={s.nombre}
+                          style={[styles.cmpChannelBtn, !isActive && styles.cmpChannelBtnOff, s.tiene_diffs && isActive && styles.cmpChannelBtnAlert]}
+                          onPress={() => canToggle && toggleSep(s.nombre)}
+                          activeOpacity={canToggle ? 0.7 : 1}
+                        >
+                          <View style={[styles.cmpChannelSwatch, { backgroundColor: s.color || '#94A3B8', opacity: isActive ? 1 : 0.3 }]} />
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.cmpChannelName, !isActive && styles.cmpChannelNameOff]} numberOfLines={2}>{s.nombre}</Text>
+                            <Text style={[styles.cmpChannelPct, s.tiene_diffs && isActive && styles.cmpChannelPctAlert]}>
+                              {s.solo_en ? `solo en ${s.solo_en}` : `${s.similarity}%`}
+                            </Text>
+                          </View>
+                          {s.tiene_diffs && isActive && <Text style={styles.cmpChannelAlertIcon}>!</Text>}
+                          {!isActive && <Text style={styles.cmpChannelOffIcon}>✕</Text>}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Área de imagen paneable */}
+                <View
+                  style={[styles.cmpImageArea, Platform.OS === 'web' && { cursor: isPanning ? 'grab' : 'default' }]}
+                  {...cmpPanResponder.panHandlers}
+                >
+                  {showCanvas ? (
+                    Platform.OS === 'web'
+                      ? <canvas ref={cmpCanvasRef} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }} />
+                      : <Image source={{ uri: imgUri }} style={[styles.cmpLightboxImage, { transform: imgTransform }]} resizeMode="contain" />
+                  ) : (
+                    <Image
+                      source={{ uri: imgUri }}
+                      style={[styles.cmpLightboxImage, { transform: imgTransform }]}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
 
       {/* ── Lightbox PDF ── */}
       {pdfLightboxUrl && (

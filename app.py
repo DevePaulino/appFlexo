@@ -11,10 +11,12 @@ def ensure_maquina_ejemplo_presente(empresa_id):
             'descripcion': 'Máquina de ejemplo protegida'
         })
 import os
+import io
 import tempfile
 import subprocess
 import smtplib
 import numpy as np
+import fitz  # PyMuPDF
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from pymongo import ReturnDocument
@@ -25,6 +27,7 @@ import time
 import hashlib
 import secrets
 import re
+import glob
 import base64
 import hmac
 from urllib import request as urllib_request, parse as urllib_parse, error as urllib_error
@@ -302,6 +305,7 @@ PERMISSION_KEYS = [
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -319,6 +323,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': False,
     },
     'administrador': {
+        'manage_empresa_branding': True,
         'manage_app_settings': True,
         'manage_roles_permissions': True,
         'manage_usuarios': True,
@@ -336,6 +341,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': True,
     },
     'root': {
+        'manage_empresa_branding': True,
         'manage_app_settings': True,
         'manage_roles_permissions': True,
         'manage_usuarios': True,
@@ -354,6 +360,7 @@ ROLE_PERMISSIONS_DEFAULT = {
     },
     # Department roles
     'comercial': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -371,6 +378,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': False,
     },
     'diseno': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -388,6 +396,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': False,
     },
     'impresion': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -405,6 +414,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': False,
     },
     'post-impresion': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -422,6 +432,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_modulos': False,
     },
     'oficina': {
+        'manage_empresa_branding': False,
         'manage_app_settings': False,
         'manage_roles_permissions': False,
         'manage_usuarios': False,
@@ -2793,6 +2804,103 @@ def upload_usuario_avatar(usuario_id):
 def serve_avatar(filename):
     try:
         filepath = os.path.join(UPLOAD_BASE_DIR, 'avatars', filename)
+        if not os.path.isfile(filepath):
+            return jsonify({'error': 'No encontrado'}), 404
+        return send_file(filepath)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+ALLOWED_LOGO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'svg'}
+
+@app.route('/api/empresa/branding', methods=['GET'])
+def get_empresa_branding():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        doc = mongo.db['empresas'].find_one({'empresa_id': empresa_id}) or {}
+        return jsonify({
+            'display_name': doc.get('display_name', ''),
+            'logo_url': doc.get('logo_url', None),
+            'use_logo': doc.get('use_logo', True),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/empresa/branding', methods=['PUT'])
+def update_empresa_branding():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        body = request.get_json(force=True) or {}
+        update = {}
+        if 'display_name' in body:
+            update['display_name'] = str(body['display_name']).strip()
+        if 'use_logo' in body:
+            update['use_logo'] = bool(body['use_logo'])
+        if body.get('remove_logo'):
+            # Delete logo file if stored
+            doc = mongo.db['empresas'].find_one({'empresa_id': empresa_id}) or {}
+            old_logo = doc.get('logo_filename')
+            if old_logo:
+                try:
+                    os.remove(os.path.join(UPLOAD_BASE_DIR, 'logos', str(empresa_id), old_logo))
+                except Exception:
+                    pass
+            update['logo_url'] = None
+            update['logo_filename'] = None
+        if not update:
+            return jsonify({'ok': True}), 200
+        mongo.db['empresas'].update_one(
+            {'empresa_id': empresa_id},
+            {'$set': update},
+            upsert=True,
+        )
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/empresa/logo', methods=['POST'])
+def upload_empresa_logo():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se recibió archivo'}), 400
+        file = request.files['file']
+        if not file or not file.filename:
+            return jsonify({'error': 'Archivo inválido'}), 400
+        if not _allowed_file(file.filename, ALLOWED_LOGO_EXTENSIONS):
+            return jsonify({'error': 'Formato no permitido. Use JPG, PNG, WebP o SVG'}), 400
+        logo_dir = os.path.join(UPLOAD_BASE_DIR, 'logos', str(empresa_id))
+        os.makedirs(logo_dir, exist_ok=True)
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(logo_dir, filename)
+        file.save(filepath)
+        logo_url = f"/api/empresa/logo-file/{empresa_id}/{filename}"
+        mongo.db['empresas'].update_one(
+            {'empresa_id': empresa_id},
+            {'$set': {'logo_url': logo_url, 'logo_filename': filename}},
+            upsert=True,
+        )
+        return jsonify({'logo_url': logo_url}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/empresa/logo-file/<empresa_id>/<filename>', methods=['GET'])
+def serve_empresa_logo(empresa_id, filename):
+    try:
+        filepath = os.path.join(UPLOAD_BASE_DIR, 'logos', str(empresa_id), filename)
         if not os.path.isfile(filepath):
             return jsonify({'error': 'No encontrado'}), 404
         return send_file(filepath)
@@ -7672,6 +7780,191 @@ def get_archivos_pedido(pedido_id):
         return jsonify({'error': str(e)}), 500
 
 
+_GS_PATH = '/opt/homebrew/bin/gs'
+_SEP_NAME_RE = re.compile(r'\((.+?)\)(?:\.\w+)?$')
+
+
+def _gs_render_seps(pdf_path, page_num, dpi=108, include_b64=False):
+    """
+    Renderiza todas las separaciones (CMYK + spot) de una página PDF
+    usando GhostScript tiffsep.
+    Devuelve (arrays_dict, b64_dict) si include_b64=True, else solo arrays_dict.
+    """
+    if not os.path.isfile(_GS_PATH):
+        return ({}, {}) if include_b64 else {}
+    seps = {}
+    seps_b64 = {}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_base = os.path.join(tmpdir, 'out.tif')
+        cmd = [
+            _GS_PATH, '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-sDEVICE=tiffsep',
+            f'-r{dpi}',
+            f'-dFirstPage={page_num}',
+            f'-dLastPage={page_num}',
+            f'-sOutputFile={out_base}',
+            pdf_path,
+        ]
+        try:
+            subprocess.run(cmd, capture_output=True, timeout=120, check=False)
+        except Exception:
+            return ({}, {}) if include_b64 else {}
+        for fpath in glob.glob(os.path.join(tmpdir, '*.tif')):
+            m = _SEP_NAME_RE.search(os.path.basename(fpath))
+            if not m:
+                continue  # skip composite
+            name = m.group(1)
+            try:
+                img = Image.open(fpath).convert('L')
+                seps[name] = np.array(img, dtype=np.int32)
+                if include_b64:
+                    w, h = img.size
+                    # Reduce to ~72 DPI equivalent for display (2/3 size)
+                    display_img = img.resize((max(1, w * 2 // 3), max(1, h * 2 // 3)), Image.LANCZOS)
+                    buf = io.BytesIO()
+                    display_img.save(buf, format='JPEG', quality=72)
+                    seps_b64[name] = base64.b64encode(buf.getvalue()).decode('utf-8')
+            except Exception:
+                pass
+    return (seps, seps_b64) if include_b64 else seps
+
+
+@app.route('/api/archivos/comparar-pdf', methods=['POST'])
+def comparar_pdf():
+    """
+    Compara visualmente dos PDFs (por archivo_id) página a página usando PyMuPDF + Pillow.
+    Body JSON: { archivo_id_a, archivo_id_b }
+    Devuelve: { pages: [{page, diff_base64, similarity}], total_pages }
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+        body = request.get_json(force=True) or {}
+        id_a = body.get('archivo_id_a')
+        id_b = body.get('archivo_id_b')
+        if not id_a or not id_b:
+            return jsonify({'error': 'Faltan archivo_id_a o archivo_id_b'}), 400
+
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            doc_a = col.find_one({'_id': ObjectId(id_a), 'empresa_id': empresa_id})
+            doc_b = col.find_one({'_id': ObjectId(id_b), 'empresa_id': empresa_id})
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+
+        if not doc_a or not doc_b:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+
+        path_a = os.path.join(UPLOAD_BASE_DIR, doc_a['ruta_relativa'])
+        path_b = os.path.join(UPLOAD_BASE_DIR, doc_b['ruta_relativa'])
+        if not os.path.isfile(path_a) or not os.path.isfile(path_b):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+
+        pdf_a = fitz.open(path_a)
+        pdf_b = fitz.open(path_b)
+        pages_count = min(len(pdf_a), len(pdf_b), 10)  # máximo 10 páginas
+
+        matrix = fitz.Matrix(1.5, 1.5)  # ~108 DPI, balance calidad/velocidad
+        results = []
+
+        for i in range(pages_count):
+            pix_a = pdf_a[i].get_pixmap(matrix=matrix, colorspace=fitz.csRGB)
+            pix_b = pdf_b[i].get_pixmap(matrix=matrix, colorspace=fitz.csRGB)
+
+            img_a = Image.frombytes('RGB', [pix_a.width, pix_a.height], pix_a.samples)
+            img_b = Image.frombytes('RGB', [pix_b.width, pix_b.height], pix_b.samples)
+
+            if img_a.size != img_b.size:
+                img_b = img_b.resize(img_a.size, Image.LANCZOS)
+
+            arr_a = np.array(img_a, dtype=np.int32)
+            arr_b = np.array(img_b, dtype=np.int32)
+            diff  = np.abs(arr_a - arr_b).astype(np.uint8)
+
+            # Máscara de píxeles distintos (umbral 8 para ignorar ruido de compresión)
+            has_diff = diff.max(axis=2) > 8
+            changed_pixels = int(has_diff.sum())
+            total_pixels   = arr_a.shape[0] * arr_a.shape[1]
+            similarity      = round((1 - changed_pixels / total_pixels) * 100, 1)
+
+            # Composición: página A en escala de grises + diferencias en rojo vivo
+            gray = np.array(img_a.convert('L'))
+            composite = np.stack([gray, gray, gray], axis=-1).copy()
+            composite[has_diff] = [230, 30, 30]  # rojo para cambios
+
+            buf_diff = io.BytesIO()
+            Image.fromarray(composite.astype(np.uint8)).save(buf_diff, format='JPEG', quality=80)
+            b64_diff = base64.b64encode(buf_diff.getvalue()).decode('utf-8')
+
+            buf_a = io.BytesIO()
+            img_a.save(buf_a, format='JPEG', quality=82)
+            b64_a = base64.b64encode(buf_a.getvalue()).decode('utf-8')
+
+            buf_b = io.BytesIO()
+            img_b.save(buf_b, format='JPEG', quality=82)
+            b64_b = base64.b64encode(buf_b.getvalue()).decode('utf-8')
+
+            # ── Comparación por separación individual (GhostScript) ─────────
+            sep_diffs = []
+            channels_a = {}
+            channels_b = {}
+            try:
+                gs_a, channels_a = _gs_render_seps(path_a, i + 1, include_b64=True)
+                gs_b, channels_b = _gs_render_seps(path_b, i + 1, include_b64=True)
+                common = sorted(set(gs_a.keys()) & set(gs_b.keys()))
+                only_a = sorted(set(gs_a.keys()) - set(gs_b.keys()))
+                only_b = sorted(set(gs_b.keys()) - set(gs_a.keys()))
+                for name in common:
+                    arr_ca = gs_a[name]
+                    arr_cb = gs_b[name]
+                    if arr_ca.shape != arr_cb.shape:
+                        arr_cb = np.array(
+                            Image.fromarray(arr_cb.astype(np.uint8)).resize(
+                                (arr_ca.shape[1], arr_ca.shape[0]), Image.LANCZOS),
+                            dtype=np.int32)
+                    diff_ch = np.abs(arr_ca - arr_cb)
+                    changed_ch = int((diff_ch > 8).sum())
+                    total_ch = arr_ca.size
+                    sim_ch = round((1 - changed_ch / total_ch) * 100, 1)
+                    sep_diffs.append({
+                        'nombre': name,
+                        'similarity': sim_ch,
+                        'tiene_diffs': changed_ch > 0,
+                        'color': _color_para_separacion(name),
+                    })
+                for name in only_a:
+                    sep_diffs.append({'nombre': name, 'similarity': 0.0,
+                                      'tiene_diffs': True, 'solo_en': 'A',
+                                      'color': _color_para_separacion(name)})
+                for name in only_b:
+                    sep_diffs.append({'nombre': name, 'similarity': 0.0,
+                                      'tiene_diffs': True, 'solo_en': 'B',
+                                      'color': _color_para_separacion(name)})
+            except Exception:
+                pass
+
+            results.append({
+                'page': i + 1,
+                'diff_base64': b64_diff,
+                'page_a_base64': b64_a,
+                'page_b_base64': b64_b,
+                'similarity': similarity,
+                'sep_diffs': sep_diffs,
+                'channels_a': channels_a,
+                'channels_b': channels_b,
+            })
+
+        pdf_a.close()
+        pdf_b.close()
+        return jsonify({'pages': results, 'total_pages': pages_count}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/archivos/<archivo_id>', methods=['GET'])
 def descargar_archivo(archivo_id):
     """Descarga un archivo como attachment (fuerza descarga en el navegador)."""
@@ -7730,6 +8023,53 @@ def preview_archivo_inline(archivo_id):
             as_attachment=False,
             download_name=doc.get('nombre_original') or doc['nombre_archivo'],
         )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+_THUMBS_DIR = os.path.join(UPLOAD_BASE_DIR, '_thumbs')
+os.makedirs(_THUMBS_DIR, exist_ok=True)
+
+@app.route('/api/archivos/<archivo_id>/thumbnail', methods=['GET'])
+def thumbnail_archivo(archivo_id):
+    """
+    Devuelve la primera página del PDF como JPEG (caché en disco).
+    Acepta token vía query param ?token= igual que /inline.
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+
+        thumb_path = os.path.join(_THUMBS_DIR, f'{archivo_id}.jpg')
+
+        # Generar thumbnail si no existe o el PDF es más reciente
+        if not os.path.isfile(thumb_path) or os.path.getmtime(full_path) > os.path.getmtime(thumb_path):
+            try:
+                pdf = fitz.open(full_path)
+                page = pdf[0]
+                mat = fitz.Matrix(1.5, 1.5)  # ~108 DPI
+                pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+                img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+                pdf.close()
+                img.save(thumb_path, format='JPEG', quality=82, optimize=True)
+            except Exception as e:
+                return jsonify({'error': f'Error generando thumbnail: {e}'}), 500
+
+        return send_file(thumb_path, mimetype='image/jpeg', as_attachment=False,
+                         max_age=86400)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -8062,5 +8402,7 @@ def metadatos_archivo(archivo_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 if __name__ == '__main__':
     app.run("0.0.0.0", 8080, debug=False, use_reloader=False)
+
