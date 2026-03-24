@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, AppState, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, AppState, Easing, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PedidosProvider } from './PedidosContext';
 import { ModulosProvider, useModulos } from './ModulosContext';
 import { SettingsProvider } from './SettingsContext';
@@ -117,6 +117,400 @@ function normalizeTabName(tabName) {
   if (MIGRATED_TO_ACTIVOS.includes(tabName)) return 'Activos';
   return VALID_TABS.includes(tabName) ? tabName : 'Pedidos';
 }
+
+function EmpresaBranding({ currentUser }) {
+  const { t } = useTranslation();
+  const canEditByPermission = usePermission('manage_empresa_branding');
+  const canEditByRole = currentUser?.rol === 'administrador' || currentUser?.rol === 'root';
+  const canEdit = canEditByRole || canEditByPermission;
+  const [branding, setBranding] = React.useState({ display_name: '', logo_url: null, use_logo: true });
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editName, setEditName] = React.useState('');
+  const [editUseLogo, setEditUseLogo] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
+  const [pendingFile, setPendingFile] = React.useState(null);
+  const [pendingPreview, setPendingPreview] = React.useState(null);
+  const fileInputRef = React.useRef(null);
+  const glowAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+      ])
+    ).start();
+  }, [glowAnim]);
+
+  const animatedNameColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#E2E8F0', '#93C5FD'],
+  });
+
+  const loadBranding = React.useCallback(async () => {
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/api/empresa/branding`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setBranding(data);
+      }
+    } catch (_) {}
+  }, []);
+
+  React.useEffect(() => { loadBranding(); }, [loadBranding]);
+
+  const displayLabel = branding.display_name || currentUser?.empresa_nombre || '';
+  const logoUrl = branding.logo_url ? `${API_BASE}${branding.logo_url}` : null;
+  // pendingPreview shown optimistically in header until server URL is confirmed
+  const headerLogoUrl = (branding.use_logo || pendingPreview) ? (pendingPreview || logoUrl) : null;
+
+  const openEdit = () => {
+    setEditName(branding.display_name || currentUser?.empresa_nombre || '');
+    setEditUseLogo(branding.use_logo !== false);
+    setPendingFile(null);
+    setPendingPreview(null);
+    setEditOpen(true);
+  };
+
+  const closeEdit = () => {
+    setPendingFile(null);
+    setEditOpen(false);
+    // pendingPreview stays until next openEdit to keep header updated optimistically
+  };
+
+  const handleFileSelect = (file) => {
+    if (!file) return;
+    setPendingFile(file);
+    setPendingPreview(URL.createObjectURL(file));
+  };
+
+  const handleSave = async () => {
+    setUploading(true);
+    const newName = editName.trim();
+    try {
+      // Upload logo if pending
+      let newLogoUrl = branding.logo_url;
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append('file', pendingFile);
+        const uploadRes = await fetch(`${API_BASE}/api/empresa/logo`, { method: 'POST', body: formData });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          newLogoUrl = uploadData.logo_url || newLogoUrl;
+        }
+      }
+      // Optimistic update so state is correct immediately and after refresh
+      setBranding(prev => ({ ...prev, display_name: newName, logo_url: newLogoUrl, use_logo: editUseLogo }));
+      // Persist name + display mode
+      await fetch(`${API_BASE}/api/empresa/branding`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: newName, use_logo: editUseLogo }),
+      });
+      // Confirm with server (also ensures logo_url is in sync)
+      await loadBranding();
+    } catch (_) {
+      await loadBranding();
+    }
+    setUploading(false);
+    closeEdit();
+  };
+
+  const removeLogo = async () => {
+    setBranding(prev => ({ ...prev, logo_url: null }));
+    try {
+      await fetch(`${API_BASE}/api/empresa/branding`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remove_logo: true }),
+      });
+    } catch (_) {
+      await loadBranding();
+    }
+  };
+
+  const [wrapHovered, setWrapHovered] = React.useState(false);
+
+  return (
+    <View
+      style={brandingStyles.wrap}
+      onMouseEnter={() => setWrapHovered(true)}
+      onMouseLeave={() => setWrapHovered(false)}
+    >
+      {/* Logo o nombre */}
+      {headerLogoUrl ? (
+        <View style={brandingStyles.logoCard}>
+          <Image source={{ uri: headerLogoUrl }} style={brandingStyles.logo} resizeMode="contain" />
+        </View>
+      ) : (
+        <Animated.Text style={[brandingStyles.name, { color: animatedNameColor }]} numberOfLines={1}>{displayLabel}</Animated.Text>
+      )}
+
+      {/* Botón editar — solo visible al hacer hover sobre el área */}
+      {canEdit && wrapHovered && (
+        <Pressable onPress={openEdit} style={brandingStyles.editBtn}>
+          <Text style={brandingStyles.editIcon}>✎</Text>
+        </Pressable>
+      )}
+
+      {/* Panel de edición */}
+      {editOpen && (
+        <Modal transparent visible animationType="fade" onRequestClose={closeEdit}>
+          <Pressable style={brandingStyles.backdrop} onPress={closeEdit} />
+          <View style={brandingStyles.panel}>
+            <Text style={brandingStyles.panelTitle}>{t('branding.editTitle')}</Text>
+
+            <Text style={brandingStyles.panelLabel}>{t('branding.nameLabel')}</Text>
+            <TextInput
+              style={brandingStyles.panelInput}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder={currentUser?.empresa_nombre || ''}
+              placeholderTextColor="#94A3B8"
+              onSubmitEditing={handleSave}
+              returnKeyType="done"
+              autoFocus
+            />
+
+            {/* Toggle: mostrar nombre o logo */}
+            <Text style={brandingStyles.panelLabel}>{t('branding.displayModeLabel')}</Text>
+            <View style={brandingStyles.toggleRow}>
+              <TouchableOpacity
+                style={[brandingStyles.toggleOption, !editUseLogo && brandingStyles.toggleOptionActive]}
+                onPress={() => setEditUseLogo(false)}
+              >
+                <Text style={[brandingStyles.toggleOptionText, !editUseLogo && brandingStyles.toggleOptionTextActive]}>
+                  {t('branding.showName')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[brandingStyles.toggleOption, editUseLogo && brandingStyles.toggleOptionActive]}
+                onPress={() => setEditUseLogo(true)}
+              >
+                <Text style={[brandingStyles.toggleOptionText, editUseLogo && brandingStyles.toggleOptionTextActive]}>
+                  {t('branding.showLogo')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={brandingStyles.panelLabel}>{t('branding.logoLabel')}</Text>
+            {(pendingPreview || logoUrl) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Image source={{ uri: pendingPreview || logoUrl }} style={brandingStyles.previewLogo} resizeMode="contain" />
+                {!pendingPreview && (
+                  <TouchableOpacity onPress={removeLogo}>
+                    <Text style={brandingStyles.removeLogoText}>{t('branding.removeLogo')}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            {Platform.OS === 'web' ? (
+              <>
+                <TouchableOpacity
+                  style={brandingStyles.uploadBtn}
+                  onPress={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Text style={brandingStyles.uploadBtnText}>{t('branding.uploadLogo')}</Text>
+                </TouchableOpacity>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  style={{ display: 'none' }}
+                  onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                />
+              </>
+            ) : null}
+
+            <View style={brandingStyles.panelActions}>
+              <TouchableOpacity style={brandingStyles.panelBtn} onPress={closeEdit}>
+                <Text style={brandingStyles.panelBtnText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[brandingStyles.panelBtn, brandingStyles.panelBtnPrimary]} onPress={handleSave} disabled={uploading}>
+                <Text style={[brandingStyles.panelBtnText, brandingStyles.panelBtnPrimaryText]}>{uploading ? t('branding.uploading') : t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+const brandingStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    paddingLeft: 12,
+    paddingRight: 4,
+    gap: 6,
+    maxWidth: 220,
+    overflow: 'visible',
+  },
+  divider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginLeft: 4,
+  },
+  logoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: -10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 10,
+  },
+  logo: {
+    height: 34,
+    width: 120,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    flexShrink: 1,
+  },
+  editBtn: {
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+  },
+  editIcon: {
+    color: 'rgba(241,245,249,0.6)',
+    fontSize: 12,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  panel: {
+    position: 'absolute',
+    top: 48,
+    left: 12,
+    width: 300,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 100,
+  },
+  panelTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 14,
+  },
+  panelLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  panelInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 14,
+  },
+  previewLogo: {
+    height: 32,
+    width: 80,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  removeLogoText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  toggleOption: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  toggleOptionActive: {
+    backgroundColor: '#1E40AF',
+  },
+  toggleOptionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  toggleOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  uploadBtn: {
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+  },
+  uploadBtnText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  panelActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  panelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  panelBtnText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  panelBtnPrimary: {
+    backgroundColor: '#1E293B',
+    borderColor: '#1E293B',
+  },
+  panelBtnPrimaryText: {
+    color: '#FFFFFF',
+  },
+});
 
 function UserProfileBadge({ currentUser, onLogout, onAvatarUpdate }) {
   const { t, i18n } = useTranslation();
@@ -386,6 +780,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const { modulos } = useModulos();
   const consumoModuloActivo = modulos.consumo_material !== false;
   const produccionModuloActivo = modulos.produccion === true;
+  const presupuestosModuloActivo = modulos.presupuestos !== false;
   const canManageBilling = usePermission('manage_billing');
   const canManageModulos = usePermission('manage_modulos');
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
@@ -443,9 +838,10 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   return (
     <View>
       <View style={styles.tabsBar}>
+        <EmpresaBranding currentUser={currentUser} />
         <View style={styles.tabsList}>
           {state.routes
-            .filter((route) => VISIBLE_TOP_TABS.includes(route.name) && (route.name !== 'Producción' || produccionModuloActivo))
+            .filter((route) => VISIBLE_TOP_TABS.includes(route.name) && (route.name !== 'Producción' || produccionModuloActivo) && (route.name !== 'Presupuesto' || presupuestosModuloActivo))
             .map((route) => {
               const options = descriptors[route.key]?.options || {};
               const label = options.tabBarLabel || options.title || route.name;
@@ -632,6 +1028,7 @@ const styles = StyleSheet.create({
     zIndex: 5,
     paddingRight: 8,
     paddingVertical: 5,
+    overflow: 'visible',
   },
   tabsList: {
     flex: 1,
