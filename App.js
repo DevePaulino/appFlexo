@@ -134,6 +134,15 @@ function EmpresaBranding({ currentUser }) {
   const glowAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (!document.getElementById('pfp-brand-font')) {
+        const link = document.createElement('link');
+        link.id = 'pfp-brand-font';
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Exo+2:wght@800;900&display=swap';
+        document.head.appendChild(link);
+      }
+    }
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
@@ -379,7 +388,8 @@ const brandingStyles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    fontFamily: Platform.OS === 'web' ? '"Exo 2", system-ui, sans-serif' : undefined,
+    letterSpacing: 0.8,
     flexShrink: 1,
   },
   editBtn: {

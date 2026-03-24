@@ -75,57 +75,66 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginBottom: 10,
   },
-  chartsContainer: {
+  bodyRow: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  chartsSidebar: {
+    width: 130,
     backgroundColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 12,
-    marginHorizontal: 10,
-    marginTop: 10,
-    marginBottom: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
   },
   chartsTitle: {
-    fontSize: 14,
+    fontSize: 9,
     fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 10,
+    color: '#94A3B8',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
-  verticalChartWrap: {
-    height: 96,
-  },
-  verticalChartContent: {
-    alignItems: 'flex-end',
-    gap: 14,
-    paddingHorizontal: 8,
-    paddingRight: 14,
-  },
-  verticalBarItem: {
-    width: 104,
+  hBarItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
+    gap: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
     paddingHorizontal: 4,
-    paddingVertical: 2,
   },
-  verticalBarItemActive: {
+  hBarItemActive: {
     backgroundColor: '#EEF2F8',
   },
-  verticalBarValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 2,
+  hBarLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#475569',
+    width: 40,
   },
-  verticalBarTrack: {
-    width: 32,
-    height: 56,
+  hBarTrack: {
+    flex: 1,
+    height: 8,
     backgroundColor: '#E2E8F0',
-    borderRadius: 6,
-    justifyContent: 'flex-end',
+    borderRadius: 4,
     overflow: 'hidden',
   },
-  verticalBarFill: {
-    width: '100%',
-    borderRadius: 6,
+  hBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  hBarValue: {
+    fontSize: 10,
+    fontWeight: '800',
+    width: 18,
+    textAlign: 'right',
+  },
+  chartEmpty: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    paddingVertical: 6,
   },
   verticalBarLabel: {
     marginTop: 4,
@@ -1033,8 +1042,9 @@ export default function ProduccionScreen() {
           placeholderTextColor="#94A3B8"
         />
       </View>
-      <ScrollView style={styles.content}>
-        <View style={styles.chartsContainer}>
+      <View style={styles.bodyRow}>
+        {/* ── Sidebar: gráfica de carga ── */}
+        <View style={styles.chartsSidebar}>
           <Text style={styles.chartsTitle}>
             {t('screens.produccion.cargaPorMaquina', { count: Object.values(trabajosPorMaquina || {}).reduce((sum, trabajos) => sum + (Array.isArray(trabajos) ? trabajos.length : 0), 0) })}
           </Text>
@@ -1044,51 +1054,44 @@ export default function ProduccionScreen() {
               return <Text style={styles.chartEmpty}>{t('screens.produccion.sinMaquinas')}</Text>;
             }
             const maxCarga = Math.max(...cargas.map((c) => c.cantidad), 1);
+            const hayFiltroActivo = maquinasFiltroIds.length > 0;
             return (
-              <View style={styles.verticalChartWrap}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.verticalChartContent}>
-                  {cargas.map((carga) => {
-                    const heightPct = Math.max(6, (carga.cantidad / maxCarga) * 100);
-                    const tone = getWorkloadColor(carga.cantidad, maxCarga);
-                    const activa = maquinasFiltroIds.includes(String(carga.id));
-                    const hayFiltroActivo = maquinasFiltroIds.length > 0;
-                    return (
-                      <TouchableOpacity
-                        key={carga.id}
-                        style={[
-                          styles.verticalBarItem,
-                          activa && styles.verticalBarItemActive,
-                          activa ? { borderWidth: 2, borderColor: tone } : null,
-                          hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
-                        ]}
-                        onPress={() => toggleMaquinaFiltro(carga.id)}
-                      >
-                        <Text style={[styles.verticalBarValue, { color: tone }]}>{carga.cantidad}</Text>
-                        <View style={styles.verticalBarTrack}>
-                          <View style={[styles.verticalBarFill, { height: `${heightPct}%`, backgroundColor: tone }]} />
-                        </View>
-                        <Text style={styles.verticalBarLabel} numberOfLines={1}>{carga.nombre}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {cargas.map((carga) => {
+                  const widthPct = Math.max(8, (carga.cantidad / maxCarga) * 100);
+                  const tone = getWorkloadColor(carga.cantidad, maxCarga);
+                  const activa = maquinasFiltroIds.includes(String(carga.id));
+                  return (
+                    <TouchableOpacity
+                      key={carga.id}
+                      style={[
+                        styles.hBarItem,
+                        activa && styles.hBarItemActive,
+                        activa ? { borderWidth: 1.5, borderColor: tone } : null,
+                        hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
+                      ]}
+                      onPress={() => toggleMaquinaFiltro(carga.id)}
+                    >
+                      <Text style={styles.hBarLabel} numberOfLines={1}>{carga.nombre}</Text>
+                      <View style={styles.hBarTrack}>
+                        <View style={[styles.hBarFill, { width: `${widthPct}%`, backgroundColor: tone }]} />
+                      </View>
+                      <Text style={[styles.hBarValue, { color: tone }]}>{carga.cantidad}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             );
           })()}
           {maquinasFiltroIds.length > 0 && (
-            <View style={styles.filterRow}>
-                <Text style={styles.filterText}>
-                {t('screens.produccion.filtroActivo', { estados: maquinas
-                  .filter((m) => maquinasFiltroIds.includes(String(m.id)))
-                  .map((m) => m.nombre)
-                  .join('') })}
-              </Text>
-              <TouchableOpacity style={styles.filterClearBtn} onPress={() => setMaquinasFiltroIds([])}>
-                <Text style={styles.filterClearText}>{t('screens.produccion.quitarFiltro')}</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={[styles.filterClearBtn, { marginTop: 8, alignSelf: 'stretch' }]} onPress={() => setMaquinasFiltroIds([])}>
+              <Text style={styles.filterClearText}>{t('screens.produccion.quitarFiltro')}</Text>
+            </TouchableOpacity>
           )}
         </View>
+
+        {/* ── Contenido principal ── */}
+        <ScrollView style={styles.content}>
 
         {/* Production Board - Trabajos en Producción */}
         <ProductionBoard
@@ -1189,7 +1192,8 @@ export default function ProduccionScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }
