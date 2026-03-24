@@ -4878,7 +4878,17 @@ def registrar_consumo_auto():
                 update_pedido['fecha_finalizacion'] = now
             else:
                 update_pedido['fecha_finalizacion'] = None
-        pedidos_col.update_one({'_id': ObjectId(pedido_id)}, {'$set': update_pedido})
+        historial_entry = {
+            'fecha': now,
+            'usuario': request_user.get('nombre') or request_user.get('email', 'Sistema'),
+            'tipo': 'sin_material' if sin_material else 'con_consumo',
+        }
+        if update_pedido.get('datos_impresion'):
+            historial_entry['datos_impresion'] = update_pedido['datos_impresion']
+        pedidos_col.update_one(
+            {'_id': ObjectId(pedido_id)},
+            {'$set': update_pedido, '$push': {'historial_impresiones': historial_entry}}
+        )
 
         return jsonify({
             'success': True,
@@ -7287,8 +7297,6 @@ def marcar_pedido_impreso(pedido_id):
         pedido = col.find_one({'_id': oid, 'empresa_id': empresa_id})
         if not pedido:
             return jsonify({'error': 'Pedido no encontrado'}), 404
-        if pedido.get('impresion_registrada'):
-            return jsonify({'error': 'El pedido ya ha sido marcado como impreso'}), 409
         now = datetime.now().isoformat()
         # Avanzar al siguiente estado, igual que el flujo con consumo
         estados_disponibles = get_estados_pedido_disponibles(empresa_id)
@@ -7311,9 +7319,14 @@ def marcar_pedido_impreso(pedido_id):
                 update_fields['fecha_finalizacion'] = now
             else:
                 update_fields['fecha_finalizacion'] = None
+        historial_entry = {
+            'fecha': now,
+            'usuario': request_user.get('nombre') or request_user.get('email', 'Sistema'),
+            'tipo': 'sin_consumo',
+        }
         col.update_one(
             {'_id': oid, 'empresa_id': empresa_id},
-            {'$set': update_fields}
+            {'$set': update_fields, '$push': {'historial_impresiones': historial_entry}}
         )
         return jsonify({'success': True, 'pedido_id': pedido_id, 'nuevo_estado': siguiente_estado_label}), 200
     except Exception as e:
