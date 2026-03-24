@@ -80,16 +80,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chartsSidebar: {
-    width: 130,
-    backgroundColor: '#0F172A',
-    paddingTop: 10,
+    width: 136,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#1E293B',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    paddingTop: 12,
     paddingBottom: 8,
-    paddingHorizontal: 8,
+    paddingLeft: 10,
+    paddingRight: 8,
+    shadowColor: '#64748B',
+    shadowOffset: { width: 3, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1,
   },
   chartsTitle: {
     fontSize: 8,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#94A3B8',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 2,
@@ -97,18 +108,18 @@ const styles = StyleSheet.create({
   chartsTotalCount: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#F1F5F9',
-    marginBottom: 10,
+    color: '#0F172A',
+    marginBottom: 12,
     lineHeight: 26,
   },
   chartsTotalLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#94A3B8',
   },
   chartEmpty: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: '#CBD5E1',
     fontStyle: 'italic',
     paddingVertical: 6,
   },
@@ -629,9 +640,9 @@ const wbStyles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 7,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#E2E8F0',
   },
   header: {
     flexDirection: 'row',
@@ -660,7 +671,7 @@ const wbStyles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#334155',
     letterSpacing: 0.2,
   },
   count: {
@@ -669,7 +680,7 @@ const wbStyles = StyleSheet.create({
   },
   track: {
     height: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#E2E8F0',
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -1129,10 +1140,10 @@ export default function ProduccionScreen() {
           })()}
           {maquinasFiltroIds.length > 0 && (
             <TouchableOpacity
-              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}
+              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' }}
               onPress={() => setMaquinasFiltroIds([])}
             >
-              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
             </TouchableOpacity>
           )}
         </View>
