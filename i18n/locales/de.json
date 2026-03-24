@@ -190,6 +190,17 @@
     "colores": "Farben",
     "noCompatible": "nicht kompatibel"
   },
+  "branding": {
+    "editTitle": "Unternehmensidentität",
+    "nameLabel": "Angezeigter Name",
+    "logoLabel": "Logo",
+    "uploadLogo": "Logo hochladen (PNG, JPG, SVG...)",
+    "uploading": "Hochladen...",
+    "removeLogo": "Logo entfernen",
+    "displayModeLabel": "Kopfzeile anzeigen",
+    "showName": "Name",
+    "showLogo": "Logo"
+  },
   "common": {
     "save": "Speichern",
     "saveChanges": "Änderungen speichern",
@@ -600,6 +611,8 @@
       "modulosHint": "Aktivieren oder deaktivieren Sie optionale Anwendungsfunktionen.",
       "moduloConsumoMaterial": "Materialverwaltung",
       "moduloConsumoMaterialHint": "Erfasst den Materialverbrauch beim Markieren eines Auftrags als gedruckt.",
+      "moduloPresupuestos": "Angebote",
+      "moduloPresupuestosHint": "Aktiviert die Angebotsverwaltung und den Reiter Angebote.",
       "moduloProduccion": "Produktion",
       "moduloProduccionHint": "Aktiviert die Produktionswarteschlange und den Reiter Produktion.",
       "moduloProduccionTrigger": "Status, der die Maschinenauswahl auslöst:",
@@ -765,7 +778,27 @@
       "labelMermaImpresion": "Makulatur (m):",
       "labelMetrosConsumidos": "Verbrauchte Meter:",
       "labelSentidoImpresion": "Druckrichtung:",
-      "labelRetalGenerado": "Verschnitt erzeugt:"
+      "labelRetalGenerado": "Verschnitt erzeugt:",
+      "aprobarBtn": "Design genehmigen",
+      "aprobadoLabel": "Design genehmigt",
+      "revocarBtn": "Widerrufen",
+      "revocarConfirm": "Genehmigung widerrufen?",
+      "comparadorTitle": "PDF vergleichen",
+      "comparadorColTitleOrigen": "Quell-PDF",
+      "comparadorColTitleDestino": "Zielauftrag",
+      "comparadorColTitlePdfDestino": "Ziel-PDF",
+      "comparadorSinArchivos": "Keine Dateien",
+      "comparadorSinPdf": "Kein PDF",
+      "comparadorSinResultados": "Keine Ergebnisse",
+      "comparadorEstePedido": "dieser Auftrag",
+      "comparadorBtnComparar": "Vergleichen",
+      "comparadorVerResultado": "ERGEBNIS ANZEIGEN",
+      "comparadorSimilitud": "Ähnlichkeit",
+      "comparadorPlaceholderNumero": "Auftragsnr.",
+      "comparadorPlaceholderCliente": "Kunde",
+      "comparadorPlaceholderReferencia": "Referenz",
+      "eskoGenerarBtn": "Generieren",
+      "eskoSubirBtn": "Hochladen"
     }
   },
   "legal": {

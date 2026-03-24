@@ -41,21 +41,37 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E293B',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
+    paddingRight: 44,
     position: 'relative',
     marginBottom: 12,
     borderRadius: 12,
   },
   title: {
-    fontSize: 22,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  headerNum: {
+    fontSize: 20,
     fontWeight: '900',
     color: '#F1F5F9',
+    lineHeight: 24,
+  },
+  headerRef: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#94A3B8',
+    marginTop: 1,
   },
   closeBtn: {
     position: 'absolute',
-    right: 16,
-    top: 14,
+    right: 12,
+    top: 12,
     padding: 4,
   },
   closeBtnText: {
@@ -65,68 +81,74 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingBottom: 6,
+    marginBottom: 8,
+    overflow: 'hidden',
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: -12,
-    marginTop: -12,
-    marginBottom: 12,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginHorizontal: -10,
+    marginBottom: 0,
   },
   topGrid: {
     flexDirection: 'row',
+    gap: 8,
+  },
+  col: {
+    flex: 1,
   },
   leftCol: {
     flex: 1,
-    marginRight: 8,
   },
   rightCol: {
     flex: 1,
-    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 8,
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 6,
   },
   label: {
-    flex: 0.38,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
+    width: 92,
+    flexShrink: 0,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94A3B8',
   },
   value: {
-    flex: 0.62,
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#0F172A',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
   },
   fullWidthRow: {
-    marginBottom: 8,
+    paddingVertical: 5,
   },
   fullWidthLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94A3B8',
+    marginBottom: 3,
   },
   fullWidthValue: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
+    lineHeight: 18,
   },
   actionRow: {
     flexDirection: 'row',
@@ -197,13 +219,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    marginHorizontal: -12,
-    marginTop: -12,
+    marginHorizontal: -10,
     marginBottom: 10,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    minHeight: 44,
   },
   fileUploadIconBtn: {
     width: 28,
@@ -336,6 +356,154 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     paddingTop: 4,
     paddingRight: 4,
+  },
+  versionTabApproved: {
+    borderColor: '#16A34A',
+    borderWidth: 1.5,
+  },
+  approveBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  approveBtnActive: {
+    borderColor: '#16A34A',
+    backgroundColor: '#16A34A',
+  },
+  approveBtnText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  approveBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  approvedBadge: {
+    marginTop: 2,
+    alignSelf: 'flex-start',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  approvedBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+
+  // ── Panel aprobación ────────────────────────────────────────────────────
+  approvalPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  approvalPanelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: '#16A34A',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 6,
+    alignSelf: 'stretch',
+    marginTop: 8,
+  },
+  approvalPanelBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+    letterSpacing: 0.3,
+  },
+  approvalPanelApproved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    gap: 8,
+  },
+  approvalPanelTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  approvalPanelDate: {
+    fontSize: 10,
+    color: '#4ADE80',
+    marginTop: 2,
+  },
+  revocarBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    backgroundColor: 'transparent',
+  },
+  revocarBtnText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  revocarConfirmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  revocarConfirmText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#B91C1C',
+  },
+  revocarConfirmNo: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  revocarConfirmNoText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  revocarConfirmYes: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: '#DC2626',
+  },
+  revocarConfirmYesText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   // ── PDF Lightbox ─────────────────────────────────────────────────────────
@@ -1206,6 +1374,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
   const [confirmingDeleteArchivo, setConfirmingDeleteArchivo] = useState(null);
   const [confirmingDeletePedido, setConfirmingDeletePedido] = useState(false);
+  const [approvingArchivoId, setApprovingArchivoId] = useState(null);
+  const [confirmingRevocarId, setConfirmingRevocarId] = useState(null);
   const fileInputArtesRef      = useRef(null);
   const fileInputUnitarioRef   = useRef(null);
   const fileInputEskoRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
@@ -1418,7 +1588,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const res = await fetch(`${API_BASE}/api/pedidos`, { headers: getAuthHeaders() });
       if (!res.ok) return;
       const data = await res.json();
-      setComparadorAllPedidos((data.pedidos || []).filter((p) => p.id !== pedidoId));
+      setComparadorAllPedidos(data.pedidos || []);
     } catch (_) {}
   };
 
@@ -1462,6 +1632,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
   const runComparison = async () => {
     if (!comparadorSrcArchivoId || !comparadorTargetArchivoId) return;
+    if (comparadorSrcArchivoId === comparadorTargetArchivoId) return;
     setComparadorRunning(true);
     setComparadorDiff(null);
     try {
@@ -1607,6 +1778,28 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     }
   };
 
+  const toggleAprobarVersion = async (archivoId, yaAprobado) => {
+    setApprovingArchivoId(archivoId);
+    setConfirmingRevocarId(null);
+    try {
+      const resp = await fetch(`${API_BASE}/api/archivos/${archivoId}/aprobar`, { method: 'PATCH', headers: getAuthHeaders() });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      setArchivos((prev) => ({
+        ...prev,
+        unitario: prev.unitario.map((u) => {
+          if (yaAprobado) {
+            return u.id === archivoId ? { ...u, aprobado: false, fecha_aprobacion: null, aprobado_por: null } : u;
+          }
+          return u.id === archivoId
+            ? { ...u, aprobado: true, fecha_aprobacion: data.fecha_aprobacion, aprobado_por: data.aprobado_por }
+            : { ...u, aprobado: false, fecha_aprobacion: null, aprobado_por: null };
+        }),
+      }));
+    } catch (_) {}
+    finally { setApprovingArchivoId(null); }
+  };
+
   const ejecutarEliminarPedido = async () => {
     if (!pedido?.id) return;
     try {
@@ -1635,6 +1828,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       <Text style={[styles.value, color ? { color } : null]}>{value ?? '-'}</Text>
     </View>
   );
+
 
   const formatearFecha = (valor) => {
     if (!valor) return '-';
@@ -1709,6 +1903,14 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('screens.pedidoDetalle.title')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <Text style={styles.headerNum}>
+                {pedido?.numero_pedido || (loading ? '…' : '—')}
+              </Text>
+              {pedido?.referencia ? (
+                <Text style={styles.headerRef}>{pedido.referencia}</Text>
+              ) : null}
+            </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
@@ -1741,150 +1943,117 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               <ScrollView style={{ flex: 1 }}>
 
               {/* ═══════════════════ TAB: PEDIDO ═══════════════════ */}
-              {activeTab === 'datos' && (
-                <>
-                <View style={styles.topGrid}>
-                  {(() => {
-                    const dp = pedido.datos_presupuesto || null;
-                    const hasPresupuesto = dp && Object.keys(dp).some((k) => {
-                      const v = dp[k];
-                      if (v === null || v === undefined) return false;
-                      if (Array.isArray(v)) return v.length > 0;
-                      if (typeof v === 'string') return v.trim() !== '';
-                      return true;
-                    });
-
-                    if (hasPresupuesto) {
-                      return (
-                        <>
-                          <View style={styles.leftCol}>
-                            <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPedido')}</Text>
-                              {renderRow(t('screens.pedidoDetalle.labelNumero'), pedido.numero_pedido || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelFechaPedido'), formatearFecha(pedido.fecha_pedido))}
-                              {renderRow(t('screens.pedidoDetalle.labelReferencia'), pedido.referencia || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelNombreTrabajo'), pedido.nombre || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
-                              {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
-                            </View>
-                            <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secCliente')}</Text>
-                              {renderRow(t('screens.pedidoDetalle.labelCliente'), (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                              {renderRow(t('screens.pedidoDetalle.labelRazonSocial'), dp?.razon_social || pedido.razon_social || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelCif'), dp?.cif || pedido.cif || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelContacto'), dp?.personas_contacto || pedido.personas_contacto || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelEmail'), dp?.email || pedido.email || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelVendedor'), dp?.vendedor || '-')}
-                            </View>
-                          </View>
-
-                          <View style={styles.rightCol}>
-                            <View style={styles.sectionCard}>
-                              <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPresupuesto')}</Text>
-                              {renderRow(t('screens.pedidoDetalle.labelNPresupuesto'), dp?.numero_presupuesto || pedido.numero_presupuesto || '-')}
-                              {pedido.fecha_aprobacion_presupuesto ? renderRow(t('screens.pedidoDetalle.labelFechaAprobacion'), formatearFechaHora(pedido.fecha_aprobacion_presupuesto)) : null}
-                              {renderRow(t('screens.pedidoDetalle.labelRefPresupuesto'), dp?.referencia || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelFormato'), dp?.formatoAncho ? `${dp.formatoAncho} x ${dp.formatoLargo || '-'} mm` : '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelMaquina'), dp?.maquina || pedido.maquina || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelMaterial'), dp?.material || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelAcabado'), Array.isArray(dp?.acabado) ? (dp.acabado.length ? dp.acabado.join(', ') : '-') : (dp?.acabado || '-'))}
-                              {renderRow(t('screens.pedidoDetalle.labelTirada'), dp?.tirada ? `${dp.tirada} ${t('screens.pedidoDetalle.unidades')}` : '-')}
-                              {/* ── Tintas como texto ── */}
-                              {(() => {
-                                const CMYK_LABELS = { C: 'Cyan', M: 'Magenta', Y: 'Yellow', K: t('screens.pedidoDetalle.cmykNegro') };
-                                const items = [];
-                                (dp?.selectedTintas || []).filter((t) => ['C','M','Y','K'].includes(t)).forEach((t) => items.push(CMYK_LABELS[t]));
-                                const spotMap = new Map();
-                                (dp?.selectedTintas || []).filter((t) => !['C','M','Y','K'].includes(t)).forEach((t) => spotMap.set(t, t));
-                                (dp?.pantones || []).forEach((p) => {
-                                  const lbl = p.label || p.key || '';
-                                  if (!lbl || spotMap.has(lbl) || ['C','M','Y','K'].includes(lbl)) return;
-                                  spotMap.set(lbl, lbl);
-                                });
-                                spotMap.forEach((lbl) => items.push(lbl));
-                                (Array.isArray(dp?.detalleTintaEspecial) ? dp.detalleTintaEspecial : [])
-                                  .forEach((te) => { if (te && !items.includes(te)) items.push(te); });
-                                if (items.length === 0) return null;
-                                return renderRow(t('screens.pedidoDetalle.labelTintas'), items.join(' · '));
-                              })()}
-                              {renderRow(t('screens.pedidoDetalle.labelTroquelEstado'), dp?.troquelEstadoSel || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelTroquelForma'), dp?.troquelFormaSel || '-')}
-                              {renderRow(t('screens.pedidoDetalle.labelTroquelCoste'), dp?.troquelCoste || '-')}
+              {activeTab === 'datos' && (() => {
+                const dp = pedido.datos_presupuesto || null;
+                const CMYK_LABELS = { C: 'Cyan', M: 'Magenta', Y: 'Yellow', K: t('screens.pedidoDetalle.cmykNegro') };
+                const tintasItems = (() => {
+                  const items = [];
+                  (dp?.selectedTintas || []).filter((x) => ['C','M','Y','K'].includes(x)).forEach((x) => items.push(CMYK_LABELS[x]));
+                  const spotMap = new Map();
+                  (dp?.selectedTintas || []).filter((x) => !['C','M','Y','K'].includes(x)).forEach((x) => spotMap.set(x, x));
+                  (dp?.pantones || []).forEach((p) => { const lbl = p.label || p.key || ''; if (lbl && !spotMap.has(lbl) && !['C','M','Y','K'].includes(lbl)) spotMap.set(lbl, lbl); });
+                  spotMap.forEach((lbl) => items.push(lbl));
+                  (Array.isArray(dp?.detalleTintaEspecial) ? dp.detalleTintaEspecial : []).forEach((te) => { if (te && !items.includes(te)) items.push(te); });
+                  return items;
+                })();
+                return (
+                  <>
+                    {/* ── 3 columnas ── */}
+                    <View style={styles.topGrid}>
+                      {/* Col 1: Cliente / Contacto */}
+                      <View style={styles.col}>
+                        <View style={styles.sectionCard}>
+                          <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secCliente')}</Text>
+                          {renderRow(t('screens.pedidoDetalle.labelCliente'), (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente?.nombre || '-'))}
+                          {renderRow(t('screens.pedidoDetalle.labelRazonSocial'), dp?.razon_social || pedido.razon_social || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelCif'), dp?.cif || pedido.cif || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelContacto'), dp?.personas_contacto || pedido.personas_contacto || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelEmail'), dp?.email || pedido.email || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelVendedor'), dp?.vendedor || '-')}
+                        </View>
+                      </View>
+                      {/* Col 2: Pedido */}
+                      <View style={styles.col}>
+                        <View style={styles.sectionCard}>
+                          <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPedido')}</Text>
+                          {renderRow(t('screens.pedidoDetalle.labelNumero'), pedido.numero_pedido || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelFechaPedido'), formatearFecha(pedido.fecha_pedido))}
+                          {renderRow(t('screens.pedidoDetalle.labelReferencia'), pedido.referencia || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelNombreTrabajo'), pedido.nombre || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
+                          {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
+                          {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
+                        </View>
+                      </View>
+                      {/* Col 3: Presupuesto / Producto */}
+                      <View style={styles.col}>
+                        {dp && (
+                          <View style={styles.sectionCard}>
+                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPresupuesto')}</Text>
+                            {renderRow(t('screens.pedidoDetalle.labelNPresupuesto'), dp?.numero_presupuesto || pedido.numero_presupuesto || '-')}
+                            {pedido.fecha_aprobacion_presupuesto ? renderRow(t('screens.pedidoDetalle.labelFechaAprobacion'), formatearFechaHora(pedido.fecha_aprobacion_presupuesto)) : null}
+                            {renderRow(t('screens.pedidoDetalle.labelFormato'), dp?.formatoAncho ? `${dp.formatoAncho} x ${dp.formatoLargo || '-'} mm` : '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelMaquina'), dp?.maquina || pedido.maquina || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelMaterial'), dp?.material || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelAcabado'), Array.isArray(dp?.acabado) ? (dp.acabado.length ? dp.acabado.join(', ') : '-') : (dp?.acabado || '-'))}
+                            {renderRow(t('screens.pedidoDetalle.labelTirada'), dp?.tirada ? `${dp.tirada} ${t('screens.pedidoDetalle.unidades')}` : '-')}
+                            {tintasItems.length > 0 ? renderRow(t('screens.pedidoDetalle.labelTintas'), tintasItems.join(' · ')) : null}
+                            {renderRow(t('screens.pedidoDetalle.labelTroquelEstado'), dp?.troquelEstadoSel || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelTroquelForma'), dp?.troquelFormaSel || '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelTroquelCoste'), dp?.troquelCoste || '-')}
+                            {dp?.observaciones ? (
                               <View style={styles.fullWidthRow}>
                                 <Text style={styles.fullWidthLabel}>{t('screens.pedidoDetalle.labelObservaciones')}</Text>
-                                <Text style={styles.fullWidthValue}>{dp?.observaciones || '-'}</Text>
+                                <Text style={styles.fullWidthValue}>{dp.observaciones}</Text>
                               </View>
+                            ) : null}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* ── Impresión (ancho completo) ── */}
+                    {pedido.datos_impresion && (() => {
+                      const di = pedido.datos_impresion;
+                      if (di.sin_material) {
+                        return (
+                          <View style={[styles.sectionCard, { marginTop: 4 }]}>
+                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
+                            {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
+                            {renderRow(t('screens.pedidoDetalle.labelSinMaterial'), t('screens.pedidoDetalle.valSinMaterial'))}
+                          </View>
+                        );
+                      }
+                      return (
+                        <View style={[styles.sectionCard, { marginTop: 4 }]}>
+                          <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
+                          <View style={styles.topGrid}>
+                            <View style={styles.col}>
+                              {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelMaterialImpresion'), di.material_nombre || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelFabricante'), di.fabricante || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelAnchoRollo'), di.ancho_rollo_cm != null ? `${di.ancho_rollo_cm} cm` : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelAnchoTrabajo'), di.ancho_trabajo_cm != null ? `${di.ancho_trabajo_cm} cm` : '-')}
+                            </View>
+                            <View style={styles.col}>
+                              {renderRow(t('screens.pedidoDetalle.labelAprovechamiento'), di.aprovechamiento_pct != null ? `${di.aprovechamiento_pct}%` : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelTirada'), di.tirada != null ? String(di.tirada) : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelEtiqPorVuelta'), di.etiquetas_por_vuelta != null ? String(di.etiquetas_por_vuelta) : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelVueltas'), di.vueltas != null ? String(di.vueltas) : '-')}
+                            </View>
+                            <View style={styles.col}>
+                              {renderRow(t('screens.pedidoDetalle.labelMermaImpresion'), di.merma_metros != null ? `${di.merma_metros} m` : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelMetrosConsumidos'), di.metros_consumidos != null ? `${di.metros_consumidos} m` : '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelSentidoImpresion'), di.sentido_impresion || '-')}
+                              {renderRow(t('screens.pedidoDetalle.labelRetalGenerado'), di.retal_generado ? t('common.yes') : t('common.no'))}
                             </View>
                           </View>
-                        </>
+                        </View>
                       );
-                    }
-
-                    return (
-                      <>
-                        <View style={styles.leftCol}>
-                          <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secPedido')}</Text>
-                            {renderRow(t('screens.pedidoDetalle.labelNumero'), pedido.numero_pedido || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelFechaPedido'), formatearFecha(pedido.fecha_pedido))}
-                            {renderRow(t('screens.pedidoDetalle.labelReferencia'), pedido.referencia || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelNombreTrabajo'), pedido.nombre || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
-                            {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
-                          </View>
-                        </View>
-                        <View style={styles.rightCol}>
-                          <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secCliente')}</Text>
-                            {renderRow(t('screens.pedidoDetalle.labelCliente'), (typeof pedido.cliente === 'string') ? pedido.cliente : (pedido.cliente && (pedido.cliente.nombre || '-')))}
-                            {renderRow(t('screens.pedidoDetalle.labelRazonSocial'), pedido.razon_social || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelCif'), pedido.cif || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelContacto'), pedido.personas_contacto || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelEmail'), pedido.email || '-')}
-                            {renderRow(t('screens.pedidoDetalle.labelVendedor'), (pedido.datos_presupuesto && pedido.datos_presupuesto.vendedor) || '-')}
-                          </View>
-                        </View>
-                      </>
-                    );
-                  })()}
-                </View>
-
-                {/* ═══════════════════ IMPRESIÓN (datos tab) ═══════════════════ */}
-                {pedido.datos_impresion && (() => {
-                  const di = pedido.datos_impresion;
-                  if (di.sin_material) {
-                    return (
-                      <View style={[styles.sectionCard, { marginTop: 6 }]}>
-                        <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
-                        {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
-                        {renderRow(t('screens.pedidoDetalle.labelSinMaterial'), t('screens.pedidoDetalle.valSinMaterial'))}
-                      </View>
-                    );
-                  }
-                  return (
-                    <View style={[styles.sectionCard, { marginTop: 6 }]}>
-                      <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.secImpresion')}</Text>
-                      {renderRow(t('screens.pedidoDetalle.labelFechaImpresion'), di.fecha ? new Date(di.fecha).toLocaleString() : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelMaterialImpresion'), di.material_nombre || '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelFabricante'), di.fabricante || '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelAnchoRollo'), di.ancho_rollo_cm != null ? `${di.ancho_rollo_cm} cm` : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelAnchoTrabajo'), di.ancho_trabajo_cm != null ? `${di.ancho_trabajo_cm} cm` : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelAprovechamiento'), di.aprovechamiento_pct != null ? `${di.aprovechamiento_pct}%` : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelTirada'), di.tirada != null ? String(di.tirada) : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelEtiqPorVuelta'), di.etiquetas_por_vuelta != null ? String(di.etiquetas_por_vuelta) : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelVueltas'), di.vueltas != null ? String(di.vueltas) : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelMermaImpresion'), di.merma_metros != null ? `${di.merma_metros} m` : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelMetrosConsumidos'), di.metros_consumidos != null ? `${di.metros_consumidos} m` : '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelSentidoImpresion'), di.sentido_impresion || '-')}
-                      {renderRow(t('screens.pedidoDetalle.labelRetalGenerado'), di.retal_generado ? t('common.yes') : t('common.no'))}
-                    </View>
-                  );
-                })()}
-
-                </>
-              )}
+                    })()}
+                  </>
+                );
+              })()}
 
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
               {activeTab === 'archivos' && (
@@ -2011,16 +2180,23 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <View style={styles.versionTabsCol}>
                           {archivos.unitario.map((u) => {
                             const isActive = u.version === selectedVersion;
+                            const isApproved = !!u.aprobado;
+                            const isApproving = approvingArchivoId === u.id;
                             const fecha = u.fecha_subida ? u.fecha_subida.split('T')[0].split('-').reverse().join('/') : '';
                             return (
-                              <View key={u.id} style={[styles.versionTab, isActive && styles.versionTabActive]}>
+                              <View key={u.id} style={[styles.versionTab, isActive && styles.versionTabActive, isApproved && styles.versionTabApproved]}>
                                 <TouchableOpacity
                                   onPress={() => setSelectedVersion(u.version)}
                                   style={{ flex: 1 }}
                                 >
-                                  <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
-                                    v{u.version}
-                                  </Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                    <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
+                                      v{u.version}
+                                    </Text>
+                                    {isApproved && (
+                                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' }} />
+                                    )}
+                                  </View>
                                   {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
                                 </TouchableOpacity>
                                 {canDelete && (
@@ -2041,6 +2217,17 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                               </View>
                             );
                           })}
+                          {/* Botón aprobar versión seleccionada */}
+                          {(() => {
+                            const sel = archivos.unitario.find((u) => u.version === selectedVersion);
+                            if (!sel || sel.aprobado || confirmingRevocarId === sel.id) return null;
+                            if (approvingArchivoId === sel.id) return <ActivityIndicator size="small" color="#16A34A" style={{ marginTop: 6 }} />;
+                            return (
+                              <TouchableOpacity style={[styles.approvalPanelBtn, { marginTop: 6 }]} onPress={() => toggleAprobarVersion(sel.id, false)}>
+                                <Text style={styles.approvalPanelBtnText}>✓ {t('screens.pedidoDetalle.aprobarBtn')}</Text>
+                              </TouchableOpacity>
+                            );
+                          })()}
                         </View>
 
                         {/* MIDDLE: Preview + separaciones */}
@@ -2094,6 +2281,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                               : [];
                             const extraEnPdfSet = new Set(extraEnPdf.map((s) => s.nombre));
 
+                            const isApproved = !!selected.aprobado;
+                            const isApproving = approvingArchivoId === selected.id;
+                            const fechaAprobacion = selected.fecha_aprobacion
+                              ? new Date(selected.fecha_aprobacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : null;
+
                             return (
                               <View style={styles.previewRow}>
                                 {/* Thumbnail PDF */}
@@ -2111,7 +2304,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   />
                                 </View>
 
-                                {/* Columna separaciones */}
+                                {/* Columna separaciones + aprobación */}
                                 <View style={styles.metaColumn}>
                                   <Text style={styles.metaTitle}>{t('screens.pedidoDetalle.separacionesTitle')}</Text>
                                   {pdfMetaLoading ? (
@@ -2151,6 +2344,33 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       ) : null}
                                     </>
                                   )}
+
+                                  {/* ── Aprobación (bajo separaciones) ── */}
+                                  {confirmingRevocarId === selected.id ? (
+                                    <View style={styles.revocarConfirmRow}>
+                                      <Text style={styles.revocarConfirmText}>{t('screens.pedidoDetalle.revocarConfirm')}</Text>
+                                      <TouchableOpacity style={styles.revocarConfirmNo} onPress={() => setConfirmingRevocarId(null)}>
+                                        <Text style={styles.revocarConfirmNoText}>{t('common.cancel')}</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity style={styles.revocarConfirmYes} onPress={() => toggleAprobarVersion(selected.id, true)}>
+                                        <Text style={styles.revocarConfirmYesText}>{t('screens.pedidoDetalle.revocarBtn')}</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  ) : isApproving ? (
+                                    <View style={styles.approvalPanel}>
+                                      <ActivityIndicator size="small" color="#16A34A" />
+                                    </View>
+                                  ) : isApproved ? (
+                                    <View style={styles.approvalPanelApproved}>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.approvalPanelTitle}>✓ {t('screens.pedidoDetalle.aprobadoLabel')} · v{selected.version}</Text>
+                                        {fechaAprobacion ? <Text style={styles.approvalPanelDate}>{fechaAprobacion}{selected.aprobado_por ? ` · ${selected.aprobado_por}` : ''}</Text> : null}
+                                      </View>
+                                      <TouchableOpacity onPress={() => setConfirmingRevocarId(selected.id)} style={styles.revocarBtn}>
+                                        <Text style={styles.revocarBtnText}>{t('screens.pedidoDetalle.revocarBtn')}</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  ) : null}
                                 </View>
                               </View>
                             );
@@ -2183,12 +2403,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   return (
                     <View style={[styles.sectionCard, { flex: 1 }]}>
                       <View style={styles.fileSectionHeader}>
-                        <Text style={styles.filesSectionLabel}>⇄ Comparar PDF</Text>
+                        <Text style={styles.filesSectionLabel}>⇄ {t('screens.pedidoDetalle.comparadorTitle')}</Text>
                       </View>
 
-                      <Text style={styles.cmpColTitle}>PDF origen</Text>
+                      <Text style={styles.cmpColTitle}>{t('screens.pedidoDetalle.comparadorColTitleOrigen')}</Text>
                       {srcOptions.length === 0
-                        ? <Text style={styles.cmpEmpty}>Sin archivos</Text>
+                        ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinArchivos')}</Text>
                         : srcOptions.map((opt) => (
                           <TouchableOpacity key={opt.id}
                             style={[styles.cmpPdfRow, comparadorSrcArchivoId === opt.id && styles.cmpPdfRowActive]}
@@ -2198,7 +2418,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         ))
                       }
 
-                      <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>Pedido destino</Text>
+                      <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>{t('screens.pedidoDetalle.comparadorColTitleDestino')}</Text>
                       {comparadorTargetPedido ? (
                         <View style={styles.cmpTargetChip}>
                           <View style={{ flex: 1 }}>
@@ -2215,7 +2435,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <>
                           <TextInput
                             style={styles.cmpSearchInput}
-                            placeholder="Nº pedido"
+                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderNumero')}
                             placeholderTextColor="#94A3B8"
                             value={comparadorSearchNumero}
                             onChangeText={setComparadorSearchNumero}
@@ -2223,7 +2443,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           />
                           <TextInput
                             style={styles.cmpSearchInput}
-                            placeholder="Cliente"
+                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderCliente')}
                             placeholderTextColor="#94A3B8"
                             value={comparadorSearchCliente}
                             onChangeText={setComparadorSearchCliente}
@@ -2231,7 +2451,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           />
                           <TextInput
                             style={styles.cmpSearchInput}
-                            placeholder="Referencia"
+                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderReferencia')}
                             placeholderTextColor="#94A3B8"
                             value={comparadorSearchNombre}
                             onChangeText={setComparadorSearchNombre}
@@ -2240,15 +2460,21 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           {(comparadorSearchNumero.trim() || comparadorSearchCliente.trim() || comparadorSearchNombre.trim()) ? (
                             <View style={styles.cmpDropdown}>
                               {filtered.length === 0
-                                ? <Text style={styles.cmpDropdownEmpty}>Sin resultados</Text>
-                                : filtered.map((p) => (
-                                  <TouchableOpacity key={p.id} style={styles.cmpDropdownItem} onPress={() => selectTargetPedido(p)}>
-                                    <Text style={styles.cmpDropdownNum}>{p.numero_pedido}</Text>
-                                    {(p.referencia || p.datos_presupuesto?.referencia) ? (
-                                      <Text style={styles.cmpDropdownSub} numberOfLines={1}>{p.referencia || p.datos_presupuesto?.referencia}</Text>
-                                    ) : null}
-                                  </TouchableOpacity>
-                                ))
+                                ? <Text style={styles.cmpDropdownEmpty}>{t('screens.pedidoDetalle.comparadorSinResultados')}</Text>
+                                : filtered.map((p) => {
+                                  const esMismo = p.id === pedidoId;
+                                  return (
+                                    <TouchableOpacity key={p.id} style={[styles.cmpDropdownItem, esMismo && { backgroundColor: '#1E3A5F' }]} onPress={() => selectTargetPedido(p)}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <Text style={styles.cmpDropdownNum}>{p.numero_pedido}</Text>
+                                        {esMismo && <Text style={{ fontSize: 9, fontWeight: '700', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('screens.pedidoDetalle.comparadorEstePedido')}</Text>}
+                                      </View>
+                                      {(p.referencia || p.datos_presupuesto?.referencia) ? (
+                                        <Text style={styles.cmpDropdownSub} numberOfLines={1}>{p.referencia || p.datos_presupuesto?.referencia}</Text>
+                                      ) : null}
+                                    </TouchableOpacity>
+                                  );
+                                })
                               }
                             </View>
                           ) : null}
@@ -2257,9 +2483,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                       {comparadorTargetPedido && (
                         <>
-                          <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>PDF destino</Text>
+                          <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>{t('screens.pedidoDetalle.comparadorColTitlePdfDestino')}</Text>
                           {targetOptions.length === 0
-                            ? <Text style={styles.cmpEmpty}>Sin PDF</Text>
+                            ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinPdf')}</Text>
                             : targetOptions.map((opt) => (
                               <TouchableOpacity key={opt.id}
                                 style={[styles.cmpPdfRow, comparadorTargetArchivoId === opt.id && styles.cmpPdfRowActive]}
@@ -2272,20 +2498,20 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       )}
 
                       <TouchableOpacity
-                        style={[styles.cmpRunBtn, { marginTop: 12 }, (!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorRunning) && styles.cmpRunBtnDisabled]}
+                        style={[styles.cmpRunBtn, { marginTop: 12 }, (!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning) && styles.cmpRunBtnDisabled]}
                         onPress={runComparison}
-                        disabled={!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorRunning}
+                        disabled={!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning}
                       >
                         {comparadorRunning
                           ? <ActivityIndicator size="small" color="#FFFFFF" />
-                          : <Text style={styles.cmpRunBtnText}>⇄ Comparar</Text>
+                          : <Text style={styles.cmpRunBtnText}>⇄ {t('screens.pedidoDetalle.comparadorBtnComparar')}</Text>
                         }
                       </TouchableOpacity>
 
                       {comparadorDiff && comparadorDiff.length > 0 && (
                         <TouchableOpacity style={styles.cmpViewResultBtn} onPress={() => setComparadorLightbox(true)}>
-                          <Text style={styles.cmpViewResultBtnLabel}>VER RESULTADO</Text>
-                          <Text style={styles.cmpViewResultBtnSim}>{comparadorDiff[0]?.similarity}% similitud</Text>
+                          <Text style={styles.cmpViewResultBtnLabel}>{t('screens.pedidoDetalle.comparadorVerResultado')}</Text>
+                          <Text style={styles.cmpViewResultBtnSim}>{comparadorDiff[0]?.similarity}% {t('screens.pedidoDetalle.comparadorSimilitud')}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -2358,13 +2584,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   onPress={() => handleDescargarTool(title)}
                                   disabled={!!isLoading}
                                 >
-                                  <Text style={styles.eskoGenerateBtnText}>{isLoading ? '…' : '⬇ Generar'}</Text>
+                                  <Text style={styles.eskoGenerateBtnText}>{isLoading ? '…' : `⬇ ${t('screens.pedidoDetalle.eskoGenerarBtn')}`}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
                                   style={styles.eskoUploadBtn}
                                 >
-                                  <Text style={styles.eskoUploadBtnText}>↑ Subir</Text>
+                                  <Text style={styles.eskoUploadBtnText}>↑ {t('screens.pedidoDetalle.eskoSubirBtn')}</Text>
                                 </TouchableOpacity>
                               </>
                             )}
@@ -2482,7 +2708,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               <View style={styles.cmpLightboxHeader}>
                 {/* Izquierda: similitud + páginas */}
                 <View style={styles.cmpLightboxLeft}>
-                  <Text style={styles.cmpLightboxSimilarity}>{page.similarity}% similitud</Text>
+                  <Text style={styles.cmpLightboxSimilarity}>{page.similarity}% {t('screens.pedidoDetalle.comparadorSimilitud')}</Text>
                   {comparadorDiff.length > 1 && (
                     <View style={styles.cmpPageNav}>
                       <TouchableOpacity onPress={() => setComparadorDiffPage((p) => Math.max(0, p - 1))} disabled={comparadorDiffPage === 0}>

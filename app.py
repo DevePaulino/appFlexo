@@ -8074,6 +8074,50 @@ def thumbnail_archivo(archivo_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/archivos/<archivo_id>/aprobar', methods=['PATCH'])
+def aprobar_archivo(archivo_id):
+    """
+    Alterna el estado de aprobación de una versión unitario.
+    - Si no estaba aprobada → la aprueba y revoca cualquier otra versión aprobada del mismo pedido.
+    - Si ya estaba aprobada → revoca la aprobación.
+    Devuelve { aprobado: bool }
+    """
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        if doc.get('tipo') != 'unitario':
+            return jsonify({'error': 'Solo se pueden aprobar versiones unitario'}), 400
+
+        ya_aprobado = bool(doc.get('aprobado'))
+        if ya_aprobado:
+            # Revocar aprobación
+            col.update_one({'_id': oid}, {'$unset': {'aprobado': '', 'fecha_aprobacion': '', 'aprobado_por': ''}})
+            return jsonify({'aprobado': False}), 200
+        else:
+            # Aprobar esta versión y revocar las demás del mismo pedido
+            pedido_id = doc.get('pedido_id')
+            col.update_many(
+                {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'unitario', 'aprobado': True},
+                {'$unset': {'aprobado': '', 'fecha_aprobacion': '', 'aprobado_por': ''}}
+            )
+            ahora = datetime.utcnow().isoformat() + 'Z'
+            aprobado_por = request_user.get('nombre') or request_user.get('email') or 'Usuario'
+            col.update_one({'_id': oid}, {'$set': {'aprobado': True, 'fecha_aprobacion': ahora, 'aprobado_por': aprobado_por}})
+            return jsonify({'aprobado': True, 'fecha_aprobacion': ahora, 'aprobado_por': aprobado_por}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/archivos/<archivo_id>', methods=['DELETE'])
 def eliminar_archivo(archivo_id):
     """

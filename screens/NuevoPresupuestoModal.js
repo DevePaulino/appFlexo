@@ -41,34 +41,41 @@ function isValidCif(value) {
     return /^[A-Z]\d{7}[A-Z0-9]$/.test(value);
 }
 
+function contrastText(hex) {
+    if (!hex) return '#FFFFFF';
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1E293B' : '#FFFFFF';
+}
+
 const styles = {
     container: { paddingHorizontal: 12, paddingVertical: 12, flex: 1 },
     section: {
         marginBottom: 10,
         marginTop: 4,
         backgroundColor: '#FFF',
-        borderRadius: 14,
-        padding: 12,
-        borderWidth: 1.5,
-        borderColor: '#E2E8F0'
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingBottom: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        overflow: 'hidden',
     },
     sectionTitle: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '800',
-        color: '#64748B',
+        color: '#F1F5F9',
         letterSpacing: 0.8,
         textTransform: 'uppercase',
-        backgroundColor: '#E2E8F0',
+        backgroundColor: '#1E293B',
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 6,
         marginHorizontal: -12,
-        marginTop: -12,
-        marginBottom: 14,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
+        marginBottom: 12,
     },
     divider: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
-    label: { fontSize: 13, color: '#475569', fontWeight: '700', marginBottom: 6 },
+    label: { fontSize: 11, color: '#94A3B8', fontWeight: '500', marginBottom: 4 },
     row: { flexDirection: 'row', gap: 12, marginBottom: 10, alignItems: 'flex-start' },
     col: { flex: 1 },
     input: (value, isRequired, isNumeric = false, submitted = false) => ({
@@ -95,13 +102,13 @@ const styles = {
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 10, paddingVertical: 8,
-        backgroundColor: active ? '#E2E8F0' : '#F1F5F9',
+        backgroundColor: active ? tinta.color : '#F1F5F9',
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: active ? (tinta.isCMYK ? tinta.color : '#94A3B8') : '#E2E8F0',
+        borderColor: active ? tinta.color : '#E2E8F0',
         marginRight: 8, marginBottom: 8, minWidth: 40, alignItems: 'center'
     }),
-    tintaTxt: { color: '#0F172A', fontWeight: '700', fontSize: 13, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
+    tintaTxt: { fontWeight: '700', fontSize: 13, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     tintaCounter: {
         marginTop: -4, marginBottom: 8, backgroundColor: '#E2E8F0', alignSelf: 'flex-start', paddingHorizontal: 18,
         paddingVertical: 7, borderRadius: 14, fontWeight: '700', fontSize: 16, color: '#444', letterSpacing: 0.5
@@ -340,7 +347,7 @@ const TintasSelector = ({
                         );
                     }}
                 >
-                    <Text style={styles.tintaTxt}>{tinta.label}</Text>
+                    <Text style={[styles.tintaTxt, { color: active ? contrastText(tinta.color) : '#475569' }]}>{tinta.label}</Text>
                 </TouchableOpacity>
             );
         })}

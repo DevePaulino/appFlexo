@@ -190,6 +190,17 @@
     "colores": "couleurs",
     "noCompatible": "non compatible"
   },
+  "branding": {
+    "editTitle": "Identité de l'entreprise",
+    "nameLabel": "Nom affiché",
+    "logoLabel": "Logo",
+    "uploadLogo": "Télécharger un logo (PNG, JPG, SVG...)",
+    "uploading": "Téléchargement...",
+    "removeLogo": "Supprimer le logo",
+    "displayModeLabel": "Afficher dans l'en-tête",
+    "showName": "Nom",
+    "showLogo": "Logo"
+  },
   "common": {
     "save": "Enregistrer",
     "saveChanges": "Enregistrer les modifications",
@@ -600,6 +611,8 @@
       "modulosHint": "Activez ou désactivez les fonctionnalités optionnelles de l'application.",
       "moduloConsumoMaterial": "Gestion des matériaux",
       "moduloConsumoMaterialHint": "Enregistre la consommation de matériau lors du marquage d'un travail comme imprimé.",
+      "moduloPresupuestos": "Devis",
+      "moduloPresupuestosHint": "Active la gestion des devis et l'onglet Devis.",
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Active la file de production et l'onglet Production.",
       "moduloProduccionTrigger": "État qui déclenche le sélecteur de machine :",
@@ -765,7 +778,27 @@
       "labelMermaImpresion": "Gaspillage (m) :",
       "labelMetrosConsumidos": "Mètres consommés :",
       "labelSentidoImpresion": "Sens d'impression :",
-      "labelRetalGenerado": "Rebut généré :"
+      "labelRetalGenerado": "Rebut généré :",
+      "aprobarBtn": "Approuver le design",
+      "aprobadoLabel": "Design approuvé",
+      "revocarBtn": "Révoquer",
+      "revocarConfirm": "Révoquer l'approbation ?",
+      "comparadorTitle": "Comparer PDF",
+      "comparadorColTitleOrigen": "PDF source",
+      "comparadorColTitleDestino": "Commande cible",
+      "comparadorColTitlePdfDestino": "PDF cible",
+      "comparadorSinArchivos": "Aucun fichier",
+      "comparadorSinPdf": "Aucun PDF",
+      "comparadorSinResultados": "Aucun résultat",
+      "comparadorEstePedido": "cette commande",
+      "comparadorBtnComparar": "Comparer",
+      "comparadorVerResultado": "VOIR RÉSULTAT",
+      "comparadorSimilitud": "similarité",
+      "comparadorPlaceholderNumero": "N° commande",
+      "comparadorPlaceholderCliente": "Client",
+      "comparadorPlaceholderReferencia": "Référence",
+      "eskoGenerarBtn": "Générer",
+      "eskoSubirBtn": "Téléverser"
     }
   },
   "legal": {

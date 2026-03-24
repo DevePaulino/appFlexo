@@ -190,6 +190,17 @@
     "colores": "colors",
     "noCompatible": "not compatible"
   },
+  "branding": {
+    "editTitle": "Company branding",
+    "nameLabel": "Display name",
+    "logoLabel": "Logo",
+    "uploadLogo": "Upload logo (PNG, JPG, SVG...)",
+    "uploading": "Uploading...",
+    "removeLogo": "Remove logo",
+    "displayModeLabel": "Show in header",
+    "showName": "Name",
+    "showLogo": "Logo"
+  },
   "common": {
     "save": "Save",
     "saveChanges": "Save changes",
@@ -604,6 +615,8 @@
       "modulosHint": "Enable or disable optional application features.",
       "moduloConsumoMaterial": "Material management",
       "moduloConsumoMaterialHint": "Tracks material usage when marking a job as printed.",
+      "moduloPresupuestos": "Quotes",
+      "moduloPresupuestosHint": "Enables quote management and the Quotes tab.",
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Enables the production queue and the Production tab.",
       "moduloProduccionTrigger": "State that triggers the machine selector:",
@@ -769,7 +782,27 @@
       "labelMermaImpresion": "Waste (metres):",
       "labelMetrosConsumidos": "Metres used:",
       "labelSentidoImpresion": "Print direction:",
-      "labelRetalGenerado": "Waste roll:"
+      "labelRetalGenerado": "Waste roll:",
+      "aprobarBtn": "Approve design",
+      "aprobadoLabel": "Design approved",
+      "revocarBtn": "Revoke",
+      "revocarConfirm": "Revoke approval?",
+      "comparadorTitle": "Compare PDF",
+      "comparadorColTitleOrigen": "Source PDF",
+      "comparadorColTitleDestino": "Target order",
+      "comparadorColTitlePdfDestino": "Target PDF",
+      "comparadorSinArchivos": "No files",
+      "comparadorSinPdf": "No PDF",
+      "comparadorSinResultados": "No results",
+      "comparadorEstePedido": "this order",
+      "comparadorBtnComparar": "Compare",
+      "comparadorVerResultado": "VIEW RESULT",
+      "comparadorSimilitud": "similarity",
+      "comparadorPlaceholderNumero": "Order no.",
+      "comparadorPlaceholderCliente": "Client",
+      "comparadorPlaceholderReferencia": "Reference",
+      "eskoGenerarBtn": "Generate",
+      "eskoSubirBtn": "Upload"
     }
   },
   "legal": {
