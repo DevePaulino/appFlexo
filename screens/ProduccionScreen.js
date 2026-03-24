@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chartsSidebar: {
-    width: 136,
+    width: 160,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 4,
     borderLeftColor: '#1E293B',
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   chartsTitle: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     color: '#94A3B8',
     letterSpacing: 1,
@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   chartsTotalCount: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 12,
-    lineHeight: 26,
+    lineHeight: 30,
   },
   chartsTotalLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     color: '#94A3B8',
   },
@@ -669,13 +669,13 @@ const wbStyles = StyleSheet.create({
   },
   name: {
     flex: 1,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#334155',
     letterSpacing: 0.2,
   },
   count: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   track: {
