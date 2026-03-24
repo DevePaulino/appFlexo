@@ -409,7 +409,9 @@
       "impresosTitle": "Histórico de impressões",
       "impresosEmpty": "Nenhum trabalho impresso",
       "impresosHint": "Histórico de trabalhos marcados como impressos",
-      "colFechaImpresion": "Data de impressão"
+      "colFechaImpresion": "Data de impressão",
+      "cargaTitulo": "Carga de trabalho",
+      "cargaTrabajos": "trabalhos"
     },
     "materiales": {
       "title": "Materiais",

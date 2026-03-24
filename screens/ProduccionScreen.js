@@ -92,7 +92,19 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  chartsTotalCount: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#F1F5F9',
     marginBottom: 10,
+    lineHeight: 26,
+  },
+  chartsTotalLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.4)',
   },
   chartEmpty: {
     fontSize: 11,
@@ -1084,9 +1096,15 @@ export default function ProduccionScreen() {
       <View style={styles.bodyRow}>
         {/* ── Sidebar: gráfica de carga ── */}
         <View style={styles.chartsSidebar}>
-          <Text style={styles.chartsTitle}>
-            {t('screens.produccion.cargaPorMaquina', { count: Object.values(trabajosPorMaquina || {}).reduce((sum, trabajos) => sum + (Array.isArray(trabajos) ? trabajos.length : 0), 0) })}
-          </Text>
+          {(() => {
+            const total = Object.values(trabajosPorMaquina || {}).reduce((sum, w) => sum + (Array.isArray(w) ? w.length : 0), 0);
+            return (
+              <>
+                <Text style={styles.chartsTitle}>{t('screens.produccion.cargaTitulo')}</Text>
+                <Text style={styles.chartsTotalCount}>{total} <Text style={styles.chartsTotalLabel}>{t('screens.produccion.cargaTrabajos')}</Text></Text>
+              </>
+            );
+          })()}
           {(() => {
             const { cargas } = getCargaPorMaquina();
             if (cargas.length === 0) {

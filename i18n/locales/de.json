@@ -409,7 +409,9 @@
       "impresosTitle": "Druckverlauf",
       "impresosEmpty": "Keine gedruckten Aufträge",
       "impresosHint": "Verlauf der als gedruckt markierten Aufträge",
-      "colFechaImpresion": "Druckdatum"
+      "colFechaImpresion": "Druckdatum",
+      "cargaTitulo": "Arbeitsbelastung",
+      "cargaTrabajos": "Aufträge"
     },
     "materiales": {
       "title": "Materialien",

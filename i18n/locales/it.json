@@ -409,7 +409,9 @@
       "impresosTitle": "Storico delle stampe",
       "impresosEmpty": "Nessun lavoro stampato",
       "impresosHint": "Storico dei lavori contrassegnati come stampati",
-      "colFechaImpresion": "Data di stampa"
+      "colFechaImpresion": "Data di stampa",
+      "cargaTitulo": "Carico di lavoro",
+      "cargaTrabajos": "lavori"
     },
     "materiales": {
       "title": "Materiali",

@@ -409,7 +409,9 @@
       "impresosTitle": "Print history",
       "impresosEmpty": "No printed jobs",
       "impresosHint": "History of jobs marked as printed",
-      "colFechaImpresion": "Print date"
+      "colFechaImpresion": "Print date",
+      "cargaTitulo": "Workload",
+      "cargaTrabajos": "jobs"
     },
     "materiales": {
       "title": "Materials",
