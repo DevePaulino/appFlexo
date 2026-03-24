@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+import { Animated, Easing, View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
@@ -81,106 +81,24 @@ const styles = StyleSheet.create({
   },
   chartsSidebar: {
     width: 130,
-    backgroundColor: '#FFF',
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    backgroundColor: '#0F172A',
     paddingTop: 10,
     paddingBottom: 8,
     paddingHorizontal: 8,
   },
   chartsTitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  hBarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
-    paddingHorizontal: 4,
-  },
-  hBarItemActive: {
-    backgroundColor: '#EEF2F8',
-  },
-  hBarLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#475569',
-    width: 40,
-  },
-  hBarTrack: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  hBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  hBarValue: {
-    fontSize: 10,
-    fontWeight: '800',
-    width: 18,
-    textAlign: 'right',
+    marginBottom: 10,
   },
   chartEmpty: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: 'rgba(255,255,255,0.3)',
     fontStyle: 'italic',
     paddingVertical: 6,
-  },
-  verticalBarLabel: {
-    marginTop: 4,
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#0F172A',
-    textAlign: 'center',
-    width: '100%',
-  },
-  chartFillGreen: {
-    backgroundColor: '#E55A2B',
-  },
-  chartFillYellow: {
-    backgroundColor: '#F5A623',
-  },
-  chartFillRed: {
-    backgroundColor: '#D64541',
-  },
-  chartEmpty: {
-    fontSize: 12,
-    color: '#475569',
-  },
-  filterRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  filterText: {
-    fontSize: 12,
-    color: '#0F172A',
-    flex: 1,
-  },
-  filterClearBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
-  },
-  filterClearText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
   },
   tableHeader: {
     flexDirection: 'row',
@@ -609,6 +527,146 @@ const getRetrasoTextStyle = (dias) => {
   else return [styles.retrasoText, styles.retrasoRojoText];
 };
 
+// ── Utilidad de color por carga ─────────────────────────────────────────────
+function getWorkloadColor(cantidad, maxCarga) {
+  if (cantidad === 0) return '#94A3B8';
+  const ratio = maxCarga > 0 ? cantidad / maxCarga : 0;
+  let r, g, b;
+  if (ratio <= 0.5) {
+    const t = ratio / 0.5;
+    r = Math.round(22  + (245 - 22)  * t);
+    g = Math.round(163 + (158 - 163) * t);
+    b = Math.round(74  + (11  - 74)  * t);
+  } else {
+    const t = (ratio - 0.5) / 0.5;
+    r = Math.round(245 + (220 - 245) * t);
+    g = Math.round(158 + (38  - 158) * t);
+    b = Math.round(11  + (38  - 11)  * t);
+  }
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// ── Barra de carga animada ───────────────────────────────────────────────────
+function WorkloadBar({ carga, maxCarga, activa, dimmed, onPress }) {
+  const ratio = maxCarga > 0 ? carga.cantidad / maxCarga : 0;
+  const widthPct = Math.max(4, ratio * 100);
+  const tone = getWorkloadColor(carga.cantidad, maxCarga);
+
+  const barAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacAnim = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    Animated.spring(barAnim, {
+      toValue: widthPct,
+      friction: 8,
+      tension: 45,
+      useNativeDriver: false,
+    }).start();
+  }, [widthPct]);
+
+  useEffect(() => {
+    if (ratio < 0.05) return;
+    const period = Math.round(2200 - ratio * 1600); // 2200ms en vacío → 600ms al máximo
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scaleAnim, { toValue: 1.8, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(opacAnim, { toValue: 0, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scaleAnim, { toValue: 1, duration: 0, useNativeDriver: true }),
+          Animated.timing(opacAnim, { toValue: 0.6, duration: 0, useNativeDriver: true }),
+        ]),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [ratio]);
+
+  const animatedWidth = barAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.75}
+      style={[
+        wbStyles.card,
+        activa && { borderColor: tone, borderWidth: 1.5 },
+        dimmed && { opacity: 0.3 },
+      ]}
+    >
+      <View style={wbStyles.header}>
+        <View style={wbStyles.dotWrap}>
+          <Animated.View style={[wbStyles.dotRing, { backgroundColor: tone, opacity: opacAnim, transform: [{ scale: scaleAnim }] }]} />
+          <View style={[wbStyles.dot, { backgroundColor: tone }]} />
+        </View>
+        <Text style={wbStyles.name} numberOfLines={1}>{carga.nombre}</Text>
+        <Text style={[wbStyles.count, { color: tone }]}>{carga.cantidad}</Text>
+      </View>
+      <View style={wbStyles.track}>
+        <Animated.View style={[wbStyles.fill, { width: animatedWidth, backgroundColor: tone }]} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const wbStyles = StyleSheet.create({
+  card: {
+    marginBottom: 5,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  dotWrap: {
+    width: 10,
+    height: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotRing: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  name: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E2E8F0',
+    letterSpacing: 0.2,
+  },
+  count: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  track: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+});
+
 export default function ProduccionScreen() {
   const { t } = useTranslation();
   const route = useRoute();
@@ -638,25 +696,6 @@ export default function ProduccionScreen() {
       return { id: String(maq.id), nombre: maq.nombre, cantidad };
     });
     return { cargas };
-  };
-
-  const getWorkloadColor = (cantidad, maxCarga) => {
-    if (cantidad === 0) return '#94A3B8'; // sin carga → gris
-    const ratio = maxCarga > 0 ? cantidad / maxCarga : 0;
-    // Interpolación 3 paradas: verde → amarillo → rojo
-    let r, g, b;
-    if (ratio <= 0.5) {
-      const t = ratio / 0.5;
-      r = Math.round(22  + (245 - 22)  * t); // #16A34A → #F59E0B
-      g = Math.round(163 + (158 - 163) * t);
-      b = Math.round(74  + (11  - 74)  * t);
-    } else {
-      const t = (ratio - 0.5) / 0.5;
-      r = Math.round(245 + (220 - 245) * t); // #F59E0B → #DC2626
-      g = Math.round(158 + (38  - 158) * t);
-      b = Math.round(11  + (38  - 11)  * t);
-    }
-    return `rgb(${r}, ${g}, ${b})`;
   };
 
   const slugifyEstado = (texto) => {
@@ -1057,35 +1096,25 @@ export default function ProduccionScreen() {
             const hayFiltroActivo = maquinasFiltroIds.length > 0;
             return (
               <ScrollView showsVerticalScrollIndicator={false}>
-                {cargas.map((carga) => {
-                  const widthPct = Math.max(8, (carga.cantidad / maxCarga) * 100);
-                  const tone = getWorkloadColor(carga.cantidad, maxCarga);
-                  const activa = maquinasFiltroIds.includes(String(carga.id));
-                  return (
-                    <TouchableOpacity
-                      key={carga.id}
-                      style={[
-                        styles.hBarItem,
-                        activa && styles.hBarItemActive,
-                        activa ? { borderWidth: 1.5, borderColor: tone } : null,
-                        hayFiltroActivo && !activa ? { opacity: 0.35 } : null,
-                      ]}
-                      onPress={() => toggleMaquinaFiltro(carga.id)}
-                    >
-                      <Text style={styles.hBarLabel} numberOfLines={1}>{carga.nombre}</Text>
-                      <View style={styles.hBarTrack}>
-                        <View style={[styles.hBarFill, { width: `${widthPct}%`, backgroundColor: tone }]} />
-                      </View>
-                      <Text style={[styles.hBarValue, { color: tone }]}>{carga.cantidad}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {cargas.map((carga) => (
+                  <WorkloadBar
+                    key={carga.id}
+                    carga={carga}
+                    maxCarga={maxCarga}
+                    activa={maquinasFiltroIds.includes(String(carga.id))}
+                    dimmed={hayFiltroActivo && !maquinasFiltroIds.includes(String(carga.id))}
+                    onPress={() => toggleMaquinaFiltro(carga.id)}
+                  />
+                ))}
               </ScrollView>
             );
           })()}
           {maquinasFiltroIds.length > 0 && (
-            <TouchableOpacity style={[styles.filterClearBtn, { marginTop: 8, alignSelf: 'stretch' }]} onPress={() => setMaquinasFiltroIds([])}>
-              <Text style={styles.filterClearText}>{t('screens.produccion.quitarFiltro')}</Text>
+            <TouchableOpacity
+              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}
+              onPress={() => setMaquinasFiltroIds([])}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
             </TouchableOpacity>
           )}
         </View>
