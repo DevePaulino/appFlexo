@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
  *   message    — optional override for the question text (pre-translated)
  *   size       — 'sm' (default, for table rows) | 'md' (for modals/bottom bars)
  */
-export default function DeleteConfirmRow({ onCancel, onConfirm, message, size = 'sm' }) {
+export default function DeleteConfirmRow({ onCancel, onConfirm, message, size = 'sm', cancelLabel, confirmLabel }) {
   const { t } = useTranslation();
   const sm = size === 'sm';
 
@@ -57,7 +57,7 @@ export default function DeleteConfirmRow({ onCancel, onConfirm, message, size = 
         }}
       >
         <Text style={{ fontSize: sm ? 11 : 12, color: '#64748B', fontWeight: '500' }}>
-          {t('common.cancel')}
+          {cancelLabel || t('common.cancel')}
         </Text>
       </TouchableOpacity>
 
@@ -73,7 +73,7 @@ export default function DeleteConfirmRow({ onCancel, onConfirm, message, size = 
         }}
       >
         <Text style={{ fontSize: sm ? 11 : 12, color: '#FFFFFF', fontWeight: '700' }}>
-          {t('common.delete')}
+          {confirmLabel || t('common.delete')}
         </Text>
       </TouchableOpacity>
     </View>

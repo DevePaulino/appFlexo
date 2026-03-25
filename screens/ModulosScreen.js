@@ -264,6 +264,20 @@ export default function ModulosScreen() {
             />
           </View>
 
+          {/* Módulo Presupuestos */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.rowLabel}>{t('screens.config.moduloPresupuestos')}</Text>
+              <Text style={styles.rowHint}>{t('screens.config.moduloPresupuestosHint')}</Text>
+            </View>
+            <Switch
+              value={modulos.presupuestos !== false}
+              onValueChange={(v) => setModulo('presupuestos', v)}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
           {/* Módulo Producción */}
           <View style={[styles.row, !modulos.produccion && styles.rowLast]}>
             <View style={{ flex: 1, paddingRight: 12 }}>

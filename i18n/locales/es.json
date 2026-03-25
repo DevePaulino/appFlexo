@@ -361,7 +361,13 @@
       "omitir": "Omitir",
       "seleccionaMaterial": "Selecciona el material:",
       "metrosConsumir": "Metros a consumir:",
-      "registrarContinuar": "Registrar y continuar"
+      "registrarContinuar": "Registrar y continuar",
+      "cancelarBtn": "Cancelar",
+      "cancelarConfirm": "¿Cancelar pedido?",
+      "cancelarSi": "Sí, cancelar",
+      "reactivarBtn": "Reactivar",
+      "reactivarConfirm": "¿Reactivar pedido?",
+      "reactivarSi": "Sí, reactivar"
     },
     "produccion": {
       "cargaPorMaquina": "Carga de trabajo por máquina ({{count}} trabajos asignados)",
@@ -800,7 +806,16 @@
       "comparadorPlaceholderCliente": "Cliente",
       "comparadorPlaceholderReferencia": "Referencia",
       "eskoGenerarBtn": "Generar",
-      "eskoSubirBtn": "Subir"
+      "eskoSubirBtn": "Subir",
+      "historialImpresionesTitle": "Historial de impresiones",
+      "historialTipoConConsumo": "Con consumo",
+      "historialTipoSinMaterial": "Sin material",
+      "historialTipoSinConsumo": "Sin consumo",
+      "btnCancelarPedido": "Cancelar pedido",
+      "confirmCancelarPedido": "¿Cancelar este pedido?",
+      "errNoPudoCancelar": "No se pudo cancelar el pedido",
+      "btnCancelarPedidoSi": "Sí, cancelar",
+      "pedidoCanceladoBanner": "PEDIDO CANCELADO"
     }
   },
   "legal": {

@@ -361,7 +361,13 @@
       "omitir": "Salta",
       "seleccionaMaterial": "Seleziona il materiale:",
       "metrosConsumir": "Metri da consumare:",
-      "registrarContinuar": "Registra e continua"
+      "registrarContinuar": "Registra e continua",
+      "cancelarBtn": "Annulla",
+      "cancelarConfirm": "Annullare l'ordine?",
+      "cancelarSi": "Sì, annulla",
+      "reactivarBtn": "Riattiva",
+      "reactivarConfirm": "Riattivare l'ordine?",
+      "reactivarSi": "Sì, riattiva"
     },
     "produccion": {
       "cargaPorMaquina": "Carico di lavoro per macchina ({{count}} lavori assegnati)",
@@ -800,7 +806,16 @@
       "comparadorPlaceholderCliente": "Cliente",
       "comparadorPlaceholderReferencia": "Riferimento",
       "eskoGenerarBtn": "Genera",
-      "eskoSubirBtn": "Carica"
+      "eskoSubirBtn": "Carica",
+      "historialImpresionesTitle": "Cronologia stampe",
+      "historialTipoConConsumo": "Con consumo",
+      "historialTipoSinMaterial": "Senza materiale",
+      "historialTipoSinConsumo": "Senza consumo",
+      "btnCancelarPedido": "Annulla ordine",
+      "confirmCancelarPedido": "Annullare questo ordine?",
+      "errNoPudoCancelar": "Impossibile annullare l'ordine",
+      "btnCancelarPedidoSi": "Sì, annulla",
+      "pedidoCanceladoBanner": "ORDINE ANNULLATO"
     }
   },
   "legal": {

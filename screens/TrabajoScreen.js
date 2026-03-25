@@ -337,6 +337,76 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
   },
+  cancelBtn: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: 'transparent',
+  },
+  cancelBtnText: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  cancelConfirmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 6,
+  },
+  cancelConfirmText: {
+    fontSize: 10,
+    color: '#DC2626',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  cancelConfirmNo: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  cancelConfirmNoText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  cancelConfirmYes: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#DC2626',
+  },
+  reactivarBtn: {
+    marginLeft: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+    backgroundColor: '#F0FDF4',
+  },
+  reactivarBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  reactivarConfirmYes: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#15803D',
+  },
+  cancelConfirmYesText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -595,6 +665,9 @@ export default function TrabajoScreen({ currentUser }) {
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const canChangeEstado = usePermission('manage_estados_pedido');
   const puedeEditarFinalizado = usePermission('editar_estado_finalizado');
+  const canCancelar = usePermission('cancelar_pedido');
+  const [cancelConfirmId, setCancelConfirmId] = useState(null);
+  const [reactivarConfirmId, setReactivarConfirmId] = useState(null);
   const { modulos } = useModulos();
   const [stockModal, setStockModal] = useState({ visible: false, pedido: null, authHdrs: null, stockEntries: [], selectedStockId: '', metros: '', formatoAncho: 0 });
   const hoverNuevoTimerRef = useRef(null);
@@ -635,7 +708,8 @@ export default function TrabajoScreen({ currentUser }) {
         if (item?.color) entry.color = item.color;
         return entry;
       })
-      .filter((item) => item.label && item.value);
+      .filter((item) => item.label && item.value)
+      .filter((item) => item.value !== 'cancelado'); // cancelado solo via botón dedicado
     const unique = parsed.filter((item, idx, self) => idx === self.findIndex((x) => x.value === item.value));
     return unique.length > 0 ? unique : ESTADOS_DEFAULT;
   }, [settings.estados_pedido]);
@@ -790,6 +864,35 @@ export default function TrabajoScreen({ currentUser }) {
       console.error('Error cambiando estado:', e);
       showToast('Error al cambiar estado', 'error');
     }
+  };
+
+  const handleCancelarPedido = async (trabajo) => {
+    const pid = trabajo.pedido_id || trabajo.id || trabajo._id;
+    if (!pid) return;
+    const token = global.__MIAPP_ACCESS_TOKEN;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const selectedRole = typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem('PFP_SELECTED_ROLE') : null;
+    if (selectedRole) headers['X-Role'] = selectedRole;
+    try {
+      const res = await fetch(`http://localhost:8080/api/pedidos/${pid}/cancelar`, { method: 'POST', headers });
+      if (res.ok) {
+        setCancelConfirmId(null);
+        cargarPedidos();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || t('screens.trabajos.errorCambiarEstado'), 'error');
+      }
+    } catch (e) {
+      showToast(t('screens.trabajos.errorCambiarEstado'), 'error');
+    }
+  };
+
+  const handleReactivarPedido = async (trabajo) => {
+    const primerEstado = estadosDisponibles[0]?.label;
+    if (!primerEstado) return;
+    setReactivarConfirmId(null);
+    await handleCambiarEstado(trabajo, primerEstado);
   };
 
   // Función para cargar pedidos
@@ -1172,12 +1275,15 @@ export default function TrabajoScreen({ currentUser }) {
           </View>
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
+            const esCancelado = estadoTrabajoActual === 'cancelado';
             const esFinalizado = (estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado']).includes(estadoTrabajoActual);
             const currentIdx = estadosDisponibles.findIndex((e) => e.value === estadoTrabajoActual);
             const resolvedIdx = currentIdx === -1 ? 0 : currentIdx;
             const isAtFirst = resolvedIdx === 0;
             const isAtLast = resolvedIdx === estadosDisponibles.length - 1;
-            const showNavBtns = canChangeEstado || (puedeEditarFinalizado && esFinalizado);
+            const showNavBtns = !esCancelado && (canChangeEstado || (puedeEditarFinalizado && esFinalizado));
+            const isConfirmingCancel = cancelConfirmId === (trabajo.pedido_id || trabajo.id || trabajo._id);
+            const isConfirmingReactivar = reactivarConfirmId === (trabajo.pedido_id || trabajo.id || trabajo._id);
 
             return (
               <View key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`} style={[styles.tableRow, (idx + (paginaPedidos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
@@ -1249,6 +1355,26 @@ export default function TrabajoScreen({ currentUser }) {
                         <Text style={styles.navBtnText}>›</Text>
                       </TouchableOpacity>
                     </>
+                  )}
+                  {canCancelar && esCancelado && (
+                    isConfirmingReactivar ? (
+                      <View style={styles.cancelConfirmRow}>
+                        <Text style={styles.cancelConfirmText}>{t('screens.trabajos.reactivarConfirm')}</Text>
+                        <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setReactivarConfirmId(null)}>
+                          <Text style={styles.cancelConfirmNoText}>{t('common.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.reactivarConfirmYes} onPress={() => handleReactivarPedido(trabajo)}>
+                          <Text style={styles.cancelConfirmYesText}>{t('screens.trabajos.reactivarSi')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.reactivarBtn}
+                        onPress={() => setReactivarConfirmId(trabajo.pedido_id || trabajo.id || trabajo._id)}
+                      >
+                        <Text style={styles.reactivarBtnText}>{t('screens.trabajos.reactivarBtn')}</Text>
+                      </TouchableOpacity>
+                    )
                   )}
                 </View>
               </View>
@@ -1346,6 +1472,7 @@ export default function TrabajoScreen({ currentUser }) {
         currentUser={currentUser}
         refreshKey={detalleRefreshKey}
         onEdit={() => { cargarPedidos(); }}
+        onCancelled={() => { cargarPedidos(); }}
       />
 
       <NuevoPedidoModal

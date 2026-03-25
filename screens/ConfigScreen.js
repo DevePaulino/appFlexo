@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSettings } from '../SettingsContext';
 import { useTranslation } from 'react-i18next';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch, Image } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePermission } from './usePermission';
 
+const API_BASE = 'http://localhost:8080';
 const API_URL = 'http://localhost:8080/api/settings';
 const API_MODO_URL = 'http://localhost:8080/api/settings/modo-creacion';
 const API_SESSION_TIMEOUT_URL = 'http://localhost:8080/api/settings/session-timeout';
@@ -27,6 +28,7 @@ const PEDIDO_RULES_EXPANDED_KEY = 'config_pedido_rules_expanded';
 const ROLE_RULES_EXPANDED_KEY = 'config_role_rules_expanded';
 
 const ROLE_PERMISSION_CONFIG = [
+  { key: 'manage_empresa_branding', title: 'Personalización de empresa',               hint: 'Editar nombre visible y logo de la empresa.' },
   { key: 'manage_app_settings',    title: 'Editar configuración de la app',           hint: 'Modificar catálogos y reglas globales.' },
   { key: 'manage_roles_permissions',title: 'Editar roles y permisos',                  hint: 'Cambiar el rol activo y la matriz de permisos.' },
   { key: 'manage_usuarios',         title: 'Gestionar usuarios',                       hint: 'Añadir, editar y eliminar usuarios.' },
@@ -37,6 +39,7 @@ const ROLE_PERMISSION_CONFIG = [
   { key: 'edit_presupuestos',       title: 'Editar presupuestos',                      hint: 'Creación, edición y aprobación de presupuestos.' },
   { key: 'manage_estados_pedido',   title: 'Editar estados de pedidos',                hint: 'Crear, modificar y eliminar estados.' },
   { key: 'editar_estado_finalizado',title: 'Editar pedidos finalizados',               hint: 'Avanzar o retroceder el estado de pedidos finalizados.' },
+  { key: 'cancelar_pedido',         title: 'Cancelar / reactivar pedidos',             hint: 'Cancelar un pedido o reactivarlo desde estado cancelado.' },
   { key: 'edit_modo_creacion',      title: 'Modo de creación',                         hint: 'Alternar entre modo manual y automático.' },
   { key: 'edit_produccion',         title: 'Editar producción',                        hint: 'Enviar, mover, reordenar y cambiar estado.' },
   { key: 'eliminar_archivos',       title: 'Eliminar archivos',                        hint: 'Borrar artes y versiones en el detalle de un pedido.' },
@@ -51,7 +54,7 @@ const PERMISSION_GROUPS = [
     color: '#6D28D9',
     bg: '#F5F3FF',
     border: '#DDD6FE',
-    permissions: ['manage_app_settings', 'manage_roles_permissions', 'manage_usuarios', 'manage_session_timeout', 'manage_billing', 'manage_modulos'],
+    permissions: ['manage_empresa_branding', 'manage_app_settings', 'manage_roles_permissions', 'manage_usuarios', 'manage_session_timeout', 'manage_billing', 'manage_modulos'],
   },
   {
     key: 'pedidos',
@@ -59,7 +62,7 @@ const PERMISSION_GROUPS = [
     color: '#1D4ED8',
     bg: '#EFF6FF',
     border: '#BFDBFE',
-    permissions: ['edit_pedidos', 'edit_presupuestos', 'manage_estados_pedido', 'editar_estado_finalizado', 'edit_modo_creacion'],
+    permissions: ['edit_pedidos', 'edit_presupuestos', 'manage_estados_pedido', 'editar_estado_finalizado', 'cancelar_pedido', 'edit_modo_creacion'],
   },
   {
     key: 'produccion',
@@ -636,8 +639,13 @@ const styles = StyleSheet.create({
   usersTableRowAlt: {
     backgroundColor: '#F1F5F9',
   },
+  usersColAvatar: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   usersColNombre: {
-    flex: 0.30,
+    flex: 0.28,
     paddingRight: 8,
   },
   usersColEmail: {
@@ -940,10 +948,44 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
   );
 }
 
+const AVATAR_PALETTES = [
+  ['#6366F1', '#8B5CF6'],
+  ['#0EA5E9', '#6366F1'],
+  ['#10B981', '#0EA5E9'],
+  ['#F59E0B', '#EF4444'],
+  ['#EC4899', '#8B5CF6'],
+  ['#14B8A6', '#6366F1'],
+];
+function getUserInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+function getUserAvatarColor(name) {
+  if (!name) return AVATAR_PALETTES[0][0];
+  return AVATAR_PALETTES[name.charCodeAt(0) % AVATAR_PALETTES.length][0];
+}
+
+function UserAvatar({ nombre, avatarUrl, size = 30 }) {
+  const url = avatarUrl ? `${API_BASE}${avatarUrl}` : null;
+  const initials = getUserInitials(nombre);
+  const color = getUserAvatarColor(nombre);
+  const circleStyle = { width: size, height: size, borderRadius: size / 2, overflow: 'hidden' };
+  if (url) {
+    return <Image source={{ uri: url }} style={[circleStyle, { backgroundColor: '#E2E8F0' }]} resizeMode="cover" />;
+  }
+  return (
+    <View style={[circleStyle, { backgroundColor: color, alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ color: '#FFF', fontSize: size * 0.38, fontWeight: '700' }}>{initials}</Text>
+    </View>
+  );
+}
+
 export default function ConfigScreen({ route, currentUser }) {
   const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
-  const { settings, estadoRules: ctxEstadoRules, modoCreacion, recargarSettings, setModoCreacion: setModoCreacionCtx } = useSettings();
+  const { settings, setSettings, estadoRules: ctxEstadoRules, modoCreacion, recargarSettings, setModoCreacion: setModoCreacionCtx } = useSettings();
   const [estadoRules, setEstadoRules] = React.useState(ctxEstadoRules);
   React.useEffect(() => { setEstadoRules(ctxEstadoRules); }, [ctxEstadoRules]);
   const [inputs, setInputs] = useState({
@@ -2365,6 +2407,7 @@ export default function ConfigScreen({ route, currentUser }) {
                 <>
                   <View style={styles.usersTableWrap}>
                     <View style={styles.usersTableHeader}>
+                      <View style={styles.usersColAvatar} />
                       <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
                       <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>{t('screens.config.colEmail')}</Text></View>
                       <View style={styles.usersColRol}><Text style={styles.usersHeaderText}>{t('screens.config.colRol')}</Text></View>
@@ -2376,6 +2419,9 @@ export default function ConfigScreen({ route, currentUser }) {
                     <ScrollView>
                       {usuariosPaginados.map((usuario, idx) => (
                         <View key={usuario.id} style={[styles.usersTableRow, (idx + (paginaUsuarios - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.usersTableRowAlt]}>
+                          <View style={styles.usersColAvatar}>
+                            <UserAvatar nombre={usuario.nombre} avatarUrl={usuario.avatar_url} size={30} />
+                          </View>
                           <View style={styles.usersColNombre}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.nombre || '-'}</Text></View>
                           <View style={styles.usersColEmail}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.email || '-'}</Text></View>
                           <View style={styles.usersColRol}><Text style={styles.usersCellText} numberOfLines={1}>{usuario.rol || '-'}</Text></View>

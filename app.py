@@ -279,11 +279,54 @@ ROLE_COLOR_PALETTE = [
 PROTECTED_ESTADOS_PEDIDO_KEYS = {
     'en-diseno',
     'finalizado',
+    'cancelado',
 }
+# Estados que solo se alcanzan por vía dedicada (no con las flechas de avance/retroceso)
+PROTECTED_TRANSITION_ESTADOS = {'cancelado'}
 
 # Ensure minimum users exist at startup (call after helpers are defined)
 try:
     ensure_default_users()
+except Exception:
+    pass
+
+
+def ensure_role_permission_defaults():
+    """Garantiza que los permisos nuevos con valor por defecto True para 'administrador'
+    estén presentes en todos los documentos role_permissions de la BD.
+    Evita que una BD guardada antes de añadir un permiso lo deje en False."""
+    NEW_ADMIN_PERMISSIONS = {
+        'cancelar_pedido': True,
+    }
+    try:
+        col = get_empresa_collection('config_general', None)
+        docs = list(col.find({'clave': 'role_permissions'}))
+        for doc in docs:
+            try:
+                perms = json.loads(doc.get('valor') or '{}')
+                if not isinstance(perms, dict):
+                    continue
+                admin_perms = perms.get('administrador')
+                if not isinstance(admin_perms, dict):
+                    continue
+                changed = False
+                for perm_key, default_val in NEW_ADMIN_PERMISSIONS.items():
+                    if perm_key not in admin_perms:
+                        admin_perms[perm_key] = default_val
+                        changed = True
+                if changed:
+                    col.update_one(
+                        {'_id': doc['_id']},
+                        {'$set': {'valor': json.dumps(perms)}}
+                    )
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+try:
+    ensure_role_permission_defaults()
 except Exception:
     pass
 PERMISSION_KEYS = [
@@ -293,6 +336,7 @@ PERMISSION_KEYS = [
     'manage_session_timeout',
     'manage_estados_pedido',
     'editar_estado_finalizado',
+    'cancelar_pedido',
     'edit_clientes',
     'edit_maquinas',
     'edit_pedidos',
@@ -312,6 +356,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': False,
@@ -330,6 +375,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': True,
         'manage_estados_pedido': True,
         'editar_estado_finalizado': True,
+        'cancelar_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
@@ -348,6 +394,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': True,
         'manage_estados_pedido': True,
         'editar_estado_finalizado': True,
+        'cancelar_pedido': True,
         'edit_clientes': True,
         'edit_maquinas': True,
         'edit_pedidos': True,
@@ -367,6 +414,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': True,
         'edit_maquinas': False,
         'edit_pedidos': True,
@@ -385,6 +433,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': True,
@@ -403,6 +452,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': True,
         'edit_pedidos': False,
@@ -421,6 +471,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': False,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': False,
         'edit_maquinas': False,
         'edit_pedidos': False,
@@ -439,6 +490,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'manage_session_timeout': False,
         'manage_estados_pedido': True,
         'editar_estado_finalizado': False,
+        'cancelar_pedido': False,
         'edit_clientes': True,
         'edit_maquinas': False,
         'edit_pedidos': True,
@@ -4836,8 +4888,9 @@ def registrar_consumo_auto():
         estados_disponibles = get_estados_pedido_disponibles(empresa_id)
         estado_actual_label = str(pedido.get('estado') or '')
         estado_actual_slug  = slugify_estado(estado_actual_label)
-        slugs_ordenados = [slugify_estado(e['valor']) for e in estados_disponibles]
-        labels_ordenados = [e['valor'] for e in estados_disponibles]
+        _estados_flow = [e for e in estados_disponibles if slugify_estado(e['valor']) not in PROTECTED_TRANSITION_ESTADOS]
+        slugs_ordenados = [slugify_estado(e['valor']) for e in _estados_flow]
+        labels_ordenados = [e['valor'] for e in _estados_flow]
         siguiente_estado_label = None
         try:
             idx = slugs_ordenados.index(estado_actual_slug)
@@ -4878,10 +4931,21 @@ def registrar_consumo_auto():
                 update_pedido['fecha_finalizacion'] = now
             else:
                 update_pedido['fecha_finalizacion'] = None
+        # Resolver nombre de máquina desde trabajo_orden
+        _maquina_nombre = pedido.get('maquina')
+        try:
+            _to = get_empresa_collection('trabajo_orden', empresa_id).find_one({'trabajo_id': pedido_id})
+            if _to and _to.get('maquina_id'):
+                _maq = get_empresa_collection('maquinas', empresa_id).find_one({'_id': ObjectId(_to['maquina_id'])})
+                if _maq:
+                    _maquina_nombre = _maq.get('nombre', _maquina_nombre)
+        except Exception:
+            pass
         historial_entry = {
             'fecha': now,
             'usuario': request_user.get('nombre') or request_user.get('email', 'Sistema'),
             'tipo': 'sin_material' if sin_material else 'con_consumo',
+            'maquina': _maquina_nombre,
         }
         if update_pedido.get('datos_impresion'):
             historial_entry['datos_impresion'] = update_pedido['datos_impresion']
@@ -6122,6 +6186,13 @@ def update_pedido(pedido_id):
             estados_finales = set(reglas.get('estados_finalizados', []))
             estado_actual = slugify_estado(str(pedido_actual.get('estado') or ''))
 
+            # Bloquear transiciones hacia/desde 'cancelado' por esta vía
+            if nuevo_estado in PROTECTED_TRANSITION_ESTADOS:
+                return jsonify({'error': 'Usa el botón de cancelación para cancelar un pedido'}), 400
+            if estado_actual in PROTECTED_TRANSITION_ESTADOS:
+                if not can_role_permission(request_user.get('rol'), 'cancelar_pedido', empresa_id=empresa_id):
+                    return jsonify({'error': 'No autorizado para reactivar un pedido cancelado'}), 403
+
             # Check permission to edit finalized states
             if estado_actual in estados_finales and estado_actual != nuevo_estado:
                 request_role = str(request_user.get('rol') or '').strip().lower()
@@ -7301,8 +7372,9 @@ def marcar_pedido_impreso(pedido_id):
         # Avanzar al siguiente estado, igual que el flujo con consumo
         estados_disponibles = get_estados_pedido_disponibles(empresa_id)
         estado_actual_slug = slugify_estado(str(pedido.get('estado') or ''))
-        slugs_ordenados = [slugify_estado(e['valor']) for e in estados_disponibles]
-        labels_ordenados = [e['valor'] for e in estados_disponibles]
+        _estados_flow = [e for e in estados_disponibles if slugify_estado(e['valor']) not in PROTECTED_TRANSITION_ESTADOS]
+        slugs_ordenados = [slugify_estado(e['valor']) for e in _estados_flow]
+        labels_ordenados = [e['valor'] for e in _estados_flow]
         siguiente_estado_label = None
         try:
             idx = slugs_ordenados.index(estado_actual_slug)
@@ -7319,16 +7391,67 @@ def marcar_pedido_impreso(pedido_id):
                 update_fields['fecha_finalizacion'] = now
             else:
                 update_fields['fecha_finalizacion'] = None
+        _maquina_nombre = pedido.get('maquina')
+        try:
+            _to = get_empresa_collection('trabajo_orden', empresa_id).find_one({'trabajo_id': pedido_id})
+            if _to and _to.get('maquina_id'):
+                _maq = get_empresa_collection('maquinas', empresa_id).find_one({'_id': ObjectId(_to['maquina_id'])})
+                if _maq:
+                    _maquina_nombre = _maq.get('nombre', _maquina_nombre)
+        except Exception:
+            pass
         historial_entry = {
             'fecha': now,
             'usuario': request_user.get('nombre') or request_user.get('email', 'Sistema'),
             'tipo': 'sin_consumo',
+            'maquina': _maquina_nombre,
         }
         col.update_one(
             {'_id': oid, 'empresa_id': empresa_id},
             {'$set': update_fields, '$push': {'historial_impresiones': historial_entry}}
         )
         return jsonify({'success': True, 'pedido_id': pedido_id, 'nuevo_estado': siguiente_estado_label}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/cancelar', methods=['POST', 'OPTIONS'])
+def cancelar_pedido_endpoint(pedido_id):
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'cancelar_pedido', empresa_id=normalize_empresa_id(request_user.get('empresa_id'))):
+            return jsonify({'error': 'No autorizado para cancelar pedidos'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+        pedido = col.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+        if slugify_estado(str(pedido.get('estado') or '')) == 'cancelado':
+            return jsonify({'error': 'El pedido ya está cancelado'}), 409
+        # Buscar el label del estado 'cancelado' en la configuración de la empresa
+        available_items = get_estados_pedido_disponibles(empresa_id)
+        cancelado_label = next(
+            (item['valor'] for item in available_items if slugify_estado(item['valor']) == 'cancelado'),
+            'Cancelado'
+        )
+        now = datetime.now().isoformat()
+        col.update_one(
+            {'_id': oid, 'empresa_id': empresa_id},
+            {'$set': {
+                'estado': cancelado_label,
+                'fecha_cancelacion': now,
+                'en_produccion': False,
+            }}
+        )
+        return jsonify({'success': True, 'nuevo_estado': cancelado_label}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -86,7 +86,7 @@ export function SettingsProvider({ children, authUser }) {
   }, []);
 
   return (
-    <SettingsContext.Provider value={{ settings, estadoRules, modoCreacion, recargarSettings, setModoCreacion }}>
+    <SettingsContext.Provider value={{ settings, setSettings, estadoRules, modoCreacion, recargarSettings, setModoCreacion }}>
       {children}
     </SettingsContext.Provider>
   );

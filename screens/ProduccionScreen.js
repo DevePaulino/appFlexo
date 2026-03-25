@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Animated, Easing, View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+import { Animated, Easing, Platform, View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+const useNativeDriverTransform = Platform.OS !== 'web';
 import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
@@ -594,12 +595,12 @@ function WorkloadBar({ carga, maxCarga, activa, dimmed, onPress }) {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(scaleAnim, { toValue: 1.8, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.timing(opacAnim, { toValue: 0, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1.8, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: useNativeDriverTransform }),
+          Animated.timing(opacAnim, { toValue: 0, duration: period / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: useNativeDriverTransform }),
         ]),
         Animated.parallel([
-          Animated.timing(scaleAnim, { toValue: 1, duration: 0, useNativeDriver: true }),
-          Animated.timing(opacAnim, { toValue: 0.6, duration: 0, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 0, useNativeDriver: useNativeDriverTransform }),
+          Animated.timing(opacAnim, { toValue: 0.6, duration: 0, useNativeDriver: useNativeDriverTransform }),
         ]),
       ])
     );

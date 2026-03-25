@@ -361,7 +361,13 @@
       "omitir": "Ignorer",
       "seleccionaMaterial": "Sélectionnez le matériau :",
       "metrosConsumir": "Mètres à consommer :",
-      "registrarContinuar": "Enregistrer et continuer"
+      "registrarContinuar": "Enregistrer et continuer",
+      "cancelarBtn": "Annuler",
+      "cancelarConfirm": "Annuler la commande ?",
+      "cancelarSi": "Oui, annuler",
+      "reactivarBtn": "Réactiver",
+      "reactivarConfirm": "Réactiver la commande ?",
+      "reactivarSi": "Oui, réactiver"
     },
     "produccion": {
       "cargaPorMaquina": "Charge de travail par machine ({{count}} travaux assignés)",
@@ -800,7 +806,16 @@
       "comparadorPlaceholderCliente": "Client",
       "comparadorPlaceholderReferencia": "Référence",
       "eskoGenerarBtn": "Générer",
-      "eskoSubirBtn": "Téléverser"
+      "eskoSubirBtn": "Téléverser",
+      "historialImpresionesTitle": "Historique des impressions",
+      "historialTipoConConsumo": "Avec consommation",
+      "historialTipoSinMaterial": "Sans matériau",
+      "historialTipoSinConsumo": "Sans consommation",
+      "btnCancelarPedido": "Annuler la commande",
+      "confirmCancelarPedido": "Annuler cette commande ?",
+      "errNoPudoCancelar": "Impossible d'annuler la commande",
+      "btnCancelarPedidoSi": "Oui, annuler",
+      "pedidoCanceladoBanner": "COMMANDE ANNULÉE"
     }
   },
   "legal": {

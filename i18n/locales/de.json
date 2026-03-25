@@ -361,7 +361,13 @@
       "omitir": "Überspringen",
       "seleccionaMaterial": "Material auswählen:",
       "metrosConsumir": "Zu verbrauchende Meter:",
-      "registrarContinuar": "Registrieren und weiter"
+      "registrarContinuar": "Registrieren und weiter",
+      "cancelarBtn": "Stornieren",
+      "cancelarConfirm": "Auftrag stornieren?",
+      "cancelarSi": "Ja, stornieren",
+      "reactivarBtn": "Reaktivieren",
+      "reactivarConfirm": "Auftrag reaktivieren?",
+      "reactivarSi": "Ja, reaktivieren"
     },
     "produccion": {
       "cargaPorMaquina": "Arbeitsauslastung nach Maschine ({{count}} zugewiesene Aufträge)",
@@ -800,7 +806,16 @@
       "comparadorPlaceholderCliente": "Kunde",
       "comparadorPlaceholderReferencia": "Referenz",
       "eskoGenerarBtn": "Generieren",
-      "eskoSubirBtn": "Hochladen"
+      "eskoSubirBtn": "Hochladen",
+      "historialImpresionesTitle": "Druckverlauf",
+      "historialTipoConConsumo": "Mit Verbrauch",
+      "historialTipoSinMaterial": "Kein Material",
+      "historialTipoSinConsumo": "Ohne Verbrauch",
+      "btnCancelarPedido": "Auftrag stornieren",
+      "confirmCancelarPedido": "Diesen Auftrag stornieren?",
+      "errNoPudoCancelar": "Auftrag konnte nicht storniert werden",
+      "btnCancelarPedidoSi": "Ja, stornieren",
+      "pedidoCanceladoBanner": "AUFTRAG STORNIERT"
     }
   },
   "legal": {

@@ -1231,15 +1231,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
     marginVertical: 14,
   },
+  // ── Banner cancelado ──────────────────────────────────────────────
+  canceladoBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  canceladoBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B91C1C',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   // ── Barra de acciones inferior ────────────────────────────────────
   bottomBar: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     marginTop: 4,
+    minHeight: 52,
+  },
+  bottomDestructiveBtns: {
+    position: 'absolute',
+    left: 0,
+    top: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 1,
   },
   bottomMainBtns: {
     flex: 1,
@@ -1280,17 +1308,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bottomDeleteBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#DC2626',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bottomDeleteBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '500',
+    opacity: 0.75,
+  },
+  bottomCancelarPedidoBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomCancelarPedidoBtnText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '400',
+    opacity: 0.8,
   },
   // ── Display de tintas 2 columnas ──────────────────────────────────
   inkSection: {
@@ -1344,10 +1385,11 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit, currentUser = null, refreshKey = 0 }) {
+export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDeleted, onEdit, onCancelled, currentUser = null, refreshKey = 0 }) {
   const { t } = useTranslation();
-  const canDelete = usePermission('eliminar_archivos');
-  const canEdit   = usePermission('edit_pedidos');
+  const canDelete   = usePermission('eliminar_archivos');
+  const canEdit     = usePermission('edit_pedidos');
+  const canCancelar = usePermission('cancelar_pedido');
   const { estadoRules } = useSettings();
   const slugifyEstado = (texto) => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const [editVisible, setEditVisible]           = useState(false);
@@ -1355,6 +1397,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [pedido, setPedido] = useState(null);
   const finalizadoSlugs = estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado'];
   const esFinalizado = pedido ? finalizadoSlugs.includes(slugifyEstado(pedido.estado)) : false;
+  const esCancelado  = pedido ? slugifyEstado(pedido.estado) === 'cancelado' : false;
   const [activeRole, setActiveRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1374,6 +1417,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
   const [confirmingDeleteArchivo, setConfirmingDeleteArchivo] = useState(null);
   const [confirmingDeletePedido, setConfirmingDeletePedido] = useState(false);
+  const [confirmingCancelarPedido, setConfirmingCancelarPedido] = useState(false);
   const [approvingArchivoId, setApprovingArchivoId] = useState(null);
   const [confirmingRevocarId, setConfirmingRevocarId] = useState(null);
   const fileInputArtesRef      = useRef(null);
@@ -1800,6 +1844,18 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     finally { setApprovingArchivoId(null); }
   };
 
+  const ejecutarCancelarPedido = async () => {
+    if (!pedido?.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/pedidos/${pedido.id}/cancelar`, { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { Alert.alert(t('common.error'), data.error || t('screens.pedidoDetalle.errNoPudoCancelar')); return; }
+      setConfirmingCancelarPedido(false);
+      cargarPedido();
+      if (typeof onCancelled === 'function') onCancelled();
+    } catch (_) {}
+  };
+
   const ejecutarEliminarPedido = async () => {
     if (!pedido?.id) return;
     try {
@@ -1915,6 +1971,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
+
+          {/* ── Banner pedido cancelado ── */}
+          {esCancelado && (
+            <View style={styles.canceladoBanner}>
+              <Text style={styles.canceladoBannerText}>🚫 {t('screens.pedidoDetalle.pedidoCanceladoBanner')}</Text>
+            </View>
+          )}
 
           {/* ── Pestañas ── */}
           <View style={styles.tabBar}>
@@ -2051,6 +2114,45 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         </View>
                       );
                     })()}
+
+                    {/* ── Historial de impresiones ── */}
+                    {Array.isArray(pedido.historial_impresiones) && pedido.historial_impresiones.length > 0 && (
+                      <View style={[styles.sectionCard, { marginTop: 4 }]}>
+                        <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.historialImpresionesTitle')}</Text>
+                        {[...pedido.historial_impresiones].reverse().map((entry, i) => (
+                          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, borderBottomWidth: i < pedido.historial_impresiones.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9', gap: 10 }}>
+                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Text style={{ fontSize: 13 }}>🖨</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E293B' }}>
+                                  {entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                </Text>
+                                {entry.maquina ? (
+                                  <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: '#E0F2FE' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1' }}>{entry.maquina}</Text>
+                                  </View>
+                                ) : null}
+                                <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: entry.tipo === 'con_consumo' ? '#DCFCE7' : '#F1F5F9' }}>
+                                  <Text style={{ fontSize: 9, fontWeight: '700', color: entry.tipo === 'con_consumo' ? '#16A34A' : '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                                    {entry.tipo === 'con_consumo' ? t('screens.pedidoDetalle.historialTipoConConsumo') : entry.tipo === 'sin_material' ? t('screens.pedidoDetalle.historialTipoSinMaterial') : t('screens.pedidoDetalle.historialTipoSinConsumo')}
+                                  </Text>
+                                </View>
+                              </View>
+                              {entry.usuario ? <Text style={{ fontSize: 10, color: '#94A3B8' }}>{entry.usuario}</Text> : null}
+                              {entry.datos_impresion && !entry.datos_impresion.sin_material && entry.datos_impresion.metros_consumidos != null ? (
+                                <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                                  {entry.datos_impresion.material_nombre || '—'} · {entry.datos_impresion.metros_consumidos} m
+                                  {entry.datos_impresion.aprovechamiento_pct != null ? ` · ${entry.datos_impresion.aprovechamiento_pct}% ${t('screens.pedidoDetalle.labelAprovechamiento').toLowerCase()}` : ''}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', marginTop: 6 }}>#{pedido.historial_impresiones.length - i}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </>
                 );
               })()}
@@ -2142,7 +2244,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                 {/* ── Unitario + Comparador ── */}
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
-                <View style={[styles.sectionCard, { flex: 2 }]}>
+                <View style={[styles.sectionCard, { flex: 1 }]}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
                     {uploadingUnitario
@@ -2621,25 +2723,40 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           {/* ── Barra de acciones inferior ── */}
           {pedido && (
             <View style={styles.bottomBar}>
-              {canDelete && !esFinalizado && (
-                !confirmingDeletePedido ? (
-                  <TouchableOpacity style={styles.bottomDeleteBtn} onPress={() => setConfirmingDeletePedido(true)}>
-                    <Text style={styles.bottomDeleteBtnText}>{t('screens.pedidoDetalle.btnEliminar')}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <DeleteConfirmRow
-                    size="md"
-                    message={t('screens.pedidoDetalle.confirmEliminarPedido')}
-                    onCancel={() => setConfirmingDeletePedido(false)}
-                    onConfirm={() => { setConfirmingDeletePedido(false); ejecutarEliminarPedido(); }}
-                  />
-                )
-              )}
+              <View style={styles.bottomDestructiveBtns}>
+                {canDelete && !esFinalizado && !esCancelado && (
+                  !confirmingDeletePedido ? (
+                    <TouchableOpacity style={styles.bottomDeleteBtn} onPress={() => setConfirmingDeletePedido(true)}>
+                      <Text style={styles.bottomDeleteBtnText}>{t('screens.pedidoDetalle.btnEliminar')}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <DeleteConfirmRow
+                      size="md"
+                      message={t('screens.pedidoDetalle.confirmEliminarPedido')}
+                      onCancel={() => setConfirmingDeletePedido(false)}
+                      onConfirm={() => { setConfirmingDeletePedido(false); ejecutarEliminarPedido(); }}
+                    />
+                  )
+                )}
+                {canCancelar && !esFinalizado && !esCancelado && (
+                  !confirmingCancelarPedido ? (
+                    <TouchableOpacity style={styles.bottomCancelarPedidoBtn} onPress={() => setConfirmingCancelarPedido(true)}>
+                      <Text style={styles.bottomCancelarPedidoBtnText}>{t('screens.pedidoDetalle.btnCancelarPedido')}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <DeleteConfirmRow
+                      size="md"
+                      message={t('screens.pedidoDetalle.confirmCancelarPedido')}
+                      cancelLabel={t('common.no')}
+                      confirmLabel={t('screens.pedidoDetalle.btnCancelarPedidoSi')}
+                      onCancel={() => setConfirmingCancelarPedido(false)}
+                      onConfirm={ejecutarCancelarPedido}
+                    />
+                  )
+                )}
+              </View>
               <View style={styles.bottomMainBtns}>
-                <TouchableOpacity style={styles.bottomCancelBtn} onPress={onClose}>
-                  <Text style={styles.bottomCancelBtnText}>{t('screens.pedidoDetalle.btnCancelar')}</Text>
-                </TouchableOpacity>
-                {!esFinalizado && <TouchableOpacity
+                {!esFinalizado && !esCancelado && <TouchableOpacity
                   style={styles.bottomEditBtn}
                   onPress={async () => {
                     if (!pedido) return;
