@@ -7965,6 +7965,57 @@ def _gs_render_seps(pdf_path, page_num, dpi=108, include_b64=False):
     return (seps, seps_b64) if include_b64 else seps
 
 
+def _get_page_boxes(pdf_doc, page_idx):
+    """Returns MediaBox, TrimBox, BleedBox, CropBox, UserUnit and distortion for a PDF page."""
+    PT_TO_MM = 25.4 / 72
+    page = pdf_doc[page_idx]
+    boxes = {}
+    r = page.rect  # always available; equivalent to MediaBox
+    boxes['media'] = {
+        'width_mm':  round(float(r.width)  * PT_TO_MM, 2),
+        'height_mm': round(float(r.height) * PT_TO_MM, 2),
+        'width_pt':  round(float(r.width), 2),
+        'height_pt': round(float(r.height), 2),
+    }
+    try:
+        xref = page.xref
+        for key, name in [('TrimBox', 'trim'), ('BleedBox', 'bleed'), ('CropBox', 'crop')]:
+            val = pdf_doc.xref_get_key(xref, key)
+            if val and val[0] == 'array':
+                nums = [float(v) for v in val[1].strip('[]').split()]
+                if len(nums) == 4:
+                    w_pt = nums[2] - nums[0]
+                    h_pt = nums[3] - nums[1]
+                    boxes[name] = {
+                        'width_mm':  round(w_pt * PT_TO_MM, 2),
+                        'height_mm': round(h_pt * PT_TO_MM, 2),
+                        'width_pt':  round(w_pt, 2),
+                        'height_pt': round(h_pt, 2),
+                    }
+    except Exception:
+        pass
+    # UserUnit: PDF 1.6+ page-level scale (1 unit = UserUnit/72 inch, default 1.0)
+    try:
+        xref = page.xref
+        uu_val = pdf_doc.xref_get_key(xref, 'UserUnit')
+        if uu_val and uu_val[0] in ('int', 'real'):
+            uu = float(uu_val[1])
+            if abs(uu - 1.0) > 0.0001:
+                boxes['user_unit'] = round(uu, 4)
+    except Exception:
+        pass
+    # Distortion: ratio MediaBox / TrimBox per axis (common in flexo/gravure print files)
+    if 'media' in boxes and 'trim' in boxes:
+        try:
+            sx = boxes['media']['width_pt'] / boxes['trim']['width_pt']
+            sy = boxes['media']['height_pt'] / boxes['trim']['height_pt']
+            if abs(sx - 1.0) > 0.0005 or abs(sy - 1.0) > 0.0005:
+                boxes['distortion'] = {'x': round(sx, 4), 'y': round(sy, 4)}
+        except Exception:
+            pass
+    return boxes
+
+
 @app.route('/api/archivos/comparar-pdf', methods=['POST'])
 def comparar_pdf():
     """
@@ -8003,10 +8054,22 @@ def comparar_pdf():
         pdf_b = fitz.open(path_b)
         pages_count = min(len(pdf_a), len(pdf_b), 10)  # máximo 10 páginas
 
-        matrix = fitz.Matrix(1.5, 1.5)  # ~108 DPI, balance calidad/velocidad
+        req_scale = float(body.get('scale', 7.0))
+        req_scale = max(1.0, min(8.0, req_scale))
+        matrix = fitz.Matrix(req_scale, req_scale)  # 7.0 = ~504 DPI
         results = []
 
         for i in range(pages_count):
+            page_a_boxes = _get_page_boxes(pdf_a, i)
+            page_b_boxes = _get_page_boxes(pdf_b, i)
+            page_a_dims = {
+                'width_pt':  round(float(pdf_a[i].rect.width), 2),
+                'height_pt': round(float(pdf_a[i].rect.height), 2),
+            }
+            page_b_dims = {
+                'width_pt':  round(float(pdf_b[i].rect.width), 2),
+                'height_pt': round(float(pdf_b[i].rect.height), 2),
+            }
             pix_a = pdf_a[i].get_pixmap(matrix=matrix, colorspace=fitz.csRGB)
             pix_b = pdf_b[i].get_pixmap(matrix=matrix, colorspace=fitz.csRGB)
 
@@ -8032,15 +8095,15 @@ def comparar_pdf():
             composite[has_diff] = [230, 30, 30]  # rojo para cambios
 
             buf_diff = io.BytesIO()
-            Image.fromarray(composite.astype(np.uint8)).save(buf_diff, format='JPEG', quality=80)
+            Image.fromarray(composite.astype(np.uint8)).save(buf_diff, format='JPEG', quality=85)
             b64_diff = base64.b64encode(buf_diff.getvalue()).decode('utf-8')
 
             buf_a = io.BytesIO()
-            img_a.save(buf_a, format='JPEG', quality=82)
+            img_a.save(buf_a, format='JPEG', quality=95)
             b64_a = base64.b64encode(buf_a.getvalue()).decode('utf-8')
 
             buf_b = io.BytesIO()
-            img_b.save(buf_b, format='JPEG', quality=82)
+            img_b.save(buf_b, format='JPEG', quality=95)
             b64_b = base64.b64encode(buf_b.getvalue()).decode('utf-8')
 
             # ── Comparación por separación individual (GhostScript) ─────────
@@ -8091,6 +8154,10 @@ def comparar_pdf():
                 'sep_diffs': sep_diffs,
                 'channels_a': channels_a,
                 'channels_b': channels_b,
+                'page_a_dims': page_a_dims,
+                'page_b_dims': page_b_dims,
+                'page_a_boxes': page_a_boxes,
+                'page_b_boxes': page_b_boxes,
             })
 
         pdf_a.close()

@@ -1067,6 +1067,65 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 
+  // Tool button active state
+  cmpToolBtnActive: {
+    backgroundColor: '#1E1B4B',
+    borderColor: '#FACC15',
+    borderWidth: 1.5,
+  },
+
+  // Page boxes info bar
+  cmpPageBoxBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  cmpPageBoxItem: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  cmpPageBoxLabel: {
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  cmpRulerResult: {
+    fontSize: 12,
+    color: '#FACC15',
+    fontWeight: '700',
+    marginLeft: 'auto',
+  },
+
+  // Eyedropper tooltip
+  cmpEyedropTooltip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    minWidth: 180,
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  cmpEyedropCMYK: {
+    fontSize: 12,
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cmpEyedropTAC: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
   // ── Contenedores Esko ───────────────────────────────────────────────────
   eskoActionsRow: {
     flexDirection: 'row',
@@ -1448,10 +1507,22 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const cmpPanRef = useRef({ x: 0, y: 0 });
   const cmpPanStartRef = useRef({ x: 0, y: 0 });
   const cmpZoomRef = useRef(1.0);
+  const cmpImgRef = useRef(null); // native <img> ref for sampling on web
+  const [cmpTool, setCmpTool] = useState(null); // null | 'eyedropper' | 'ruler'
+  const cmpToolRef = useRef(null); // mirrors cmpTool for use inside memo/callbacks
+  const [cmpEyedropResult, setCmpEyedropResult] = useState(null);
+  const [cmpEyedropRadius, setCmpEyedropRadius] = useState(1); // sample area radius in px
+  const cmpEyedropDragging = useRef(false);
+  const cmpRulerDragging = useRef(null); // null | 0 | 1 — index of point being dragged
+  const [cmpRulerPoints, setCmpRulerPoints] = useState([]);
+  const [cmpRulerDist, setCmpRulerDist] = useState(null);
+
+  // Keep ref in sync so pan responder (created once via useMemo) can read current tool
+  useEffect(() => { cmpToolRef.current = cmpTool; }, [cmpTool]);
 
   const cmpPanResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => cmpZoomRef.current > 1,
-    onMoveShouldSetPanResponder: () => cmpZoomRef.current > 1,
+    onStartShouldSetPanResponder: () => cmpZoomRef.current > 1 && cmpToolRef.current !== 'eyedropper' && cmpToolRef.current !== 'ruler',
+    onMoveShouldSetPanResponder: () => cmpZoomRef.current > 1 && cmpToolRef.current !== 'eyedropper' && cmpToolRef.current !== 'ruler',
     onPanResponderGrant: () => {
       cmpPanStartRef.current = { ...cmpPanRef.current };
     },
@@ -1521,17 +1592,20 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const h = valid[0].img.naturalHeight;
       canvas.width = w;
       canvas.height = h;
+      canvas.style.width = '';
+      canvas.style.height = '';
+      const W = w, H = h;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, W, H);
       const off = document.createElement('canvas');
-      off.width = w; off.height = h;
+      off.width = W; off.height = H;
       const octx = off.getContext('2d', { willReadFrequently: true });
       for (const { name, img } of valid) {
         if (id !== cmpCompositeIdRef.current) return;
-        octx.clearRect(0, 0, w, h);
-        octx.drawImage(img, 0, 0);
-        const data = octx.getImageData(0, 0, w, h);
+        octx.clearRect(0, 0, W, H);
+        octx.drawImage(img, 0, 0, W, H);
+        const data = octx.getImageData(0, 0, W, H);
         const d = data.data;
         const hex = (colorMap[name] || '#1A1A1A').replace('#', '');
         const cr = parseInt(hex.slice(0, 2), 16) || 0;
@@ -1674,7 +1748,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     setComparadorSearchNombre('');
   };
 
-  const runComparison = async () => {
+  const runComparison = async (scale = 7.0) => {
     if (!comparadorSrcArchivoId || !comparadorTargetArchivoId) return;
     if (comparadorSrcArchivoId === comparadorTargetArchivoId) return;
     setComparadorRunning(true);
@@ -1683,7 +1757,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const res = await fetch(`${API_BASE}/api/archivos/comparar-pdf`, {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ archivo_id_a: comparadorSrcArchivoId, archivo_id_b: comparadorTargetArchivoId }),
+        body: JSON.stringify({ archivo_id_a: comparadorSrcArchivoId, archivo_id_b: comparadorTargetArchivoId, scale }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -1698,6 +1772,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     } catch (_) {}
     setComparadorRunning(false);
   };
+
 
   const cargarArchivos = async () => {
     if (!pedidoId) return;
@@ -2601,7 +2676,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                       <TouchableOpacity
                         style={[styles.cmpRunBtn, { marginTop: 12 }, (!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning) && styles.cmpRunBtnDisabled]}
-                        onPress={runComparison}
+                        onPress={() => runComparison()}
                         disabled={!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning}
                       >
                         {comparadorRunning
@@ -2799,7 +2874,249 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           setComparadorActiveSeps(null);
           cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
           cmpPanRef.current = { x: 0, y: 0 }; setComparadorPan({ x: 0, y: 0 });
+          setCmpTool(null); setCmpEyedropResult(null);
+          setCmpRulerPoints([]); setCmpRulerDist(null);
+          cmpRulerDragging.current = null;
         };
+
+        // ── Helpers: coordinate extraction ───────────────────────────────
+        const getCmpCoords = (e, containerEl) => {
+          const containerRect = (containerEl || e.currentTarget).getBoundingClientRect();
+          const svgPctX = (e.clientX - containerRect.left) / containerRect.width;
+          const svgPctY = (e.clientY - containerRect.top) / containerRect.height;
+          const activeEl = showCanvas ? cmpCanvasRef.current : cmpImgRef.current;
+          if (!activeEl) return null;
+          const imgRect = activeEl.getBoundingClientRect();
+          // For <img objectFit:contain>, getBoundingClientRect gives the CSS box (includes
+          // letterbox bars). We need coords relative to the actual image content area.
+          let cLeft, cTop, cW, cH;
+          if (!showCanvas && activeEl.naturalWidth && activeEl.naturalHeight) {
+            const natAR = activeEl.naturalWidth / activeEl.naturalHeight;
+            const boxAR = imgRect.width / imgRect.height;
+            if (natAR > boxAR) {
+              // landscape: fills full width, letterbox top/bottom
+              cW = imgRect.width;
+              cH = imgRect.width / natAR;
+              cLeft = imgRect.left;
+              cTop  = imgRect.top + (imgRect.height - cH) / 2;
+            } else {
+              // portrait: fills full height, letterbox left/right
+              cH = imgRect.height;
+              cW = imgRect.height * natAR;
+              cLeft = imgRect.left + (imgRect.width - cW) / 2;
+              cTop  = imgRect.top;
+            }
+          } else {
+            cLeft = imgRect.left; cTop = imgRect.top;
+            cW = imgRect.width;   cH = imgRect.height;
+          }
+          const imgPctX = Math.max(0, Math.min(1, (e.clientX - cLeft) / cW));
+          const imgPctY = Math.max(0, Math.min(1, (e.clientY - cTop)  / cH));
+          return { svgPctX, svgPctY, imgPctX, imgPctY };
+        };
+
+        // ── Eyedropper sample (radius-averaged) ──────────────────────────
+        const sampleEyedrop = async (e, containerEl) => {
+          const coords = getCmpCoords(e, containerEl);
+          if (!coords) return;
+          const { imgPctX, imgPctY } = coords;
+          const rad = cmpEyedropRadius;
+
+          // Average pixels in (2r+1)² area on each channel
+          const sampleGrayAvg = (tc, iw, ih, fx, fy) => {
+            const cx = Math.round(fx * iw);
+            const cy = Math.round(fy * ih);
+            const x0 = Math.max(0, cx - rad);
+            const y0 = Math.max(0, cy - rad);
+            const w = Math.min(iw, cx + rad + 1) - x0;
+            const h = Math.min(ih, cy + rad + 1) - y0;
+            if (w <= 0 || h <= 0) return 128;
+            const data = tc.getImageData(x0, y0, w, h).data;
+            let sum = 0;
+            for (let i = 0; i < data.length; i += 4) sum += data[i];
+            return sum / (data.length / 4);
+          };
+
+          const channelsObj = comparadorViewMode === 'a' ? page.channels_a
+            : comparadorViewMode === 'b' ? page.channels_b : null;
+
+          if (channelsObj && Object.keys(channelsObj).length > 0) {
+            const seps = page.sep_diffs || [];
+            const results = await Promise.all(
+              Object.entries(channelsObj).map(([name, b64]) =>
+                new Promise((resolve) => {
+                  const img = new window.Image();
+                  img.onload = () => {
+                    try {
+                      const tmp = document.createElement('canvas');
+                      tmp.width = img.naturalWidth; tmp.height = img.naturalHeight;
+                      const tc = tmp.getContext('2d');
+                      tc.drawImage(img, 0, 0);
+                      const avg = sampleGrayAvg(tc, img.naturalWidth, img.naturalHeight, imgPctX, imgPctY);
+                      const inkPct = Math.round((255 - avg) / 255 * 100);
+                      const sepInfo = seps.find((s) => s.nombre === name);
+                      resolve({ name, inkPct, color: sepInfo?.color || '#94A3B8' });
+                    } catch (_) { resolve({ name, inkPct: 0, color: '#94A3B8' }); }
+                  };
+                  img.onerror = () => resolve({ name, inkPct: 0, color: '#94A3B8' });
+                  img.src = `data:image/jpeg;base64,${b64}`;
+                })
+              )
+            );
+            // Maintain insertion order (from Object.entries / sep_diffs) — no re-sort
+            const sorted = results.filter(Boolean);
+            const totalInk = sorted.reduce((s, r) => s + r.inkPct, 0);
+            const sampleDiam = rad * 2 + 1;
+            setCmpEyedropResult({ screenX: e.clientX, screenY: e.clientY, separations: sorted, totalInk, samplePx: sampleDiam * sampleDiam });
+          } else {
+            // Fallback: sample composite → RGB→CMYK
+            let r = 255, g = 255, b = 255;
+            try {
+              const sampleRGBAvg = (tc, w, h) => {
+                const cx = Math.round(imgPctX * w);
+                const cy = Math.round(imgPctY * h);
+                const x0 = Math.max(0, cx - rad); const y0 = Math.max(0, cy - rad);
+                const sw = Math.min(w, cx + rad + 1) - x0; const sh = Math.min(h, cy + rad + 1) - y0;
+                if (sw <= 0 || sh <= 0) return [255, 255, 255];
+                const d = tc.getImageData(x0, y0, sw, sh).data;
+                let sr = 0, sg = 0, sb = 0;
+                for (let i = 0; i < d.length; i += 4) { sr += d[i]; sg += d[i+1]; sb += d[i+2]; }
+                const n = d.length / 4;
+                return [Math.round(sr/n), Math.round(sg/n), Math.round(sb/n)];
+              };
+              if (showCanvas) {
+                const cvs = cmpCanvasRef.current;
+                [r, g, b] = sampleRGBAvg(cvs.getContext('2d'), cvs.width, cvs.height);
+              } else {
+                const el = cmpImgRef.current;
+                if (el) {
+                  const tmp = document.createElement('canvas');
+                  tmp.width = el.naturalWidth; tmp.height = el.naturalHeight;
+                  tmp.getContext('2d').drawImage(el, 0, 0);
+                  [r, g, b] = sampleRGBAvg(tmp.getContext('2d'), el.naturalWidth, el.naturalHeight);
+                }
+              }
+            } catch (_) {}
+            const R = r / 255, G = g / 255, B = b / 255;
+            const K = 1 - Math.max(R, G, B);
+            const dK = K < 1 ? 1 - K : 1;
+            const C  = K < 1 ? Math.round(((1 - R - K) / dK) * 100) : 0;
+            const M  = K < 1 ? Math.round(((1 - G - K) / dK) * 100) : 0;
+            const Y  = K < 1 ? Math.round(((1 - B - K) / dK) * 100) : 0;
+            const Kp = Math.round(K * 100);
+            const sampleDiam = rad * 2 + 1;
+            setCmpEyedropResult({
+              screenX: e.clientX, screenY: e.clientY, r, g, b,
+              separations: [
+                { name: 'Cyan',    inkPct: C,  color: '#00BCD4' },
+                { name: 'Magenta', inkPct: M,  color: '#E91E63' },
+                { name: 'Yellow',  inkPct: Y,  color: '#FFC107' },
+                { name: 'Black',   inkPct: Kp, color: '#78909C' },
+              ].filter((s) => s.inkPct > 0),
+              totalInk: C + M + Y + Kp,
+              samplePx: sampleDiam * sampleDiam,
+            });
+          }
+        };
+
+        // ── Mouse handlers ────────────────────────────────────────────────
+        const handleImageAreaMouseDown = Platform.OS === 'web' ? (e) => {
+          if (cmpTool === 'eyedropper') {
+            e.preventDefault(); // prevent browser image-drag ghost
+            cmpEyedropDragging.current = true;
+            sampleEyedrop(e, e.currentTarget);
+          } else if (cmpTool === 'ruler' && cmpRulerPoints.length > 0) {
+            // Check if click is near an existing ruler point (within 16px)
+            const containerRect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - containerRect.left;
+            const clickY = e.clientY - containerRect.top;
+            for (let i = 0; i < cmpRulerPoints.length; i++) {
+              const pt = cmpRulerPoints[i];
+              const ptX = pt.svgPctX * containerRect.width;
+              const ptY = pt.svgPctY * containerRect.height;
+              const dist = Math.sqrt((clickX - ptX) ** 2 + (clickY - ptY) ** 2);
+              if (dist < 16) {
+                e.preventDefault();
+                cmpRulerDragging.current = i;
+                cmpRulerDragging._wasDragging = false; // will be set true on first move
+                return;
+              }
+            }
+          }
+        } : undefined;
+
+        const handleImageAreaMouseMove = Platform.OS === 'web' ? (e) => {
+          if (cmpTool === 'eyedropper' && cmpEyedropDragging.current) {
+            sampleEyedrop(e, e.currentTarget);
+          } else if (cmpTool === 'ruler' && cmpRulerDragging.current !== null) {
+            cmpRulerDragging._wasDragging = true; // mark so click handler skips
+            const coords = getCmpCoords(e, e.currentTarget);
+            if (!coords) return;
+            const idx = cmpRulerDragging.current;
+            setCmpRulerPoints((prev) => {
+              const next = [...prev];
+              next[idx] = { ...next[idx], svgPctX: coords.svgPctX, svgPctY: coords.svgPctY, imgPctX: coords.imgPctX, imgPctY: coords.imgPctY };
+              if (next.length === 2) {
+                const result = calcRulerDist(next);
+                if (result) setCmpRulerDist(result);
+              }
+              return next;
+            });
+          }
+        } : undefined;
+
+        const handleImageAreaMouseUp = Platform.OS === 'web' ? () => {
+          cmpEyedropDragging.current = false;
+          cmpRulerDragging.current = null;
+        } : undefined;
+
+        // Helper: compute mm distance between two ruler points
+        const calcRulerDist = (pts) => {
+          if (pts.length < 2) return null;
+          const pg = comparadorDiff[comparadorDiffPage];
+          const dims = pg?.page_a_dims
+            || (pg?.page_a_boxes?.media?.width_pt ? pg.page_a_boxes.media : null);
+          if (!dims?.width_pt || !dims?.height_pt) {
+            // Fallback: convert pixels to mm using fixed render DPI (5.0 × 72 = 360 DPI)
+            const activeEl = showCanvas ? cmpCanvasRef.current : cmpImgRef.current;
+            const imgW = activeEl ? (showCanvas ? activeEl.width : activeEl.naturalWidth) : 0;
+            const imgH = activeEl ? (showCanvas ? activeEl.height : activeEl.naturalHeight) : 0;
+            if (!imgW) return null;
+            const MM_PER_PX = 25.4 / (7.0 * 72);
+            const dx_px = Math.abs((pts[1].imgPctX - pts[0].imgPctX) * imgW);
+            const dy_px = Math.abs((pts[1].imgPctY - pts[0].imgPctY) * imgH);
+            const dist_px = Math.sqrt(dx_px * dx_px + dy_px * dy_px);
+            return { dx_mm: (dx_px * MM_PER_PX).toFixed(2), dy_mm: (dy_px * MM_PER_PX).toFixed(2), dist_mm: (dist_px * MM_PER_PX).toFixed(2), unit: 'mm' };
+          }
+          const dx_pt = (pts[1].imgPctX - pts[0].imgPctX) * dims.width_pt;
+          const dy_pt = (pts[1].imgPctY - pts[0].imgPctY) * dims.height_pt;
+          const dx_mm = Math.abs(dx_pt * 25.4 / 72);
+          const dy_mm = Math.abs(dy_pt * 25.4 / 72);
+          const dist_mm = Math.sqrt(dx_pt * dx_pt + dy_pt * dy_pt) * 25.4 / 72;
+          return { dx_mm: dx_mm.toFixed(2), dy_mm: dy_mm.toFixed(2), dist_mm: dist_mm.toFixed(2), unit: 'mm' };
+        };
+
+        const handleImageAreaClick = Platform.OS === 'web' ? (e) => {
+          if (cmpTool !== 'ruler') return;
+          // Skip click if it was the end of a drag (dragging ref is cleared in mouseup,
+          // but onClick fires after mouseup — use a tiny flag to distinguish)
+          if (cmpRulerDragging._wasDragging) { cmpRulerDragging._wasDragging = false; return; }
+          // Ruler: click to place points
+          const coords = getCmpCoords(e, e.currentTarget);
+          if (!coords) return;
+          const { svgPctX, svgPctY, imgPctX, imgPctY } = coords;
+          setCmpRulerPoints((prev) => {
+            const pt = { svgPctX, svgPctY, imgPctX, imgPctY };
+            const next = prev.length >= 2 ? [pt] : [...prev, pt];
+            if (next.length === 2) {
+              const result = calcRulerDist(next);
+              setCmpRulerDist(result);
+            } else {
+              setCmpRulerDist(null);
+            }
+            return next;
+          });
+        } : undefined;
         const setCmpZoom = (newZ) => {
           cmpZoomRef.current = newZ;
           setComparadorZoom(newZ);
@@ -2861,13 +3178,49 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     <Text style={[styles.cmpLightboxModeBtnText, comparadorAutoPlay && styles.cmpLightboxModeBtnTextActive]}>⟳ A↔B</Text>
                   </TouchableOpacity>
                 </View>
-                {/* Derecha: zoom + cerrar */}
+                {/* Derecha: herramientas + zoom + cerrar */}
                 <View style={styles.cmpLightboxRight}>
+                  {/* Tool: eyedropper */}
+                  <TouchableOpacity
+                    style={[styles.cmpZoomBtn, cmpTool === 'eyedropper' && styles.cmpToolBtnActive]}
+                    onPress={() => { setCmpTool(t => t === 'eyedropper' ? null : 'eyedropper'); setCmpEyedropResult(null); cmpEyedropDragging.current = false; }}
+                    title="Cuentagotas de tinta"
+                  >
+                    {Platform.OS === 'web' ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={cmpTool === 'eyedropper' ? '#FACC15' : '#CBD5E1'}>
+                        <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z"/>
+                        <circle cx="4.5" cy="19.5" r="1.5"/>
+                      </svg>
+                    ) : (
+                      <Text style={[styles.cmpZoomBtnText, cmpTool === 'eyedropper' && { color: '#FACC15' }]}>⊙</Text>
+                    )}
+                  </TouchableOpacity>
+                  {/* Radius control — visible only when eyedropper active */}
+                  {cmpTool === 'eyedropper' && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
+                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '700', minWidth: 20, textAlign: 'center' }}>{(cmpEyedropRadius * 2 + 1)}px</Text>
+                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.min(10, r + 1))} style={{ padding: 2 }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>＋</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {/* Tool: ruler */}
+                  <TouchableOpacity
+                    style={[styles.cmpZoomBtn, cmpTool === 'ruler' && styles.cmpToolBtnActive]}
+                    onPress={() => { setCmpTool(t => t === 'ruler' ? null : 'ruler'); setCmpRulerPoints([]); setCmpRulerDist(null); }}
+                    title="Regla de medición"
+                  >
+                    <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
+                  </TouchableOpacity>
+                  <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
                   <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.min(4, parseFloat((comparadorZoom + 0.25).toFixed(2))))}>
                     <Text style={styles.cmpZoomBtnText}>＋</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.cmpZoomBtn, { paddingHorizontal: 6, width: 'auto' }]} onPress={() => setCmpZoom(1.0)}>
-                    <Text style={[styles.cmpZoomBtnText, { fontSize: 10 }]}>100%</Text>
+                    <Text style={[styles.cmpZoomBtnText, { fontSize: 10 }]}>{Math.round(comparadorZoom * 100)}%</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.max(0.25, parseFloat((comparadorZoom - 0.25).toFixed(2))))}>
                     <Text style={styles.cmpZoomBtnText}>－</Text>
@@ -2877,6 +3230,90 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* Page boxes info bar — always visible */}
+              <View style={styles.cmpPageBoxBar}>
+                {/* PDF A boxes */}
+                {(() => {
+                  const ab = page.page_a_boxes;
+                  if (!ab || !ab.media) return (
+                    <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic' }}>
+                      Sin datos de cajas — vuelve a comparar para verlos
+                    </Text>
+                  );
+                  const boxes = [
+                    { label: 'Media', box: ab.media },
+                    { label: 'Trim',  box: ab.trim },
+                    { label: 'Bleed', box: ab.bleed },
+                  ].filter(x => x.box);
+                  if (!boxes.length) return null;
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+                      <Text style={[styles.cmpPageBoxLabel, { fontSize: 10 }]}>A</Text>
+                      {boxes.map(x => (
+                        <Text key={x.label} style={styles.cmpPageBoxItem}>
+                          <Text style={styles.cmpPageBoxLabel}>{x.label} </Text>
+                          {x.box.width_mm}×{x.box.height_mm}mm
+                        </Text>
+                      ))}
+                      {ab.distortion && (
+                        <Text style={[styles.cmpPageBoxItem, { color: '#F59E0B' }]}>
+                          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>⤡ </Text>
+                          {ab.distortion.x !== ab.distortion.y
+                            ? `${(ab.distortion.x * 100).toFixed(2)}% × ${(ab.distortion.y * 100).toFixed(2)}%`
+                            : `${(ab.distortion.x * 100).toFixed(2)}%`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })()}
+                {/* Divider */}
+                {(page.page_a_boxes || page.page_b_boxes) && (
+                  <View style={{ width: 1, height: 14, backgroundColor: '#334155', marginHorizontal: 4 }} />
+                )}
+                {/* PDF B boxes */}
+                {(() => {
+                  const bb = page.page_b_boxes;
+                  if (!bb) return null;
+                  const boxes = [
+                    { label: 'Media', box: bb.media },
+                    { label: 'Trim',  box: bb.trim },
+                    { label: 'Bleed', box: bb.bleed },
+                  ].filter(x => x.box);
+                  if (!boxes.length) return null;
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+                      <Text style={[styles.cmpPageBoxLabel, { fontSize: 10, color: '#A78BFA' }]}>B</Text>
+                      {boxes.map(x => (
+                        <Text key={x.label} style={styles.cmpPageBoxItem}>
+                          <Text style={[styles.cmpPageBoxLabel, { color: '#A78BFA' }]}>{x.label} </Text>
+                          {x.box.width_mm}×{x.box.height_mm}mm
+                        </Text>
+                      ))}
+                      {bb.distortion && (
+                        <Text style={[styles.cmpPageBoxItem, { color: '#F59E0B' }]}>
+                          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>⤡ </Text>
+                          {bb.distortion.x !== bb.distortion.y
+                            ? `${(bb.distortion.x * 100).toFixed(2)}% × ${(bb.distortion.y * 100).toFixed(2)}%`
+                            : `${(bb.distortion.x * 100).toFixed(2)}%`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })()}
+                {/* Ruler result */}
+                {cmpRulerDist && (
+                  <Text style={[styles.cmpRulerResult, { marginLeft: 'auto' }]}>
+                    {'⌗ '}{cmpRulerDist.dist_mm} {cmpRulerDist.unit}
+                    {`  H: ${cmpRulerDist.dx_mm}  V: ${cmpRulerDist.dy_mm} ${cmpRulerDist.unit}`}
+                  </Text>
+                )}
+                {/* Ruler waiting for second point */}
+                {cmpTool === 'ruler' && cmpRulerPoints.length === 1 && !cmpRulerDist && (
+                  <Text style={[styles.cmpRulerResult, { marginLeft: 'auto', color: '#64748B' }]}>⌗ Click para segundo punto…</Text>
+                )}
+              </View>
+
 
               {/* Body: sidebar izquierdo + imagen */}
               <View style={styles.cmpLightboxBody}>
@@ -2910,21 +3347,97 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                 {/* Área de imagen paneable */}
                 <View
-                  style={[styles.cmpImageArea, Platform.OS === 'web' && { cursor: isPanning ? 'grab' : 'default' }]}
+                  style={[styles.cmpImageArea, Platform.OS === 'web' && {
+                    cursor: cmpTool === 'eyedropper'
+                      ? 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'%3E%3Cpath fill=\'%23fff\' stroke=\'%23000\' stroke-width=\'1\' d=\'M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z\'/%3E%3Ccircle cx=\'4.5\' cy=\'19.5\' r=\'1.5\' fill=\'%23FACC15\'/%3E%3C/svg%3E") 4 20, crosshair'
+                      : cmpTool === 'ruler'
+                        ? 'crosshair'
+                        : (isPanning ? 'grab' : 'default'),
+                  }]}
                   {...cmpPanResponder.panHandlers}
+                  onMouseDown={handleImageAreaMouseDown}
+                  onMouseMove={handleImageAreaMouseMove}
+                  onMouseUp={handleImageAreaMouseUp}
+                  onMouseLeave={handleImageAreaMouseUp}
+                  onClick={handleImageAreaClick}
                 >
                   {showCanvas ? (
                     Platform.OS === 'web'
-                      ? <canvas ref={cmpCanvasRef} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }} />
+                      ? <canvas ref={cmpCanvasRef} draggable={false} onDragStart={e => e.preventDefault()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }} />
                       : <Image source={{ uri: imgUri }} style={[styles.cmpLightboxImage, { transform: imgTransform }]} resizeMode="contain" />
-                  ) : (
-                    <Image
-                      source={{ uri: imgUri }}
-                      style={[styles.cmpLightboxImage, { transform: imgTransform }]}
-                      resizeMode="contain"
+                  ) : Platform.OS === 'web' ? (
+                    <img
+                      ref={cmpImgRef}
+                      src={imgUri}
+                      alt=""
+                      draggable={false}
+                      onDragStart={e => e.preventDefault()}
+                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }}
                     />
+                  ) : (
+                    <Image source={{ uri: imgUri }} style={[styles.cmpLightboxImage, { transform: imgTransform }]} resizeMode="contain" />
                   )}
+
+                  {/* Ruler SVG overlay */}
+                  {Platform.OS === 'web' && cmpRulerPoints.length > 0 && cmpRulerPoints[0].svgPctX != null && (() => {
+                    const [p1, p2] = cmpRulerPoints;
+                    const mx = p2 ? ((p1.svgPctX + p2.svgPctX) / 2 * 100).toFixed(1) : null;
+                    const my = p2 ? ((p1.svgPctY + p2.svgPctY) / 2 * 100).toFixed(1) : null;
+                    return (
+                      <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+                        {p2 && <line x1={`${p1.svgPctX * 100}%`} y1={`${p1.svgPctY * 100}%`} x2={`${p2.svgPctX * 100}%`} y2={`${p2.svgPctY * 100}%`} stroke="#FACC15" strokeWidth="1.5" strokeDasharray="6,3" />}
+                        {cmpRulerPoints.map((pt, i) => (
+                          <g key={i} style={{ pointerEvents: 'auto', cursor: 'grab' }}>
+                            <circle cx={`${pt.svgPctX * 100}%`} cy={`${pt.svgPctY * 100}%`} r="8" fill="transparent" />
+                            <circle cx={`${pt.svgPctX * 100}%`} cy={`${pt.svgPctY * 100}%`} r="5" fill="#FACC15" stroke="#0F172A" strokeWidth="1.5" />
+                            <text x={`${pt.svgPctX * 100}%`} y={`${pt.svgPctY * 100}%`} dy="-10" fontSize="11" fill="#FACC15" textAnchor="middle" stroke="#0F172A" strokeWidth="3" paintOrder="stroke" fontWeight="700">{i === 0 ? 'A' : 'B'}</text>
+                          </g>
+                        ))}
+                        {p2 && cmpRulerDist && (
+                          <text x={`${mx}%`} y={`${my}%`} dy="-8" fontSize="12" fill="#FACC15" textAnchor="middle" stroke="#0F172A" strokeWidth="3" paintOrder="stroke" fontWeight="700">
+                            {cmpRulerDist.dist_mm} {cmpRulerDist.unit}
+                          </text>
+                        )}
+                      </svg>
+                    );
+                  })()}
                 </View>
+
+                {/* Eyedropper tooltip — positioned fixed within the modal overlay */}
+                {Platform.OS === 'web' && cmpEyedropResult && cmpTool === 'eyedropper' && (() => {
+                  const { screenX, screenY, r, g, b, separations, totalInk, samplePx } = cmpEyedropResult;
+                  const tacColor = totalInk > 300 ? '#EF4444' : totalInk > 240 ? '#F59E0B' : '#4ADE80';
+                  return (
+                    <View pointerEvents="none" style={[styles.cmpEyedropTooltip, { position: 'fixed', left: screenX + 14, top: screenY - 80 }]}>
+                      {/* RGB preview (fallback mode) */}
+                      {(r != null) && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <View style={{ width: 16, height: 16, borderRadius: 3, backgroundColor: `rgb(${r},${g},${b})`, borderWidth: 1, borderColor: '#E5E7EB' }} />
+                          <Text style={{ fontSize: 10, color: '#6B7280' }}>RGB {r} {g} {b}</Text>
+                        </View>
+                      )}
+                      {/* Separation channels */}
+                      {separations && separations.length > 0 ? (
+                        separations.map((sep, i) => (
+                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                            <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: sep.color || '#9CA3AF', borderWidth: 1, borderColor: '#E5E7EB' }} />
+                            <Text style={{ fontSize: 12, color: '#111827', fontWeight: '600', flex: 1 }}>{sep.name}</Text>
+                            <Text style={{ fontSize: 13, color: '#111827', fontWeight: '800', minWidth: 36, textAlign: 'right' }}>{sep.inkPct}%</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>Sin datos de separación</Text>
+                      )}
+                      {/* TAC + sample size */}
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 4 }}>
+                        <Text style={[styles.cmpEyedropTAC, { color: tacColor }]}>TAC: {totalInk}%</Text>
+                        {samplePx != null && (
+                          <Text style={{ fontSize: 9, color: '#9CA3AF' }}>{samplePx}px²</Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })()}
               </View>
             </View>
           </Modal>
