@@ -1190,6 +1190,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
+    flex: 1,
+    alignContent: 'stretch',
+    alignItems: 'stretch',
   },
   eskoToolCol: {
     flexBasis: '46%',
@@ -1217,7 +1220,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   eskoOutputBox: {
-    minHeight: 64,
+    flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 8,
     backgroundColor: '#FFFFFF',
