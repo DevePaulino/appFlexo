@@ -41,34 +41,31 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E1B4B',
-    paddingVertical: 14,
+    paddingVertical: 11,
     paddingHorizontal: 16,
     paddingRight: 44,
     position: 'relative',
     marginBottom: 12,
     borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   title: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 4,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#F1F5F9',
+    letterSpacing: -0.3,
   },
   headerNum: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    lineHeight: 24,
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#94A3B8',
   },
   headerRef: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#94A3B8',
-    marginTop: 1,
+    fontWeight: '400',
+    color: '#64748B',
   },
   closeBtn: {
     position: 'absolute',
@@ -2124,14 +2121,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('screens.pedidoDetalle.title')}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <Text style={styles.headerNum}>
-                {pedido?.numero_pedido || (loading ? '…' : '—')}
-              </Text>
-              {pedido?.referencia ? (
-                <Text style={styles.headerRef}>{pedido.referencia}</Text>
-              ) : null}
-            </View>
+            <Text style={styles.headerNum}>{pedido?.numero_pedido || (loading ? '…' : '—')}</Text>
+            {pedido?.referencia ? (
+              <Text style={styles.headerRef} numberOfLines={1}>{pedido.referencia}</Text>
+            ) : null}
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
