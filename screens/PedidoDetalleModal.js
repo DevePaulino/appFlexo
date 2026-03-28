@@ -2376,9 +2376,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                 </View>
 
-                {/* ── Unitario + Comparador ── */}
+                {/* ── Unitario + Comparador + Esko ── */}
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
-                <View style={[styles.sectionCard, { flex: 1 }]}>
+                <View style={[styles.sectionCard, { flex: 4 }]}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
                     {uploadingUnitario
@@ -2640,7 +2640,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   const tgtLabel  = targetOptions.find(o => o.id === comparadorTargetArchivoId)?.label;
                   const isDisabled = !comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning;
                   return (
-                    <View style={[styles.sectionCard, { flex: 1 }]}>
+                    <View style={[styles.sectionCard, { flex: 2, minWidth: 160 }]}>
                       <View style={styles.fileSectionHeader}>
                         <Text style={styles.filesSectionLabel}>⇄ {t('screens.pedidoDetalle.comparadorTitle')}</Text>
                       </View>
@@ -2816,10 +2816,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   );
                 })()}
 
-                </View>{/* fin fila unitario+comparador */}
-
                 {/* ── Contenedores Esko ── */}
-                <View style={styles.sectionCard}>
+                <View style={[styles.sectionCard, { flex: 4 }]}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
                   </View>
@@ -2908,6 +2906,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     })}
                   </View>
                 </View>
+                </View>{/* fin fila tres columnas */}
 
                 </>
               )}
