@@ -25,7 +25,7 @@ export function ModulosProvider({ children, authUser }) {
       const res = await fetch(API_MODULOS_URL, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!res.ok) return;
       const data = await res.json();
-      if (data?.modulos) setModulos((prev) => ({ ...prev, ...data.modulos }));
+      if (data?.modulos) setModulos((prev) => ({ ...prev, ...data.modulos, consumo_material: false }));
     } catch (_) {}
   }, []);
 
@@ -49,7 +49,7 @@ export function ModulosProvider({ children, authUser }) {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data?.modulos) setModulos((prev) => ({ ...prev, ...data.modulos }));
+        if (data?.modulos) setModulos((prev) => ({ ...prev, ...data.modulos, consumo_material: false }));
       } else {
         // Revertir si el servidor rechaza el cambio
         setModulos((prev) => ({ ...prev, [key]: !value }));
