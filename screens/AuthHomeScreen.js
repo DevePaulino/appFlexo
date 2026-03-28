@@ -62,17 +62,17 @@ function PasswordStrengthBar({ pwd }) {
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const P = {
-  // Panel izquierdo (marca) — permanece oscuro
-  bg:          '#1E293B',
-  bgPanel:     '#1E293B',
-  surface:     '#253347',
-  surfaceAlt:  '#2E3F55',
+  // Panel izquierdo (marca) — índigo oscuro de la app
+  bg:          '#1E1B4B',
+  bgPanel:     '#1E1B4B',
+  surface:     '#2D2A6E',
+  surfaceAlt:  '#3730A3',
   border:      'rgba(255,255,255,0.08)',
   borderInput: 'rgba(255,255,255,0.12)',
-  borderFocus: '#E8522A',
-  accent:      '#E8522A',
-  accentDim:   'rgba(232,82,42,0.15)',
-  accentBorder:'rgba(232,82,42,0.30)',
+  borderFocus: '#818CF8',
+  accent:      '#818CF8',   // índigo-400 — visible sobre fondo oscuro
+  accentDim:   'rgba(129,140,248,0.18)',
+  accentBorder:'rgba(129,140,248,0.35)',
   text:        '#FFFFFF',
   textSec:     'rgba(255,255,255,0.55)',
   textMuted:   'rgba(255,255,255,0.28)',
@@ -80,12 +80,16 @@ const P = {
   dangerBg:    'rgba(248,113,113,0.10)',
   dangerBorder:'rgba(248,113,113,0.25)',
 
-  // Panel derecho (formulario) — azul claro
-  fBg:         '#EEF2F8',   // fondo panel: azul muy claro
+  // Panel derecho (formulario) — índigo-50 de la app
+  fBg:         '#EEF2FF',   // fondo panel: indigo-50
   fSurface:    '#FFFFFF',   // card: blanco puro
-  fSurfaceAlt: '#E2E8F0',   // inputs, pills: slate-200
-  fBorder:     'rgba(15,23,42,0.10)',
-  fBorderInput:'rgba(15,23,42,0.14)',
+  fSurfaceAlt: '#E0E7FF',   // inputs, pills: indigo-100
+  fBorder:     'rgba(79,70,229,0.10)',
+  fBorderInput:'rgba(79,70,229,0.14)',
+  fBorderFocus:'#4F46E5',
+  fAccent:     '#4F46E5',   // índigo-600 — CTA principal
+  fAccentDim:  'rgba(79,70,229,0.08)',
+  fAccentBorder:'rgba(79,70,229,0.25)',
   fText:       '#0F172A',   // texto principal: slate-900
   fTextSec:    'rgba(15,23,42,0.55)',
   fTextMuted:  'rgba(15,23,42,0.38)',
@@ -138,7 +142,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    shadowColor: P.accent,
+    shadowColor: '#818CF8',
     shadowOpacity: 0.5,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -159,7 +163,7 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
   logoNameForge: {
-    color: P.accent,
+    color: P.accent,   // índigo-400
   },
   logoSuffix: {
     fontSize: 20,
@@ -172,7 +176,7 @@ const s = StyleSheet.create({
   brandEyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: P.accent,
+    color: P.accent,   // índigo-400 sobre fondo oscuro
     letterSpacing: 2.5,
     textTransform: 'uppercase',
     marginBottom: 14,
@@ -236,7 +240,7 @@ const s = StyleSheet.create({
     lineHeight: 17,
   },
   modulesCaptionAccent: {
-    color: P.accent,
+    color: P.accent,   // índigo-400
     fontWeight: '600',
   },
 
@@ -289,7 +293,7 @@ const s = StyleSheet.create({
     borderRadius: 7,
   },
   tabActive: {
-    backgroundColor: P.accent,
+    backgroundColor: P.fAccent,
   },
   tabText: {
     fontSize: 13,
@@ -338,8 +342,8 @@ const s = StyleSheet.create({
     fontSize: 14,
   },
   inputFocused: {
-    borderColor: P.accent,
-    backgroundColor: 'rgba(232,82,42,0.04)',
+    borderColor: P.fBorderFocus,
+    backgroundColor: P.fAccentDim,
   },
 
   // ── Billing ──────────────────────────────────────────────────────────────
@@ -358,8 +362,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   billingBtnActive: {
-    borderColor: P.accentBorder,
-    backgroundColor: 'rgba(232,82,42,0.08)',
+    borderColor: P.fAccentBorder,
+    backgroundColor: P.fAccentDim,
   },
   billingBtnText: {
     fontSize: 12,
@@ -367,7 +371,7 @@ const s = StyleSheet.create({
     color: P.fTextSec,
   },
   billingBtnTextActive: {
-    color: P.accent,
+    color: P.fAccent,
     fontWeight: '700',
   },
   billingDesc: {
@@ -398,10 +402,10 @@ const s = StyleSheet.create({
     marginTop: 20,
     minHeight: 46,
     borderRadius: R.md,
-    backgroundColor: P.accent,
+    backgroundColor: P.fAccent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: P.accent,
+    shadowColor: P.fAccent,
     shadowOpacity: 0.30,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -455,10 +459,10 @@ const s = StyleSheet.create({
   // ── Checkboxes de consentimiento ─────────────────────────────────────────
   consentBox: {
     marginTop: 16,
-    backgroundColor: 'rgba(232,82,42,0.05)',
+    backgroundColor: P.fAccentDim,
     borderRadius: R.md,
     borderWidth: 1,
-    borderColor: 'rgba(232,82,42,0.15)',
+    borderColor: P.fAccentBorder,
     padding: 12,
     gap: 10,
   },
@@ -480,8 +484,8 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
   checkboxChecked: {
-    backgroundColor: P.accent,
-    borderColor: P.accent,
+    backgroundColor: P.fAccent,
+    borderColor: P.fAccent,
   },
   checkmark: {
     color: '#FFFFFF',
@@ -496,9 +500,9 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
   legalLink: {
-    color: P.accent,
+    color: P.fAccent,
     textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(232,82,42,0.35)',
+    textDecorationColor: P.fAccentBorder,
   },
 
   // ── Forgot password link ─────────────────────────────────────────────────
