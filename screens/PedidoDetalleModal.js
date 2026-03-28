@@ -2937,36 +2937,50 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
             return sum / (data.length / 4);
           };
 
+          const seps = page.sep_diffs || [];
+          const sampleChannels = (channelsData) => Promise.all(
+            Object.entries(channelsData).map(([name, b64]) =>
+              new Promise((resolve) => {
+                const img = new window.Image();
+                img.onload = () => {
+                  try {
+                    const tmp = document.createElement('canvas');
+                    tmp.width = img.naturalWidth; tmp.height = img.naturalHeight;
+                    const tc = tmp.getContext('2d');
+                    tc.drawImage(img, 0, 0);
+                    const avg = sampleGrayAvg(tc, img.naturalWidth, img.naturalHeight, imgPctX, imgPctY);
+                    const inkPct = Math.round((255 - avg) / 255 * 100);
+                    const sepInfo = seps.find((s) => s.nombre === name);
+                    resolve({ name, inkPct, color: sepInfo?.color || '#94A3B8' });
+                  } catch (_) { resolve({ name, inkPct: 0, color: '#94A3B8' }); }
+                };
+                img.onerror = () => resolve({ name, inkPct: 0, color: '#94A3B8' });
+                img.src = `data:image/jpeg;base64,${b64}`;
+              })
+            )
+          );
+
+          const sampleDiam = rad * 2 + 1;
+
+          // Diff mode: sample both A and B channels simultaneously
+          if (comparadorViewMode === 'diff' && page.channels_a && Object.keys(page.channels_a).length > 0) {
+            const [separationsA, separationsB] = await Promise.all([
+              sampleChannels(page.channels_a),
+              page.channels_b ? sampleChannels(page.channels_b) : Promise.resolve([]),
+            ]);
+            const totalInkA = separationsA.reduce((s, r) => s + r.inkPct, 0);
+            const totalInkB = separationsB.reduce((s, r) => s + r.inkPct, 0);
+            setCmpEyedropResult({ screenX: e.clientX, screenY: e.clientY, separationsA, separationsB, totalInkA, totalInkB, samplePx: sampleDiam * sampleDiam });
+            return;
+          }
+
           const channelsObj = comparadorViewMode === 'a' ? page.channels_a
             : comparadorViewMode === 'b' ? page.channels_b : null;
 
           if (channelsObj && Object.keys(channelsObj).length > 0) {
-            const seps = page.sep_diffs || [];
-            const results = await Promise.all(
-              Object.entries(channelsObj).map(([name, b64]) =>
-                new Promise((resolve) => {
-                  const img = new window.Image();
-                  img.onload = () => {
-                    try {
-                      const tmp = document.createElement('canvas');
-                      tmp.width = img.naturalWidth; tmp.height = img.naturalHeight;
-                      const tc = tmp.getContext('2d');
-                      tc.drawImage(img, 0, 0);
-                      const avg = sampleGrayAvg(tc, img.naturalWidth, img.naturalHeight, imgPctX, imgPctY);
-                      const inkPct = Math.round((255 - avg) / 255 * 100);
-                      const sepInfo = seps.find((s) => s.nombre === name);
-                      resolve({ name, inkPct, color: sepInfo?.color || '#94A3B8' });
-                    } catch (_) { resolve({ name, inkPct: 0, color: '#94A3B8' }); }
-                  };
-                  img.onerror = () => resolve({ name, inkPct: 0, color: '#94A3B8' });
-                  img.src = `data:image/jpeg;base64,${b64}`;
-                })
-              )
-            );
             // Maintain insertion order (from Object.entries / sep_diffs) — no re-sort
-            const sorted = results.filter(Boolean);
+            const sorted = (await sampleChannels(channelsObj)).filter(Boolean);
             const totalInk = sorted.reduce((s, r) => s + r.inkPct, 0);
-            const sampleDiam = rad * 2 + 1;
             setCmpEyedropResult({ screenX: e.clientX, screenY: e.clientY, separations: sorted, totalInk, samplePx: sampleDiam * sampleDiam });
           } else {
             // Fallback: sample composite → RGB→CMYK
@@ -3241,12 +3255,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       Sin datos de cajas — vuelve a comparar para verlos
                     </Text>
                   );
-                  const boxes = [
-                    { label: 'Media', box: ab.media },
-                    { label: 'Trim',  box: ab.trim },
-                    { label: 'Bleed', box: ab.bleed },
-                  ].filter(x => x.box);
-                  if (!boxes.length) return null;
+                  const trimBox = ab.trim || ab.media;
+                  if (!trimBox) return null;
+                  const boxes = [{ label: 'Trim', box: trimBox }];
                   return (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
                       <Text style={[styles.cmpPageBoxLabel, { fontSize: 10 }]}>A</Text>
@@ -3275,12 +3286,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 {(() => {
                   const bb = page.page_b_boxes;
                   if (!bb) return null;
-                  const boxes = [
-                    { label: 'Media', box: bb.media },
-                    { label: 'Trim',  box: bb.trim },
-                    { label: 'Bleed', box: bb.bleed },
-                  ].filter(x => x.box);
-                  if (!boxes.length) return null;
+                  const trimBox = bb.trim || bb.media;
+                  if (!trimBox) return null;
+                  const boxes = [{ label: 'Trim', box: trimBox }];
                   return (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
                       <Text style={[styles.cmpPageBoxLabel, { fontSize: 10, color: '#A78BFA' }]}>B</Text>
@@ -3405,7 +3413,44 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
                 {/* Eyedropper tooltip — positioned fixed within the modal overlay */}
                 {Platform.OS === 'web' && cmpEyedropResult && cmpTool === 'eyedropper' && (() => {
-                  const { screenX, screenY, r, g, b, separations, totalInk, samplePx } = cmpEyedropResult;
+                  const { screenX, screenY, r, g, b, separations, totalInk, separationsA, separationsB, totalInkA, totalInkB, samplePx } = cmpEyedropResult;
+
+                  // ── Diff mode: dual A/B columns ──────────────────────────
+                  if (separationsA) {
+                    const allNames = [...new Set([...separationsA.map(s => s.name), ...(separationsB || []).map(s => s.name)])];
+                    const tacColorA = totalInkA > 300 ? '#EF4444' : totalInkA > 240 ? '#F59E0B' : '#4ADE80';
+                    const tacColorB = totalInkB > 300 ? '#EF4444' : totalInkB > 240 ? '#F59E0B' : '#4ADE80';
+                    return (
+                      <View pointerEvents="none" style={[styles.cmpEyedropTooltip, { position: 'fixed', left: screenX + 14, top: screenY - 80, minWidth: 220 }]}>
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 4 }}>
+                          <View style={{ width: 10, height: 10, marginRight: 6 }} />
+                          <Text style={{ fontSize: 11, color: '#6B7280', flex: 1 }}>Canal</Text>
+                          <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '700', minWidth: 38, textAlign: 'right' }}>A</Text>
+                          <Text style={{ fontSize: 11, color: '#A78BFA', fontWeight: '700', minWidth: 38, textAlign: 'right' }}>B</Text>
+                        </View>
+                        {allNames.map((name, i) => {
+                          const a = separationsA.find(s => s.name === name);
+                          const b2 = (separationsB || []).find(s => s.name === name);
+                          return (
+                            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: a?.color || b2?.color || '#9CA3AF', borderWidth: 1, borderColor: '#E5E7EB' }} />
+                              <Text style={{ fontSize: 11, color: '#111827', flex: 1 }}>{name}</Text>
+                              <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '700', minWidth: 38, textAlign: 'right' }}>{a != null ? `${a.inkPct}%` : '—'}</Text>
+                              <Text style={{ fontSize: 12, color: '#A78BFA', fontWeight: '700', minWidth: 38, textAlign: 'right' }}>{b2 != null ? `${b2.inkPct}%` : '—'}</Text>
+                            </View>
+                          );
+                        })}
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 4 }}>
+                          <Text style={{ fontSize: 9, color: '#9CA3AF' }}>{samplePx}px²</Text>
+                          <Text style={[styles.cmpEyedropTAC, { color: tacColorA }]}>A {totalInkA}%</Text>
+                          <Text style={[styles.cmpEyedropTAC, { color: tacColorB }]}>B {totalInkB}%</Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  // ── Single mode (A or B view) ─────────────────────────────
                   const tacColor = totalInk > 300 ? '#EF4444' : totalInk > 240 ? '#F59E0B' : '#4ADE80';
                   return (
                     <View pointerEvents="none" style={[styles.cmpEyedropTooltip, { position: 'fixed', left: screenX + 14, top: screenY - 80 }]}>
