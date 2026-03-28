@@ -16,35 +16,33 @@ import { useTranslation } from 'react-i18next';
 const API = 'http://localhost:8080';
 
 const C = {
-  bg:          '#F4F5FD',
-  header:      '#FFFFFF',
-  headerBorder:'#E4E7ED',
-  surface:     '#FFFFFF',
-  border:      '#E2E8F0',
-  borderStrong:'#CBD5E1',
-  text:        '#0F172A',
-  textSec:     '#475569',
-  textMuted:   '#94A3B8',
-  accent:      '#3B82F6',
-  accentDim:   'rgba(59,130,246,0.08)',
-  accentBorder:'rgba(59,130,246,0.22)',
-  green:       '#16A34A',
-  greenDim:    'rgba(22,163,74,0.10)',
-  greenBorder: 'rgba(22,163,74,0.25)',
-  blue:        '#3B82F6',
-  blueDim:     'rgba(59,130,246,0.08)',
-  blueBorder:  'rgba(59,130,246,0.22)',
-  warn:        '#D97706',
-  warnDim:     'rgba(217,119,6,0.08)',
-  warnBorder:  'rgba(217,119,6,0.22)',
+  bg:           '#F4F5FD',
+  header:       '#EEF2FF',
+  headerBorder: '#C7D2FE',
+  navDark:      '#1E1B4B',
+  surface:      '#FFFFFF',
+  border:       '#E2E8F0',
+  borderStrong: '#CBD5E1',
+  text:         '#0F172A',
+  textSec:      '#475569',
+  textMuted:    '#94A3B8',
+  accent:       '#4F46E5',
+  accentDim:    'rgba(79,70,229,0.08)',
+  accentBorder: 'rgba(79,70,229,0.22)',
+  green:        '#16A34A',
+  greenDim:     'rgba(22,163,74,0.10)',
+  greenBorder:  'rgba(22,163,74,0.25)',
+  warn:         '#D97706',
+  warnDim:      'rgba(217,119,6,0.08)',
+  warnBorder:   'rgba(217,119,6,0.22)',
 };
 
 const ACTION_ICONS = {
-  pedido:   '•',
-  features: '•',
-  purchase: '•',
+  pedido:       '•',
+  features:     '•',
+  purchase:     '•',
   signup_bonus: '•',
-  default:  '•',
+  default:      '•',
 };
 
 export default function BillingScreen({ navigation, currentUser }) {
@@ -52,8 +50,9 @@ export default function BillingScreen({ navigation, currentUser }) {
   const [status, setStatus] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [buying, setBuying] = useState(null); // package_id being purchased
+  const [buying, setBuying] = useState(null);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [expandedTx, setExpandedTx] = useState(new Set());
 
   const token = currentUser?.access_token;
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
@@ -91,7 +90,6 @@ export default function BillingScreen({ navigation, currentUser }) {
     } catch (_) {}
   }, [authHeader, load]);
 
-  // Detect return from Stripe checkout (web only)
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const url = new URL(window.location.href);
@@ -129,7 +127,6 @@ export default function BillingScreen({ navigation, currentUser }) {
           }
         }
       } else {
-        // Simulated topup (no Stripe configured)
         const res = await fetch(`${API}/api/billing/creditos/topup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeader },
@@ -169,6 +166,14 @@ export default function BillingScreen({ navigation, currentUser }) {
     setChangingPlan(false);
   };
 
+  const toggleTx = (i) => {
+    setExpandedTx((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
   const isCredits = status?.billing_model === 'creditos';
   const isSub = status?.billing_model === 'suscripcion';
 
@@ -178,15 +183,22 @@ export default function BillingScreen({ navigation, currentUser }) {
     catch { return iso.slice(0, 10); }
   };
 
+  const formatDateTime = (iso) => {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+    catch { return iso.slice(0, 16).replace('T', ' '); }
+  };
+
   return (
     <View style={s.root}>
       {/* Header */}
       <View style={s.header}>
-        <View style={s.headerRow}>
-          <View style={{ width: 38 }} />
-          <Text style={s.headerTitle}>{t('billing.title')}</Text>
-          <View style={{ width: 38 }} />
-        </View>
+        <Text style={s.headerTitle}>{t('billing.title')}</Text>
       </View>
 
       {loading ? (
@@ -277,7 +289,6 @@ export default function BillingScreen({ navigation, currentUser }) {
                   </View>
                 </View>
 
-                {/* Aviso pasarela simulada */}
                 {!status?.stripe_enabled && (
                   <View style={s.warnBox}>
                     <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
@@ -323,23 +334,54 @@ export default function BillingScreen({ navigation, currentUser }) {
             ) : (
               history.map((tx, i) => {
                 const isPos = tx.amount > 0;
+                const isExpanded = expandedTx.has(i);
                 return (
                   <View key={i}>
                     {i > 0 && <View style={s.txDivider} />}
-                    <View style={s.txRow}>
-                      <Text style={s.txIcon}>{ACTION_ICONS[tx.action] || ACTION_ICONS.default}</Text>
-                      <View style={s.txInfo}>
-                        <Text style={s.txAction}>{t(`billing.action_${tx.action}`, { defaultValue: tx.action })}</Text>
-                        {tx.pedido_id && <Text style={s.txRef}>{t('billing.order')} #{tx.pedido_id?.slice(-6)}</Text>}
-                        <Text style={s.txDate}>{formatDate(tx.created_at)}</Text>
-                      </View>
-                      <View style={s.txAmountWrap}>
-                        <Text style={[s.txAmount, isPos ? s.txAmountPos : s.txAmountNeg]}>
+                    <TouchableOpacity
+                      style={s.txRow}
+                      onPress={() => toggleTx(i)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.txAmountBadge, isPos ? s.txAmountBadgePos : s.txAmountBadgeNeg]}>
+                        <Text style={[s.txAmountBadgeText, isPos ? s.txAmountBadgeTextPos : s.txAmountBadgeTextNeg]}>
                           {isPos ? '+' : ''}{tx.amount}
                         </Text>
-                        <Text style={s.txBalance}>{t('billing.balanceAfter', { n: tx.balance_after })}</Text>
                       </View>
-                    </View>
+                      <View style={s.txInfo}>
+                        <Text style={s.txAction}>{t(`billing.action_${tx.action}`, { defaultValue: tx.action })}</Text>
+                        {tx.pedido_id && (
+                          <Text style={s.txRef}>{t('billing.order')} #{tx.pedido_id.slice(-6)}</Text>
+                        )}
+                        <Text style={s.txDate}>{formatDate(tx.created_at)}</Text>
+                      </View>
+                      <Text style={s.txChevron}>{isExpanded ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <View style={s.txDetail}>
+                        {tx.pedido_id && (
+                          <View style={s.txDetailRow}>
+                            <Text style={s.txDetailLabel}>{t('billing.order')}</Text>
+                            <Text style={s.txDetailValue}>#{tx.pedido_id?.slice(-6)}</Text>
+                          </View>
+                        )}
+                        <View style={s.txDetailRow}>
+                          <Text style={s.txDetailLabel}>{t('billing.historyTitle')}</Text>
+                          <Text style={s.txDetailValue}>{formatDateTime(tx.created_at)}</Text>
+                        </View>
+                        <View style={s.txDetailRow}>
+                          <Text style={s.txDetailLabel}>{t('billing.balanceAfter', { n: '' }).replace(':', '').trim()}</Text>
+                          <Text style={s.txDetailValue}>{tx.balance_after} {t('billing.credits')}</Text>
+                        </View>
+                        {tx.description && (
+                          <View style={s.txDetailRow}>
+                            <Text style={s.txDetailLabel}>{t('common.description') || 'Descripción'}</Text>
+                            <Text style={[s.txDetailValue, { flex: 1 }]}>{tx.description}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
                 );
               })
@@ -363,34 +405,14 @@ const s = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: C.headerBorder,
-    flexDirection: 'row',
-    alignItems: 'center',
     minHeight: 54,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 38,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: {
-    fontSize: 22,
-    color: '#1E1B4B',
-    lineHeight: 28,
-    fontWeight: '400',
-  },
   headerTitle: {
-    flex: 1,
     fontSize: 18,
     fontWeight: '800',
-    color: '#1E1B4B',
+    color: C.navDark,
     letterSpacing: -0.3,
-    textAlign: 'center',
   },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -410,21 +432,20 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
+    overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#4F46E5',
+    color: '#FFFFFF',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#ECEFFE',
+    backgroundColor: C.navDark,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginHorizontal: -12,
-    marginTop: -12,
+    marginHorizontal: -16,
+    marginTop: -16,
     marginBottom: 14,
-    borderTopLeftRadius: 13,
-    borderTopRightRadius: 13,
   },
 
   // Plan
@@ -501,7 +522,7 @@ const s = StyleSheet.create({
   packageCardPopular: {
     borderColor: C.accentBorder,
     borderWidth: 1.5,
-    backgroundColor: C.blueDim,
+    backgroundColor: C.accentDim,
   },
   popularBadge: {
     position: 'absolute',
@@ -529,18 +550,40 @@ const s = StyleSheet.create({
   buyBtnTextPopular: { color: '#FFF' },
 
   // History
-  txRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  txDivider: { height: 1, backgroundColor: C.border, marginVertical: 10 },
-  txIcon: { fontSize: 16, marginTop: 1 },
+  txRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  txDivider: { height: 1, backgroundColor: C.border, marginVertical: 2 },
+  txAmountBadge: {
+    width: 52,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  txAmountBadgePos:     { backgroundColor: C.greenDim,  borderColor: C.greenBorder },
+  txAmountBadgeNeg:     { backgroundColor: C.accentDim, borderColor: C.accentBorder },
+  txAmountBadgeText:    { fontSize: 13, fontWeight: '800' },
+  txAmountBadgeTextPos: { color: C.green },
+  txAmountBadgeTextNeg: { color: C.accent },
   txInfo: { flex: 1 },
   txAction: { fontSize: 13, fontWeight: '600', color: C.text },
-  txRef: { fontSize: 11, color: C.textMuted, marginTop: 1 },
+  txRef: { fontSize: 11, color: C.accent, fontWeight: '600', marginTop: 1 },
   txDate: { fontSize: 11, color: C.textMuted, marginTop: 1 },
-  txAmountWrap: { alignItems: 'flex-end' },
-  txAmount: { fontSize: 15, fontWeight: '800' },
-  txAmountPos: { color: C.green },
-  txAmountNeg: { color: C.accent },
-  txBalance: { fontSize: 10, color: C.textMuted, marginTop: 1 },
+  txChevron: { fontSize: 9, color: C.textMuted, paddingHorizontal: 4 },
+
+  // Expanded detail
+  txDetail: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 10,
+    marginBottom: 4,
+    gap: 6,
+  },
+  txDetailRow: { flexDirection: 'row', gap: 8 },
+  txDetailLabel: { fontSize: 11, color: C.textMuted, width: 90 },
+  txDetailValue: { fontSize: 11, fontWeight: '600', color: C.text },
 
   emptyHistory: { fontSize: 13, color: C.textMuted, textAlign: 'center', paddingVertical: 12 },
 
