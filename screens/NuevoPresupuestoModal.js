@@ -68,7 +68,7 @@ const styles = {
         color: '#F1F5F9',
         letterSpacing: 0.8,
         textTransform: 'uppercase',
-        backgroundColor: '#4F46E5',
+        backgroundColor: '#1E1B4B',
         paddingHorizontal: 12,
         paddingVertical: 6,
         marginHorizontal: -12,
@@ -129,7 +129,7 @@ const styles = {
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#4F46E5',
+        backgroundColor: '#1E1B4B',
         paddingVertical: 14,
         paddingHorizontal: 16,
         position: 'relative',
