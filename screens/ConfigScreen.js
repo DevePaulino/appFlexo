@@ -1826,8 +1826,9 @@ export default function ConfigScreen({ route, currentUser }) {
       const estadosProtegidos = new Set([
         'en-diseno',
         'finalizado',
+        'cancelado',
       ]);
-      
+
       if (estadosProtegidos.has(estadoKey)) {
         Alert.alert('Acción no permitida', t('screens.config.errStatusProtected'));
         return;
@@ -2200,6 +2201,7 @@ export default function ConfigScreen({ route, currentUser }) {
     const estadosProtegidos = new Set([
       'en-diseno',
       'finalizado',
+      'cancelado',
     ]);
     return (
       <View key={categoryKey} style={[styles.section, sectionStyle]}>
