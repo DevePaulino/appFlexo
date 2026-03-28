@@ -41,20 +41,22 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#4F46E5',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     paddingRight: 44,
     position: 'relative',
     marginBottom: 12,
     borderRadius: 12,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#A5B4FC',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
+    letterSpacing: 2,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   headerNum: {
     fontSize: 20,
@@ -2122,7 +2124,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('screens.pedidoDetalle.title')}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
               <Text style={styles.headerNum}>
                 {pedido?.numero_pedido || (loading ? '…' : '—')}
               </Text>
