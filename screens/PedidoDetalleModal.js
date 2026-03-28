@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   header: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
     paddingVertical: 14,
     paddingHorizontal: 16,
     paddingRight: 44,
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#A5B4FC',
+    color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 4,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginHorizontal: -10,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginHorizontal: -10,
@@ -3394,7 +3394,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   </TouchableOpacity>
                   {/* Radius control — visible only when eyedropper active */}
                   {cmpTool === 'eyedropper' && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E1B4B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
                       <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
                         <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
                       </TouchableOpacity>
@@ -3463,7 +3463,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 })()}
                 {/* Divider */}
                 {!cmpViewOnly && (page.page_a_boxes || page.page_b_boxes) && (
-                  <View style={{ width: 1, height: 14, backgroundColor: '#334155', marginHorizontal: 4 }} />
+                  <View style={{ width: 1, height: 14, backgroundColor: '#1E1B4B', marginHorizontal: 4 }} />
                 )}
                 {/* PDF B boxes — hidden in view-only (same file as A) */}
                 {!cmpViewOnly && (() => {
