@@ -788,7 +788,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const { t } = useTranslation();
   const [openSubmenu, setOpenSubmenu] = React.useState(null); // null | 'Setting' | 'Activos'
   const { modulos } = useModulos();
-  const consumoModuloActivo = modulos.consumo_material !== false;
+  const consumoModuloActivo = modulos.consumo_material === true;
   const produccionModuloActivo = modulos.produccion === true;
   const presupuestosModuloActivo = modulos.presupuestos !== false;
   const canManageBilling = usePermission('manage_billing');
