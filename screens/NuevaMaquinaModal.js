@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
     paddingVertical: 14,
     paddingHorizontal: 20,
     flexDirection: 'row',

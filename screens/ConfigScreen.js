@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   matrixRoleHeaderProtected: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
   },
   matrixRoleHeaderText: {
     fontSize: 10,

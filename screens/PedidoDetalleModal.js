@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   lightboxContent: {
     width: '92%',
     height: '92%',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#1E1B4B',
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
