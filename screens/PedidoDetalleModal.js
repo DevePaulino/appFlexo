@@ -1559,6 +1559,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [comparadorDiffPage, setComparadorDiffPage] = useState(0);
   const [comparadorLightbox, setComparadorLightbox] = useState(false);
   const [cmpViewOnly, setCmpViewOnly] = useState(false);
+  const [cmpViewOnlyLoading, setCmpViewOnlyLoading] = useState(false);
   const [comparadorViewMode, setComparadorViewMode] = useState('diff'); // 'diff' | 'a' | 'b'
   const [comparadorAutoPlay, setComparadorAutoPlay] = useState(false);
   const comparadorAutoPlayRef = useRef(null);
@@ -1838,9 +1839,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
 
   const openViewOnlyLightbox = async (archivoId) => {
-    setComparadorRunning(true);
-    setComparadorDiff(null);
+    setCmpViewOnlyLoading(true);
     setCmpViewOnly(true);
+    setComparadorDiff(null);
     try {
       const res = await fetch(`${API_BASE}/api/archivos/comparar-pdf`, {
         method: 'POST',
@@ -1858,7 +1859,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         setComparadorLightbox(true);
       }
     } catch (_) {}
-    setComparadorRunning(false);
+    setCmpViewOnlyLoading(false);
   };
 
   const cargarArchivos = async () => {
@@ -2483,7 +2484,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                     style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                                     onPress={() => openViewOnlyLightbox(selected.id)}
                                     activeOpacity={0.85}
+                                    disabled={cmpViewOnlyLoading}
                                   />
+                                  {cmpViewOnlyLoading && (
+                                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                      <ActivityIndicator size="small" color="#FFFFFF" />
+                                    </View>
+                                  )}
                                 </View>
 
                                 {/* Columna separaciones + aprobación */}
@@ -2875,7 +2882,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                                         onPress={() => openViewOnlyLightbox(eskoFile.id)}
                                         activeOpacity={0.85}
+                                        disabled={cmpViewOnlyLoading}
                                       />
+                                      {cmpViewOnlyLoading && (
+                                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                          <ActivityIndicator size="small" color="#FFFFFF" />
+                                        </View>
+                                      )}
                                     </View>
                                   );
                                 })()}
@@ -3029,6 +3042,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         const closeLightbox = () => {
           setComparadorLightbox(false);
           setCmpViewOnly(false);
+          setCmpViewOnlyLoading(false);
           setComparadorAutoPlay(false);
           setComparadorActiveSeps(null);
           cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
@@ -3355,44 +3369,42 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>
                 {/* Derecha: herramientas + zoom + cerrar */}
                 <View style={styles.cmpLightboxRight}>
-                  {/* Tools: eyedropper + ruler — hidden in view-only mode */}
-                  {!cmpViewOnly && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.cmpZoomBtn, cmpTool === 'eyedropper' && styles.cmpToolBtnActive]}
-                        onPress={() => { setCmpTool(t => t === 'eyedropper' ? null : 'eyedropper'); setCmpEyedropResult(null); cmpEyedropDragging.current = false; }}
-                        title="Cuentagotas de tinta"
-                      >
-                        {Platform.OS === 'web' ? (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill={cmpTool === 'eyedropper' ? '#FACC15' : '#CBD5E1'}>
-                            <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z"/>
-                            <circle cx="4.5" cy="19.5" r="1.5"/>
-                          </svg>
-                        ) : (
-                          <Text style={[styles.cmpZoomBtnText, cmpTool === 'eyedropper' && { color: '#FACC15' }]}>⊙</Text>
-                        )}
+                  {/* Tool: eyedropper */}
+                  <TouchableOpacity
+                    style={[styles.cmpZoomBtn, cmpTool === 'eyedropper' && styles.cmpToolBtnActive]}
+                    onPress={() => { setCmpTool(t => t === 'eyedropper' ? null : 'eyedropper'); setCmpEyedropResult(null); cmpEyedropDragging.current = false; }}
+                    title="Cuentagotas de tinta"
+                  >
+                    {Platform.OS === 'web' ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={cmpTool === 'eyedropper' ? '#FACC15' : '#CBD5E1'}>
+                        <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z"/>
+                        <circle cx="4.5" cy="19.5" r="1.5"/>
+                      </svg>
+                    ) : (
+                      <Text style={[styles.cmpZoomBtnText, cmpTool === 'eyedropper' && { color: '#FACC15' }]}>⊙</Text>
+                    )}
+                  </TouchableOpacity>
+                  {/* Radius control — visible only when eyedropper active */}
+                  {cmpTool === 'eyedropper' && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
+                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
                       </TouchableOpacity>
-                      {cmpTool === 'eyedropper' && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
-                          <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
-                            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
-                          </TouchableOpacity>
-                          <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '700', minWidth: 20, textAlign: 'center' }}>{(cmpEyedropRadius * 2 + 1)}px</Text>
-                          <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.min(10, r + 1))} style={{ padding: 2 }}>
-                            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>＋</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      <TouchableOpacity
-                        style={[styles.cmpZoomBtn, cmpTool === 'ruler' && styles.cmpToolBtnActive]}
-                        onPress={() => { setCmpTool(t => t === 'ruler' ? null : 'ruler'); setCmpRulerPoints([]); setCmpRulerDist(null); }}
-                        title="Regla de medición"
-                      >
-                        <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
+                      <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '700', minWidth: 20, textAlign: 'center' }}>{(cmpEyedropRadius * 2 + 1)}px</Text>
+                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.min(10, r + 1))} style={{ padding: 2 }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>＋</Text>
                       </TouchableOpacity>
-                      <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
-                    </>
+                    </View>
                   )}
+                  {/* Tool: ruler */}
+                  <TouchableOpacity
+                    style={[styles.cmpZoomBtn, cmpTool === 'ruler' && styles.cmpToolBtnActive]}
+                    onPress={() => { setCmpTool(t => t === 'ruler' ? null : 'ruler'); setCmpRulerPoints([]); setCmpRulerDist(null); }}
+                    title="Regla de medición"
+                  >
+                    <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
+                  </TouchableOpacity>
+                  <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
                   <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.min(4, parseFloat((comparadorZoom + 0.25).toFixed(2))))}>
                     <Text style={styles.cmpZoomBtnText}>＋</Text>
                   </TouchableOpacity>
