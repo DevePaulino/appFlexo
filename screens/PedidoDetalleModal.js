@@ -1533,7 +1533,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [uploadingArtes, setUploadingArtes] = useState(false);
   const [uploadingUnitario, setUploadingUnitario] = useState(false);
   const [uploadingEsko, setUploadingEsko] = useState({});   // { report: bool, repetidora: bool, … }
-  const [artesExpanded, setArtesExpanded] = useState(false);
   const [pdfMeta, setPdfMeta] = useState(null);
   const [pdfMetaLoading, setPdfMetaLoading] = useState(false);
   const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
@@ -1559,6 +1558,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [comparadorDiff, setComparadorDiff] = useState(null);
   const [comparadorDiffPage, setComparadorDiffPage] = useState(0);
   const [comparadorLightbox, setComparadorLightbox] = useState(false);
+  const [cmpViewOnly, setCmpViewOnly] = useState(false);
   const [comparadorViewMode, setComparadorViewMode] = useState('diff'); // 'diff' | 'a' | 'b'
   const [comparadorAutoPlay, setComparadorAutoPlay] = useState(false);
   const comparadorAutoPlayRef = useRef(null);
@@ -1836,6 +1836,30 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     setComparadorRunning(false);
   };
 
+
+  const openViewOnlyLightbox = async (archivoId) => {
+    setComparadorRunning(true);
+    setComparadorDiff(null);
+    setCmpViewOnly(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/archivos/comparar-pdf`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archivo_id_a: archivoId, archivo_id_b: archivoId, scale: 7.0 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComparadorDiff(data.pages || []);
+        setComparadorDiffPage(0);
+        setComparadorViewMode('a');
+        setComparadorAutoPlay(false);
+        setComparadorActiveSeps(null);
+        setComparadorZoom(1.0);
+        setComparadorLightbox(true);
+      }
+    } catch (_) {}
+    setComparadorRunning(false);
+  };
 
   const cargarArchivos = async () => {
     if (!pedidoId) return;
@@ -2397,7 +2421,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             const selected = archivos.unitario.find((u) => u.version === selectedVersion);
                             if (!selected) return null;
                             const inlineToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
-                            const inlineUrl = `${API_BASE}/api/archivos/${selected.id}/inline${inlineToken}`;
                             const thumbnailUrl = `${API_BASE}/api/archivos/${selected.id}/thumbnail${inlineToken}`;
 
                             // ── Detección de mismatch tintas PDF vs pedido ──────────
@@ -2458,7 +2481,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                   />
                                   <TouchableOpacity
                                     style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                                    onPress={() => setPdfLightboxUrl(inlineUrl)}
+                                    onPress={() => openViewOnlyLightbox(selected.id)}
                                     activeOpacity={0.85}
                                   />
                                 </View>
@@ -2547,18 +2570,14 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 {/* ── Artes Finales del Cliente ── */}
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
-                    <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}
-                      onPress={() => setArtesExpanded(v => !v)}
-                    >
-                      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
                       <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.artesTitle')}</Text>
                       {archivos.artes.length > 0 && (
                         <View style={styles.fileCountBadge}>
                           <Text style={styles.fileCountBadgeText}>{archivos.artes.length}</Text>
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </View>
                     {uploadingArtes
                       ? <ActivityIndicator size="small" color="#FFFFFF" />
                       : (
@@ -2583,7 +2602,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     />
                   )}
 
-                  {artesExpanded && (archivosLoading && archivos.artes.length === 0 ? (
+                  {(archivosLoading && archivos.artes.length === 0 ? (
                     <ActivityIndicator size="small" color="#475569" />
                   ) : archivos.artes.length === 0 ? (
                     <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinArtes')}</Text>
@@ -2688,7 +2707,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           <>
                             <View style={styles.cmpTargetChip}>
                               <View style={{ flex: 1 }}>
-                                <Text style={styles.cmpTargetChipNum}>#{comparadorTargetPedido.numero_pedido}</Text>
+                                <Text style={styles.cmpTargetChipNum}>{comparadorTargetPedido.numero_pedido}</Text>
                                 {(comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia)
                                   ? <Text style={styles.cmpTargetChipSub} numberOfLines={1}>{comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia}</Text>
                                   : null}
@@ -2846,6 +2865,20 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                               <ActivityIndicator size="small" color="#475569" />
                             ) : eskoFile ? (
                               <>
+                                {eskoFile.nombre_original?.toLowerCase().endsWith('.pdf') && (() => {
+                                  const eskoThumbToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
+                                  const eskoThumbUrl = `${API_BASE}/api/archivos/${eskoFile.id}/thumbnail${eskoThumbToken}`;
+                                  return (
+                                    <View style={{ height: 80, width: '100%', marginBottom: 6, borderRadius: 4, overflow: 'hidden', position: 'relative', backgroundColor: '#F8FAFC' }}>
+                                      <Image source={{ uri: eskoThumbUrl }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
+                                      <TouchableOpacity
+                                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                        onPress={() => openViewOnlyLightbox(eskoFile.id)}
+                                        activeOpacity={0.85}
+                                      />
+                                    </View>
+                                  );
+                                })()}
                                 <Text style={styles.eskoFileName} numberOfLines={1}>{eskoFile.nombre_original}</Text>
                                 <Text style={styles.eskoFileMeta}>{formatearTamanio(eskoFile.tamanio)}</Text>
                                 {confirmingDeleteArchivo === eskoFile.id ? (
@@ -2995,6 +3028,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
             : `data:image/jpeg;base64,${page.diff_base64}`;
         const closeLightbox = () => {
           setComparadorLightbox(false);
+          setCmpViewOnly(false);
           setComparadorAutoPlay(false);
           setComparadorActiveSeps(null);
           cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
@@ -3281,7 +3315,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               <View style={styles.cmpLightboxHeader}>
                 {/* Izquierda: similitud + páginas */}
                 <View style={styles.cmpLightboxLeft}>
-                  <Text style={styles.cmpLightboxSimilarity}>{page.similarity}% {t('screens.pedidoDetalle.comparadorSimilitud')}</Text>
+                  {!cmpViewOnly && <Text style={styles.cmpLightboxSimilarity}>{page.similarity}% {t('screens.pedidoDetalle.comparadorSimilitud')}</Text>}
                   {comparadorDiff.length > 1 && (
                     <View style={styles.cmpPageNav}>
                       <TouchableOpacity onPress={() => setComparadorDiffPage((p) => Math.max(0, p - 1))} disabled={comparadorDiffPage === 0}>
@@ -3296,7 +3330,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>
                 {/* Centro: botones de modo */}
                 <View style={styles.cmpLightboxCenter}>
-                  {[
+                  {!cmpViewOnly && [
                     { key: 'diff', label: '⊕ Diferencias' },
                     { key: 'a',    label: 'PDF A' },
                     { key: 'b',    label: 'PDF B' },
@@ -3307,54 +3341,58 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       <Text style={[styles.cmpLightboxModeBtnText, comparadorViewMode === m.key && styles.cmpLightboxModeBtnTextActive]}>{m.label}</Text>
                     </TouchableOpacity>
                   ))}
-                  <TouchableOpacity
-                    style={[styles.cmpLightboxModeBtn, comparadorAutoPlay && styles.cmpLightboxModeBtnAuto]}
-                    onPress={() => {
-                      const next = !comparadorAutoPlay;
-                      setComparadorAutoPlay(next);
-                      if (next && comparadorViewMode === 'diff') setComparadorViewMode('a');
-                    }}>
-                    <Text style={[styles.cmpLightboxModeBtnText, comparadorAutoPlay && styles.cmpLightboxModeBtnTextActive]}>⟳ A↔B</Text>
-                  </TouchableOpacity>
+                  {!cmpViewOnly && (
+                    <TouchableOpacity
+                      style={[styles.cmpLightboxModeBtn, comparadorAutoPlay && styles.cmpLightboxModeBtnAuto]}
+                      onPress={() => {
+                        const next = !comparadorAutoPlay;
+                        setComparadorAutoPlay(next);
+                        if (next && comparadorViewMode === 'diff') setComparadorViewMode('a');
+                      }}>
+                      <Text style={[styles.cmpLightboxModeBtnText, comparadorAutoPlay && styles.cmpLightboxModeBtnTextActive]}>⟳ A↔B</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 {/* Derecha: herramientas + zoom + cerrar */}
                 <View style={styles.cmpLightboxRight}>
-                  {/* Tool: eyedropper */}
-                  <TouchableOpacity
-                    style={[styles.cmpZoomBtn, cmpTool === 'eyedropper' && styles.cmpToolBtnActive]}
-                    onPress={() => { setCmpTool(t => t === 'eyedropper' ? null : 'eyedropper'); setCmpEyedropResult(null); cmpEyedropDragging.current = false; }}
-                    title="Cuentagotas de tinta"
-                  >
-                    {Platform.OS === 'web' ? (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill={cmpTool === 'eyedropper' ? '#FACC15' : '#CBD5E1'}>
-                        <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z"/>
-                        <circle cx="4.5" cy="19.5" r="1.5"/>
-                      </svg>
-                    ) : (
-                      <Text style={[styles.cmpZoomBtnText, cmpTool === 'eyedropper' && { color: '#FACC15' }]}>⊙</Text>
-                    )}
-                  </TouchableOpacity>
-                  {/* Radius control — visible only when eyedropper active */}
-                  {cmpTool === 'eyedropper' && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
-                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
-                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
+                  {/* Tools: eyedropper + ruler — hidden in view-only mode */}
+                  {!cmpViewOnly && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.cmpZoomBtn, cmpTool === 'eyedropper' && styles.cmpToolBtnActive]}
+                        onPress={() => { setCmpTool(t => t === 'eyedropper' ? null : 'eyedropper'); setCmpEyedropResult(null); cmpEyedropDragging.current = false; }}
+                        title="Cuentagotas de tinta"
+                      >
+                        {Platform.OS === 'web' ? (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill={cmpTool === 'eyedropper' ? '#FACC15' : '#CBD5E1'}>
+                            <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41L7.82 12.42A2 2 0 0 0 7.24 14v2.76l-2.12 2.12 1.41 1.41 2.12-2.12H11a2 2 0 0 0 1.41-.59l6.6-6.59 1.41 1.41 1.42-1.42-1.41-1.41 3.12-3.12a1 1 0 0 0-.84-1.66z"/>
+                            <circle cx="4.5" cy="19.5" r="1.5"/>
+                          </svg>
+                        ) : (
+                          <Text style={[styles.cmpZoomBtnText, cmpTool === 'eyedropper' && { color: '#FACC15' }]}>⊙</Text>
+                        )}
                       </TouchableOpacity>
-                      <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '700', minWidth: 20, textAlign: 'center' }}>{(cmpEyedropRadius * 2 + 1)}px</Text>
-                      <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.min(10, r + 1))} style={{ padding: 2 }}>
-                        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>＋</Text>
+                      {cmpTool === 'eyedropper' && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#1E293B', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
+                          <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.max(1, r - 1))} style={{ padding: 2 }}>
+                            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>−</Text>
+                          </TouchableOpacity>
+                          <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '700', minWidth: 20, textAlign: 'center' }}>{(cmpEyedropRadius * 2 + 1)}px</Text>
+                          <TouchableOpacity onPress={() => setCmpEyedropRadius(r => Math.min(10, r + 1))} style={{ padding: 2 }}>
+                            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>＋</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.cmpZoomBtn, cmpTool === 'ruler' && styles.cmpToolBtnActive]}
+                        onPress={() => { setCmpTool(t => t === 'ruler' ? null : 'ruler'); setCmpRulerPoints([]); setCmpRulerDist(null); }}
+                        title="Regla de medición"
+                      >
+                        <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
                       </TouchableOpacity>
-                    </View>
+                      <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
+                    </>
                   )}
-                  {/* Tool: ruler */}
-                  <TouchableOpacity
-                    style={[styles.cmpZoomBtn, cmpTool === 'ruler' && styles.cmpToolBtnActive]}
-                    onPress={() => { setCmpTool(t => t === 'ruler' ? null : 'ruler'); setCmpRulerPoints([]); setCmpRulerDist(null); }}
-                    title="Regla de medición"
-                  >
-                    <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
-                  </TouchableOpacity>
-                  <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
                   <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.min(4, parseFloat((comparadorZoom + 0.25).toFixed(2))))}>
                     <Text style={styles.cmpZoomBtnText}>＋</Text>
                   </TouchableOpacity>
@@ -3404,11 +3442,11 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   );
                 })()}
                 {/* Divider */}
-                {(page.page_a_boxes || page.page_b_boxes) && (
+                {!cmpViewOnly && (page.page_a_boxes || page.page_b_boxes) && (
                   <View style={{ width: 1, height: 14, backgroundColor: '#334155', marginHorizontal: 4 }} />
                 )}
                 {/* PDF B boxes */}
-                {(() => {
+                {!cmpViewOnly && (() => {
                   const bb = page.page_b_boxes;
                   if (!bb) return null;
                   const trimBox = bb.trim || bb.media;
@@ -3451,7 +3489,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {/* Body: sidebar izquierdo + imagen */}
               <View style={styles.cmpLightboxBody}>
                 {/* Sidebar canales */}
-                {allSeps.length > 0 && (
+                {!cmpViewOnly && allSeps.length > 0 && (
                   <View style={styles.cmpChannelSidebar}>
                     {allSeps.map((s) => {
                       const isActive = activeSeps.has(s.nombre);
