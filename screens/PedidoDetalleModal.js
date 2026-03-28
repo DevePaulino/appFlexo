@@ -2298,91 +2298,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
               {activeTab === 'archivos' && (
                 <>
-                <View style={styles.sectionCard}>
-
-                  {/* ── Artes Finales del Cliente ── */}
-                  <View style={styles.fileSectionHeader}>
-                    <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}
-                      onPress={() => setArtesExpanded(v => !v)}
-                    >
-                      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
-                      <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.artesTitle')}</Text>
-                      {archivos.artes.length > 0 && (
-                        <View style={styles.fileCountBadge}>
-                          <Text style={styles.fileCountBadgeText}>{archivos.artes.length}</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                    {uploadingArtes
-                      ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : (
-                        <TouchableOpacity
-                          style={styles.fileUploadIconBtn}
-                          onPress={() => fileInputArtesRef.current && fileInputArtesRef.current.click()}
-                        >
-                          <Text style={styles.fileUploadIconBtnText}>+</Text>
-                        </TouchableOpacity>
-                      )
-                    }
-                  </View>
-
-                  {Platform.OS === 'web' && (
-                    <input
-                      type="file"
-                      ref={fileInputArtesRef}
-                      style={{ display: 'none' }}
-                      multiple
-                      accept=".pdf,.ai,.eps,.jpg,.jpeg,.png"
-                      onChange={(e) => handleUploadArtes(e.target.files)}
-                    />
-                  )}
-
-                  {artesExpanded && (archivosLoading && archivos.artes.length === 0 ? (
-                    <ActivityIndicator size="small" color="#475569" />
-                  ) : archivos.artes.length === 0 ? (
-                    <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinArtes')}</Text>
-                  ) : (
-                    archivos.artes.map((archivo) => {
-                      const ext = (archivo.nombre_original || '').split('.').pop().toUpperCase().slice(0, 4);
-                      return (
-                        <View key={archivo.id} style={styles.fileRow}>
-                          <View style={styles.fileIcon}>
-                            <Text style={styles.fileIconText}>{ext}</Text>
-                          </View>
-                          <Text style={styles.fileName} numberOfLines={1}>{archivo.nombre_original}</Text>
-                          <Text style={styles.fileMeta}>{formatearTamanio(archivo.tamanio)}</Text>
-                          <TouchableOpacity
-                            style={[styles.fileActionBtn, styles.fileDownloadBtn]}
-                            onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${archivo.id}`, '_blank'); }}
-                          >
-                            <Text style={styles.fileActionBtnText}>↓</Text>
-                          </TouchableOpacity>
-                          {canDelete && (
-                            confirmingDeleteArchivo === archivo.id ? (
-                              <DeleteConfirmRow
-                                onCancel={() => setConfirmingDeleteArchivo(null)}
-                                onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(archivo.id); }}
-                              />
-                            ) : (
-                              <TouchableOpacity
-                                style={[styles.fileActionBtn, styles.fileDeleteBtn]}
-                                onPress={() => setConfirmingDeleteArchivo(archivo.id)}
-                              >
-                                <Text style={styles.fileActionBtnText}>✕</Text>
-                              </TouchableOpacity>
-                            )
-                          )}
-                        </View>
-                      );
-                    })
-                  ))}
-
-                </View>
-
-                {/* ── Unitario + Comparador + Esko ── */}
+                {/* ── Unitario + Artes | Comparador | Esko ── */}
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
-                <View style={[styles.sectionCard, { flex: 4 }]}>
+                <View style={{ flex: 4, gap: 10 }}>
+                <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
                     {uploadingUnitario
@@ -2624,6 +2543,88 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   )}
 
                 </View>{/* fin unitario sectionCard */}
+
+                {/* ── Artes Finales del Cliente ── */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.fileSectionHeader}>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}
+                      onPress={() => setArtesExpanded(v => !v)}
+                    >
+                      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 14 }}>{artesExpanded ? '▾' : '▸'}</Text>
+                      <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.artesTitle')}</Text>
+                      {archivos.artes.length > 0 && (
+                        <View style={styles.fileCountBadge}>
+                          <Text style={styles.fileCountBadgeText}>{archivos.artes.length}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    {uploadingArtes
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : (
+                        <TouchableOpacity
+                          style={styles.fileUploadIconBtn}
+                          onPress={() => fileInputArtesRef.current && fileInputArtesRef.current.click()}
+                        >
+                          <Text style={styles.fileUploadIconBtnText}>+</Text>
+                        </TouchableOpacity>
+                      )
+                    }
+                  </View>
+
+                  {Platform.OS === 'web' && (
+                    <input
+                      type="file"
+                      ref={fileInputArtesRef}
+                      style={{ display: 'none' }}
+                      multiple
+                      accept=".pdf,.ai,.eps,.jpg,.jpeg,.png"
+                      onChange={(e) => handleUploadArtes(e.target.files)}
+                    />
+                  )}
+
+                  {artesExpanded && (archivosLoading && archivos.artes.length === 0 ? (
+                    <ActivityIndicator size="small" color="#475569" />
+                  ) : archivos.artes.length === 0 ? (
+                    <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinArtes')}</Text>
+                  ) : (
+                    archivos.artes.map((archivo) => {
+                      const ext = (archivo.nombre_original || '').split('.').pop().toUpperCase().slice(0, 4);
+                      return (
+                        <View key={archivo.id} style={styles.fileRow}>
+                          <View style={styles.fileIcon}>
+                            <Text style={styles.fileIconText}>{ext}</Text>
+                          </View>
+                          <Text style={styles.fileName} numberOfLines={1}>{archivo.nombre_original}</Text>
+                          <Text style={styles.fileMeta}>{formatearTamanio(archivo.tamanio)}</Text>
+                          <TouchableOpacity
+                            style={[styles.fileActionBtn, styles.fileDownloadBtn]}
+                            onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${archivo.id}`, '_blank'); }}
+                          >
+                            <Text style={styles.fileActionBtnText}>↓</Text>
+                          </TouchableOpacity>
+                          {canDelete && (
+                            confirmingDeleteArchivo === archivo.id ? (
+                              <DeleteConfirmRow
+                                onCancel={() => setConfirmingDeleteArchivo(null)}
+                                onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(archivo.id); }}
+                              />
+                            ) : (
+                              <TouchableOpacity
+                                style={[styles.fileActionBtn, styles.fileDeleteBtn]}
+                                onPress={() => setConfirmingDeleteArchivo(archivo.id)}
+                              >
+                                <Text style={styles.fileActionBtnText}>✕</Text>
+                              </TouchableOpacity>
+                            )
+                          )}
+                        </View>
+                      );
+                    })
+                  ))}
+                </View>{/* fin artes sectionCard */}
+
+                </View>{/* fin columna izquierda */}
 
                 {/* ── Comparador de PDF ── */}
                 {(() => {
