@@ -640,77 +640,95 @@ const styles = StyleSheet.create({
   },
 
   // ── Comparador de PDF ───────────────────────────────────────────────────────
-  cmpSidePanel: {
-    flex: 1,
-    borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
-    paddingLeft: 12,
-  },
-  cmpRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  cmpColPdf: {
-    width: 120,
-    flexShrink: 0,
-  },
-  cmpColSearch: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cmpColTitle: {
-    fontSize: 10,
-    fontWeight: '700',
+  cmpSectionLabel: {
+    fontSize: 9,
+    fontWeight: '800',
     color: '#94A3B8',
     textTransform: 'uppercase',
-    letterSpacing: 0.7,
-    marginBottom: 6,
+    letterSpacing: 0.8,
+    marginBottom: 7,
   },
   cmpEmpty: {
     fontSize: 11,
     color: '#CBD5E1',
     fontStyle: 'italic',
+    paddingVertical: 2,
   },
-  cmpPdfRow: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 6,
+  // Horizontal pill selection
+  cmpPill: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-    marginBottom: 4,
+    marginRight: 6,
+    marginBottom: 6,
   },
-  cmpPdfRowActive: {
-    backgroundColor: '#14532D',
-    borderColor: '#16A34A',
+  cmpPillActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4338CA',
   },
-  cmpPdfRowText: {
+  cmpPillText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#475569',
   },
-  cmpPdfRowTextActive: {
-    color: '#DCFCE7',
-    fontWeight: '600',
+  cmpPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  // Connector between sections
+  cmpConnector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+    gap: 6,
+  },
+  cmpConnectorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  cmpConnectorArrow: {
+    fontSize: 11,
+    color: '#CBD5E1',
+    fontWeight: '700',
+  },
+  // Search row — 3 compact labeled inputs
+  cmpSearchRow: {
+    flexDirection: 'row',
+    gap: 5,
+    marginBottom: 5,
+  },
+  cmpFieldGroup: {
+    flex: 1,
+  },
+  cmpFieldLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
   },
   cmpSearchInput: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
     borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
     fontSize: 12,
     color: '#1E1B4B',
     backgroundColor: '#F8FAFC',
-    marginBottom: 6,
   },
   cmpDropdown: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
+    marginBottom: 4,
   },
   cmpDropdownEmpty: {
     fontSize: 11,
@@ -722,11 +740,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8FAFC',
   },
   cmpDropdownNum: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1E1B4B',
   },
   cmpDropdownSub: {
@@ -734,23 +752,27 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 1,
   },
+  // Selected target order chip
   cmpTargetChip: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#EEF2FF',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 8,
+    marginBottom: 8,
   },
   cmpTargetChipNum: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: '#4338CA',
   },
   cmpTargetChipSub: {
     fontSize: 11,
-    color: '#3B82F6',
+    color: '#6366F1',
     marginTop: 2,
   },
   cmpClearBtn: {
@@ -759,24 +781,60 @@ const styles = StyleSheet.create({
   },
   cmpClearBtnText: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#A5B4FC',
   },
-  cmpRunBtn: {
-    marginTop: 10,
-    backgroundColor: '#1E40AF',
-    borderRadius: 7,
-    paddingVertical: 7,
-    paddingHorizontal: 18,
-    alignSelf: 'center',
+  // Status summary bar
+  cmpStatusBar: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 6,
+    marginBottom: 8,
+    gap: 4,
+  },
+  cmpStatusSeg: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4338CA',
+    flex: 1,
+    textAlign: 'center',
+  },
+  cmpStatusSegEmpty: {
+    fontSize: 11,
+    color: '#CBD5E1',
+    flex: 1,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  cmpStatusArrow: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    fontWeight: '700',
+  },
+  // Compare button
+  cmpRunBtn: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cmpRunBtnDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#E2E8F0',
   },
   cmpRunBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  cmpRunBtnTextDisabled: {
+    color: '#94A3B8',
   },
   cmpDiffArea: {
     marginTop: 14,
@@ -820,26 +878,27 @@ const styles = StyleSheet.create({
 
   // ── Comparador lightbox ─────────────────────────────────────────────────
   cmpViewResultBtn: {
-    marginTop: 10,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 7,
-    paddingVertical: 8,
+    marginTop: 8,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#C7D2FE',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'space-between',
   },
   cmpViewResultBtnLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#475569',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4338CA',
+    letterSpacing: 0.3,
   },
   cmpViewResultBtnSim: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: '#4F46E5',
   },
   cmpLightboxOverlay: {
     flex: 1,
@@ -2577,120 +2636,182 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     })),
                   ];
                   const filtered = getFilteredComparadorPedidos();
+                  const srcLabel  = srcOptions.find(o => o.id === comparadorSrcArchivoId)?.label;
+                  const tgtLabel  = targetOptions.find(o => o.id === comparadorTargetArchivoId)?.label;
+                  const isDisabled = !comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning;
                   return (
                     <View style={[styles.sectionCard, { flex: 1 }]}>
                       <View style={styles.fileSectionHeader}>
                         <Text style={styles.filesSectionLabel}>⇄ {t('screens.pedidoDetalle.comparadorTitle')}</Text>
                       </View>
 
-                      <Text style={styles.cmpColTitle}>{t('screens.pedidoDetalle.comparadorColTitleOrigen')}</Text>
-                      {srcOptions.length === 0
-                        ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinArchivos')}</Text>
-                        : srcOptions.map((opt) => (
-                          <TouchableOpacity key={opt.id}
-                            style={[styles.cmpPdfRow, comparadorSrcArchivoId === opt.id && styles.cmpPdfRowActive]}
-                            onPress={() => setComparadorSrcArchivoId((id) => id === opt.id ? null : opt.id)}>
-                            <Text style={[styles.cmpPdfRowText, comparadorSrcArchivoId === opt.id && styles.cmpPdfRowTextActive]} numberOfLines={1}>{opt.label}</Text>
-                          </TouchableOpacity>
-                        ))
-                      }
-
-                      <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>{t('screens.pedidoDetalle.comparadorColTitleDestino')}</Text>
-                      {comparadorTargetPedido ? (
-                        <View style={styles.cmpTargetChip}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.cmpTargetChipNum}>{comparadorTargetPedido.numero_pedido}</Text>
-                            {(comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia)
-                              ? <Text style={styles.cmpTargetChipSub} numberOfLines={1}>{comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia}</Text>
-                              : null}
-                          </View>
-                          <TouchableOpacity onPress={clearTargetPedido} style={styles.cmpClearBtn}>
-                            <Text style={styles.cmpClearBtnText}>✕</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <>
-                          <TextInput
-                            style={styles.cmpSearchInput}
-                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderNumero')}
-                            placeholderTextColor="#94A3B8"
-                            value={comparadorSearchNumero}
-                            onChangeText={setComparadorSearchNumero}
-                            onFocus={loadComparadorPedidos}
-                          />
-                          <TextInput
-                            style={styles.cmpSearchInput}
-                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderCliente')}
-                            placeholderTextColor="#94A3B8"
-                            value={comparadorSearchCliente}
-                            onChangeText={setComparadorSearchCliente}
-                            onFocus={loadComparadorPedidos}
-                          />
-                          <TextInput
-                            style={styles.cmpSearchInput}
-                            placeholder={t('screens.pedidoDetalle.comparadorPlaceholderReferencia')}
-                            placeholderTextColor="#94A3B8"
-                            value={comparadorSearchNombre}
-                            onChangeText={setComparadorSearchNombre}
-                            onFocus={loadComparadorPedidos}
-                          />
-                          {(comparadorSearchNumero.trim() || comparadorSearchCliente.trim() || comparadorSearchNombre.trim()) ? (
-                            <View style={styles.cmpDropdown}>
-                              {filtered.length === 0
-                                ? <Text style={styles.cmpDropdownEmpty}>{t('screens.pedidoDetalle.comparadorSinResultados')}</Text>
-                                : filtered.map((p) => {
-                                  const esMismo = p.id === pedidoId;
-                                  return (
-                                    <TouchableOpacity key={p.id} style={[styles.cmpDropdownItem, esMismo && { backgroundColor: '#1E3A5F' }]} onPress={() => selectTargetPedido(p)}>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <Text style={styles.cmpDropdownNum}>{p.numero_pedido}</Text>
-                                        {esMismo && <Text style={{ fontSize: 9, fontWeight: '700', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('screens.pedidoDetalle.comparadorEstePedido')}</Text>}
-                                      </View>
-                                      {(p.referencia || p.datos_presupuesto?.referencia) ? (
-                                        <Text style={styles.cmpDropdownSub} numberOfLines={1}>{p.referencia || p.datos_presupuesto?.referencia}</Text>
-                                      ) : null}
-                                    </TouchableOpacity>
-                                  );
-                                })
-                              }
+                      {/* ── ORIGEN ── */}
+                      <View style={{ paddingTop: 10 }}>
+                        <Text style={styles.cmpSectionLabel}>{t('screens.pedidoDetalle.comparadorColTitleOrigen')}</Text>
+                        {srcOptions.length === 0
+                          ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinArchivos')}</Text>
+                          : <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                              {srcOptions.map((opt) => {
+                                const isActive = comparadorSrcArchivoId === opt.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={opt.id}
+                                    style={[styles.cmpPill, isActive && styles.cmpPillActive]}
+                                    onPress={() => setComparadorSrcArchivoId((id) => id === opt.id ? null : opt.id)}
+                                  >
+                                    <Text style={[styles.cmpPillText, isActive && styles.cmpPillTextActive]}>
+                                      {isActive ? '✓ ' : ''}{opt.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
                             </View>
-                          ) : null}
-                        </>
-                      )}
-
-                      {comparadorTargetPedido && (
-                        <>
-                          <Text style={[styles.cmpColTitle, { marginTop: 12 }]}>{t('screens.pedidoDetalle.comparadorColTitlePdfDestino')}</Text>
-                          {targetOptions.length === 0
-                            ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinPdf')}</Text>
-                            : targetOptions.map((opt) => (
-                              <TouchableOpacity key={opt.id}
-                                style={[styles.cmpPdfRow, comparadorTargetArchivoId === opt.id && styles.cmpPdfRowActive]}
-                                onPress={() => setComparadorTargetArchivoId((id) => id === opt.id ? null : opt.id)}>
-                                <Text style={[styles.cmpPdfRowText, comparadorTargetArchivoId === opt.id && styles.cmpPdfRowTextActive]} numberOfLines={1}>{opt.label}</Text>
-                              </TouchableOpacity>
-                            ))
-                          }
-                        </>
-                      )}
-
-                      <TouchableOpacity
-                        style={[styles.cmpRunBtn, { marginTop: 12 }, (!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning) && styles.cmpRunBtnDisabled]}
-                        onPress={() => runComparison()}
-                        disabled={!comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning}
-                      >
-                        {comparadorRunning
-                          ? <ActivityIndicator size="small" color="#FFFFFF" />
-                          : <Text style={styles.cmpRunBtnText}>⇄ {t('screens.pedidoDetalle.comparadorBtnComparar')}</Text>
                         }
-                      </TouchableOpacity>
+                      </View>
 
-                      {comparadorDiff && comparadorDiff.length > 0 && (
-                        <TouchableOpacity style={styles.cmpViewResultBtn} onPress={() => setComparadorLightbox(true)}>
-                          <Text style={styles.cmpViewResultBtnLabel}>{t('screens.pedidoDetalle.comparadorVerResultado')}</Text>
-                          <Text style={styles.cmpViewResultBtnSim}>{comparadorDiff[0]?.similarity}% {t('screens.pedidoDetalle.comparadorSimilitud')}</Text>
+                      {/* ── Connector ── */}
+                      <View style={styles.cmpConnector}>
+                        <View style={styles.cmpConnectorLine} />
+                        <Text style={styles.cmpConnectorArrow}>↓</Text>
+                        <View style={styles.cmpConnectorLine} />
+                      </View>
+
+                      {/* ── DESTINO ── */}
+                      <View>
+                        <Text style={styles.cmpSectionLabel}>{t('screens.pedidoDetalle.comparadorColTitleDestino')}</Text>
+                        {comparadorTargetPedido ? (
+                          <>
+                            <View style={styles.cmpTargetChip}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.cmpTargetChipNum}>#{comparadorTargetPedido.numero_pedido}</Text>
+                                {(comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia)
+                                  ? <Text style={styles.cmpTargetChipSub} numberOfLines={1}>{comparadorTargetPedido.referencia || comparadorTargetPedido.datos_presupuesto?.referencia}</Text>
+                                  : null}
+                              </View>
+                              <TouchableOpacity onPress={clearTargetPedido} style={styles.cmpClearBtn}>
+                                <Text style={styles.cmpClearBtnText}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                            {targetOptions.length === 0
+                              ? <Text style={styles.cmpEmpty}>{t('screens.pedidoDetalle.comparadorSinPdf')}</Text>
+                              : <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                  {targetOptions.map((opt) => {
+                                    const isActive = comparadorTargetArchivoId === opt.id;
+                                    return (
+                                      <TouchableOpacity
+                                        key={opt.id}
+                                        style={[styles.cmpPill, isActive && styles.cmpPillActive]}
+                                        onPress={() => setComparadorTargetArchivoId((id) => id === opt.id ? null : opt.id)}
+                                      >
+                                        <Text style={[styles.cmpPillText, isActive && styles.cmpPillTextActive]}>
+                                          {isActive ? '✓ ' : ''}{opt.label}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })}
+                                </View>
+                            }
+                          </>
+                        ) : (
+                          <>
+                            <View style={styles.cmpSearchRow}>
+                              <View style={[styles.cmpFieldGroup, { flex: 0.7 }]}>
+                                <Text style={styles.cmpFieldLabel}>Nº</Text>
+                                <TextInput
+                                  style={styles.cmpSearchInput}
+                                  placeholder="000"
+                                  placeholderTextColor="#CBD5E1"
+                                  value={comparadorSearchNumero}
+                                  onChangeText={setComparadorSearchNumero}
+                                  onFocus={loadComparadorPedidos}
+                                />
+                              </View>
+                              <View style={styles.cmpFieldGroup}>
+                                <Text style={styles.cmpFieldLabel}>{t('screens.pedidoDetalle.comparadorPlaceholderCliente')}</Text>
+                                <TextInput
+                                  style={styles.cmpSearchInput}
+                                  placeholder="..."
+                                  placeholderTextColor="#CBD5E1"
+                                  value={comparadorSearchCliente}
+                                  onChangeText={setComparadorSearchCliente}
+                                  onFocus={loadComparadorPedidos}
+                                />
+                              </View>
+                              <View style={styles.cmpFieldGroup}>
+                                <Text style={styles.cmpFieldLabel}>{t('screens.pedidoDetalle.comparadorPlaceholderReferencia')}</Text>
+                                <TextInput
+                                  style={styles.cmpSearchInput}
+                                  placeholder="..."
+                                  placeholderTextColor="#CBD5E1"
+                                  value={comparadorSearchNombre}
+                                  onChangeText={setComparadorSearchNombre}
+                                  onFocus={loadComparadorPedidos}
+                                />
+                              </View>
+                            </View>
+                            {(comparadorSearchNumero.trim() || comparadorSearchCliente.trim() || comparadorSearchNombre.trim()) && (
+                              <View style={styles.cmpDropdown}>
+                                {filtered.length === 0
+                                  ? <Text style={styles.cmpDropdownEmpty}>{t('screens.pedidoDetalle.comparadorSinResultados')}</Text>
+                                  : filtered.map((p) => {
+                                      const esMismo = p.id === pedidoId;
+                                      return (
+                                        <TouchableOpacity
+                                          key={p.id}
+                                          style={[styles.cmpDropdownItem, esMismo && { backgroundColor: '#EEF2FF' }]}
+                                          onPress={() => selectTargetPedido(p)}
+                                        >
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                            <Text style={styles.cmpDropdownNum}>#{p.numero_pedido}</Text>
+                                            {esMismo && <Text style={{ fontSize: 9, fontWeight: '700', color: '#6366F1', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('screens.pedidoDetalle.comparadorEstePedido')}</Text>}
+                                          </View>
+                                          {(p.referencia || p.datos_presupuesto?.referencia) && (
+                                            <Text style={styles.cmpDropdownSub} numberOfLines={1}>{p.referencia || p.datos_presupuesto?.referencia}</Text>
+                                          )}
+                                        </TouchableOpacity>
+                                      );
+                                    })
+                                }
+                              </View>
+                            )}
+                          </>
+                        )}
+                      </View>
+
+                      {/* ── Status + Compare ── */}
+                      <View style={{ marginTop: 4 }}>
+                        <View style={styles.cmpStatusBar}>
+                          {srcLabel
+                            ? <Text style={styles.cmpStatusSeg} numberOfLines={1}>{srcLabel}</Text>
+                            : <Text style={styles.cmpStatusSegEmpty}>— {t('screens.pedidoDetalle.comparadorColTitleOrigen').toLowerCase()}</Text>
+                          }
+                          <Text style={styles.cmpStatusArrow}>⇄</Text>
+                          {comparadorTargetPedido && tgtLabel
+                            ? <Text style={styles.cmpStatusSeg} numberOfLines={1}>{tgtLabel}</Text>
+                            : comparadorTargetPedido
+                              ? <Text style={styles.cmpStatusSegEmpty}>— pdf</Text>
+                              : <Text style={styles.cmpStatusSegEmpty}>— {t('screens.pedidoDetalle.comparadorColTitleDestino').toLowerCase()}</Text>
+                          }
+                        </View>
+
+                        <TouchableOpacity
+                          style={[styles.cmpRunBtn, isDisabled && styles.cmpRunBtnDisabled]}
+                          onPress={() => runComparison()}
+                          disabled={isDisabled}
+                        >
+                          {comparadorRunning
+                            ? <ActivityIndicator size="small" color="#FFFFFF" />
+                            : <Text style={[styles.cmpRunBtnText, isDisabled && styles.cmpRunBtnTextDisabled]}>⇄ {t('screens.pedidoDetalle.comparadorBtnComparar')}</Text>
+                          }
                         </TouchableOpacity>
-                      )}
+
+                        {comparadorDiff && comparadorDiff.length > 0 && (
+                          <TouchableOpacity style={styles.cmpViewResultBtn} onPress={() => setComparadorLightbox(true)}>
+                            <Text style={styles.cmpViewResultBtnLabel}>{t('screens.pedidoDetalle.comparadorVerResultado')} →</Text>
+                            <Text style={styles.cmpViewResultBtnSim}>{comparadorDiff[0]?.similarity}%</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   );
                 })()}
