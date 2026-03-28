@@ -3435,7 +3435,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   const boxes = [{ label: 'Trim', box: trimBox }];
                   return (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
-                      <Text style={[styles.cmpPageBoxLabel, { fontSize: 10 }]}>A</Text>
+                      {!cmpViewOnly && <Text style={[styles.cmpPageBoxLabel, { fontSize: 10 }]}>A</Text>}
                       {boxes.map(x => (
                         <Text key={x.label} style={styles.cmpPageBoxItem}>
                           <Text style={styles.cmpPageBoxLabel}>{x.label} </Text>
@@ -3457,7 +3457,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 {!cmpViewOnly && (page.page_a_boxes || page.page_b_boxes) && (
                   <View style={{ width: 1, height: 14, backgroundColor: '#334155', marginHorizontal: 4 }} />
                 )}
-                {/* PDF B boxes */}
+                {/* PDF B boxes — hidden in view-only (same file as A) */}
                 {!cmpViewOnly && (() => {
                   const bb = page.page_b_boxes;
                   if (!bb) return null;
@@ -3501,7 +3501,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {/* Body: sidebar izquierdo + imagen */}
               <View style={styles.cmpLightboxBody}>
                 {/* Sidebar canales */}
-                {!cmpViewOnly && allSeps.length > 0 && (
+                {allSeps.length > 0 && (
                   <View style={styles.cmpChannelSidebar}>
                     {allSeps.map((s) => {
                       const isActive = activeSeps.has(s.nombre);
