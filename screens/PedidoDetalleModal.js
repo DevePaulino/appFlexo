@@ -1192,7 +1192,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   eskoToolCol: {
-    flex: 1,
+    flexBasis: '46%',
+    flexGrow: 1,
     minWidth: 90,
     borderRadius: 10,
     borderWidth: 1,
