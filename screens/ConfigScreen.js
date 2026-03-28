@@ -85,11 +85,11 @@ const PERMISSION_GROUPS = [
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F5FD' },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 20,
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7ED',
+    borderBottomColor: '#C7D2FE',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

@@ -21,11 +21,11 @@ const styles = StyleSheet.create({
   },
   // Single flat toolbar row — title left, search center, button right
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 20,
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E7ED',
+    borderBottomColor: '#C7D2FE',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
