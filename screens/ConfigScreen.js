@@ -1130,7 +1130,8 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const cargarUsuarios = async () => {
     try {
-      const response = await fetch(API_USERS_URL);
+      const authHeaders = global.__MIAPP_ACCESS_TOKEN ? { Authorization: `Bearer ${global.__MIAPP_ACCESS_TOKEN}` } : {};
+      const response = await fetch(API_USERS_URL, { headers: authHeaders });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         Alert.alert('Error', data.error || 'No se pudieron cargar los usuarios');
@@ -1499,17 +1500,18 @@ export default function ConfigScreen({ route, currentUser }) {
     try {
       const endpoint = usuarioEditandoId ? `${API_USERS_URL}/${usuarioEditandoId}` : API_USERS_URL;
       const method = usuarioEditandoId ? 'PUT' : 'POST';
+      const authHeaders = global.__MIAPP_ACCESS_TOKEN ? { Authorization: `Bearer ${global.__MIAPP_ACCESS_TOKEN}` } : {};
       const response = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-        nombre,
-        email,
-        rol,
-        ...(puedeGestionarSesionTimeout ? {
-          sesion_timeout_minutos: nuevoUsuarioSesionTimeout.trim() !== '' ? parseInt(nuevoUsuarioSesionTimeout, 10) || null : null,
-        } : {}),
-      }),
+          nombre,
+          email,
+          rol,
+          ...(puedeGestionarSesionTimeout ? {
+            sesion_timeout_minutos: nuevoUsuarioSesionTimeout.trim() !== '' ? parseInt(nuevoUsuarioSesionTimeout, 10) || null : null,
+          } : {}),
+        }),
       });
       const data = await response.json().catch(() => ({}));
 
