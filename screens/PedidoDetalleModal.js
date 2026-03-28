@@ -2209,6 +2209,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                           {renderRow(t('screens.pedidoDetalle.labelEstado'), pedido.estado || '-')}
                           {renderRow(t('screens.pedidoDetalle.labelFechaEntrega'), formatearFecha(pedido.fecha_entrega))}
                           {renderRow(t('screens.pedidoDetalle.labelRetraso'), String(pedido.dias_retraso ?? 0), (pedido.dias_retraso || 0) > 0 ? '#FF6B6B' : '#16A34A')}
+                          {dp?.observaciones ? (
+                            <View style={styles.fullWidthRow}>
+                              <Text style={styles.fullWidthLabel}>{t('screens.pedidoDetalle.labelObservaciones')}</Text>
+                              <Text style={styles.fullWidthValue}>{dp.observaciones}</Text>
+                            </View>
+                          ) : null}
                         </View>
                       </View>
                       {/* Col 3: Presupuesto / Producto */}
