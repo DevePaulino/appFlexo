@@ -83,79 +83,70 @@ const PERMISSION_GROUPS = [
 ];
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EEF2F8' },
+  container: { flex: 1, backgroundColor: '#F4F5FD' },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-    justifyContent: 'center',
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
+    gap: 12,
+    minHeight: 54,
+  },
+  headerTopRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
   },
   contentWrap: {
     padding: 12,
   },
   groupTitle: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: '800',
-    color: '#F1F5F9',
+    color: '#4F46E5',
     marginBottom: 10,
     marginTop: 0,
     alignSelf: 'flex-start',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ECEFFE',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   blockContainer: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#E4E7ED',
     borderRadius: 14,
     padding: 10,
     marginBottom: 14,
   },
   section: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FAFBFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E4E7ED',
     padding: 12,
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#F1F5F9',
+    color: '#4F46E5',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ECEFFE',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -191,7 +182,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addBtnText: { color: '#1E293B', fontWeight: '600', fontSize: 13 },
+  addBtnText: { color: '#4F46E5', fontWeight: '700', fontSize: 13 },
   chipList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
@@ -403,7 +394,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ECEFFE',
     borderBottomWidth: 0,
     gap: 7,
   },
@@ -417,7 +408,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: '#F1F5F9',
+    color: '#4F46E5',
   },
   matrixRow: {
     flexDirection: 'row',
@@ -465,7 +456,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   matrixRoleHeaderProtected: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
   },
   matrixRoleHeaderText: {
     fontSize: 10,
@@ -492,8 +483,8 @@ const styles = StyleSheet.create({
     borderColor: '#E8522A',
   },
   matrixDotProtected: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#4F46E5',
+    borderColor: '#6366F1',
   },
   matrixDotReadonly: {
     opacity: 0.45,
@@ -550,19 +541,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   usersBtnPlus: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(248,250,252,0.55)',
-    backgroundColor: 'transparent',
+    backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
   },
   usersBtnPlusText: {
-    color: '#F1F5F9',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
     fontSize: 13,
   },
   usersRoleLabel: {
@@ -597,47 +586,45 @@ const styles = StyleSheet.create({
     borderColor: '#DC2626',
   },
   usersSearchInput: {
+    flex: 1,
+    maxWidth: 320,
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    backgroundColor: '#F8FAFF',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     color: '#0F172A',
-    fontSize: 14,
-    width: '75%',
-    maxWidth: 442,
-    minWidth: 234,
-    marginBottom: 10,
+    fontSize: 13,
   },
   usersTableWrap: {
     maxHeight: 280,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    overflow: 'hidden',
   },
   usersTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1.5,
+    borderColor: '#D9DBFF',
     paddingHorizontal: 10,
     paddingVertical: 10,
+    marginBottom: 6,
+    borderRadius: 10,
     minHeight: 44,
     alignItems: 'center',
   },
   usersTableRow: {
     flexDirection: 'row',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 3,
     alignItems: 'center',
   },
   usersTableRowAlt: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
   },
   usersColAvatar: {
     width: 44,
@@ -683,9 +670,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   usersHeaderText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
   },
   usersCellText: {
     color: '#0F172A',
@@ -764,7 +752,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   usersBtnPrimaryText: {
-    color: '#1E293B',
+    color: '#4F46E5',
     fontWeight: '700',
   },
   usersModalBackdrop: {
@@ -808,15 +796,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   usrRolTabBtnActive: {
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#4F46E5',
   },
   usrRolTabBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#6B7280',
   },
   usrRolTabBtnTextActive: {
-    color: '#1E293B',
+    color: '#4F46E5',
   },
 });
 
@@ -996,6 +984,7 @@ export default function ConfigScreen({ route, currentUser }) {
   });
   const [usuarios, setUsuarios] = useState([]);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
+  const [busquedaRoles, setBusquedaRoles] = useState('');
   const [paginaUsuarios, setPaginaUsuarios] = useState(1);
   const [activeTabUsRol, setActiveTabUsRol] = useState('usuarios'); // 'usuarios' | 'roles'
   const [modalNuevoRolVisible, setModalNuevoRolVisible] = useState(false);
@@ -2198,11 +2187,15 @@ export default function ConfigScreen({ route, currentUser }) {
     }
   };
 
-  const renderCategoria = (categoryKey, categoryTitle, sectionStyle = null) => {
+  const renderCategoria = (categoryKey, categoryTitle, sectionStyle = null, filterText = '') => {
     const itemsRaw = settings[categoryKey] || [];
-    const items = categoryKey === 'roles'
+    let items = categoryKey === 'roles'
       ? itemsRaw.filter((item) => !item?.internal)
       : itemsRaw;
+    if (filterText.trim()) {
+      const q = filterText.trim().toLowerCase();
+      items = items.filter((item) => (item.valor || item.label || '').toLowerCase().includes(q));
+    }
     const rolesProtegidos = new Set(['administrador']);
     const estadosProtegidos = new Set([
       'en-diseno',
@@ -2353,27 +2346,37 @@ export default function ConfigScreen({ route, currentUser }) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.title}>{pageTitle}</Text>
-          {showTopUsersPlus && activeTabUsRol === 'usuarios' ? (
-            <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
-              <Text style={styles.usersBtnPlusText}>{t('screens.config.newUserBtn')}</Text>
-            </TouchableOpacity>
-          ) : showTopUsersPlus && activeTabUsRol === 'roles' ? (
-            <TouchableOpacity style={[styles.usersBtnPlus, !puedeEditarRolesPermisos && { opacity: 0.45 }]} onPress={() => puedeEditarRolesPermisos && setModalNuevoRolVisible(true)} disabled={!puedeEditarRolesPermisos}>
-              <Text style={styles.usersBtnPlusText}>{t('screens.config.newRolBtn')}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 38 }} />
-          )}
-        </View>
+        <Text style={styles.title}>{pageTitle}</Text>
+        {showTopUsersPlus && activeTabUsRol === 'usuarios' ? (
+          <TextInput
+            style={styles.usersSearchInput}
+            value={busquedaUsuarios}
+            onChangeText={setBusquedaUsuarios}
+            placeholder={t('screens.config.searchUsersPlaceholder')}
+            placeholderTextColor="#94A3B8"
+          />
+        ) : showTopUsersPlus && activeTabUsRol === 'roles' ? (
+          <TextInput
+            style={styles.usersSearchInput}
+            value={busquedaRoles}
+            onChangeText={setBusquedaRoles}
+            placeholder={t('screens.config.searchRolesPlaceholder')}
+            placeholderTextColor="#94A3B8"
+          />
+        ) : null}
+        {showTopUsersPlus && activeTabUsRol === 'usuarios' && (
+          <TouchableOpacity style={[styles.usersBtnPlus, !puedeAdministrarUsuarios && { opacity: 0.45 }]} onPress={() => puedeAdministrarUsuarios && abrirModalNuevoUsuario()} disabled={!puedeAdministrarUsuarios}>
+            <Text style={styles.usersBtnPlusText}>{t('screens.config.newUserBtn')}</Text>
+          </TouchableOpacity>
+        )}
+        {showTopUsersPlus && activeTabUsRol === 'roles' && (
+          <TouchableOpacity style={[styles.usersBtnPlus, !puedeEditarRolesPermisos && { opacity: 0.45 }]} onPress={() => puedeEditarRolesPermisos && setModalNuevoRolVisible(true)} disabled={!puedeEditarRolesPermisos}>
+            <Text style={styles.usersBtnPlusText}>{t('screens.config.newRolBtn')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={styles.contentWrap}>
 
       {showUsuariosRoles && (
-      <>
-      {/* Tab bar */}
       <View style={styles.usrRolTabBar}>
         {['usuarios', 'roles'].map(tab => (
           <TouchableOpacity
@@ -2387,19 +2390,15 @@ export default function ConfigScreen({ route, currentUser }) {
           </TouchableOpacity>
         ))}
       </View>
+      )}
 
+      <View style={styles.contentWrap}>
+
+      {showUsuariosRoles && (
+      <>
       {/* ── Pestaña Usuarios ────────────────────────────────────────── */}
       {activeTabUsRol === 'usuarios' && (
-      <View style={styles.blockContainer}>
-        <View style={styles.section}>
-
-              <TextInput
-                style={styles.usersSearchInput}
-                value={busquedaUsuarios}
-                onChangeText={setBusquedaUsuarios}
-                placeholder={t('screens.config.searchUsersPlaceholder')}
-                placeholderTextColor="#94A3B8"
-              />
+      <View>
 
               {usuariosFiltrados.length === 0 ? (
                 <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
@@ -2562,7 +2561,6 @@ export default function ConfigScreen({ route, currentUser }) {
                 </View>
               </Modal>
 
-        </View>
       </View>
       )}
 
@@ -2570,7 +2568,7 @@ export default function ConfigScreen({ route, currentUser }) {
       {activeTabUsRol === 'roles' && (
       <View style={styles.blockContainer}>
         <View>
-          {renderCategoria('roles', t('screens.config.rolesUsuarioTitle'))}
+          {renderCategoria('roles', t('screens.config.rolesUsuarioTitle'), null, busquedaRoles)}
           <Text style={[styles.muted, { marginTop: -6, marginBottom: 10 }]}>{t('screens.config.rolesProtegidos')}</Text>
         </View>
 

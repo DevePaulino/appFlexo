@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
   },
   btnSaveText: {
-    color: '#1E293B',
+    color: '#4F46E5',
     fontWeight: '700',
   },
 });

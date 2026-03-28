@@ -575,6 +575,7 @@
       "rolNombrePlaceholder": "Ex. Éditeur, Superviseur...",
       "rolColorLabel": "Couleur",
       "searchUsersPlaceholder": "Rechercher par nom, e-mail ou rôle...",
+      "searchRolesPlaceholder": "Rechercher un rôle...",
       "noUsuarios": "Aucun utilisateur",
       "noUsuariosMsg": "Aucun utilisateur à afficher",
       "colNombre": "Nom",

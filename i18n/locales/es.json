@@ -575,6 +575,7 @@
       "rolNombrePlaceholder": "Ej. Editor, Supervisor...",
       "rolColorLabel": "Color",
       "searchUsersPlaceholder": "Buscar por nombre, email o rol...",
+      "searchRolesPlaceholder": "Buscar rol...",
       "noUsuarios": "Sin usuarios",
       "noUsuariosMsg": "No hay usuarios para mostrar",
       "colNombre": "Nombre",

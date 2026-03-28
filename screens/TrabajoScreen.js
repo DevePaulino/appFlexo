@@ -14,601 +14,245 @@ import { useMaquinas } from '../MaquinasContext';
 import { useModulos } from '../ModulosContext';
 
 const styles = StyleSheet.create({
+  // ─── Layout ──────────────────────────────────────────────────────────────────
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',  // very subtle indigo wash
   },
+  // Single flat toolbar row — title left, search center, button right
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' }, // kept for compatibility
+  headerSearchRow: {},                                            // kept for compatibility
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
-  },
-  headerSearchRow: {
-    marginTop: 6,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',  // indigo-950 — dark but colored
+    letterSpacing: -0.3,
+    marginRight: 4,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    fontSize: 12,
-    color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
-  },
-  chartsContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginHorizontal: 10,
-    marginTop: 10,
-    marginBottom: 10,
-    padding: 12,
-  },
-  chartsTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 10,
-  },
-  chartRow: {
-    marginBottom: 10,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  chartLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  chartCount: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#E55A2B',
-  },
-  chartTrack: {
-    height: 10,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
-    overflow: 'hidden',
-  },
-  chartStackRow: {
-    flexDirection: 'row',
-    height: 12,
-    borderRadius: 6,
-    overflow: 'visible',
-    backgroundColor: '#E2E8F0',
-    marginBottom: 12,
-    paddingVertical: 1,
-  },
-  chartFill: {
-    height: '100%',
-    borderRadius: 6,
-  },
-  chartLegendWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chartLegendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 10,
-    marginBottom: 6,
-  },
-  chartLegendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
-  },
-  chartLegendText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  chartLegendItemActive: {
-    backgroundColor: '#EEF7F1',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.16,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  chartSegmentTouchable: {
-    height: '100%',
-  },
-  chartSegmentActiveShadow: {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-    transform: [{ scaleY: 1.12 }],
-    zIndex: 2,
-  },
-  chartEmpty: {
-    fontSize: 12,
-    color: '#475569',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  filterText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  filterClearBtn: {
-    backgroundColor: '#EEF2F8',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  filterClearText: {
-    color: '#374151',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'flex-start',
-    marginTop: -4,
-  },
-  btn: {
-    backgroundColor: '#EEF2F8',
+    borderColor: '#E4E7ED',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  btnNew: {
-    backgroundColor: '#475569',
-  },
-  btnNewText: {
-    color: '#FFFFFF',
-  },
-  btnText: {
-    color: '#374151',
-    fontWeight: '700',
+    paddingVertical: 7,
     fontSize: 13,
+    color: '#0F172A',
+    maxWidth: 320,
   },
-  btnPlusWrap: {
-    position: 'relative',
-  },
+
+  // ─── "+ Nuevo" button — solid indigo, right side ──────────────────────────
+  btnPlusWrap: { position: 'relative' },
   btnPlus: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(248,250,252,0.55)',
-    backgroundColor: 'transparent',
+    backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
   },
-  btnPlusDisabled: {
-    borderColor: 'rgba(248,250,252,0.2)',
-  },
-  btnPlusText: {
-    color: '#F1F5F9',
-    fontWeight: '600',
-    fontSize: 13,
-  },
+  btnPlusDisabled: { backgroundColor: '#A5B4FC' },
+  btnPlusText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
   hoverHint: {
-    position: 'absolute',
-    left: 44,
-    top: 8,
-    backgroundColor: '#0F172A',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    position: 'absolute', right: 0, top: 40,
+    backgroundColor: '#0F172A', borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 4,
   },
-  hoverHintText: {
-    color: '#F1F5F9',
-    fontSize: 11,
-    fontWeight: '700',
+  hoverHintText: { color: '#F1F5F9', fontSize: 11, fontWeight: '700' },
+  btnRow: { flexDirection: 'row', gap: 8 },
+  btn: { backgroundColor: '#F8FAFC', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#E4E7ED' },
+  btnNew: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+  btnNewText: { color: '#FFFFFF' },
+  btnText: { color: '#374151', fontWeight: '600', fontSize: 13 },
+
+  // ─── KPI chart band — full-width, no card ────────────────────────────────
+  chartsContainer: {
+    backgroundColor: '#FAFBFF',  // barely-indigo white — ties charts to the palette
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E7ED',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 16,
   },
-  tableContainer: {
-    flex: 1,
-    paddingHorizontal: 10,
+  chartsTitle: { fontSize: 11, fontWeight: '600', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.7 },
+  // KPI stat pills
+  kpiScrollContent: { flexDirection: 'row', gap: 10, paddingBottom: 14 },
+  kpiPill: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    paddingHorizontal: 14,
     paddingVertical: 10,
+    minWidth: 110,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
+  kpiPillLabel: { fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 4 },
+  kpiPillCount: { fontSize: 24, fontWeight: '900', color: '#0F172A', letterSpacing: -1, lineHeight: 28 },
+  // Segmented progress bar
+  chartStackRow: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: '#E9EBF0',
+  },
+  chartFill: { height: '100%' },
+  chartSegmentTouchable: { height: '100%' },
+  chartSegmentActiveShadow: { zIndex: 2 },
+  // Filter active strip
+  filterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9',
+  },
+  filterText: { fontSize: 12, color: '#475569', fontWeight: '500', flex: 1 },
+  filterClearBtn: {
+    backgroundColor: '#EEF2FF', borderRadius: 6,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  filterClearText: { color: '#4F46E5', fontSize: 11, fontWeight: '700' },
+  // Unused chart rows (kept so getStatusColor still works)
+  chartRow: {}, chartHeader: {}, chartLabel: {}, chartCount: {}, chartTrack: {},
+  chartLegendWrap: {}, chartLegendItem: {}, chartLegendDot: {}, chartLegendText: {},
+  chartLegendItemActive: {}, chartEmpty: {},
+
+  // ─── Table ────────────────────────────────────────────────────────────────
+  tableContainer: { flex: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12 },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    backgroundColor: '#ECEFFE',  // indigo-tinted header
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     marginBottom: 6,
-    borderRadius: 10,
-    minHeight: 44,
+    borderRadius: 8,
+    minHeight: 36,
     alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    marginBottom: 3,
-  },
-  rowAlternate: {
-    backgroundColor: '#F1F5F9',
-  },
-  tableCell: {
-    justifyContent: 'center',
-  },
-  headerText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#F1F5F9',
-  },
-  cellText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#0F172A',
-  },
-  colNumeroPedido: {
-    flex: 0.12,
-    alignItems: 'center',
-  },
-  colNombre: {
-    flex: 0.19,
-  },
-  colCliente: {
-    flex: 0.19,
-  },
-  colReferencia: {
-    flex: 0.12,
-  },
-  colFase: {
-    flex: 0.14,
-    alignItems: 'center',
-  },
-  colEstado: {
-    flex: 0.14,
-    alignItems: 'center',
-  },
-  colAcciones: {
-    flex: 0.12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  navBtn: {
-    backgroundColor: '#EEF2F8',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 5,
-    marginHorizontal: 2,
-  },
-  navBtnDisabled: {
-    opacity: 0.3,
-  },
-  navBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  cancelBtn: {
-    marginLeft: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: 'transparent',
-  },
-  cancelBtnText: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: '#94A3B8',
-  },
-  cancelConfirmRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginLeft: 6,
-  },
-  cancelConfirmText: {
-    fontSize: 10,
-    color: '#DC2626',
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  cancelConfirmNo: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-  },
-  cancelConfirmNoText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  cancelConfirmYes: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#DC2626',
-  },
-  reactivarBtn: {
-    marginLeft: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#6EE7B7',
-    backgroundColor: '#F0FDF4',
-  },
-  reactivarBtnText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  reactivarConfirmYes: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#15803D',
-  },
-  cancelConfirmYesText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  statusDiseno: {
-    backgroundColor: '#E3F2FD',
-  },
-  statusDisenoText: {
-    color: '#1976D2',
-  },
-  statusPendienteAprobacion: {
-    backgroundColor: '#FFF3E0',
-  },
-  statusPendienteAprobacionText: {
-    color: '#F57C00',
-  },
-  statusPendienteCliche: {
-    backgroundColor: '#FCE4EC',
-  },
-  statusPendienteClicheText: {
-    color: '#C2185B',
-  },
-  statusPendienteImpresion: {
-    backgroundColor: '#F3E5F5',
-  },
-  statusPendienteImpresionText: {
-    color: '#7B1FA2',
-  },
-  statusPendientePostImpresion: {
-    backgroundColor: '#E0F2F1',
-  },
-  statusPendientePostImpresionText: {
-    color: '#00796B',
-  },
-  statusFinalizado: {
-    backgroundColor: '#E8F5E9',
-  },
-  statusFinalizadoText: {
-    color: '#388E3C',
-  },
-  statusParado: {
-    backgroundColor: '#FFEBEE',
-  },
-  statusParadoText: {
-    color: '#D32F2F',
-  },
-  statusCancelado: {
-    backgroundColor: '#F1F5F9',
-  },
-  statusCanceladoText: {
-    color: '#475569',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  estadosDotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  estadoDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    opacity: 0.3,
-  },
-  estadoDotActivo: {
-    opacity: 1,
-    transform: [{ scale: 1.55 }],
-  },
-  content: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  cardText: {
-    fontSize: 14,
-    color: '#475569',
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  paginationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  paginationBtn: {
-    backgroundColor: '#475569',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  paginationBtnDisabled: {
-    backgroundColor: '#94A3B8',
-  },
-  paginationBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  paginationInfo: {
-    color: '#0F172A',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '92%',
-    maxWidth: 520,
-    backgroundColor: '#FFF',
-    borderRadius: 18,
-    padding: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-    flex: 1,
-  },
-  modalHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalCloseX: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#475569',
-    padding: 4,
-  },
-  maquinaItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 8,
-    backgroundColor: '#F1F5F9',
+    marginBottom: 4,
+    borderLeftWidth: 3,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+    cursor: 'pointer',
   },
-  maquinaItemAtenuada: {
-    opacity: 0.45,
+  rowAlternate: {},   // eliminated — rows are uniform
+  tableCell: { justifyContent: 'center' },
+  headerText: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5 },
+  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A' },
+  // Order number pill
+  numeroPedidoPill: {
+    backgroundColor: '#EEF2FF', borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 2,
   },
-  maquinaItemText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
+  numeroPedidoPillText: { color: '#4F46E5', fontWeight: '800', fontSize: 12 },
+  // Column flex weights — unchanged
+  colNumeroPedido: { flex: 0.12, alignItems: 'center' },
+  colNombre: { flex: 0.19 },
+  colCliente: { flex: 0.19 },
+  colReferencia: { flex: 0.12 },
+  colFase: { flex: 0.14, alignItems: 'center' },
+  colEstado: { flex: 0.14, alignItems: 'center' },
+  colAcciones: { flex: 0.12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  // State nav arrows
+  navBtn: {
+    backgroundColor: '#F4F5FD', borderWidth: 1, borderColor: '#D9DBFF',
+    paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6, marginHorizontal: 2,
   },
-  maquinaItemSubText: {
-    marginTop: 2,
-    fontSize: 12,
-    color: '#475569',
-  },
-  modalActions: {
-    marginTop: 8,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalCloseBtn: {
-    backgroundColor: '#EEF2F8',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  modalCloseText: {
-    color: '#374151',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  navBtnDisabled: { opacity: 0.3 },
+  navBtnText: { fontSize: 14, fontWeight: '800', color: '#4F46E5' },
+
+  // ─── Progress dots (unchanged) ────────────────────────────────────────────
+  estadosDotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  estadoDot: { width: 10, height: 10, borderRadius: 5, opacity: 0.3 },
+  estadoDotActivo: { opacity: 1, transform: [{ scale: 1.55 }] },
+
+  // ─── Cancel / Reactivar inline rows (unchanged) ───────────────────────────
+  cancelBtn: { marginLeft: 6, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: 'transparent' },
+  cancelBtnText: { fontSize: 9, fontWeight: '500', color: '#94A3B8' },
+  cancelConfirmRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 6 },
+  cancelConfirmText: { fontSize: 10, color: '#DC2626', fontWeight: '600', flexShrink: 1 },
+  cancelConfirmNo: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  cancelConfirmNoText: { fontSize: 10, fontWeight: '600', color: '#64748B' },
+  cancelConfirmYes: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#DC2626' },
+  cancelConfirmYesText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
+  reactivarBtn: { marginLeft: 6, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#6EE7B7', backgroundColor: '#F0FDF4' },
+  reactivarBtnText: { fontSize: 10, fontWeight: '700', color: '#15803D' },
+  reactivarConfirmYes: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#15803D' },
+
+  // ─── Status badges (unchanged) ───────────────────────────────────────────
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignItems: 'center' },
+  statusDiseno: { backgroundColor: '#E3F2FD' },
+  statusDisenoText: { color: '#1976D2' },
+  statusPendienteAprobacion: { backgroundColor: '#FFF3E0' },
+  statusPendienteAprobacionText: { color: '#F57C00' },
+  statusPendienteCliche: { backgroundColor: '#FCE4EC' },
+  statusPendienteClicheText: { color: '#C2185B' },
+  statusPendienteImpresion: { backgroundColor: '#F3E5F5' },
+  statusPendienteImpresionText: { color: '#7B1FA2' },
+  statusPendientePostImpresion: { backgroundColor: '#E0F2F1' },
+  statusPendientePostImpresionText: { color: '#00796B' },
+  statusFinalizado: { backgroundColor: '#E8F5E9' },
+  statusFinalizadoText: { color: '#388E3C' },
+  statusParado: { backgroundColor: '#FFEBEE' },
+  statusParadoText: { color: '#D32F2F' },
+  statusCancelado: { backgroundColor: '#F1F5F9' },
+  statusCanceladoText: { color: '#475569' },
+  statusText: { fontSize: 11, fontWeight: '600' },
+
+  // ─── Pagination ───────────────────────────────────────────────────────────
+  paginationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 10, marginBottom: 4 },
+  paginationBtn: { backgroundColor: '#4F46E5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  paginationBtnDisabled: { backgroundColor: '#C7D2FE' },
+  paginationBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  paginationInfo: { color: '#475569', fontSize: 12, fontWeight: '600' },
+
+  // ─── Cards / modals (unchanged) ───────────────────────────────────────────
+  content: { padding: 16 },
+  card: { backgroundColor: '#FFF', borderRadius: 14, padding: 16, marginBottom: 12, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
+  cardText: { fontSize: 14, color: '#475569', marginBottom: 6 },
+  emptyText: { fontSize: 16, color: '#94A3B8', textAlign: 'center', marginTop: 32 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  modalCard: { width: '92%', maxWidth: 520, backgroundColor: '#FFF', borderRadius: 18, padding: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', flex: 1 },
+  modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalCloseX: { fontSize: 20, fontWeight: '900', color: '#475569', padding: 4 },
+  maquinaItem: { paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, marginBottom: 8, backgroundColor: '#F1F5F9' },
+  maquinaItemAtenuada: { opacity: 0.45 },
+  maquinaItemText: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  maquinaItemSubText: { marginTop: 2, fontSize: 12, color: '#475569' },
+  modalActions: { marginTop: 8, flexDirection: 'row', justifyContent: 'flex-end' },
+  modalCloseBtn: { backgroundColor: '#EEF2F8', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  modalCloseText: { color: '#374151', fontSize: 13, fontWeight: '700' },
 });
 
 export default function TrabajoScreen({ currentUser }) {
@@ -1148,21 +792,7 @@ export default function TrabajoScreen({ currentUser }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>{t('nav.pedidos')}</Text>
-          {modoCreacion !== 'automatico' ? (
-            <Pressable
-              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-              onPress={() => puedeCrear && setModalVisible(true)}
-              disabled={!puedeCrear}
-            >
-              <Text style={styles.btnPlusText}>{t('screens.trabajos.newBtn')}</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 38 }} />
-          )}
-        </View>
+        <Text style={styles.headerTitle}>{t('nav.pedidos')}</Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -1170,10 +800,18 @@ export default function TrabajoScreen({ currentUser }) {
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
         />
+        {modoCreacion !== 'automatico' && (
+          <Pressable
+            style={[styles.btnPlus, !puedeCrear && styles.btnPlusDisabled]}
+            onPress={() => puedeCrear && setModalVisible(true)}
+            disabled={!puedeCrear}
+          >
+            <Text style={styles.btnPlusText}>{t('screens.trabajos.newBtn')}</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.chartsContainer}>
-        <Text style={styles.chartsTitle}>{t('screens.trabajos.distribucion')}</Text>
         {(() => {
           const { conteos } = getCargaEstados();
           const total = conteos.reduce((sum, item) => sum + item.cantidad, 0);
@@ -1188,6 +826,28 @@ export default function TrabajoScreen({ currentUser }) {
 
           return (
             <>
+              {/* KPI stat pills — one per active status, scrollable */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kpiScrollContent}>
+                {activos.map((item) => {
+                  const isActive = estadosFiltro.includes(item.value);
+                  return (
+                    <TouchableOpacity
+                      key={`kpi-${item.value}`}
+                      style={[
+                        styles.kpiPill,
+                        { borderLeftColor: item.color },
+                        isActive && { backgroundColor: item.color + '18', borderColor: item.color + '33' },
+                      ]}
+                      onPress={() => toggleEstadoFiltro(item.value)}
+                    >
+                      <Text style={styles.kpiPillLabel} numberOfLines={1}>{item.label}</Text>
+                      <Text style={[styles.kpiPillCount, isActive && { color: item.color }]}>{item.cantidad}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Segmented progress bar */}
               <View style={styles.chartStackRow}>
                 {activos.map((item) => {
                   const widthPct = (item.cantidad / total) * 100;
@@ -1196,32 +856,17 @@ export default function TrabajoScreen({ currentUser }) {
                   return (
                     <TouchableOpacity
                       key={item.value}
-                      title={`${item.label}: ${item.cantidad}`}
                       onPress={() => toggleEstadoFiltro(item.value)}
                       style={[
                         styles.chartSegmentTouchable,
                         { width: `${widthPct}%` },
-                        hayFiltroActivo && !activoSeleccionado ? { opacity: 0.35 } : null,
-                        activoSeleccionado && styles.chartSegmentActiveShadow,
+                        hayFiltroActivo && !activoSeleccionado ? { opacity: 0.25 } : null,
                       ]}
                     >
                       <View style={[styles.chartFill, { width: '100%', backgroundColor: item.color }]} />
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-
-              <View style={styles.chartLegendWrap}>
-                {activos.map((item) => (
-                  <TouchableOpacity
-                    key={`legend-${item.value}`}
-                    style={[styles.chartLegendItem, estadosFiltro.includes(item.value) && styles.chartLegendItemActive]}
-                    onPress={() => toggleEstadoFiltro(item.value)}
-                  >
-                    <View style={[styles.chartLegendDot, { backgroundColor: item.color }]} />
-                    <Text style={styles.chartLegendText}>{`${item.label}: ${item.cantidad}`}</Text>
-                  </TouchableOpacity>
-                ))}
               </View>
 
               {estadosFiltro.length > 0 && (
@@ -1286,14 +931,20 @@ export default function TrabajoScreen({ currentUser }) {
             const isConfirmingReactivar = reactivarConfirmId === (trabajo.pedido_id || trabajo.id || trabajo._id);
 
             return (
-              <View key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`} style={[styles.tableRow, (idx + (paginaPedidos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
+              <Pressable
+                key={trabajo.id || trabajo.trabajo_id || `pedido-${idx}-${trabajo.numero_pedido || ''}`}
+                onPress={() => handleAbrirDetalle(trabajo)}
+                style={({ hovered }) => [
+                  styles.tableRow,
+                  { borderLeftColor: getEstadoDotColor(estadoTrabajoActual) },
+                  hovered && { backgroundColor: '#F5F7FF' },
+                ]}
+              >
                 <View style={[styles.tableCell, styles.colNumeroPedido]}>
                   {trabajo.numero_pedido ? (
-                    <TouchableOpacity onPress={() => handleAbrirDetalle(trabajo)}>
-                      <Text style={[styles.cellText, { color: '#4B5563', fontWeight: '700' }]} numberOfLines={1}>
-                        {trabajo.numero_pedido}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={styles.numeroPedidoPill}>
+                      <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
+                    </View>
                   ) : (
                     <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
                   )}
@@ -1377,7 +1028,7 @@ export default function TrabajoScreen({ currentUser }) {
                     )
                   )}
                 </View>
-              </View>
+              </Pressable>
             );
           })}
           {totalPaginasPedidos > 1 && (

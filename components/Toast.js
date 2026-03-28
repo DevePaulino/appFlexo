@@ -5,7 +5,7 @@ const PALETTE = {
   error:   { bg: '#DC2626', text: '#FFFFFF' },
   success: { bg: '#16A34A', text: '#FFFFFF' },
   warning: { bg: '#D97706', text: '#FFFFFF' },
-  info:    { bg: '#1E293B', text: '#F8FAFC' },
+  info:    { bg: '#4F46E5', text: '#FFFFFF' },
 };
 
 export default function Toast({ message, type = 'info', onHide, duration = 3500 }) {

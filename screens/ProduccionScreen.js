@@ -13,51 +13,37 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',
   },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    fontSize: 12,
+    borderColor: '#E4E7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontSize: 13,
     color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
+    maxWidth: 320,
   },
   content: {
     padding: 0,
@@ -68,12 +54,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E4E7ED',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#1E1B4B',
     marginBottom: 10,
   },
   bodyRow: {
@@ -81,59 +67,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chartsSidebar: {
-    width: 160,
+    width: 168,
     backgroundColor: '#FFFFFF',
-    borderLeftWidth: 4,
-    borderLeftColor: '#1E293B',
+    borderLeftWidth: 3,
+    borderLeftColor: '#4F46E5',
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-    paddingTop: 12,
+    borderRightColor: '#E4E7ED',
+    paddingTop: 14,
     paddingBottom: 8,
     paddingLeft: 10,
     paddingRight: 8,
-    shadowColor: '#64748B',
+    shadowColor: '#1E1B4B',
     shadowOffset: { width: 3, height: 0 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
     zIndex: 1,
   },
   chartsTitle: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: '#4F46E5',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   chartsTotalCount: {
     fontSize: 26,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '900',
+    color: '#1E1B4B',
     marginBottom: 12,
     lineHeight: 30,
+    letterSpacing: -1,
   },
   chartsTotalLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#94A3B8',
+    color: '#9CA3AF',
   },
   chartEmpty: {
     fontSize: 11,
-    color: '#CBD5E1',
+    color: '#C7D2FE',
     fontStyle: 'italic',
     paddingVertical: 6,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: 40,
     alignItems: 'center',
   },
   tableHeaderCell: {
@@ -141,9 +128,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   headerText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
   },
   colPos: {
     width: '5%',
@@ -222,16 +210,15 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#F1F5F9',
-    marginBottom: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    marginBottom: 3,
     alignItems: 'center',
   },
   rowAlternate: {
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#FAFBFF',
   },
   tableCell: {
     justifyContent: 'center',
@@ -290,14 +277,16 @@ const styles = StyleSheet.create({
   closeButton: {
     marginTop: 16,
     paddingVertical: 10,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#EEF2FF',
     borderRadius: 6,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
   },
   closeButtonText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: '700',
+    color: '#4F46E5',
   },
   // Estados de color
   statusDiseno: {
@@ -379,7 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E4E7ED',
     marginHorizontal: 10,
     marginTop: 6,
     marginBottom: 16,
@@ -391,7 +380,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#ECEFFE',
   },
   impresosTitleRow: {
     flexDirection: 'row',
@@ -401,10 +390,10 @@ const styles = StyleSheet.create({
   impresosSectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#1E1B4B',
   },
   impresosBadge: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#4F46E5',
     borderRadius: 10,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -416,17 +405,17 @@ const styles = StyleSheet.create({
   },
   impresosChevron: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#4F46E5',
   },
   impresosBody: {
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   impresosBusqueda: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E4E7ED',
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
@@ -435,22 +424,23 @@ const styles = StyleSheet.create({
   },
   impresosEmpty: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: '#9CA3AF',
     textAlign: 'center',
     paddingVertical: 10,
   },
   impresosTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#ECEFFE',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 6,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   impresosColHeader: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.3,
   },
   impresosTableRow: {
     flexDirection: 'row',
@@ -458,10 +448,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF2F8',
+    borderBottomColor: '#F0F1FF',
+    borderRadius: 6,
   },
   impresosTableRowAlt: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FAFBFF',
   },
   impresosCell: {
     fontSize: 12,
@@ -1061,9 +1052,9 @@ export default function ProduccionScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1976D2" />
-        <Text>Cargando producción...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F5FD' }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={{ marginTop: 10, color: '#6B7280', fontSize: 13 }}>Cargando producción...</Text>
       </View>
     );
   }
@@ -1080,7 +1071,7 @@ export default function ProduccionScreen() {
 
   if (!maquinas || maquinas.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#EEF2F8' }}>
+      <View style={{ flex: 1, backgroundColor: '#F4F5FD' }}>
         <EmptyState
           title={t('screens.maquinas.noMaquinas')}
           message={t('screens.produccion.sinMaquinas')}
@@ -1092,11 +1083,7 @@ export default function ProduccionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>{t('nav.produccion')}</Text>
-          <View style={{ width: 38 }} />
-        </View>
+        <Text style={styles.headerTitle}>{t('nav.produccion')}</Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('screens.produccion.buscarPlaceholder')}
@@ -1141,10 +1128,10 @@ export default function ProduccionScreen() {
           })()}
           {maquinasFiltroIds.length > 0 && (
             <TouchableOpacity
-              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' }}
+              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#D9DBFF', alignItems: 'center' }}
               onPress={() => setMaquinasFiltroIds([])}
             >
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#4F46E5' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
             </TouchableOpacity>
           )}
         </View>

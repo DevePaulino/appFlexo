@@ -10,14 +10,14 @@
 // ─── Colors ──────────────────────────────────────────────────────────────────
 export const C = {
   // Navigation / Header
-  header:        '#1E293B',  // slate-800
-  headerBorder:  '#334155',  // slate-700
-  headerText:    '#F8FAFC',  // slate-50
+  header:        '#FFFFFF',  // white flat header
+  headerBorder:  '#E4E7ED',  // light border
+  headerText:    '#1E1B4B',  // indigo-950
 
   // Backgrounds
-  bg:            '#EEF2F8',  // crema cálido claro  (app background)
+  bg:            '#F4F5FD',  // indigo-tinted page background
   surface:       '#FFFFFF',  // white               (cards, modals, panels)
-  surfaceAlt:    '#F1F5F9',  // slate-100           (alternate rows, input bg)
+  surfaceAlt:    '#FAFBFF',  // indigo-tinted alt   (alternate rows, input bg)
 
   // Borders
   border:        '#E2E8F0',  // borde cálido claro  (cards, sections)
@@ -25,10 +25,10 @@ export const C = {
   borderFocus:   '#475569',  // primary focus ring
 
   // Brand / Action
-  action:        '#1E293B',  // slate-800 — minimal dark action
-  actionDark:    '#0F172A',  // pressed / hover
-  actionBg:      '#EEF2F8',  // fondo claro para chips/badges de acción
-  actionText:    '#F8FAFC',
+  action:        '#4F46E5',  // indigo-600
+  actionDark:    '#4338CA',  // indigo-700 — pressed / hover
+  actionBg:      '#EEF2FF',  // indigo-50 — chips/badges
+  actionText:    '#FFFFFF',
 
   // Brand / Primary (navegación, encabezados secundarios)
   primary:       '#475569',  // slate-600

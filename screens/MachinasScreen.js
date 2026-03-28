@@ -10,69 +10,55 @@ import { useMaquinas } from '../MaquinasContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',
   },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    fontSize: 12,
+    borderColor: '#E4E7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontSize: 13,
     color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
+    maxWidth: 320,
   },
   btnPlusWrap: {
     position: 'relative',
   },
   btnPlus: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(248,250,252,0.55)',
-    backgroundColor: 'transparent',
+    backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
   },
+  btnPlusDisabled: {
+    backgroundColor: '#A5B4FC',
+  },
   btnPlusText: {
-    color: '#F1F5F9',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
     fontSize: 13,
   },
   hoverHint: {
@@ -96,39 +82,42 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
     paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     marginBottom: 6,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: 40,
     alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 3,
-    alignItems: 'center',
-    minHeight: 46,
+    marginBottom: 4,
+    cursor: 'pointer',
+    shadowColor: '#1E1B4B',
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   rowAlternate: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FAFBFF',
   },
   tableCell: {
     justifyContent: 'center',
     paddingRight: 6,
   },
   headerText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
   },
 
   // ── Columnas ──────────────────────────────────────────
@@ -361,28 +350,7 @@ export default function MachinasScreen({ currentUser }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>{t('nav.maquinas')}</Text>
-          <View style={styles.btnPlusWrap}>
-            <Pressable
-              style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-              onPress={() => puedeCrear && abrirNuevaMaquina()}
-              disabled={!puedeCrear}
-              onHoverIn={handleHoverNuevoIn}
-              onHoverOut={handleHoverNuevoOut}
-            >
-              <Text style={styles.btnPlusText}>{t('screens.maquinas.newBtn')}</Text>
-            </Pressable>
-            {hoverNuevo && (
-              <View style={styles.hoverHint}>
-                <Text style={styles.hoverHintText}>
-                  {!puedeCrear ? t('forms.permisoDenegado') : t('screens.maquinas.newMaquina')}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+        <Text style={styles.headerTitle}>{t('nav.maquinas')}</Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -390,6 +358,24 @@ export default function MachinasScreen({ currentUser }) {
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
         />
+        <View style={styles.btnPlusWrap}>
+          <Pressable
+            style={[styles.btnPlus, !puedeCrear && styles.btnPlusDisabled]}
+            onPress={() => puedeCrear && abrirNuevaMaquina()}
+            disabled={!puedeCrear}
+            onHoverIn={handleHoverNuevoIn}
+            onHoverOut={handleHoverNuevoOut}
+          >
+            <Text style={styles.btnPlusText}>{t('screens.maquinas.newBtn')}</Text>
+          </Pressable>
+          {hoverNuevo && (
+            <View style={styles.hoverHint}>
+              <Text style={styles.hoverHintText}>
+                {!puedeCrear ? t('forms.permisoDenegado') : t('screens.maquinas.newMaquina')}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {filtrados.length === 0 ? (

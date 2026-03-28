@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   header: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     paddingVertical: 12,
     paddingHorizontal: 16,
     paddingRight: 44,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     color: '#F1F5F9',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginHorizontal: -10,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1E1B4B',
   },
   fullWidthRow: {
     paddingVertical: 5,
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   fullWidthValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1E1B4B',
     lineHeight: 18,
   },
   actionRow: {
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginHorizontal: -10,
@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   versionTabActive: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
   },
   versionTabDeleteBtn: {
     position: 'absolute',
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   lightboxContent: {
     width: '92%',
     height: '92%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   sepNombre: {
     fontSize: 10,
     fontWeight: '500',
-    color: '#1E293B',
+    color: '#1E1B4B',
     flex: 1,
   },
   sepWarnIcon: {
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
-    color: '#1E293B',
+    color: '#1E1B4B',
     backgroundColor: '#F8FAFC',
     marginBottom: 6,
   },
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   cmpDropdownNum: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1E1B4B',
   },
   cmpDropdownSub: {
     fontSize: 11,
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#4F46E5',
   },
   cmpLightboxLeft: {
     flex: 1,
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#4F46E5',
     flexWrap: 'wrap',
   },
   cmpSepDiffChip: {
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
     width: 120,
     backgroundColor: '#0D1525',
     borderRightWidth: 1,
-    borderRightColor: '#1E293B',
+    borderRightColor: '#D9DBFF',
     paddingVertical: 8,
     paddingHorizontal: 6,
     gap: 4,
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
   },
   cmpChannelBtnOff: {
     backgroundColor: '#111827',
-    borderColor: '#1E293B',
+    borderColor: '#4F46E5',
   },
   cmpChannelBtnAlert: {
     borderColor: '#EF4444',
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 5,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     borderWidth: 1,
     borderColor: '#334155',
     alignItems: 'center',
@@ -1204,7 +1204,7 @@ const styles = StyleSheet.create({
   tabTextActive: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#1E1B4B',
     letterSpacing: 0.1,
   },
   filesSectionLabel: {
@@ -1380,7 +1380,7 @@ const styles = StyleSheet.create({
   inkChipLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#1E293B',
+    color: '#1E1B4B',
     flex: 1,
   },
 });
@@ -2126,7 +2126,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                             </View>
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E293B' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E1B4B' }}>
                                   {entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                                 </Text>
                                 {entry.maquina ? (

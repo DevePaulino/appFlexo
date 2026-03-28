@@ -103,13 +103,13 @@ function TrabajoRow({
       </View>
       <View style={[styles.tableCell, styles.colImpreso]}>
         {isFinalizado ? (
-          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#F1F5F9', alignItems: 'center' }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B' }}>{t('screens.trabajos.finalizado')}</Text>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
           </View>
         ) : (
           <TouchableOpacity
             onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
-            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#1E293B', alignItems: 'center' }}
+            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
           >
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
           </TouchableOpacity>

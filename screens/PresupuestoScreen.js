@@ -13,134 +13,97 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',
   },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
-  },
-  headerSearchRow: {
-    marginTop: 6,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    fontSize: 12,
-    color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
-  },
-  btn: {
-    backgroundColor: '#EEF2F8',
+    borderColor: '#E4E7ED',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  btnNew: {
-    backgroundColor: '#475569',
-  },
-  btnNewText: {
-    color: '#FFFFFF',
-  },
-  btnText: {
-    color: '#374151',
-    fontWeight: '700',
+    paddingVertical: 7,
     fontSize: 13,
-  },
-  btnPlusWrap: {
-    position: 'relative',
+    color: '#0F172A',
+    maxWidth: 320,
   },
   btnPlus: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(248,250,252,0.55)',
-    backgroundColor: 'transparent',
+    backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
   },
-  btnPlusDisabled: {
-    borderColor: 'rgba(248,250,252,0.2)',
-  },
-  btnPlusText: {
-    color: '#F1F5F9',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  hoverHint: {
-    position: 'absolute',
-    left: 44,
-    top: 8,
-    backgroundColor: '#0F172A',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  hoverHintText: {
-    color: '#F1F5F9',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  content: {
-    padding: 0,
-  },
+  btnPlusDisabled: { backgroundColor: '#A5B4FC' },
+  btnPlusText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
   chartsContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginHorizontal: 10,
-    marginTop: 10,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: '#FAFBFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E7ED',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 16,
   },
-  chartsTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+  kpiScrollContent: {
+    gap: 10,
+    paddingRight: 4,
+  },
+  kpiPill: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: '#E4E7ED',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 130,
+    shadowColor: '#1E1B4B',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  kpiPillLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  kpiPillCount: {
+    fontSize: 24,
+    fontWeight: '900',
     color: '#0F172A',
-    marginBottom: 10,
+    letterSpacing: -1,
+    lineHeight: 28,
   },
   chartTrack: {
-    height: 12,
-    backgroundColor: '#ECEFF1',
-    borderRadius: 8,
+    height: 4,
+    backgroundColor: '#E4E7ED',
+    borderRadius: 4,
     overflow: 'hidden',
     flexDirection: 'row',
+    marginTop: 14,
   },
   chartFillAprobado: {
     backgroundColor: '#16A34A',
@@ -150,43 +113,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
     height: '100%',
   },
-  chartLegendRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 18,
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  chartLegendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-  chartLegendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  chartLegendText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  chartLegendItemActive: {
-    backgroundColor: '#F2F4F7',
-  },
   chartSegmentTouchable: {
     height: '100%',
-  },
-  chartSegmentActiveShadow: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
   },
   filterRow: {
     marginTop: 10,
@@ -197,21 +125,21 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 12,
-    color: '#3B3B3B',
+    color: '#6B7280',
     flex: 1,
   },
   filterClearBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderColor: '#D9DBFF',
+    backgroundColor: '#EEF2FF',
   },
   filterClearText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#4F46E5',
   },
   tableContainer: {
     flex: 1,
@@ -220,36 +148,39 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
     paddingVertical: 10,
-    paddingHorizontal: 10,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    marginBottom: 6,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: 40,
     alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 3,
-  },
-  rowAlternate: {
-    backgroundColor: '#F1F5F9',
+    marginBottom: 4,
+    borderLeftWidth: 3,
+    cursor: 'pointer',
+    shadowColor: '#1E1B4B',
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   tableCell: {
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
   },
   cellText: {
     fontSize: 13,
@@ -271,6 +202,18 @@ const styles = StyleSheet.create({
   colEstado: {
     flex: 0.18,
   },
+  numeroPresupuestoPill: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  numeroPresupuestoPillText: {
+    color: '#4F46E5',
+    fontWeight: '800',
+    fontSize: 12,
+  },
   fechaAprobacionText: {
     fontSize: 10,
     color: '#16A34A',
@@ -282,14 +225,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#BBF7D0',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
-    minWidth: 70,
     alignItems: 'center',
   },
   actionBtnText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#16A34A',
   },
   emptyText: {
@@ -307,13 +249,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#475569',
-    paddingHorizontal: 10,
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#C7D2FE',
   },
   paginationBtnText: {
     color: '#FFFFFF',
@@ -321,7 +263,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#0F172A',
+    color: '#4F46E5',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -341,16 +283,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   estadoPendiente: {
-    color: '#B42318',
-    backgroundColor: '#FEE4E2',
+    color: '#D97706',
+    backgroundColor: '#FEF3C7',
   },
   estadoAceptado: {
-    color: '#027A48',
-    backgroundColor: '#D1FADF',
-  },
-  numeroPresupuestoLink: {
-    color: '#475569',
-    fontWeight: '700',
+    color: '#16A34A',
+    backgroundColor: '#DCFCE7',
   },
   detailOverlay: {
     flex: 1,
@@ -950,17 +888,7 @@ export default function PresupuestoScreen({ currentUser }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>{t('nav.presupuestos')}</Text>
-          <Pressable
-            style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-            onPress={() => puedeCrear && setModalVisible(true)}
-            disabled={!puedeCrear}
-          >
-            <Text style={styles.btnPlusText}>{t('screens.presupuesto.newBtn')}</Text>
-          </Pressable>
-        </View>
+        <Text style={styles.headerTitle}>{t('nav.presupuestos')}</Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -968,62 +896,72 @@ export default function PresupuestoScreen({ currentUser }) {
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
         />
+        <Pressable
+          style={[styles.btnPlus, !puedeCrear && styles.btnPlusDisabled]}
+          onPress={() => puedeCrear && setModalVisible(true)}
+          disabled={!puedeCrear}
+        >
+          <Text style={styles.btnPlusText}>{t('screens.presupuesto.newBtn')}</Text>
+        </Pressable>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.chartsContainer}>
-          <Text style={styles.chartsTitle}>{t('screens.presupuesto.estadoTitle')}</Text>
-          <View style={styles.chartTrack}>
-            <TouchableOpacity
-              style={[
-                styles.chartSegmentTouchable,
-                { width: `${aprobadosWidth}%` },
-                estadosFiltro.length > 0 && !estadosFiltro.includes('aprobado') ? { opacity: 0.35 } : null,
-                estadosFiltro.includes('aprobado') ? styles.chartSegmentActiveShadow : null,
-              ]}
-              onPress={() => toggleEstadoFiltro('aprobado')}
-            >
-              <View style={[styles.chartFillAprobado, { width: '100%' }]} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.chartSegmentTouchable,
-                { width: `${pendientesWidth}%` },
-                estadosFiltro.length > 0 && !estadosFiltro.includes('pendiente') ? { opacity: 0.35 } : null,
-                estadosFiltro.includes('pendiente') ? styles.chartSegmentActiveShadow : null,
-              ]}
-              onPress={() => toggleEstadoFiltro('pendiente')}
-            >
-              <View style={[styles.chartFillPendiente, { width: '100%' }]} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.chartLegendRow}>
-            <TouchableOpacity
-              style={[styles.chartLegendItem, estadosFiltro.includes('aprobado') && styles.chartLegendItemActive]}
-              onPress={() => toggleEstadoFiltro('aprobado')}
-            >
-              <View style={[styles.chartLegendDot, { backgroundColor: '#16A34A' }]} />
-              <Text style={styles.chartLegendText}>{t('screens.presupuesto.aprobados', { count: aprobadosCount })}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.chartLegendItem, estadosFiltro.includes('pendiente') && styles.chartLegendItemActive]}
-              onPress={() => toggleEstadoFiltro('pendiente')}
-            >
-              <View style={[styles.chartLegendDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={styles.chartLegendText}>{t('screens.presupuesto.pendientes', { count: pendientesCount })}</Text>
-            </TouchableOpacity>
-          </View>
-          {estadosFiltro.length > 0 && (
-            <View style={styles.filterRow}>
-              <Text style={styles.filterText}>
-                {t('screens.presupuesto.filtroActivo', { estados: estadosFiltro.map((estado) => estado === 'aprobado' ? t('screens.presupuesto.estadoAprobadoFilter') : t('screens.presupuesto.estadoPendienteFilter')).join(', ') })}
-              </Text>
-              <TouchableOpacity style={styles.filterClearBtn} onPress={() => setEstadosFiltro([])}>
-                <Text style={styles.filterClearText}>{t('screens.presupuesto.quitarFiltro')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+      <View style={styles.chartsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kpiScrollContent}>
+          <TouchableOpacity
+            style={[
+              styles.kpiPill,
+              { borderLeftColor: '#16A34A' },
+              estadosFiltro.includes('aprobado') && { backgroundColor: '#16A34A18', borderColor: '#16A34A33' },
+            ]}
+            onPress={() => toggleEstadoFiltro('aprobado')}
+          >
+            <Text style={styles.kpiPillLabel}>{t('screens.presupuesto.estadoAprobadoFilter')}</Text>
+            <Text style={[styles.kpiPillCount, estadosFiltro.includes('aprobado') && { color: '#16A34A' }]}>{aprobadosCount}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.kpiPill,
+              { borderLeftColor: '#F59E0B' },
+              estadosFiltro.includes('pendiente') && { backgroundColor: '#F59E0B18', borderColor: '#F59E0B33' },
+            ]}
+            onPress={() => toggleEstadoFiltro('pendiente')}
+          >
+            <Text style={styles.kpiPillLabel}>{t('screens.presupuesto.estadoPendienteFilter')}</Text>
+            <Text style={[styles.kpiPillCount, estadosFiltro.includes('pendiente') && { color: '#F59E0B' }]}>{pendientesCount}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <View style={styles.chartTrack}>
+          <TouchableOpacity
+            style={[
+              styles.chartSegmentTouchable,
+              { width: `${aprobadosWidth}%` },
+              estadosFiltro.length > 0 && !estadosFiltro.includes('aprobado') ? { opacity: 0.3 } : null,
+            ]}
+            onPress={() => toggleEstadoFiltro('aprobado')}
+          >
+            <View style={[styles.chartFillAprobado, { width: '100%' }]} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.chartSegmentTouchable,
+              { width: `${pendientesWidth}%` },
+              estadosFiltro.length > 0 && !estadosFiltro.includes('pendiente') ? { opacity: 0.3 } : null,
+            ]}
+            onPress={() => toggleEstadoFiltro('pendiente')}
+          >
+            <View style={[styles.chartFillPendiente, { width: '100%' }]} />
+          </TouchableOpacity>
         </View>
+        {estadosFiltro.length > 0 && (
+          <View style={styles.filterRow}>
+            <Text style={styles.filterText}>
+              {t('screens.presupuesto.filtroActivo', { estados: estadosFiltro.map((estado) => estado === 'aprobado' ? t('screens.presupuesto.estadoAprobadoFilter') : t('screens.presupuesto.estadoPendienteFilter')).join(', ') })}
+            </Text>
+            <TouchableOpacity style={styles.filterClearBtn} onPress={() => setEstadosFiltro([])}>
+              <Text style={styles.filterClearText}>{t('screens.presupuesto.quitarFiltro')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {filtrados.length === 0 ? (
@@ -1054,47 +992,60 @@ export default function PresupuestoScreen({ currentUser }) {
               <Text style={styles.headerText}>{t('screens.presupuesto.colEstado')}</Text>
             </View>
           </View>
-          {presupuestosPaginados.map((presupuesto, idx) => (
-            <View key={presupuesto.id} style={[styles.tableRow, (idx + (paginaPresupuestos - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
-              <View style={[styles.tableCell, styles.colNumero]}>
-                <TouchableOpacity onPress={() => handleAbrirDetalle(presupuesto)}>
-                  <Text style={[styles.cellText, styles.numeroPresupuestoLink]} numberOfLines={1}>{presupuesto.numero_presupuesto}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.tableCell, styles.colCliente]}>
-                <Text style={styles.cellText} numberOfLines={1}>{typeof presupuesto.cliente === 'string' ? presupuesto.cliente : (presupuesto.cliente && (presupuesto.cliente.nombre || '-'))}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colReferencia]}>
-                <Text style={styles.cellText} numberOfLines={1}>{presupuesto.referencia || presupuesto.nombre || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colFecha]}>
-                <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(presupuesto.fecha_presupuesto)}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colEstado]}>
-                <View style={styles.estadoContainer}>
-                  <Text
-                    style={[
-                      styles.estadoText,
-                      presupuesto.aprobado ? styles.estadoAceptado : styles.estadoPendiente,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
-                  </Text>
-                  {presupuesto.aprobado && presupuesto.fecha_aprobacion ? (
-                    <Text style={styles.fechaAprobacionText} numberOfLines={1}>
-                      {formatearFechaHora(presupuesto.fecha_aprobacion)}
-                    </Text>
-                  ) : null}
-                  {!presupuesto.aprobado ? (
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleAceptarPresupuesto(presupuesto)}>
-                      <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>
-                    </TouchableOpacity>
-                  ) : null}
+          {presupuestosPaginados.map((presupuesto) => {
+            const borderColor = presupuesto.aprobado ? '#16A34A' : '#F59E0B';
+            return (
+              <Pressable
+                key={presupuesto.id}
+                onPress={() => handleAbrirDetalle(presupuesto)}
+                style={({ hovered }) => [
+                  styles.tableRow,
+                  { borderLeftColor: borderColor },
+                  hovered && { backgroundColor: '#F5F7FF' },
+                ]}
+              >
+                <View style={[styles.tableCell, styles.colNumero]}>
+                  {presupuesto.numero_presupuesto ? (
+                    <View style={styles.numeroPresupuestoPill}>
+                      <Text style={styles.numeroPresupuestoPillText} numberOfLines={1}>{presupuesto.numero_presupuesto}</Text>
+                    </View>
+                  ) : <Text style={[styles.cellText, { color: '#999' }]}>-</Text>}
                 </View>
-              </View>
-            </View>
-          ))}
+                <View style={[styles.tableCell, styles.colCliente]}>
+                  <Text style={styles.cellText} numberOfLines={1}>{typeof presupuesto.cliente === 'string' ? presupuesto.cliente : (presupuesto.cliente && (presupuesto.cliente.nombre || '-'))}</Text>
+                </View>
+                <View style={[styles.tableCell, styles.colReferencia]}>
+                  <Text style={styles.cellText} numberOfLines={1}>{presupuesto.referencia || presupuesto.nombre || '-'}</Text>
+                </View>
+                <View style={[styles.tableCell, styles.colFecha]}>
+                  <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(presupuesto.fecha_presupuesto)}</Text>
+                </View>
+                <View style={[styles.tableCell, styles.colEstado]}>
+                  <View style={styles.estadoContainer}>
+                    <Text
+                      style={[
+                        styles.estadoText,
+                        presupuesto.aprobado ? styles.estadoAceptado : styles.estadoPendiente,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
+                    </Text>
+                    {presupuesto.aprobado && presupuesto.fecha_aprobacion ? (
+                      <Text style={styles.fechaAprobacionText} numberOfLines={1}>
+                        {formatearFechaHora(presupuesto.fecha_aprobacion)}
+                      </Text>
+                    ) : null}
+                    {!presupuesto.aprobado ? (
+                      <TouchableOpacity style={styles.actionBtn} onPress={(e) => { e.stopPropagation?.(); handleAceptarPresupuesto(presupuesto); }}>
+                        <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+              </Pressable>
+            );
+          })}
           {totalPaginasPresupuestos > 1 && (
             <View style={styles.paginationRow}>
               <TouchableOpacity

@@ -153,7 +153,7 @@ function EmpresaBranding({ currentUser }) {
 
   const animatedNameColor = glowAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E2E8F0', '#93C5FD'],
+    outputRange: ['#E0E7FF', '#A5B4FC'],
   });
 
   const loadBranding = React.useCallback(async () => {
@@ -397,7 +397,7 @@ const brandingStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   editIcon: {
-    color: 'rgba(241,245,249,0.6)',
+    color: 'rgba(255,255,255,0.4)',
     fontSize: 12,
   },
   backdrop: {
@@ -422,7 +422,7 @@ const brandingStyles = StyleSheet.create({
   panelTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#1E1B4B',
     marginBottom: 14,
   },
   panelLabel: {
@@ -440,7 +440,7 @@ const brandingStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: '#1E293B',
+    color: '#0F172A',
     backgroundColor: '#F8FAFC',
     marginBottom: 14,
   },
@@ -514,8 +514,8 @@ const brandingStyles = StyleSheet.create({
     fontWeight: '600',
   },
   panelBtnPrimary: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
   },
   panelBtnPrimaryText: {
     color: '#FFFFFF',
@@ -1031,9 +1031,9 @@ const styles = StyleSheet.create({
   tabsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1E1B4B',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    borderBottomColor: '#2D2A5E',
     position: 'relative',
     zIndex: 5,
     paddingRight: 8,
@@ -1059,13 +1059,13 @@ const styles = StyleSheet.create({
     cursor: 'pointer',
   },
   tabBtnActive: {
-    backgroundColor: 'rgba(232,82,42,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(232,82,42,0.28)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   tabBtnHover: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: 8,
   },
   tabInner: {
@@ -1080,27 +1080,26 @@ const styles = StyleSheet.create({
     right: '20%',
     height: 2,
     borderRadius: 2,
-    backgroundColor: '#E8522A',
+    backgroundColor: '#818CF8',
   },
   tabLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.38)',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    color: '#A5B4FC',
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
     color: '#FFFFFF',
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   tabChevron: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.30)',
+    color: '#A5B4FC',
     lineHeight: 13,
   },
   tabChevronActive: {
-    color: 'rgba(255,255,255,0.80)',
+    color: '#FFFFFF',
   },
   userBadge: {
     position: 'relative',
@@ -1117,7 +1116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderColor: 'rgba(255,255,255,0.25)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
@@ -1345,17 +1344,17 @@ const styles = StyleSheet.create({
   },
   settingsSubmenuWrap: {
     position: 'absolute',
-    backgroundColor: '#1A2942',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
+    borderColor: '#E4E7ED',
     borderRadius: 12,
     paddingVertical: 6,
     minWidth: 220,
     maxWidth: 280,
     zIndex: 50,
-    shadowColor: '#000000',
+    shadowColor: '#0D1117',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.10,
     shadowRadius: 24,
     elevation: 14,
   },
@@ -1371,28 +1370,28 @@ const styles = StyleSheet.create({
     minHeight: 38,
   },
   settingsSubmenuItemHover: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#F4F5F9',
   },
   settingsSubmenuItemActive: {
-    backgroundColor: 'rgba(232,82,42,0.12)',
+    backgroundColor: '#EEF2FF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(232,82,42,0.22)',
+    borderColor: '#C7D2FE',
   },
   settingsSubmenuItemDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#E8522A',
+    backgroundColor: '#4F46E5',
     flexShrink: 0,
   },
   settingsSubmenuItemText: {
-    color: 'rgba(248,250,252,0.60)',
+    color: '#6B7280',
     fontSize: 13,
     fontWeight: '500',
   },
   settingsSubmenuItemTextActive: {
-    color: '#F1F5F9',
+    color: '#4F46E5',
     fontWeight: '700',
   },
   settingsSubmenuIndicator: {

@@ -20,43 +20,29 @@ const API_BASE = 'http://localhost:8080';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',
   },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-    justifyContent: 'center',
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
+    flex: 1,
+    maxWidth: 320,
+    backgroundColor: '#F8FAFF',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -64,12 +50,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     fontSize: 12,
     color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
   },
   btnPlus: {
     borderWidth: 1.5,
-    borderColor: 'rgba(248,250,252,0.55)',
+    borderColor: '#4F46E5',
     backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
@@ -79,7 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   btnPlusText: {
-    color: '#F1F5F9',
+    color: '#4F46E5',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -94,9 +78,9 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ECEFFE',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#D9DBFF',
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
@@ -128,9 +112,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   headerText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
   },
   cellText: {
     fontSize: 13,
@@ -247,7 +232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
-  fabEditName: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  fabEditName: { fontSize: 13, fontWeight: '700', color: '#4F46E5' },
   removeText: { fontSize: 12, color: '#DC2626', fontWeight: '600' },
   anchosEditRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
   anchoChipEdit: {
@@ -302,7 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  btnSaveText: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  btnSaveText: { fontSize: 14, fontWeight: '700', color: '#4F46E5' },
 
   // Proveedor card
   provCard: {
@@ -332,9 +317,9 @@ const styles = StyleSheet.create({
   // Tab bar
   tabBar: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 10 },
   tabBtn: { paddingHorizontal: 16, paddingVertical: 10, marginRight: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive: { borderBottomColor: '#1E293B' },
+  tabBtnActive: { borderBottomColor: '#4F46E5' },
   tabBtnText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  tabBtnTextActive: { color: '#1E293B' },
+  tabBtnTextActive: { color: '#4F46E5' },
 });
 
 export default function CatalogoMaterialesScreen({ currentUser }) {
@@ -596,21 +581,9 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.headerTitle}>
-            {activeTab === 'proveedores' ? t('screens.materiales.proveedoresMaterialTitle') : t('nav.materiales')}
-          </Text>
-          <TouchableOpacity
-            style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
-            onPress={() => puedeCrear && (activeTab === 'catalogo' ? openCatCreate() : openProvCreate())}
-            disabled={!puedeCrear}
-          >
-            <Text style={styles.btnPlusText}>
-              {activeTab === 'catalogo' ? t('screens.materiales.addMaterialBtn') : t('screens.materiales.addProveedorBtn')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>
+          {activeTab === 'proveedores' ? t('screens.materiales.proveedoresMaterialTitle') : t('nav.materiales')}
+        </Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -618,6 +591,15 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
           onChangeText={activeTab === 'catalogo' ? setBusqueda : setBusquedaProv}
           placeholderTextColor="#94A3B8"
         />
+        <TouchableOpacity
+          style={[styles.btnPlus, !puedeCrear && { opacity: 0.45 }]}
+          onPress={() => puedeCrear && (activeTab === 'catalogo' ? openCatCreate() : openProvCreate())}
+          disabled={!puedeCrear}
+        >
+          <Text style={styles.btnPlusText}>
+            {activeTab === 'catalogo' ? t('screens.materiales.addMaterialBtn') : t('screens.materiales.addProveedorBtn')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab bar */}

@@ -7,22 +7,18 @@ import { useSettings } from '../SettingsContext';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: '#F4F5FD',
   },
   header: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    borderBottomColor: '#E4E7ED',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 54,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -30,15 +26,10 @@ const styles = StyleSheet.create({
     minHeight: 38,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
     textAlign: 'center',
   },
   content: {
@@ -61,10 +52,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#F1F5F9',
+    color: '#4F46E5',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ECEFFE',
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: -12,
@@ -92,7 +83,7 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#0F172A',
   },
   rowHint: {
     fontSize: 12,
@@ -118,7 +109,7 @@ const styles = StyleSheet.create({
   triggerValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#4F46E5',
     marginRight: 6,
   },
   triggerBtn: {
@@ -178,7 +169,7 @@ const styles = StyleSheet.create({
   estadoItemText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#0F172A',
   },
   estadoItemTextSelected: {
     color: '#1D4ED8',

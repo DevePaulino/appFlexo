@@ -92,15 +92,15 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   btn: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
   btnText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 0.1,
   },
 
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   inlineBtn: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,

@@ -81,6 +81,13 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const [loadingConsumos, setLoadingConsumos] = useState(false);
   const [consumosPage, setConsumosPage] = useState(1);
   const [consumosTotal, setConsumosTotal] = useState(0);
+  const [historialSearchMaterial, setHistorialSearchMaterial] = useState('');
+  const [historialPeriodo, setHistorialPeriodo] = useState('todo'); // 'todo' | 'mes_actual' | 'mes_anterior'
+
+  // ── Stock sorting & availability filter ───────────────────────────────────
+  const [stockSortBy, setStockSortBy] = useState(null); // null | 'nombre' | 'disponible' | 'fecha'
+  const [stockSortDir, setStockSortDir] = useState('asc');
+  const [stockAvailFilter, setStockAvailFilter] = useState('todos'); // 'todos' | 'bajo' | 'critico'
 
   // ── Consumo modal ─────────────────────────────────────────────────────────
   const [consumoModal, setConsumoModal] = useState({ visible: false });
@@ -155,7 +162,10 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const loadConsumos = useCallback(async (page = 1) => {
     setLoadingConsumos(true);
     try {
-      const resp = await fetch(`${API_BASE}/api/materiales/consumos?page=${page}&limit=50`, { headers: authHeaders() });
+      let qs = `page=${page}&limit=50`;
+      if (historialSearchMaterial.trim()) qs += `&material=${encodeURIComponent(historialSearchMaterial.trim())}`;
+      if (historialPeriodo !== 'todo') qs += `&periodo=${historialPeriodo}`;
+      const resp = await fetch(`${API_BASE}/api/materiales/consumos?${qs}`, { headers: authHeaders() });
       const data = await resp.json();
       if (resp.ok) {
         setConsumos(data.consumos || []);
@@ -167,7 +177,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
     } finally {
       setLoadingConsumos(false);
     }
-  }, [authHeaders]);
+  }, [authHeaders, historialSearchMaterial, historialPeriodo]);
 
   const loadProveedores = useCallback(async () => {
     try {
@@ -218,6 +228,11 @@ export default function MaterialScreen({ currentUser, navigation }) {
   useEffect(() => {
     if (activeTab === 'stock') loadStock();
   }, [stockFilter]);
+
+  // Re-load historial when filters change
+  useEffect(() => {
+    if (activeTab === 'historial') loadConsumos(1);
+  }, [historialSearchMaterial, historialPeriodo]);
 
   // ═══════════════════════════════════════════════════════════════
   // CATÁLOGO CRUD
@@ -494,16 +509,45 @@ export default function MaterialScreen({ currentUser, navigation }) {
     const materialesActivos = stock.filter(e => !e.es_retal);
     const retales = stock.filter(e => e.es_retal);
 
+    const alertasCritico = stock.filter(e => !e.es_retal && e.metros_total > 0 && (e.metros_disponibles / e.metros_total) <= 0.1);
+    const alertasBajo = stock.filter(e => !e.es_retal && e.metros_total > 0 && (e.metros_disponibles / e.metros_total) > 0.1 && (e.metros_disponibles / e.metros_total) <= 0.3);
+
     return (
       <ScrollView style={styles.tabContent}>
-        <View style={styles.headerRow}>
-          <Text style={styles.sectionTitle}>{t('screens.materiales.tabResumen')}</Text>
-          <TouchableOpacity style={styles.btnPrimary} onPress={() => setConsumoModal({ visible: true })}>
-            <Text style={styles.btnPrimaryText}>{t('screens.materiales.registrarConsumo')}</Text>
-          </TouchableOpacity>
-        </View>
-
         {loadingStock && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
+
+        {/* ── Alertas de stock ──────────────────────────── */}
+        {(alertasCritico.length > 0 || alertasBajo.length > 0) && (
+          <View style={styles.alertasCard}>
+            <Text style={styles.alertasTitle}>⚠ Alertas de stock</Text>
+            {alertasCritico.map((e, i) => {
+              const pct = Math.round((e.metros_disponibles / e.metros_total) * 100);
+              return (
+                <View key={e._id || i} style={styles.alertaRow}>
+                  <View style={[styles.alertaDot, { backgroundColor: '#D32F2F' }]} />
+                  <Text style={styles.alertaNombre}>{e.material_nombre}</Text>
+                  <Text style={[styles.alertaPct, { color: '#D32F2F' }]}>{pct}%</Text>
+                  <View style={[styles.alertaBadge, { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' }]}>
+                    <Text style={[styles.alertaBadgeText, { color: '#D32F2F' }]}>CRÍTICO</Text>
+                  </View>
+                </View>
+              );
+            })}
+            {alertasBajo.map((e, i) => {
+              const pct = Math.round((e.metros_disponibles / e.metros_total) * 100);
+              return (
+                <View key={e._id || i} style={styles.alertaRow}>
+                  <View style={[styles.alertaDot, { backgroundColor: '#F57C00' }]} />
+                  <Text style={styles.alertaNombre}>{e.material_nombre}</Text>
+                  <Text style={[styles.alertaPct, { color: '#F57C00' }]}>{pct}%</Text>
+                  <View style={[styles.alertaBadge, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
+                    <Text style={[styles.alertaBadgeText, { color: '#F57C00' }]}>BAJO</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── Material stock chart ──────────────────────── */}
         {chartData.length > 0 && Platform.OS === 'web' && (
@@ -641,13 +685,6 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
   const renderCatalogoTab = () => (
     <ScrollView style={styles.tabContent}>
-      <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>{t('screens.materiales.catalogoTitle')}</Text>
-        <TouchableOpacity style={styles.btnPrimary} onPress={openCatCreate}>
-          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addMaterialBtn')}</Text>
-        </TouchableOpacity>
-      </View>
-
       {loadingCatalogo && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
       {/* Table Header */}
@@ -718,9 +755,23 @@ export default function MaterialScreen({ currentUser, navigation }) {
     </ScrollView>
   );
 
+  const toggleStockSort = (col) => {
+    if (stockSortBy === col) {
+      setStockSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setStockSortBy(col);
+      setStockSortDir('asc');
+    }
+  };
+
+  const renderSortIcon = (col) => {
+    if (stockSortBy !== col) return <Text style={styles.thSortIcon}>⇅</Text>;
+    return <Text style={styles.thSortIcon}>{stockSortDir === 'asc' ? '↑' : '↓'}</Text>;
+  };
+
   const renderStockTab = () => {
     const q = busquedaStock.trim().toLowerCase();
-    const stockFiltrado = q
+    let stockFiltrado = q
       ? stock.filter(e =>
           (e.material_nombre || '').toLowerCase().includes(q) ||
           (e.fabricante || '').toLowerCase().includes(q) ||
@@ -728,19 +779,37 @@ export default function MaterialScreen({ currentUser, navigation }) {
         )
       : stock;
 
+    if (stockAvailFilter === 'critico') {
+      stockFiltrado = stockFiltrado.filter(e => e.metros_total > 0 && (e.metros_disponibles / e.metros_total) <= 0.1);
+    } else if (stockAvailFilter === 'bajo') {
+      stockFiltrado = stockFiltrado.filter(e => e.metros_total > 0 && (e.metros_disponibles / e.metros_total) > 0.1 && (e.metros_disponibles / e.metros_total) <= 0.3);
+    }
+
+    if (stockSortBy) {
+      stockFiltrado = [...stockFiltrado].sort((a, b) => {
+        let va, vb;
+        if (stockSortBy === 'nombre') {
+          va = (a.material_nombre || '').toLowerCase();
+          vb = (b.material_nombre || '').toLowerCase();
+        } else if (stockSortBy === 'disponible') {
+          va = a.metros_total > 0 ? a.metros_disponibles / a.metros_total : 0;
+          vb = b.metros_total > 0 ? b.metros_disponibles / b.metros_total : 0;
+        } else if (stockSortBy === 'fecha') {
+          va = new Date(a.fecha_entrada || 0).getTime();
+          vb = new Date(b.fecha_entrada || 0).getTime();
+        }
+        if (va < vb) return stockSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return stockSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     return (
     <ScrollView style={styles.tabContent}>
-      <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>{t('screens.materiales.stockTitle')}</Text>
-        <TouchableOpacity style={styles.btnPrimary} onPress={openStockCreate}>
-          <Text style={styles.btnPrimaryText}>{t('screens.materiales.addMaterialBtn')}</Text>
-        </TouchableOpacity>
-      </View>
-
       {loadingStock && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
-      {/* Mini chart — same as resumen tab */}
-      {chartData.length > 0 && !loadingStock && (
+      {/* Chart — identical to resumen tab */}
+      {chartData.length > 0 && Platform.OS === 'web' && !loadingStock && (
         <View style={[styles.chartCard, { marginBottom: 16 }]}>
           <Text style={styles.chartTitle}>{t('screens.materiales.metrosPorMaterial')}</Text>
           {chartData.map((entry) => {
@@ -750,55 +819,103 @@ export default function MaterialScreen({ currentUser, navigation }) {
             const pctRetal = entry.retales / total;
             const color = MATERIAL_COLORS[entry.colorIdx % MATERIAL_COLORS.length];
             return (
-              <View key={entry.name} style={{ marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+              <View key={entry.name} style={{ marginBottom: 20 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: color, marginRight: 7 }} />
-                    <Text style={{ fontWeight: '700', fontSize: 13, color: '#111827' }}>{entry.name}</Text>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color, marginRight: 8 }} />
+                    <Text style={{ fontWeight: '700', fontSize: 14, color: '#111827' }}>{entry.name}</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>{total.toFixed(0)} {t('screens.materiales.mTotal')}</Text>
                 </View>
-                <View style={{ height: 10, borderRadius: 5, backgroundColor: '#E9EDF2', overflow: 'hidden', flexDirection: 'row' }}>
+                <View style={{ height: 12, borderRadius: 6, backgroundColor: '#E9EDF2', overflow: 'hidden', flexDirection: 'row' }}>
                   {pctDisp > 0 && <View style={{ width: `${pctDisp * 100}%`, backgroundColor: color }} />}
                   {pctRetal > 0 && <View style={{ width: `${pctRetal * 100}%`, backgroundColor: '#FFB300' }} />}
                 </View>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 5, gap: 12 }}>
-                  <Text style={{ fontSize: 11, color: '#374151' }}>
-                    <Text style={{ color, fontWeight: '700' }}>{entry.disponible.toFixed(0)} m</Text>{'  '}{t('screens.materiales.disponibleLabel')}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 7, gap: 14 }}>
+                  <Text style={{ fontSize: 12, color: '#374151' }}>
+                    <Text style={{ color, fontWeight: '700' }}>{entry.disponible.toFixed(0)} m</Text>
+                    {'  '}{t('screens.materiales.disponibleLabel')}
                   </Text>
                   {entry.retales > 0 && (
-                    <Text style={{ fontSize: 11, color: '#374151' }}>
-                      <Text style={{ color: '#F59E0B', fontWeight: '700' }}>{entry.retales.toFixed(0)} m</Text>{'  '}{t('screens.materiales.retalesLabel')}
+                    <Text style={{ fontSize: 12, color: '#374151' }}>
+                      <Text style={{ color: '#F59E0B', fontWeight: '700' }}>{entry.retales.toFixed(0)} m</Text>
+                      {'  '}{t('screens.materiales.retalesLabel')}
                     </Text>
                   )}
-                  <Text style={{ fontSize: 11, color: '#374151' }}>
-                    <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>{entry.consumido.toFixed(0)} m</Text>{'  '}{t('screens.materiales.consumidoLabel')}
+                  <Text style={{ fontSize: 12, color: '#374151' }}>
+                    <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>{entry.consumido.toFixed(0)} m</Text>
+                    {'  '}{t('screens.materiales.consumidoLabel')}
                   </Text>
                 </View>
               </View>
             );
           })}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F2F5' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#1976D2', marginRight: 5 }} />
+              <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.disponibleCap')}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#FFB300', marginRight: 5 }} />
+              <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.retalesCap')}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#E9EDF2', borderWidth: 1, borderColor: '#CBD5E0', marginRight: 5 }} />
+              <Text style={{ fontSize: 11, color: '#6B7280' }}>{t('screens.materiales.consumidoCap')}</Text>
+            </View>
+          </View>
         </View>
       )}
 
+      {/* Quick availability filter pills */}
+      <View style={styles.stockFilterRow}>
+        {[
+          { key: 'todos', label: 'Todos' },
+          { key: 'bajo', label: 'Bajo (<30%)' },
+          { key: 'critico', label: 'Crítico (<10%)' },
+        ].map(f => (
+          <TouchableOpacity
+            key={f.key}
+            style={[styles.stockFilterPill, stockAvailFilter === f.key && styles.stockFilterPillActive]}
+            onPress={() => setStockAvailFilter(f.key)}
+          >
+            <Text style={[styles.stockFilterPillText, stockAvailFilter === f.key && styles.stockFilterPillTextActive]}>
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        <Text style={{ fontSize: 11, color: '#94A3B8', marginLeft: 4 }}>
+          {stockFiltrado.length} entrada{stockFiltrado.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
       {/* Table Header */}
       <View style={styles.tableHeader}>
-        <Text style={[styles.th, { flex: 2 }]}>{t('screens.materiales.colMaterial')}</Text>
+        <TouchableOpacity style={[styles.thSortable, { flex: 2 }]} onPress={() => toggleStockSort('nombre')}>
+          <Text style={styles.th}>{t('screens.materiales.colMaterial')}</Text>
+          {renderSortIcon('nombre')}
+        </TouchableOpacity>
         <Text style={[styles.th, { flex: 1.5 }]}>{t('screens.materiales.colFabricante')}</Text>
         <Text style={[styles.th, { width: 70 }]}>{t('screens.materiales.colAncho')}</Text>
         <Text style={[styles.th, { width: 65 }]}>{t('screens.materiales.colGsm')}</Text>
         <Text style={[styles.th, { width: 80 }]}>{t('screens.materiales.colTotalM')}</Text>
         <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colDispM')}</Text>
-        <Text style={[styles.th, { width: 40 }]}>{t('screens.materiales.colPct')}</Text>
+        <TouchableOpacity style={[styles.thSortable, { width: 50 }]} onPress={() => toggleStockSort('disponible')}>
+          <Text style={styles.th}>{t('screens.materiales.colPct')}</Text>
+          {renderSortIcon('disponible')}
+        </TouchableOpacity>
         <Text style={[styles.th, { flex: 1 }]}>{t('screens.materiales.colLote')}</Text>
-        <Text style={[styles.th, { width: 90 }]}>{t('screens.materiales.colEntrada')}</Text>
+        <TouchableOpacity style={[styles.thSortable, { width: 90 }]} onPress={() => toggleStockSort('fecha')}>
+          <Text style={styles.th}>{t('screens.materiales.colEntrada')}</Text>
+          {renderSortIcon('fecha')}
+        </TouchableOpacity>
         <Text style={[styles.th, { width: 100 }]}>{t('screens.materiales.colAcciones')}</Text>
       </View>
 
       {stockFiltrado.length === 0 && !loadingStock && (
         <EmptyState variant="inline"
-          title={busquedaStock ? t('common.noResults') : t('screens.materiales.sinStockEntradas')}
-          message={busquedaStock ? '' : t('screens.materiales.addToStart')}
+          title={busquedaStock || stockAvailFilter !== 'todos' ? t('common.noResults') : t('screens.materiales.sinStockEntradas')}
+          message={busquedaStock || stockAvailFilter !== 'todos' ? '' : t('screens.materiales.addToStart')}
         />
       )}
 
@@ -843,9 +960,36 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
   const renderHistorialTab = () => {
     const totalPages = Math.max(1, Math.ceil(consumosTotal / 50));
+    const totalConsumido = consumos.reduce((sum, c) => sum + (c.metros_consumidos || 0), 0);
     return (
       <ScrollView style={styles.tabContent}>
-        <Text style={styles.sectionTitle}>{t('screens.materiales.historialTitle')}</Text>
+        {/* Filter bar */}
+        <View style={styles.historialFilterBar}>
+          <TextInput
+            style={styles.historialSearchInput}
+            placeholder="Buscar material..."
+            value={historialSearchMaterial}
+            onChangeText={setHistorialSearchMaterial}
+            placeholderTextColor="#94A3B8"
+          />
+          <View style={styles.periodoPills}>
+            {[
+              { key: 'todo', label: 'Todo' },
+              { key: 'mes_actual', label: 'Mes actual' },
+              { key: 'mes_anterior', label: 'Mes anterior' },
+            ].map(p => (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.periodoPill, historialPeriodo === p.key && styles.periodoPillActive]}
+                onPress={() => setHistorialPeriodo(p.key)}
+              >
+                <Text style={[styles.periodoPillText, historialPeriodo === p.key && styles.periodoPillTextActive]}>
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {loadingConsumos && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
 
@@ -865,7 +1009,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
 
         {consumos.map((c, idx) => (
           <View key={c._id || c.id || idx} style={styles.tableRow}>
-            <Text style={[styles.td, { width: 80, fontWeight: '600', color: '#1976D2' }]}>#{c.numero_pedido || c.pedido_id}</Text>
+            <Text style={[styles.td, { width: 80, fontWeight: '600', color: '#4F46E5' }]}>#{c.numero_pedido || c.pedido_id}</Text>
             <Text style={[styles.td, { flex: 2 }]}>{c.material_nombre}</Text>
             <Text style={[styles.td, { flex: 1.5, color: '#555' }]}>{c.fabricante || '—'}</Text>
             <Text style={[styles.td, { width: 70 }]}>{c.ancho_cm} cm</Text>
@@ -874,6 +1018,15 @@ export default function MaterialScreen({ currentUser, navigation }) {
             <Text style={[styles.td, { width: 90, color: '#888', fontSize: 11 }]}>{formatDate(c.fecha)}</Text>
           </View>
         ))}
+
+        {consumos.length > 0 && (
+          <View style={styles.historialFooter}>
+            <Text style={styles.historialFooterLabel}>
+              Total consumido ({consumos.length} registro{consumos.length !== 1 ? 's' : ''}):
+            </Text>
+            <Text style={styles.historialFooterValue}>{totalConsumido.toFixed(2)} m</Text>
+          </View>
+        )}
 
         {totalPages > 1 && (
           <View style={styles.paginationRow}>
@@ -1367,19 +1520,26 @@ export default function MaterialScreen({ currentUser, navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.pageHeader}>
-        <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
-          <Text style={styles.pageTitle}>{t('nav.gestionMateriales')}</Text>
-          <View style={{ width: 38 }} />
-        </View>
-        {activeTab === 'stock' && (
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('common.search')}
-            value={busquedaStock}
-            onChangeText={setBusquedaStock}
-            placeholderTextColor="#94A3B8"
-          />
+        <Text style={styles.pageTitle}>{t('nav.materiales')}</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('common.search')}
+          value={busquedaStock}
+          onChangeText={(v) => { setBusquedaStock(v); if (activeTab !== 'stock') changeTab('stock'); }}
+          placeholderTextColor="#94A3B8"
+        />
+        {activeTab === 'resumen' && (
+          <TouchableOpacity style={styles.btnHeaderAction} onPress={() => setConsumoModal({ visible: true })}>
+            <Text style={styles.btnHeaderActionText}>{t('screens.materiales.registrarConsumo')}</Text>
+          </TouchableOpacity>
+        )}
+        {(activeTab === 'stock' || activeTab === 'catalogo') && (
+          <TouchableOpacity
+            style={styles.btnHeaderAction}
+            onPress={activeTab === 'stock' ? openStockCreate : openCatCreate}
+          >
+            <Text style={styles.btnHeaderActionText}>{t('screens.materiales.addMaterialBtn')}</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -1416,92 +1576,70 @@ export default function MaterialScreen({ currentUser, navigation }) {
 // STYLES
 // ═══════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EEF2F8' },
+  container: { flex: 1, backgroundColor: '#F4F5FD' },
   pageHeader: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 96,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-    justifyContent: 'center',
-  },
-  headerTopRow: {
+    borderBottomColor: '#E4E7ED',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
-    marginBottom: 6,
+    gap: 12,
+    minHeight: 54,
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    fontSize: 12,
+    borderColor: '#E4E7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontSize: 13,
     color: '#0F172A',
-    width: '62%',
-    alignSelf: 'center',
-    marginBottom: 4,
+    maxWidth: 320,
   },
   pageTitle: {
-    flex: 1,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#F1F5F9',
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
+  },
+  btnHeaderAction: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  btnHeaderActionText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
 
   // Tab bar
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingTop: 6,
+    borderBottomColor: '#E4E7ED',
+    paddingHorizontal: 16,
     gap: 4,
   },
   tabBtn: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   tabBtnActive: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderTopColor: '#E0E0E0',
-    borderLeftColor: '#E0E0E0',
-    borderRightColor: '#E0E0E0',
-    borderBottomColor: '#FFFFFF',
-    marginBottom: -1,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
+    borderBottomColor: '#4F46E5',
   },
-  tabBtnText: { fontSize: 14, color: '#475569', fontWeight: '500' },
-  tabBtnTextActive: { color: '#1E293B', fontWeight: '700' },
+  tabBtnText: { fontSize: 13, color: '#64748B', fontWeight: '500' },
+  tabBtnTextActive: { color: '#4F46E5', fontWeight: '700' },
 
   // Tab content
   tabContent: { flex: 1, padding: 16 },
@@ -1520,21 +1658,30 @@ const styles = StyleSheet.create({
   // Table
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    paddingVertical: 8,
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 6,
-    marginBottom: 2,
+    borderRadius: 10,
+    marginBottom: 4,
+    minHeight: 40,
+    alignItems: 'center',
   },
-  th: { fontSize: 12, fontWeight: '800', color: '#F1F5F9' },
+  th: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderRadius: 8,
+    marginBottom: 3,
+    shadowColor: '#1E1B4B',
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   td: { fontSize: 13, color: '#0F172A', paddingRight: 8 },
   tdActions: { flexDirection: 'row', gap: 6, justifyContent: 'flex-end' },
@@ -1600,7 +1747,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  btnPrimaryText: { color: '#1E293B', fontWeight: '600', fontSize: 13 },
+  btnPrimaryText: { color: '#4F46E5', fontWeight: '600', fontSize: 13 },
   btnCancel: {
     backgroundColor: 'transparent',
     borderRadius: 6,
@@ -1708,6 +1855,105 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
+
+  // ── Alertas de stock ────────────────────────────────────────────────────
+  alertasCard: {
+    backgroundColor: '#FFFBFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#FDE8E8',
+  },
+  alertasTitle: { fontSize: 12, fontWeight: '700', color: '#B91C1C', marginBottom: 8, letterSpacing: 0.4, textTransform: 'uppercase' },
+  alertaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDF2F2',
+  },
+  alertaDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  alertaNombre: { flex: 1, fontSize: 13, color: '#0F172A', fontWeight: '500' },
+  alertaPct: { fontSize: 13, fontWeight: '700', width: 38, textAlign: 'right' },
+  alertaBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  alertaBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+
+  // ── Stock filter pills ───────────────────────────────────────────────────
+  stockFilterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
+  stockFilterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
+    backgroundColor: '#F8FAFC',
+  },
+  stockFilterPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+  stockFilterPillText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  stockFilterPillTextActive: { color: '#FFFFFF' },
+
+  // ── Sortable th ─────────────────────────────────────────────────────────
+  thSortable: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  thSortIcon: { fontSize: 9, color: '#7C7FD0' },
+
+  // ── Historial filter bar ─────────────────────────────────────────────────
+  historialFilterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  historialSearchInput: {
+    flex: 1,
+    minWidth: 160,
+    maxWidth: 260,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E4E7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  periodoPills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  periodoPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D9DBFF',
+    backgroundColor: '#F8FAFC',
+  },
+  periodoPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+  periodoPillText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  periodoPillTextActive: { color: '#FFFFFF' },
+
+  // ── Historial footer total ───────────────────────────────────────────────
+  historialFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 6,
+    marginBottom: 8,
+    borderTopWidth: 1.5,
+    borderTopColor: '#D9DBFF',
+    backgroundColor: '#ECEFFE',
+    borderRadius: 8,
+  },
+  historialFooterLabel: { fontSize: 12, color: '#4F46E5', fontWeight: '600' },
+  historialFooterValue: { fontSize: 15, color: '#1E1B4B', fontWeight: '800' },
 
   // ── Resumen tab ─────────────────────────────────────────────────────────
   chartCard: {

@@ -68,7 +68,7 @@ const styles = {
         color: '#F1F5F9',
         letterSpacing: 0.8,
         textTransform: 'uppercase',
-        backgroundColor: '#1E293B',
+        backgroundColor: '#4F46E5',
         paddingHorizontal: 12,
         paddingVertical: 6,
         marginHorizontal: -12,
@@ -129,7 +129,7 @@ const styles = {
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
-        backgroundColor: '#1E293B',
+        backgroundColor: '#4F46E5',
         paddingVertical: 14,
         paddingHorizontal: 16,
         position: 'relative',
@@ -1584,7 +1584,7 @@ export default function NuevoPresupuestoModal({
                         onPress={() => puedeCrear && handleSubmit()}
                         disabled={!puedeCrear}
                     >
-                        <Text style={[styles.bigBtnText, { color: '#1E293B', fontWeight: '700' }]}>{submitLabel}</Text>
+                        <Text style={[styles.bigBtnText, { color: '#FFFFFF', fontWeight: '700' }]}>{submitLabel}</Text>
                     </TouchableOpacity>
                 </View>
 
