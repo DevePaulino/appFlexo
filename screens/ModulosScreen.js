@@ -241,20 +241,6 @@ export default function ModulosScreen() {
           <Text style={styles.sectionTitle}>{t('screens.config.modulosTitle')}</Text>
           <Text style={styles.hint}>{t('screens.config.modulosHint')}</Text>
 
-          {/* Consumo de material */}
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <Text style={styles.rowLabel}>{t('screens.config.moduloConsumoMaterial')}</Text>
-              <Text style={styles.rowHint}>{t('screens.config.moduloConsumoMaterialHint')}</Text>
-            </View>
-            <Switch
-              value={!!modulos.consumo_material}
-              onValueChange={(v) => setModulo('consumo_material', v)}
-              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
           {/* Módulo Presupuestos */}
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 12 }}>
