@@ -1559,7 +1559,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [comparadorDiffPage, setComparadorDiffPage] = useState(0);
   const [comparadorLightbox, setComparadorLightbox] = useState(false);
   const [cmpViewOnly, setCmpViewOnly] = useState(false);
-  const [cmpViewOnlyLoading, setCmpViewOnlyLoading] = useState(false);
+  const [cmpViewOnlyLoading, setCmpViewOnlyLoading] = useState(null); // archivoId | null
   const [comparadorViewMode, setComparadorViewMode] = useState('diff'); // 'diff' | 'a' | 'b'
   const [comparadorAutoPlay, setComparadorAutoPlay] = useState(false);
   const comparadorAutoPlayRef = useRef(null);
@@ -1839,7 +1839,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
 
   const openViewOnlyLightbox = async (archivoId) => {
-    setCmpViewOnlyLoading(true);
+    setCmpViewOnlyLoading(archivoId);
     setCmpViewOnly(true);
     setComparadorDiff(null);
     try {
@@ -1859,7 +1859,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         setComparadorLightbox(true);
       }
     } catch (_) {}
-    setCmpViewOnlyLoading(false);
+    setCmpViewOnlyLoading(null);
   };
 
   const cargarArchivos = async () => {
@@ -2484,9 +2484,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                     style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                                     onPress={() => openViewOnlyLightbox(selected.id)}
                                     activeOpacity={0.85}
-                                    disabled={cmpViewOnlyLoading}
+                                    disabled={cmpViewOnlyLoading !== null}
                                   />
-                                  {cmpViewOnlyLoading && (
+                                  {cmpViewOnlyLoading === selected.id && (
                                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
                                       <ActivityIndicator size="small" color="#FFFFFF" />
                                     </View>
@@ -2882,9 +2882,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                                         onPress={() => openViewOnlyLightbox(eskoFile.id)}
                                         activeOpacity={0.85}
-                                        disabled={cmpViewOnlyLoading}
+                                        disabled={cmpViewOnlyLoading !== null}
                                       />
-                                      {cmpViewOnlyLoading && (
+                                      {cmpViewOnlyLoading === eskoFile.id && (
                                         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
                                           <ActivityIndicator size="small" color="#FFFFFF" />
                                         </View>
@@ -3042,7 +3042,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         const closeLightbox = () => {
           setComparadorLightbox(false);
           setCmpViewOnly(false);
-          setCmpViewOnlyLoading(false);
+          setCmpViewOnlyLoading(null);
           setComparadorAutoPlay(false);
           setComparadorActiveSeps(null);
           cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
