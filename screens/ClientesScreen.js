@@ -131,17 +131,20 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#4F46E5',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#0F172A',
+    textAlign: 'center',
   },
   colNombre: {
     flex: 0.18,
@@ -539,7 +542,7 @@ export default function ClientesScreen({ currentUser }) {
             </View>
           </View>
           {clientesPaginados.map((cliente, idx) => (
-            <View key={cliente.id} style={[styles.tableRow, (idx + (paginaClientes - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
+            <TouchableOpacity key={cliente.id} style={[styles.tableRow, (idx + (paginaClientes - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]} onPress={() => abrirDetalleEdicion(cliente)} activeOpacity={0.75}>
               <View style={[styles.tableCell, styles.colNombre]}>
                 <Text style={styles.cellText} numberOfLines={1}>{cliente.nombre || '-'}</Text>
               </View>
@@ -556,21 +559,18 @@ export default function ClientesScreen({ currentUser }) {
                 <Text style={styles.cellText} numberOfLines={1}>{cliente.email || '-'}</Text>
               </View>
               <View style={[styles.tableCell, styles.colAcciones]}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => abrirDetalleEdicion(cliente)}>
-                  <Text style={styles.actionBtnText}>{t('common.edit')}</Text>
-                </TouchableOpacity>
                 {confirmingDeleteCliente === cliente.id ? (
                   <DeleteConfirmRow
                     onCancel={() => setConfirmingDeleteCliente(null)}
                     onConfirm={() => { setConfirmingDeleteCliente(null); ejecutarEliminacionCliente(cliente); }}
                   />
                 ) : (
-                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => setConfirmingDeleteCliente(cliente.id)}>
+                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteCliente(cliente.id); }}>
                     <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
           {totalPaginasClientes > 1 && (
             <View style={styles.paginationRow}>

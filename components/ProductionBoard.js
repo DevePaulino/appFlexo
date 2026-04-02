@@ -7,6 +7,8 @@ import TrabajoRow from './TrabajoRow';
 import EmptyState from './EmptyState';
 import { useModulos } from '../ModulosContext';
 import { useSettings } from '../SettingsContext';
+import RegistroCondicionesModal from './RegistroCondicionesModal';
+import CondicionesPanel from './CondicionesPanel';
 
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
   const { t } = useTranslation();
@@ -17,6 +19,11 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
   // ── Módulos ────────────────────────────────────────────────────────────────
   const { modulos } = useModulos();
   const consumoModuloActivo = modulos.consumo_material !== false;
+  const condicionesModuloActivo = !!modulos.condiciones_impresion;
+  // ── Modales de condiciones ─────────────────────────────────────────────────
+  const [condicionesPanel, setCondicionesPanel] = useState(null);   // trabajo
+  const [registroModal, setRegistroModal] = useState(null);          // trabajo pendiente de "Impreso"
+  const [condicionesPendientes, setCondicionesPendientes] = useState(null); // payload condiciones a adjuntar
   const { estadoRules } = useSettings();
   const estadosFinalizadosSlugs = new Set(estadoRules?.estados_finalizados?.length ? estadoRules.estados_finalizados : ['finalizado']);
   // ── Consumo automático ─────────────────────────────────────────────────────
@@ -270,6 +277,55 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
 
   const [sinRepetidora, setSinRepetidora] = useState(false);
 
+  // Abre el modal de condiciones antes de proceder con la impresión
+  const handleMarcarImpreso = (trabajo) => {
+    if (condicionesModuloActivo) {
+      setRegistroModal(trabajo);
+    } else if (consumoModuloActivo) {
+      abrirConsumoModal(trabajo);
+    } else {
+      marcarImpresoSinConsumo(trabajo);
+    }
+  };
+
+  const handleCondicionesConfirmadas = (condicionesObj) => {
+    const trabajo = registroModal;
+    setRegistroModal(null);
+    setCondicionesPendientes(condicionesObj);
+    if (consumoModuloActivo) {
+      abrirConsumoModal(trabajo);
+    } else {
+      marcarImpresoConCondiciones(trabajo, condicionesObj);
+    }
+  };
+
+  const marcarImpresoConCondiciones = async (trabajo, condicionesObj) => {
+    const pedidoId = String(trabajo._id || trabajo.id || trabajo.trabajo_id || '');
+    if (!pedidoId) return;
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const body = condicionesObj && condicionesObj.origen !== 'no_registrado'
+        ? { condiciones_impresion: condicionesObj }
+        : {};
+      const res = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/marcar-impreso`, {
+        method: 'POST', headers, body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setTrabajos((prev) => prev.map((t) => {
+          if (String(t.id || t._id || t.trabajo_id || '') !== pedidoId) return t;
+          const updated = { ...t, impresion_registrada: true };
+          if (data.nuevo_estado) updated.estado = data.nuevo_estado;
+          return updated;
+        }));
+        if (onRefresh) onRefresh();
+      }
+    } catch (_) {}
+    setCondicionesPendientes(null);
+  };
+
   const abrirConsumoModal = async (trabajo) => {
     setConsumoModal(trabajo);
     setConsumoResultado(null);
@@ -416,8 +472,10 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         getStatusLabel={getStatusLabel}
         getEntregaSemaforo={getEntregaSemaforo}
         formatearFecha={formatearFecha}
-        onMarcarImpreso={consumoModuloActivo ? abrirConsumoModal : marcarImpresoSinConsumo}
+        onMarcarImpreso={handleMarcarImpreso}
+        onVerCondiciones={condicionesModuloActivo ? (t) => setCondicionesPanel(t) : undefined}
         isFinalizado={estadosFinalizadosSlugs.has(slugifyEstado(item.estado))}
+        impresionRegistrada={!!item.impresion_registrada}
         styles={styles}
       />
     ));
@@ -516,6 +574,23 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         </View>
 
       </View>
+
+      {/* ── Modal: Registro de condiciones de impresión ──────────────────── */}
+      <RegistroCondicionesModal
+        visible={!!registroModal}
+        trabajo={registroModal}
+        maquinas={maquinas}
+        onClose={() => setRegistroModal(null)}
+        onConfirm={handleCondicionesConfirmadas}
+      />
+
+      {/* ── Panel: Ver condiciones / Buscar similar ───────────────────────── */}
+      <CondicionesPanel
+        visible={!!condicionesPanel}
+        trabajo={condicionesPanel}
+        maquinas={maquinas}
+        onClose={() => setCondicionesPanel(null)}
+      />
 
       {/* ── Modal de consumo automático ─────────────────────────────────── */}
       <Modal visible={!!consumoModal} transparent animationType="fade" onRequestClose={cerrarConsumoModal}>
@@ -765,23 +840,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   colCliente: {
-    flex: 0.13,
+    flex: 0.12,
     alignItems: 'center',
   },
   colEstado: {
-    flex: 0.16,
+    flex: 0.14,
     alignItems: 'center',
   },
   colFechaPedido: {
-    flex: 0.10,
+    flex: 0.09,
     alignItems: 'center',
   },
   colFechaEntrega: {
-    flex: 0.10,
+    flex: 0.09,
     alignItems: 'center',
   },
   colDias: {
-    flex: 0.07,
+    flex: 0.06,
     alignItems: 'center',
   },
   colMaquina: {
@@ -914,7 +989,7 @@ const styles = StyleSheet.create({
   retrasoAmarilloText: { color: '#F57C00' },
   retrasoRojoText: { color: '#DC2626' },
   colImpreso: {
-    width: 100,
+    flex: 0.15,
     alignItems: 'center',
   },
   // ── Modal consumo ──────────────────────────────────────────────────────────

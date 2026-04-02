@@ -232,10 +232,10 @@ const styles = StyleSheet.create({
   },
   tableContent: {
     width: '100%',
-    minWidth: 1200,
   },
   tableHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#ECEFFE',
     borderWidth: 1,
     borderColor: '#D9DBFF',
@@ -244,10 +244,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     borderRadius: 10,
     minHeight: 40,
-    alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
@@ -265,72 +265,32 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 6,
   },
   headerText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#4F46E5',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#0F172A',
+    textAlign: 'center',
   },
-  colNumero: {
-    minWidth: 110,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colTipo: {
-    minWidth: 120,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colAncho: {
-    minWidth: 110,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colAlto: {
-    minWidth: 110,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colMotivos: {
-    minWidth: 100,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colSeparacion: {
-    minWidth: 110,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colValorZ: {
-    minWidth: 90,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colSesgado: {
-    minWidth: 120,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colEstado: {
-    minWidth: 110,
-    flexGrow: 1,
-    flexShrink: 0,
-  },
-  colAcciones: {
-    minWidth: 220,
-    flexGrow: 1.4,
-    flexShrink: 0,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-  },
+  colNumero:    { flex: 0.13 },
+  colTipo:      { flex: 0.12 },
+  colAncho:     { flex: 0.10 },
+  colAlto:      { flex: 0.10 },
+  colMotivos:   { flex: 0.09 },
+  colSeparacion:{ flex: 0.11 },
+  colValorZ:    { flex: 0.09 },
+  colSesgado:   { flex: 0.11 },
+  colEstado:    { flex: 0.11 },
+  colAcciones:  { flex: 0.10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   actionBtn: {
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
@@ -424,13 +384,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#475569',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#C7D2FE',
   },
   paginationBtnText: {
     color: '#FFFFFF',
@@ -438,7 +398,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#0F172A',
+    color: '#4F46E5',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -978,7 +938,6 @@ export default function TroquelessScreen({ currentUser, navigation }) {
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ flexGrow: 1 }}>
               <View style={styles.tableContent}>
                 <View style={styles.tableHeader}>
                 <View style={[styles.tableCell, styles.colNumero]}>
@@ -1013,7 +972,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                 </View>
                 </View>
                 {troquelesPaginados.map((troquele, idx) => (
-                  <View key={troquele.id} style={[styles.tableRow, (idx + (paginaTroqueles - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]}>
+                  <TouchableOpacity key={troquele.id} style={[styles.tableRow, (idx + (paginaTroqueles - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]} onPress={() => puedeEditarTroqueles ? abrirEdicionTroquel(troquele) : abrirDetalle(troquele)} activeOpacity={0.75}>
                   <View style={[styles.tableCell, styles.colNumero]}>
                     <Text style={styles.cellText} numberOfLines={1}>{troquele.numero}</Text>
                   </View>
@@ -1044,24 +1003,18 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                     </Text>
                   </View>
                   <View style={[styles.tableCell, styles.colAcciones]}>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => (puedeEditarTroqueles ? abrirEdicionTroquel(troquele) : abrirDetalle(troquele))}
-                    >
-                      <Text style={styles.actionBtnText}>{t('common.view')}</Text>
-                    </TouchableOpacity>
                     {confirmingDeleteTroquel === (troquele._id || troquele.id) ? (
                       <DeleteConfirmRow
                         onCancel={() => setConfirmingDeleteTroquel(null)}
                         onConfirm={() => { setConfirmingDeleteTroquel(null); ejecutarEliminarTroquel(troquele); }}
                       />
                     ) : (
-                      <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => setConfirmingDeleteTroquel(troquele._id || troquele.id)}>
+                      <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteTroquel(troquele._id || troquele.id); }}>
                         <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
                 {totalPaginasTroqueles > 1 && (
                   <View style={styles.paginationRow}>
@@ -1083,7 +1036,6 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                   </View>
                 )}
               </View>
-            </ScrollView>
           </ScrollView>
         )}
 

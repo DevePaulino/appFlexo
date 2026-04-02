@@ -417,7 +417,47 @@
       "impresosHint": "History of jobs marked as printed",
       "colFechaImpresion": "Print date",
       "cargaTitulo": "Workload",
-      "cargaTrabajos": "jobs"
+      "cargaTrabajos": "jobs",
+      "condiciones": {
+        "modalTitle": "Register print conditions",
+        "cancelar": "Cancel",
+        "volver": "← Back",
+        "errorCargarTest": "Could not load reference test",
+        "elegir": {
+          "opcionIgualesLabel": "Same as machine test",
+          "opcionIgualesHint": "Clones the conditions from the most recent test of {{maquina}}",
+          "laMaquina": "the machine",
+          "opcionDesviacionLabel": "With deviation",
+          "opcionDesviacionHint": "Enter actual values and indicate deltas from the test",
+          "opcionNoRegistrarLabel": "Do not register",
+          "opcionNoRegistrarHint": "Mark as printed without saving conditions"
+        },
+        "clon": {
+          "titulo": "Reference test conditions",
+          "sinTests": "No tests registered for this machine.",
+          "fecha": "Date",
+          "material": "Material",
+          "velocidad": "Speed",
+          "anilox": "Anilox",
+          "fabTintas": "Ink supplier",
+          "fabPlancha": "Plate supplier",
+          "refPlancha": "Plate ref.",
+          "confirmar": "Confirm — Same as test"
+        },
+        "desviacion": {
+          "titulo": "Actual print values",
+          "sinReferencia": "No reference test for this machine. Values will be saved without comparison.",
+          "confirmar": "Confirm values"
+        },
+        "form": {
+          "velocidadLabel": "Speed (m/min)",
+          "medicionesReales": "Actual measurements",
+          "notasOperario": "Operator notes",
+          "notasPlaceholder": "Optional observations…",
+          "deltasTitle": "Δ Deviations vs. reference test",
+          "aniloxPlaceholder": "e.g. 400 L/cm"
+        }
+      }
     },
     "materiales": {
       "title": "Materials",

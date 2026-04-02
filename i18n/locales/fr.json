@@ -417,7 +417,47 @@
       "impresosHint": "Historique des travaux marqués comme imprimés",
       "colFechaImpresion": "Date d'impression",
       "cargaTitulo": "Charge de travail",
-      "cargaTrabajos": "travaux"
+      "cargaTrabajos": "travaux",
+      "condiciones": {
+        "modalTitle": "Enregistrer les conditions d'impression",
+        "cancelar": "Annuler",
+        "volver": "← Retour",
+        "errorCargarTest": "Impossible de charger le test de référence",
+        "elegir": {
+          "opcionIgualesLabel": "Identiques au test machine",
+          "opcionIgualesHint": "Clone les conditions du test le plus récent de {{maquina}}",
+          "laMaquina": "la machine",
+          "opcionDesviacionLabel": "Avec écart",
+          "opcionDesviacionHint": "Saisissez les valeurs réelles et indiquez les écarts par rapport au test",
+          "opcionNoRegistrarLabel": "Ne pas enregistrer",
+          "opcionNoRegistrarHint": "Marquer comme imprimé sans enregistrer les conditions"
+        },
+        "clon": {
+          "titulo": "Conditions du test de référence",
+          "sinTests": "Aucun test enregistré pour cette machine.",
+          "fecha": "Date",
+          "material": "Matériau",
+          "velocidad": "Vitesse",
+          "anilox": "Anilox",
+          "fabTintas": "Fournisseur encres",
+          "fabPlancha": "Fournisseur cliché",
+          "refPlancha": "Réf. cliché",
+          "confirmar": "Confirmer — Identiques au test"
+        },
+        "desviacion": {
+          "titulo": "Valeurs réelles d'impression",
+          "sinReferencia": "Aucun test de référence pour cette machine. Les valeurs seront enregistrées sans comparaison.",
+          "confirmar": "Confirmer les valeurs"
+        },
+        "form": {
+          "velocidadLabel": "Vitesse (m/min)",
+          "medicionesReales": "Mesures réelles",
+          "notasOperario": "Notes de l'opérateur",
+          "notasPlaceholder": "Observations optionnelles…",
+          "deltasTitle": "Δ Écarts vs. test de référence",
+          "aniloxPlaceholder": "Ex. 400 L/cm"
+        }
+      }
     },
     "materiales": {
       "title": "Matériaux",

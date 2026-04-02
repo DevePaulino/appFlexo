@@ -417,7 +417,47 @@
       "impresosHint": "Histórico de trabalhos marcados como impressos",
       "colFechaImpresion": "Data de impressão",
       "cargaTitulo": "Carga de trabalho",
-      "cargaTrabajos": "trabalhos"
+      "cargaTrabajos": "trabalhos",
+      "condiciones": {
+        "modalTitle": "Registar condições de impressão",
+        "cancelar": "Cancelar",
+        "volver": "← Voltar",
+        "errorCargarTest": "Não foi possível carregar o teste de referência",
+        "elegir": {
+          "opcionIgualesLabel": "Iguais ao teste da máquina",
+          "opcionIgualesHint": "Clona as condições do teste mais recente de {{maquina}}",
+          "laMaquina": "a máquina",
+          "opcionDesviacionLabel": "Com desvio",
+          "opcionDesviacionHint": "Introduza os valores reais e indique os deltas relativamente ao teste",
+          "opcionNoRegistrarLabel": "Não registar",
+          "opcionNoRegistrarHint": "Marcar como impresso sem guardar condições"
+        },
+        "clon": {
+          "titulo": "Condições do teste de referência",
+          "sinTests": "Sem testes registados para esta máquina.",
+          "fecha": "Data",
+          "material": "Material",
+          "velocidad": "Velocidade",
+          "anilox": "Anilox",
+          "fabTintas": "Fornecedor tintas",
+          "fabPlancha": "Fornecedor chapa",
+          "refPlancha": "Ref. chapa",
+          "confirmar": "Confirmar — Iguais ao teste"
+        },
+        "desviacion": {
+          "titulo": "Valores reais de impressão",
+          "sinReferencia": "Sem teste de referência para esta máquina. Os valores serão guardados sem comparação.",
+          "confirmar": "Confirmar valores"
+        },
+        "form": {
+          "velocidadLabel": "Velocidade (m/min)",
+          "medicionesReales": "Medições reais",
+          "notasOperario": "Notas do operador",
+          "notasPlaceholder": "Observações opcionais…",
+          "deltasTitle": "Δ Desvios vs. teste de referência",
+          "aniloxPlaceholder": "Ex. 400 L/cm"
+        }
+      }
     },
     "materiales": {
       "title": "Materiais",

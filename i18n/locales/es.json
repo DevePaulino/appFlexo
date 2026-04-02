@@ -417,7 +417,47 @@
       "impresosHint": "Historial de pedidos marcados como impresos",
       "colFechaImpresion": "F. Impresión",
       "cargaTitulo": "Carga de trabajo",
-      "cargaTrabajos": "trabajos"
+      "cargaTrabajos": "trabajos",
+      "condiciones": {
+        "modalTitle": "Registrar condiciones de impresión",
+        "cancelar": "Cancelar",
+        "volver": "← Volver",
+        "errorCargarTest": "No se pudo cargar el test de referencia",
+        "elegir": {
+          "opcionIgualesLabel": "Iguales al test de la máquina",
+          "opcionIgualesHint": "Se clonan las condiciones del test más reciente de {{maquina}}",
+          "laMaquina": "la máquina",
+          "opcionDesviacionLabel": "Con desviación",
+          "opcionDesviacionHint": "Introduce los valores reales e indica los deltas respecto al test",
+          "opcionNoRegistrarLabel": "No registrar",
+          "opcionNoRegistrarHint": "Marcar como impreso sin guardar condiciones"
+        },
+        "clon": {
+          "titulo": "Condiciones del test de referencia",
+          "sinTests": "No hay tests registrados para esta máquina.",
+          "fecha": "Fecha",
+          "material": "Material",
+          "velocidad": "Velocidad",
+          "anilox": "Anilox",
+          "fabTintas": "Fab. tintas",
+          "fabPlancha": "Fab. plancha",
+          "refPlancha": "Ref. plancha",
+          "confirmar": "Confirmar — Iguales al test"
+        },
+        "desviacion": {
+          "titulo": "Valores reales de impresión",
+          "sinReferencia": "No hay test de referencia para esta máquina. Los valores se guardarán sin comparación.",
+          "confirmar": "Confirmar valores"
+        },
+        "form": {
+          "velocidadLabel": "Velocidad (m/min)",
+          "medicionesReales": "Mediciones reales",
+          "notasOperario": "Notas del operario",
+          "notasPlaceholder": "Observaciones opcionales…",
+          "deltasTitle": "Δ Desviaciones vs. test de referencia",
+          "aniloxPlaceholder": "Ej. 400 L/cm"
+        }
+      }
     },
     "materiales": {
       "title": "Materiales",

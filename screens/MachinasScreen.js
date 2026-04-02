@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
+import MaquinaDetalleModal from './MaquinaDetalleModal';
 import EmptyState from '../components/EmptyState';
 import { useMaquinas } from '../MaquinasContext';
 
@@ -111,6 +112,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
+    alignItems: 'center',
     paddingRight: 6,
   },
   headerText: {
@@ -118,6 +120,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4F46E5',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
 
   // ── Columnas ──────────────────────────────────────────
@@ -137,22 +140,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 1,
+    textAlign: 'center',
   },
   cellMeta: {
     fontSize: 11,
     color: '#94A3B8',
     fontWeight: '500',
+    textAlign: 'center',
   },
   cellVal: {
     fontSize: 12,
     color: '#334155',
     fontWeight: '500',
     lineHeight: 17,
+    textAlign: 'center',
   },
   cellValMuted: {
     fontSize: 11,
     color: '#94A3B8',
     lineHeight: 15,
+    textAlign: 'center',
   },
 
   // ── Estado badge ──────────────────────────────────────
@@ -173,7 +180,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   deleteBtn: {
@@ -216,13 +223,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paginationBtn: {
-    backgroundColor: '#475569',
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
   },
   paginationBtnDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#C7D2FE',
   },
   paginationBtnText: {
     color: '#FFFFFF',
@@ -230,7 +237,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   paginationInfo: {
-    color: '#0F172A',
+    color: '#4F46E5',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -249,6 +256,8 @@ export default function MachinasScreen({ currentUser }) {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [maquinaEditandoId, setMaquinaEditandoId] = useState(null);
   const [initialMaquina, setInitialMaquina] = useState(null);
+  const [detalleModalVisible, setDetalleModalVisible] = useState(false);
+  const [maquinaDetalle, setMaquinaDetalle] = useState(null);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
 
@@ -287,18 +296,28 @@ export default function MachinasScreen({ currentUser }) {
   };
 
   const abrirDetalleEdicion = (maquina) => {
-    setModoEdicion(true);
-    setMaquinaEditandoId(maquina.id);
-    setInitialMaquina(maquina);
-    setModalVisible(true);
+    setMaquinaDetalle(maquina);
+    setDetalleModalVisible(true);
   };
 
   const handleGuardarMaquina = (data) => {
-    const url = modoEdicion && maquinaEditandoId
-      ? `http://localhost:8080/api/maquinas/${maquinaEditandoId}`
-      : 'http://localhost:8080/api/maquinas';
-    fetch(url, {
-      method: modoEdicion ? 'PUT' : 'POST',
+    fetch('http://localhost:8080/api/maquinas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+      .then((res) => res.json().then((d) => ({ ok: res.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) { alert(d?.error || 'No se pudo guardar'); return; }
+        recargarMaquinas();
+      })
+      .catch(() => alert('No se pudo guardar'));
+  };
+
+  const handleGuardarDetalle = (data) => {
+    if (!maquinaDetalle?.id) return;
+    fetch(`http://localhost:8080/api/maquinas/${maquinaDetalle.id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
@@ -321,10 +340,9 @@ export default function MachinasScreen({ currentUser }) {
       const res = await fetch(`http://localhost:8080/api/maquinas/${maquina.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { alert(data?.error || t('common.error')); return; }
-      if (modoEdicion && maquinaEditandoId === maquina.id) {
-        setModalVisible(false);
-        setModoEdicion(false);
-        setMaquinaEditandoId(null);
+      if (detalleModalVisible && maquinaDetalle?.id === maquina.id) {
+        setDetalleModalVisible(false);
+        setMaquinaDetalle(null);
       }
       recargarMaquinas();
     } catch {
@@ -424,9 +442,11 @@ export default function MachinasScreen({ currentUser }) {
               const estado = maquina.estado || 'Activa';
               const esActiva = estado === 'Activa';
               return (
-                <View
+                <TouchableOpacity
                   key={maquina.id}
                   style={[styles.tableRow, idx % 2 === 1 && styles.rowAlternate]}
+                  onPress={() => abrirDetalleEdicion(maquina)}
+                  activeOpacity={0.75}
                 >
                   {/* Nombre + año */}
                   <View style={[styles.tableCell, styles.colNombre]}>
@@ -500,24 +520,18 @@ export default function MachinasScreen({ currentUser }) {
                   {/* Acciones */}
                   <View style={[styles.tableCell, styles.colAcciones]}>
                     <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => abrirDetalleEdicion(maquina)}
-                    >
-                      <Text style={styles.actionBtnText}>{t('common.view')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
                       style={[
                         styles.actionBtn,
                         styles.deleteBtn,
                         maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled,
                       ]}
                       disabled={maquina.trabajos_en_cola > 0}
-                      onPress={() => handleEliminarMaquina(maquina)}
+                      onPress={(e) => { e.stopPropagation?.(); handleEliminarMaquina(maquina); }}
                     >
                       <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
 
@@ -553,10 +567,21 @@ export default function MachinasScreen({ currentUser }) {
           setMaquinaEditandoId(null);
           setInitialMaquina(null);
         }}
-        modoEdicion={modoEdicion}
-        initialMaquina={initialMaquina}
+        modoEdicion={false}
+        initialMaquina={null}
         onSave={handleGuardarMaquina}
         puedeCrear={puedeCrear}
+      />
+
+      <MaquinaDetalleModal
+        visible={detalleModalVisible}
+        onClose={() => {
+          setDetalleModalVisible(false);
+          setMaquinaDetalle(null);
+        }}
+        maquina={maquinaDetalle}
+        onSave={handleGuardarDetalle}
+        puedeEditar={puedeCrear}
       />
     </View>
   );

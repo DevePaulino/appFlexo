@@ -46,6 +46,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   content: {
+    flex: 1,
     padding: 0,
   },
   sectionContainer: {
@@ -63,53 +64,58 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   bodyRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     flex: 1,
   },
-  chartsSidebar: {
-    width: 168,
+  chartsTopBar: {
     backgroundColor: '#FFFFFF',
-    borderLeftWidth: 3,
-    borderLeftColor: '#4F46E5',
-    borderRightWidth: 1,
-    borderRightColor: '#E4E7ED',
-    paddingTop: 14,
-    paddingBottom: 8,
-    paddingLeft: 10,
-    paddingRight: 8,
+    borderTopWidth: 3,
+    borderTopColor: '#4F46E5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E7ED',
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     shadowColor: '#1E1B4B',
-    shadowOffset: { width: 3, height: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    zIndex: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  chartsTopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
   },
   chartsTitle: {
     fontSize: 9,
     fontWeight: '800',
     color: '#4F46E5',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 2,
+  },
+  chartsDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#C7D2FE',
   },
   chartsTotalCount: {
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#1E1B4B',
-    marginBottom: 12,
-    lineHeight: 30,
-    letterSpacing: -1,
+    letterSpacing: -0.3,
   },
   chartsTotalLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#94A3B8',
   },
   chartEmpty: {
     fontSize: 11,
     color: '#C7D2FE',
     fontStyle: 'italic',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -628,19 +634,26 @@ function WorkloadBar({ carga, maxCarga, activa, dimmed, onPress }) {
 
 const wbStyles = StyleSheet.create({
   card: {
-    marginBottom: 5,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    backgroundColor: '#F8FAFC',
+    width: 148,
+    marginRight: 8,
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingTop: 10,
+    paddingBottom: 9,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E4E7ED',
+    shadowColor: '#1E1B4B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   dotWrap: {
     width: 10,
@@ -655,30 +668,31 @@ const wbStyles = StyleSheet.create({
     borderRadius: 5,
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   name: {
     flex: 1,
     fontSize: 11,
     fontWeight: '700',
-    color: '#334155',
-    letterSpacing: 0.2,
+    color: '#1E1B4B',
+    letterSpacing: 0.1,
   },
   count: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   track: {
-    height: 3,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 2,
+    height: 5,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 3,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
 });
 
@@ -826,11 +840,7 @@ export default function ProduccionScreen() {
         // marca que ya cargamos la página 1 para esta máquina
         setTrabajosPages((p) => ({ ...p, [String(maq.id)]: 1 }));
         // Registrar total devuelto por la API (si está disponible) para paginación
-        if (trabajosData && typeof trabajosData.total !== 'undefined') {
-          totalsObj[maq.id] = trabajosData.total;
-        } else {
-          totalsObj[maq.id] = trabajosMaqFiltrados.length;
-        }
+        totalsObj[maq.id] = trabajosMaqFiltrados.length;
 
       }
       setTrabajosPorMaquina(trabajosObj);
@@ -874,7 +884,9 @@ export default function ProduccionScreen() {
         const fin = new Set(rules.estados_finalizados?.length ? rules.estados_finalizados : ['finalizado']);
         const pau = new Set(rules.estados_pausados?.length ? rules.estados_pausados : ['parado', 'cancelado']);
         const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-        return !fin.has(sl) && !pau.has(sl);
+        if (fin.has(sl) || pau.has(sl)) return false;
+        if (sl.includes('disen') || sl.includes('aprobac') || sl.includes('cliche')) return false;
+        return true;
       });
 
       setTrabajosPorMaquina((prev) => {
@@ -918,7 +930,9 @@ export default function ProduccionScreen() {
         const fin = new Set(rules.estados_finalizados?.length ? rules.estados_finalizados : ['finalizado']);
         const pau = new Set(rules.estados_pausados?.length ? rules.estados_pausados : ['parado', 'cancelado']);
         const sl = String(trabajo.estado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-        return !fin.has(sl) && !pau.has(sl);
+        if (fin.has(sl) || pau.has(sl)) return false;
+        if (sl.includes('disen') || sl.includes('aprobac') || sl.includes('cliche')) return false;
+        return true;
       });
 
       // Group by maquina and either replace (page=1) or append
@@ -1093,48 +1107,48 @@ export default function ProduccionScreen() {
         />
       </View>
       <View style={styles.bodyRow}>
-        {/* ── Sidebar: gráfica de carga ── */}
-        <View style={styles.chartsSidebar}>
-          {(() => {
-            const total = Object.values(trabajosPorMaquina || {}).reduce((sum, w) => sum + (Array.isArray(w) ? w.length : 0), 0);
-            return (
-              <>
+        {/* ── Barra superior: gráfica de carga horizontal ── */}
+        {(() => {
+          const total = Object.values(trabajosPorMaquina || {}).reduce((sum, w) => sum + (Array.isArray(w) ? w.length : 0), 0);
+          const { cargas } = getCargaPorMaquina();
+          const maxCarga = Math.max(...cargas.map((c) => c.cantidad), 1);
+          const hayFiltroActivo = maquinasFiltroIds.length > 0;
+          return (
+            <View style={styles.chartsTopBar}>
+              <View style={styles.chartsTopHeader}>
                 <Text style={styles.chartsTitle}>{t('screens.produccion.cargaTitulo')}</Text>
-                <Text style={styles.chartsTotalCount}>{total} <Text style={styles.chartsTotalLabel}>{t('screens.produccion.cargaTrabajos')}</Text></Text>
-              </>
-            );
-          })()}
-          {(() => {
-            const { cargas } = getCargaPorMaquina();
-            if (cargas.length === 0) {
-              return <Text style={styles.chartEmpty}>{t('screens.produccion.sinMaquinas')}</Text>;
-            }
-            const maxCarga = Math.max(...cargas.map((c) => c.cantidad), 1);
-            const hayFiltroActivo = maquinasFiltroIds.length > 0;
-            return (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {cargas.map((carga) => (
-                  <WorkloadBar
-                    key={carga.id}
-                    carga={carga}
-                    maxCarga={maxCarga}
-                    activa={maquinasFiltroIds.includes(String(carga.id))}
-                    dimmed={hayFiltroActivo && !maquinasFiltroIds.includes(String(carga.id))}
-                    onPress={() => toggleMaquinaFiltro(carga.id)}
-                  />
-                ))}
-              </ScrollView>
-            );
-          })()}
-          {maquinasFiltroIds.length > 0 && (
-            <TouchableOpacity
-              style={{ marginTop: 8, alignSelf: 'stretch', paddingVertical: 6, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#D9DBFF', alignItems: 'center' }}
-              onPress={() => setMaquinasFiltroIds([])}
-            >
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#4F46E5' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+                <View style={styles.chartsDivider} />
+                <Text style={styles.chartsTotalCount}>{total}</Text>
+                <Text style={styles.chartsTotalLabel}>{t('screens.produccion.cargaTrabajos')}</Text>
+                {hayFiltroActivo && (
+                  <TouchableOpacity
+                    style={{ marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#D9DBFF', flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    onPress={() => setMaquinasFiltroIds([])}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#4F46E5' }}>✕ {t('screens.produccion.quitarFiltro')}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {cargas.length === 0
+                ? <Text style={styles.chartEmpty}>{t('screens.produccion.sinMaquinas')}</Text>
+                : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 4 }}>
+                    {cargas.map((carga) => (
+                      <WorkloadBar
+                        key={carga.id}
+                        carga={carga}
+                        maxCarga={maxCarga}
+                        activa={maquinasFiltroIds.includes(String(carga.id))}
+                        dimmed={hayFiltroActivo && !maquinasFiltroIds.includes(String(carga.id))}
+                        onPress={() => toggleMaquinaFiltro(carga.id)}
+                      />
+                    ))}
+                  </ScrollView>
+                )
+              }
+            </View>
+          );
+        })()}
 
         {/* ── Contenido principal ── */}
         <ScrollView style={styles.content}>

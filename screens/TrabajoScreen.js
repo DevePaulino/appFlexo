@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import PedidoDetalleModal from './PedidoDetalleModal';
@@ -558,10 +558,12 @@ export default function TrabajoScreen({ currentUser }) {
       .catch(() => setTrabajos([]));
   };
 
-  // Cargar pedidos al montar el componente
-  useEffect(() => {
-    cargarPedidos();
-  }, []);
+  // Cargar pedidos al montar el componente y al volver a la pestaña
+  useFocusEffect(
+    React.useCallback(() => {
+      cargarPedidos();
+    }, [])
+  );
 
   // Recargar pedidos cuando se crea uno nuevo desde Presupuestos
   useEffect(() => {

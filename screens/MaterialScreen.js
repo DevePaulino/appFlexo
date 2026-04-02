@@ -710,9 +710,9 @@ export default function MaterialScreen({ currentUser, navigation }) {
                 ? t('screens.materiales.sinFabricantes')
                 : (mat.fabricantes || []).map(f => f.nombre).join(', ')}
             </Text>
-            <View style={[styles.tdActions, { width: 100 }]}>
-              <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openCatEdit(mat)}>
-                <Text style={styles.actionBtnSmallText}>✎</Text>
+            <View style={[styles.tdActions, { width: 120 }]}>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => openCatEdit(mat)}>
+                <Text style={styles.actionBtnText}>{t('common.edit')}</Text>
               </TouchableOpacity>
               {confirmingDelete === (mat._id || mat.id) ? (
                 <DeleteConfirmRow
@@ -720,8 +720,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
                   onConfirm={() => { setConfirmingDelete(null); deleteCatalogo(mat); }}
                 />
               ) : (
-                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(mat._id || mat.id)}>
-                  <Text style={styles.actionBtnSmallText}>✕</Text>
+                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => setConfirmingDelete(mat._id || mat.id)}>
+                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -923,7 +923,7 @@ export default function MaterialScreen({ currentUser, navigation }) {
         const pct = entry.metros_total > 0 ? Math.round((entry.metros_disponibles / entry.metros_total) * 100) : 0;
         const color = stockColor(entry);
         return (
-          <View key={entry._id || entry.id || idx} style={styles.tableRow}>
+          <TouchableOpacity key={entry._id || entry.id || idx} style={styles.tableRow} onPress={() => openStockEdit(entry)} activeOpacity={0.75}>
             <Text style={[styles.td, { flex: 2 }]}>{entry.material_nombre}</Text>
             <Text style={[styles.td, { flex: 1.5, color: '#555' }]}>{entry.fabricante || '—'}</Text>
             <Text style={[styles.td, { width: 70 }]}>{entry.ancho_cm} cm</Text>
@@ -936,22 +936,19 @@ export default function MaterialScreen({ currentUser, navigation }) {
             </View>
             <Text style={[styles.td, { flex: 1, color: '#888' }]}>{entry.numero_lote || '—'}</Text>
             <Text style={[styles.td, { width: 90, color: '#888', fontSize: 11 }]}>{formatDate(entry.fecha_entrada)}</Text>
-            <View style={[styles.tdActions, { width: 100 }]}>
-              <TouchableOpacity style={styles.actionBtnSmall} onPress={() => openStockEdit(entry)}>
-                <Text style={styles.actionBtnSmallText}>✎</Text>
-              </TouchableOpacity>
+            <View style={[styles.tdActions, { width: 80 }]}>
               {confirmingDelete === (entry._id || entry.id) ? (
                 <DeleteConfirmRow
                   onCancel={() => setConfirmingDelete(null)}
                   onConfirm={() => { setConfirmingDelete(null); deleteStock(entry); }}
                 />
               ) : (
-                <TouchableOpacity style={[styles.actionBtnSmall, styles.actionBtnDanger]} onPress={() => setConfirmingDelete(entry._id || entry.id)}>
-                  <Text style={styles.actionBtnSmallText}>✕</Text>
+                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDelete(entry._id || entry.id); }}>
+                  <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </ScrollView>
@@ -1668,7 +1665,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     alignItems: 'center',
   },
-  th: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5 },
+  th: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5, textAlign: 'center' },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1683,7 +1680,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
-  td: { fontSize: 13, color: '#0F172A', paddingRight: 8 },
+  td: { fontSize: 13, color: '#0F172A', paddingRight: 8, textAlign: 'center' },
   tdActions: { flexDirection: 'row', gap: 6, justifyContent: 'flex-end' },
 
   // Expanded row (fabricantes)
@@ -1726,17 +1723,24 @@ const styles = StyleSheet.create({
   stockInfoValue: { fontSize: 18, fontWeight: '700', color: '#222' },
   stockInfoHint: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
 
-  // Action buttons
-  actionBtnSmall: {
-    backgroundColor: '#F0F0F0',
+  // Action buttons — mismo patrón que ClientesScreen/MachinasScreen/TroquelessScreen
+  actionBtn: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 6,
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  actionBtnDanger: { backgroundColor: '#FFEBEE' },
-  actionBtnSmallText: { fontSize: 14, color: '#0F172A' },
+  deleteBtn: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  actionBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
 
   // Primary/secondary buttons
   btnPrimary: {
@@ -1769,10 +1773,10 @@ const styles = StyleSheet.create({
 
   // Pagination
   paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 16 },
-  paginationBtn: { backgroundColor: '#475569', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7 },
-  paginationBtnDisabled: { backgroundColor: '#CCC' },
-  paginationBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
-  paginationInfo: { fontSize: 13, color: '#475569' },
+  paginationBtn: { backgroundColor: '#4F46E5', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  paginationBtnDisabled: { backgroundColor: '#C7D2FE' },
+  paginationBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  paginationInfo: { fontSize: 12, fontWeight: '700', color: '#4F46E5' },
 
   // Modal
   modalOverlay: {

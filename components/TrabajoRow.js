@@ -17,7 +17,9 @@ function TrabajoRow({
   getEntregaSemaforo,
   formatearFecha,
   onMarcarImpreso,
+  onVerCondiciones,
   isFinalizado,
+  impresionRegistrada,
   styles,
 }) {
   const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
@@ -103,16 +105,36 @@ function TrabajoRow({
       </View>
       <View style={[styles.tableCell, styles.colImpreso]}>
         {isFinalizado ? (
-          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
+            </View>
+            {onVerCondiciones && (
+              <TouchableOpacity
+                onPress={() => onVerCondiciones(trabajo)}
+                style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
-          <TouchableOpacity
-            onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
-            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <TouchableOpacity
+              onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
+              style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
+            </TouchableOpacity>
+            {onVerCondiciones && (
+              <TouchableOpacity
+                onPress={() => onVerCondiciones(trabajo)}
+                style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
     </View>
@@ -131,7 +153,8 @@ export default React.memo(TrabajoRow, (a, b) => {
       a.isFinalizado === b.isFinalizado &&
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.maquinaActual === b.maquinaActual &&
-      a.canReorder === b.canReorder
+      a.canReorder === b.canReorder &&
+      a.onVerCondiciones === b.onVerCondiciones
     );
   } catch (e) {
     return false;
