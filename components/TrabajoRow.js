@@ -18,6 +18,7 @@ function TrabajoRow({
   formatearFecha,
   onMarcarImpreso,
   onVerCondiciones,
+  onOpenDetalle,
   isFinalizado,
   impresionRegistrada,
   styles,
@@ -40,6 +41,7 @@ function TrabajoRow({
 
   const rowStyle = [
     styles.tableRow,
+    { borderLeftColor: statusStyle.backgroundColor || '#4F46E5' },
     index % 2 === 1 && styles.rowAlternate,
     isDragging && styles.draggedRow,
     !canReorder && { cursor: 'default' },
@@ -52,6 +54,21 @@ function TrabajoRow({
         <Text style={[styles.dragHandle, !canReorder && styles.dragHandleDisabled]}>
           {canReorder ? '⠿' : '—'}
         </Text>
+      </View>
+      <View style={[styles.tableCell, styles.colNumPedido]}>
+        {trabajo.numero_pedido ? (
+          <TouchableOpacity
+            onPress={() => onOpenDetalle && onOpenDetalle(trabajo.trabajo_id || trabajo.id)}
+            disabled={!onOpenDetalle}
+            activeOpacity={onOpenDetalle ? 0.6 : 1}
+          >
+            <View style={styles.numeroPedidoPill}>
+              <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
+        )}
       </View>
       <View style={[styles.tableCell, styles.colNombre]}>
         <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
@@ -154,7 +171,8 @@ export default React.memo(TrabajoRow, (a, b) => {
       a.cambiandoMaquina === b.cambiandoMaquina &&
       a.maquinaActual === b.maquinaActual &&
       a.canReorder === b.canReorder &&
-      a.onVerCondiciones === b.onVerCondiciones
+      a.onVerCondiciones === b.onVerCondiciones &&
+      a.onOpenDetalle === b.onOpenDetalle
     );
   } catch (e) {
     return false;

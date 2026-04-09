@@ -53,6 +53,42 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
 
+  // ─── Sub-tab switcher — mismo lenguaje que header/submenu (#EEF2FF) ───────
+  subTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#C7D2FE',
+  },
+  subTabBtn: {
+    paddingHorizontal: 2,
+    paddingVertical: 10,
+    marginRight: 28,
+    position: 'relative',
+    cursor: 'pointer',
+  },
+  subTabLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+    letterSpacing: 0.1,
+  },
+  subTabLabelActive: {
+    color: '#4F46E5',
+    fontWeight: '700',
+  },
+  subTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#4F46E5',
+  },
+
   // ─── "+ Nuevo" button — solid indigo, right side ──────────────────────────
   btnPlusWrap: { position: 'relative' },
   btnPlus: {
@@ -165,9 +201,9 @@ const styles = StyleSheet.create({
     cursor: 'pointer',
   },
   rowAlternate: {},   // eliminated — rows are uniform
-  tableCell: { justifyContent: 'center' },
-  headerText: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5 },
-  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A' },
+  tableCell: { justifyContent: 'center', alignItems: 'center' },
+  headerText: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5, textAlign: 'center' },
+  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A', textAlign: 'center' },
   // Order number pill
   numeroPedidoPill: {
     backgroundColor: '#EEF2FF', borderRadius: 6,
@@ -306,6 +342,7 @@ export default function TrabajoScreen({ currentUser }) {
   const [modalMaquinasVisible, setModalMaquinasVisible] = useState(false);
   const [trabajoParaProduccion, setTrabajoParaProduccion] = useState(null);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
+  const [subTab, setSubTab] = useState('activos');
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const canChangeEstado = usePermission('manage_estados_pedido');
   const puedeEditarFinalizado = usePermission('editar_estado_finalizado');
@@ -429,6 +466,11 @@ export default function TrabajoScreen({ currentUser }) {
   const estadosGrafica = estadosDisponibles.filter(
     (estado) => !(estadoRules.ocultar_grafica || []).includes(estado.value)
   );
+
+  const _estadosFinalizadosSlugs = estadoRules?.estados_finalizados?.length
+    ? estadoRules.estados_finalizados
+    : ['finalizado'];
+  const esEstadoFinalizado = (slug) => _estadosFinalizadosSlugs.includes(slug) || slug === 'cancelado';
 
   const getCargaEstados = () => {
     const conteos = estadosGrafica.map((estado) => {
@@ -592,15 +634,23 @@ export default function TrabajoScreen({ currentUser }) {
           .join(' ')
           .includes(query);
         const coincideEstado = estadosFiltro.length === 0 || estadosFiltro.includes(normalizarEstadoValue(t.estado || ''));
-        return coincideBusqueda && coincideEstado;
+        const slug = normalizarEstadoValue(t.estado || '');
+        const esFin = esEstadoFinalizado(slug);
+        const coincideSubTab = subTab === 'finalizados' ? esFin : !esFin;
+        return coincideBusqueda && coincideEstado && coincideSubTab;
       }
     );
     setFiltrados(filtered);
-  }, [busqueda, trabajos, estadosFiltro]);
+  }, [busqueda, trabajos, estadosFiltro, subTab]);
 
   useEffect(() => {
     setPaginaPedidos(1);
-  }, [busqueda, trabajos, estadosFiltro]);
+  }, [busqueda, trabajos, estadosFiltro, subTab]);
+
+  useEffect(() => {
+    setEstadosFiltro([]);
+    setPaginaPedidos(1);
+  }, [subTab]);
 
   const totalPaginasPedidos = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
   const pedidosPaginados = filtrados.slice((paginaPedidos - 1) * ITEMS_PER_PAGE, paginaPedidos * ITEMS_PER_PAGE);
@@ -791,6 +841,9 @@ export default function TrabajoScreen({ currentUser }) {
   // Verificar permiso dinámicamente desde el backend
   const puedeCrear = usePermission('edit_pedidos');
 
+  const countActivos = trabajos.filter(t => !esEstadoFinalizado(normalizarEstadoValue(t.estado || ''))).length;
+  const countFinalizados = trabajos.filter(t => esEstadoFinalizado(normalizarEstadoValue(t.estado || ''))).length;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -802,7 +855,7 @@ export default function TrabajoScreen({ currentUser }) {
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
         />
-        {modoCreacion !== 'automatico' && (
+        {subTab === 'activos' && modoCreacion !== 'automatico' && (
           <Pressable
             style={[styles.btnPlus, !puedeCrear && styles.btnPlusDisabled]}
             onPress={() => puedeCrear && setModalVisible(true)}
@@ -813,7 +866,22 @@ export default function TrabajoScreen({ currentUser }) {
         )}
       </View>
 
-      <View style={styles.chartsContainer}>
+      <View style={styles.subTabBar}>
+        <Pressable style={styles.subTabBtn} onPress={() => setSubTab('activos')}>
+          <Text style={[styles.subTabLabel, subTab === 'activos' && styles.subTabLabelActive]}>
+            {t('screens.trabajos.subTabActivos')}{countActivos > 0 ? `  ${countActivos}` : ''}
+          </Text>
+          {subTab === 'activos' && <View style={styles.subTabIndicator} />}
+        </Pressable>
+        <Pressable style={styles.subTabBtn} onPress={() => setSubTab('finalizados')}>
+          <Text style={[styles.subTabLabel, subTab === 'finalizados' && styles.subTabLabelActive]}>
+            {t('screens.trabajos.subTabFinalizados')}{countFinalizados > 0 ? `  ${countFinalizados}` : ''}
+          </Text>
+          {subTab === 'finalizados' && <View style={styles.subTabIndicator} />}
+        </Pressable>
+      </View>
+
+      {subTab === 'activos' && <View style={styles.chartsContainer}>
         {(() => {
           const { conteos } = getCargaEstados();
           const total = conteos.reduce((sum, item) => sum + item.cantidad, 0);
@@ -884,7 +952,7 @@ export default function TrabajoScreen({ currentUser }) {
             </>
           );
         })()}
-      </View>
+      </View>}
 
       {filtrados.length === 0 ? (
         <View style={styles.tableContainer}>

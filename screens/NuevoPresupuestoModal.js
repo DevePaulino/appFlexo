@@ -1000,8 +1000,8 @@ export default function NuevoPresupuestoModal({
 
     return (
         <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 10 }}>
-                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', overflow: 'hidden', flexDirection: 'column' }}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+                <View style={{ width: '98%', height: '94%', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5, borderColor: '#E2E8F0', overflow: 'hidden', flexDirection: 'column' }}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalHeaderTitle}>{modalTitle}</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.modalCloseBtn}>

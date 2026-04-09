@@ -16,8 +16,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
 import { useSettings } from '../SettingsContext';
+import { useModulos } from '../ModulosContext';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
+import { CanalesGrid, deltaColor } from '../components/CondicionesView';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -27,13 +29,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
+    padding: 12,
   },
   modal: {
     width: '98%',
     height: '94%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     padding: 16,
@@ -1524,6 +1526,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [error, setError] = useState(null);
   const [chargingAction, setChargingAction] = useState(null);
   const [activeTab, setActiveTab] = useState('archivos');
+  const { modulos } = useModulos();
+  const condicionesModuloActivo = !!modulos.condiciones_impresion;
+  const [condicionesImpresion, setCondicionesImpresion] = useState(null);
+  const [condicionesLoading, setCondicionesLoading] = useState(false);
+  const [historicoSearch, setHistoricoSearch] = useState('');
+  const [expandedHistorico, setExpandedHistorico] = useState(new Set([0]));
 
   // Archivos
   const [archivos, setArchivos] = useState({ artes: [], unitario: [], esko: {} });
@@ -1565,6 +1573,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [comparadorActiveSeps, setComparadorActiveSeps] = useState(null); // null=all, Set=selected
   const [comparadorZoom, setComparadorZoom] = useState(1.0);
   const [comparadorPan, setComparadorPan] = useState({ x: 0, y: 0 });
+  const [comparadorRotation, setComparadorRotation] = useState(0); // 0 | 90 | 180 | 270
+  const [comparadorFlip, setComparadorFlip] = useState(false);
   const cmpCanvasRef = useRef(null);
   const cmpCompositeIdRef = useRef(0);
   const cmpPanRef = useRef({ x: 0, y: 0 });
@@ -1717,8 +1727,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       cargarPedido();
       cargarRolActivo();
       cargarArchivos();
+      if (condicionesModuloActivo) {
+        setCondicionesLoading(true);
+        fetch(`${API_BASE}/api/pedidos/${pedidoId}/condiciones`, { headers: getAuthHeaders() })
+          .then((r) => r.json())
+          .then((d) => setCondicionesImpresion(d.condiciones || null))
+          .catch(() => setCondicionesImpresion(null))
+          .finally(() => setCondicionesLoading(false));
+      }
     }
-  }, [visible, pedidoId, refreshKey]);
+  }, [visible, pedidoId, refreshKey, condicionesModuloActivo]);
 
   const normalizarRolActivo = (value) =>
     String(value || '')
@@ -2151,6 +2169,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
             >
               <Text style={activeTab === 'datos' ? styles.tabTextActive : styles.tabText}>{t('screens.pedidoDetalle.tabDatos')}</Text>
             </TouchableOpacity>
+            {condicionesModuloActivo && (
+              <TouchableOpacity
+                style={activeTab === 'condiciones' ? styles.tabBtnActive : styles.tabBtn}
+                onPress={() => { setActiveTab('condiciones'); setExpandedHistorico(new Set([0])); }}
+              >
+                <Text style={activeTab === 'condiciones' ? styles.tabTextActive : styles.tabText}>
+                  {t('screens.pedidoDetalle.tabHistoricoImpresiones')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={{ flex: 1, overflow: 'hidden' }}>
@@ -2162,6 +2190,177 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               <Text style={styles.errorText}>{error}</Text>
             ) : pedido ? (
               <ScrollView style={{ flex: 1 }}>
+
+              {/* ═══════════════════ TAB: HISTÓRICO DE IMPRESIONES ═══════════════════ */}
+              {activeTab === 'condiciones' && (
+                <View style={{ padding: 12 }}>
+                  {/* Buscador */}
+                  {Array.isArray(pedido.historial_impresiones) && pedido.historial_impresiones.length > 0 && (
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7, fontSize: 13, color: '#0F172A', marginBottom: 12 }}
+                      placeholder={t('screens.pedidoDetalle.historicoSearchPlaceholder')}
+                      placeholderTextColor="#94A3B8"
+                      value={historicoSearch}
+                      onChangeText={setHistoricoSearch}
+                    />
+                  )}
+                  {(!Array.isArray(pedido.historial_impresiones) || pedido.historial_impresiones.length === 0) && (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center' }}>
+                        {t('screens.pedidoDetalle.sinHistorialImpresiones')}
+                      </Text>
+                    </View>
+                  )}
+                  {Array.isArray(pedido.historial_impresiones) && (() => {
+                    const reversed = [...pedido.historial_impresiones].reverse();
+                    const q = historicoSearch.trim().toLowerCase();
+                    const filtered = q ? reversed.filter((entry) => {
+                      return [
+                        entry.maquina,
+                        entry.usuario,
+                        entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+                      ].some((v) => String(v || '').toLowerCase().includes(q));
+                    }) : reversed;
+                    if (q && filtered.length === 0) {
+                      return (
+                        <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                          <Text style={{ fontSize: 13, color: '#94A3B8' }}>{t('common.noResults')}</Text>
+                        </View>
+                      );
+                    }
+                    return filtered.map((entry, i) => {
+                    // Fallback: la entrada más reciente usa pedido.condiciones_impresion
+                    // si no tiene condiciones_impresion propio (datos guardados antes del cambio de backend)
+                    const c = entry.condiciones_impresion || (i === 0 ? pedido.condiciones_impresion : null);
+                    const snap = c ? (c.test_referencia_snapshot || {}) : {};
+                    const vals = c ? (c.valores_reales || snap) : {};
+                    const deltas = c ? (c.deltas || {}) : {};
+                    const canales = vals.canales_activos || snap.canales_activos || [];
+                    const canalesInfo = vals.canales_info || snap.canales_info || {};
+                    const meds = vals.mediciones || snap.mediciones || {};
+                    const isExpanded = expandedHistorico.has(i);
+                    const toggleExpand = () => setExpandedHistorico((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(i)) { next.delete(i); } else { next.add(i); }
+                      return next;
+                    });
+                    const Row = ({ label, value }) => value != null && value !== '' ? (
+                      <View style={{ flexDirection: 'row', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                        <Text style={{ fontSize: 12, color: '#64748B', width: 120 }}>{label}</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E1B4B', flex: 1 }}>{value}</Text>
+                      </View>
+                    ) : null;
+                    return (
+                      <View key={i} style={[styles.sectionCard, { marginBottom: 8 }]}>
+                        {/* Cabecera — siempre visible, pulsable */}
+                        <TouchableOpacity
+                          onPress={toggleExpand}
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                          activeOpacity={0.7}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E1B4B' }}>
+                              {entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </Text>
+                            {entry.maquina ? (
+                              <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, backgroundColor: '#E0F2FE' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#0369A1' }}>{entry.maquina}</Text>
+                              </View>
+                            ) : null}
+                            {entry.usuario ? (
+                              <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, backgroundColor: '#F1F5F9' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569' }}>{entry.usuario}</Text>
+                              </View>
+                            ) : null}
+                            {i === 0 && (
+                              <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, backgroundColor: '#DCFCE7' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A' }}>ÚLTIMO</Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#CBD5E1' }}>#{pedido.historial_impresiones.length - i}</Text>
+                            <Text style={{ fontSize: 16, color: '#94A3B8', fontWeight: '600' }}>{isExpanded ? '▲' : '▼'}</Text>
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Cuerpo — sólo visible si expandido */}
+                        {isExpanded && (
+                          <View style={{ marginTop: 12 }}>
+                            {/* Sin colorimetría */}
+                            {!c && (
+                              <Text style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
+                                {t('screens.pedidoDetalle.sinColorimetria')}
+                              </Text>
+                            )}
+
+                            {/* Con colorimetría */}
+                            {c && (
+                              <View>
+                                {/* Origen */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#EEF2FF', borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>
+                                      {c.origen === 'clon_test_maquina' ? 'Clonado de máquina' : c.origen === 'con_desviacion' ? 'Con desviación' : 'Pedido similar'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Row label={t('screens.pedidoDetalle.labelMaquina')} value={c.maquina_nombre} />
+                                {c.pedido_similar_id && <Row label="Pedido base" value={c.pedido_similar_nombre || c.pedido_similar_id} />}
+                                <Row label="Material" value={vals.material || snap.material} />
+                                <Row label="Velocidad" value={vals.velocidad_mmin != null ? `${vals.velocidad_mmin} m/min` : null} />
+                                <Row label="Anilox" value={vals.anilox || snap.anilox} />
+                                <Row label="Fab. tintas" value={vals.fabricante_tintas || snap.fabricante_tintas} />
+                                {vals.notas_operario ? <Row label="Notas" value={vals.notas_operario} /> : null}
+
+                                {/* Mediciones por canal */}
+                                {canales.length > 0 && (
+                                  <View style={{ marginTop: 10 }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                      {t('screens.pedidoDetalle.medicionesPorCanal')}
+                                    </Text>
+                                    <CanalesGrid
+                                      canales={canales}
+                                      canalesInfo={canalesInfo}
+                                      mediciones={meds}
+                                      deltas={deltas}
+                                      readOnly
+                                      layout="grid"
+                                    />
+                                  </View>
+                                )}
+
+                                {/* Desviaciones escalares */}
+                                {Object.keys(deltas).filter(k => k !== 'mediciones').length > 0 && (
+                                  <View style={{ marginTop: 12 }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                      {t('screens.pedidoDetalle.desviacionesEscalares')}
+                                    </Text>
+                                    {Object.entries(deltas).filter(([k]) => k !== 'mediciones').map(([k, v]) => {
+                                      const dBg = Math.abs(v) < 0.02 ? '#DCFCE7' : Math.abs(v) < 0.08 ? '#FEF9C3' : '#FEE2E2';
+                                      return (
+                                        <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                                          <Text style={{ fontSize: 13, color: '#475569' }}>{k}</Text>
+                                          <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: dBg, borderRadius: 8 }}>
+                                            <Text style={{ fontSize: 14, fontWeight: '800', color: deltaColor(v) }}>
+                                              {v > 0 ? `+${v}` : v}
+                                            </Text>
+                                          </View>
+                                        </View>
+                                      );
+                                    })}
+                                  </View>
+                                )}
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  });
+                  })()}
+                </View>
+              )}
 
               {/* ═══════════════════ TAB: PEDIDO ═══════════════════ */}
               {activeTab === 'datos' && (() => {
@@ -2279,44 +2478,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       );
                     })()}
 
-                    {/* ── Historial de impresiones ── */}
-                    {Array.isArray(pedido.historial_impresiones) && pedido.historial_impresiones.length > 0 && (
-                      <View style={[styles.sectionCard, { marginTop: 4 }]}>
-                        <Text style={styles.sectionTitle}>{t('screens.pedidoDetalle.historialImpresionesTitle')}</Text>
-                        {[...pedido.historial_impresiones].reverse().map((entry, i) => (
-                          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, borderBottomWidth: i < pedido.historial_impresiones.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9', gap: 10 }}>
-                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <Text style={{ fontSize: 13 }}>🖨</Text>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E1B4B' }}>
-                                  {entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                                </Text>
-                                {entry.maquina ? (
-                                  <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: '#E0F2FE' }}>
-                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1' }}>{entry.maquina}</Text>
-                                  </View>
-                                ) : null}
-                                <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: entry.tipo === 'con_consumo' ? '#DCFCE7' : '#F1F5F9' }}>
-                                  <Text style={{ fontSize: 9, fontWeight: '700', color: entry.tipo === 'con_consumo' ? '#16A34A' : '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                                    {entry.tipo === 'con_consumo' ? t('screens.pedidoDetalle.historialTipoConConsumo') : entry.tipo === 'sin_material' ? t('screens.pedidoDetalle.historialTipoSinMaterial') : t('screens.pedidoDetalle.historialTipoSinConsumo')}
-                                  </Text>
-                                </View>
-                              </View>
-                              {entry.usuario ? <Text style={{ fontSize: 10, color: '#94A3B8' }}>{entry.usuario}</Text> : null}
-                              {entry.datos_impresion && !entry.datos_impresion.sin_material && entry.datos_impresion.metros_consumidos != null ? (
-                                <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-                                  {entry.datos_impresion.material_nombre || '—'} · {entry.datos_impresion.metros_consumidos} m
-                                  {entry.datos_impresion.aprovechamiento_pct != null ? ` · ${entry.datos_impresion.aprovechamiento_pct}% ${t('screens.pedidoDetalle.labelAprovechamiento').toLowerCase()}` : ''}
-                                </Text>
-                              ) : null}
-                            </View>
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', marginTop: 6 }}>#{pedido.historial_impresiones.length - i}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
                   </>
                 );
               })()}
@@ -2672,7 +2833,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   const tgtLabel  = targetOptions.find(o => o.id === comparadorTargetArchivoId)?.label;
                   const isDisabled = !comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning;
                   return (
-                    <View style={[styles.sectionCard, { flex: 2, minWidth: 160 }]}>
+                    <View style={[styles.sectionCard, { flex: 4 }]}>
                       <View style={styles.fileSectionHeader}>
                         <Text style={styles.filesSectionLabel}>⇄ {t('screens.pedidoDetalle.comparadorTitle')}</Text>
                       </View>
@@ -3048,6 +3209,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           setComparadorActiveSeps(null);
           cmpZoomRef.current = 1.0; setComparadorZoom(1.0);
           cmpPanRef.current = { x: 0, y: 0 }; setComparadorPan({ x: 0, y: 0 });
+          setComparadorRotation(0); setComparadorFlip(false);
           setCmpTool(null); setCmpEyedropResult(null);
           setCmpRulerPoints([]); setCmpRulerDist(null);
           cmpRulerDragging.current = null;
@@ -3322,7 +3484,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           { translateX: comparadorPan.x },
           { translateY: comparadorPan.y },
           { scale: comparadorZoom },
+          { rotate: `${comparadorRotation}deg` },
+          { scaleX: comparadorFlip ? -1 : 1 },
         ];
+        const cmpWebTransform = `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom}) rotate(${comparadorRotation}deg) scaleX(${comparadorFlip ? -1 : 1})`;
         return (
           <Modal visible={true} transparent animationType="fade" onRequestClose={closeLightbox}>
             <View style={styles.cmpLightboxOverlay}>
@@ -3404,6 +3569,23 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     title="Regla de medición"
                   >
                     <Text style={[styles.cmpZoomBtnText, cmpTool === 'ruler' && { color: '#FACC15' }]}>📏</Text>
+                  </TouchableOpacity>
+                  <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
+                  {/* Rotate */}
+                  <TouchableOpacity
+                    style={styles.cmpZoomBtn}
+                    onPress={() => setComparadorRotation(r => (r + 90) % 360)}
+                    title="Rotar 90°"
+                  >
+                    <Text style={styles.cmpZoomBtnText}>↻</Text>
+                  </TouchableOpacity>
+                  {/* Flip horizontal */}
+                  <TouchableOpacity
+                    style={[styles.cmpZoomBtn, comparadorFlip && styles.cmpToolBtnActive]}
+                    onPress={() => setComparadorFlip(f => !f)}
+                    title="Voltear horizontal"
+                  >
+                    <Text style={[styles.cmpZoomBtnText, comparadorFlip && { color: '#FACC15' }]}>⇆</Text>
                   </TouchableOpacity>
                   <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 2 }} />
                   <TouchableOpacity style={styles.cmpZoomBtn} onPress={() => setCmpZoom(Math.min(4, parseFloat((comparadorZoom + 0.25).toFixed(2))))}>
@@ -3547,7 +3729,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 >
                   {showCanvas ? (
                     Platform.OS === 'web'
-                      ? <canvas ref={cmpCanvasRef} draggable={false} onDragStart={e => e.preventDefault()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }} />
+                      ? <canvas ref={cmpCanvasRef} draggable={false} onDragStart={e => e.preventDefault()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: cmpWebTransform, transformOrigin: 'center', display: 'block', userSelect: 'none' }} />
                       : <Image source={{ uri: imgUri }} style={[styles.cmpLightboxImage, { transform: imgTransform }]} resizeMode="contain" />
                   ) : Platform.OS === 'web' ? (
                     <img
@@ -3556,7 +3738,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       alt=""
                       draggable={false}
                       onDragStart={e => e.preventDefault()}
-                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: `translate(${comparadorPan.x}px, ${comparadorPan.y}px) scale(${comparadorZoom})`, transformOrigin: 'center', display: 'block', userSelect: 'none' }}
+                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transform: cmpWebTransform, transformOrigin: 'center', display: 'block', userSelect: 'none' }}
                     />
                   ) : (
                     <Image source={{ uri: imgUri }} style={[styles.cmpLightboxImage, { transform: imgTransform }]} resizeMode="contain" />

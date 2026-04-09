@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Platform,
   Pressable,
@@ -566,8 +566,27 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetDevCode, setResetDevCode] = useState('');
   const [resetStep, setResetStep] = useState('request'); // 'request' | 'confirm'
+  const [inviteToken, setInviteToken] = useState('');
+  const [inviteInfo, setInviteInfo] = useState(null); // { nombre, email }
+  const [invitePassword, setInvitePassword] = useState('');
+  const [invitePassword2, setInvitePassword2] = useState('');
 
   const inp = (field) => [s.input, focusedField === field && s.inputFocused];
+
+  // Detect invite token in URL (web)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const url = new URL(window.location.href);
+    const inv = url.searchParams.get('invite');
+    if (!inv) return;
+    url.searchParams.delete('invite');
+    window.history.replaceState({}, '', url.toString());
+    setInviteToken(inv);
+    fetch(`${API_BASE}/api/auth/invite-info?token=${encodeURIComponent(inv)}`)
+      .then(r => r.json())
+      .then(d => { if (d.nombre) setInviteInfo(d); else setError(d.error || 'Invitación no válida'); })
+      .catch(() => setError('Error al verificar la invitación'));
+  }, []);
 
   const validatePassword = (pwd) => {
     if (pwd.length < 8) return t('auth.errorPasswordLength');
@@ -855,6 +874,73 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     </>
   );
 
+  // ── Activate invite view ───────────────────────────────────────────────────
+  const InviteView = () => (
+    <>
+      <Text style={s.formTitle}>Activa tu cuenta</Text>
+      <Text style={s.formSub}>
+        {inviteInfo
+          ? `Hola ${inviteInfo.nombre}, elige una contraseña para ${inviteInfo.email}`
+          : 'Elige una contraseña para activar tu cuenta'}
+      </Text>
+      <Text style={s.label}>CONTRASEÑA</Text>
+      <TextInput
+        style={inp('invPwd')}
+        value={invitePassword}
+        onChangeText={setInvitePassword}
+        placeholder="Mínimo 8 caracteres"
+        placeholderTextColor={P.fTextMuted}
+        secureTextEntry
+        onFocus={() => setFocusedField('invPwd')}
+        onBlur={() => setFocusedField('')}
+      />
+      <PasswordStrengthBar pwd={invitePassword} />
+      <Text style={s.label}>CONFIRMAR CONTRASEÑA</Text>
+      <TextInput
+        style={inp('invPwd2')}
+        value={invitePassword2}
+        onChangeText={setInvitePassword2}
+        placeholder="Repite la contraseña"
+        placeholderTextColor={P.fTextMuted}
+        secureTextEntry
+        onFocus={() => setFocusedField('invPwd2')}
+        onBlur={() => setFocusedField('')}
+      />
+      {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
+      <TouchableOpacity
+        style={[s.submitBtn, loading && { opacity: 0.7 }]}
+        disabled={loading}
+        onPress={async () => {
+          setError('');
+          if (invitePassword.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
+          if (invitePassword !== invitePassword2) { setError('Las contraseñas no coinciden'); return; }
+          setLoading(true);
+          try {
+            const res = await fetch(`${API_BASE}/api/auth/accept-invite`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: inviteToken, password: invitePassword }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { setError(data.error || 'Error al activar la cuenta'); return; }
+            onAuthSuccess?.({
+              usuario: data.usuario,
+              access_token: data.access_token,
+              refresh_token: data.refresh_token,
+              access_expires_at: data.access_expires_at,
+            });
+          } catch (e) {
+            setError('Error de conexión');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      >
+        <Text style={s.submitBtnText}>{loading ? 'Activando…' : 'Activar cuenta'}</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   // ── Login view ────────────────────────────────────────────────────────────
   const LoginView = () => (
     <>
@@ -1003,7 +1089,9 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         {/* ── Panel de formulario ─────────────────────────────────────────── */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={s.formPanel} keyboardShouldPersistTaps="handled">
           <View style={s.formCard}>
-            {mfaChallengeId ? (
+            {inviteToken ? (
+              InviteView()
+            ) : mfaChallengeId ? (
               MfaView()
             ) : authMode === 'forgot' ? (
               resetStep === 'confirm' ? ResetView() : ForgotView()

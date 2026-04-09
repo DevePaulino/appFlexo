@@ -269,6 +269,20 @@ export default function ModulosScreen() {
             />
           </View>
 
+          {/* Módulo Condiciones de Impresión */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.rowLabel}>Colorimetría</Text>
+              <Text style={styles.rowHint}>Registra y consulta las condiciones con las que se imprime cada trabajo</Text>
+            </View>
+            <Switch
+              value={!!modulos.condiciones_impresion}
+              onValueChange={(v) => setModulo('condiciones_impresion', v)}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
           {/* Trigger de producción — visible solo cuando el módulo está activo */}
           {!!modulos.produccion && (
             <View style={[styles.triggerRow, styles.rowLast]}>

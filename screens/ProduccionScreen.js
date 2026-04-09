@@ -9,6 +9,7 @@ import ProductionBoard from '../components/ProductionBoard';
 import EmptyState from '../components/EmptyState';
 import { useMaquinas } from '../MaquinasContext';
 import { useSettings } from '../SettingsContext';
+import PedidoDetalleModal from './PedidoDetalleModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -713,6 +714,8 @@ export default function ProduccionScreen() {
   const [error, setError] = useState(null);
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
   const [maquinasFiltroIds, setMaquinasFiltroIds] = useState([]);
+  const [detalleVisible, setDetalleVisible] = useState(false);
+  const [detallePedidoId, setDetallePedidoId] = useState(null);
   const [trabajosImpresos, setTrabajosImpresos] = useState([]);
   const [impresosExpanded, setImpresosExpanded] = useState(false);
   const [busquedaImpresos, setBusquedaImpresos] = useState('');
@@ -1095,6 +1098,7 @@ export default function ProduccionScreen() {
   }
 
   return (
+    <>
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('nav.produccion')}</Text>
@@ -1163,6 +1167,7 @@ export default function ProduccionScreen() {
           maquinaActivaIds={maquinasFiltroIds}
           onRefresh={() => fetchData({ silent: true })}
           onRequestPage={handleRequestPage}
+          onOpenDetalle={(id) => { setDetallePedidoId(id); setDetalleVisible(true); }}
         />
 
         {/* Trabajos Impresos */}
@@ -1255,5 +1260,15 @@ export default function ProduccionScreen() {
         </ScrollView>
       </View>
     </View>
+
+    <PedidoDetalleModal
+      visible={detalleVisible}
+      onClose={() => setDetalleVisible(false)}
+      pedidoId={detallePedidoId}
+      onDeleted={() => { setDetalleVisible(false); fetchData({ silent: true }); }}
+      onEdit={() => fetchData({ silent: true })}
+      onCancelled={() => fetchData({ silent: true })}
+    />
+    </>
   );
 }

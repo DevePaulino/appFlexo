@@ -33,9 +33,12 @@ export default function NuevaMaquinaModal({
 }) {
   const [form, setForm] = useState({ ...emptyForm });
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
+  // Congelar el título cuando el modal se abre para que no cambie durante la animación de cierre
+  const [titulo, setTitulo] = useState('Nueva máquina');
 
   useEffect(() => {
     if (visible) {
+      setTitulo(modoEdicion ? 'Ficha de máquina' : 'Nueva máquina');
       if (modoEdicion && initialMaquina) {
         setForm({
           nombre:                   fmt(initialMaquina.nombre),
@@ -60,7 +63,6 @@ export default function NuevaMaquinaModal({
   }, [visible, modoEdicion, initialMaquina]);
 
   const handleClose = () => {
-    setForm({ ...emptyForm });
     onClose();
   };
 
@@ -92,7 +94,7 @@ export default function NuevaMaquinaModal({
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{modoEdicion ? 'Ficha de máquina' : 'Nueva máquina'}</Text>
+            <Text style={styles.headerTitle}>{titulo}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Text style={styles.headerClose}>✕</Text>
             </TouchableOpacity>
@@ -212,7 +214,7 @@ export default function NuevaMaquinaModal({
               disabled={!puedeCrear}
               style={[styles.btnSave, !puedeCrear && { opacity: 0.45 }]}
             >
-              <Text style={styles.btnSaveText}>{modoEdicion ? 'Guardar cambios' : 'Guardar'}</Text>
+              <Text style={styles.btnSaveText}>{titulo === 'Ficha de máquina' ? 'Guardar cambios' : 'Guardar'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -228,13 +230,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
     width: '100%',
-    maxWidth: 580,
+    maxWidth: 560,
     maxHeight: '90%',
     overflow: 'hidden',
   },

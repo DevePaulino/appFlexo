@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { CanalesGrid, DeltasPanel } from './CondicionesView';
 
 const API = 'http://localhost:8080';
 
@@ -13,173 +14,6 @@ function authHeaders() {
   const h = { 'Content-Type': 'application/json' };
   if (token) h['Authorization'] = `Bearer ${token}`;
   return h;
-}
-
-// Umbrales según estándares de artes gráficas (ISO 12647)
-function deltaColor(v, type = 'lab') {
-  if (v === null || v === undefined) return '#94A3B8';
-  const abs = Math.abs(v);
-  if (type === 'densidad') {
-    // Densitometría: ±0.02 excelente, ±0.05 aceptable, >0.05 fuera de rango
-    if (abs <= 0.02) return '#16A34A';
-    if (abs <= 0.05) return '#D97706';
-    return '#DC2626';
-  }
-  if (type === 'deltaE') {
-    // ΔE: <2 imperceptible, <4 aceptable, ≥4 problemático (ISO 12647)
-    if (v <= 2) return '#16A34A';
-    if (v <= 4) return '#D97706';
-    return '#DC2626';
-  }
-  // L*, a*, b*: ±1 excelente, ±2 aceptable, >2 fuera de rango
-  if (abs <= 1.0) return '#16A34A';
-  if (abs <= 2.0) return '#D97706';
-  return '#DC2626';
-}
-
-// ── Vista de mediciones por canal (read-only o editable) ──────────────────────
-function CanalField({ label, value, onChangeText, readOnly, keyboardType = 'numeric', fullWidth = false, flex }) {
-  return (
-    <View style={[s.canalCell, fullWidth && { width: '100%' }, flex && { flex }]}>
-      <Text style={s.canalCellKey}>{label}</Text>
-      {readOnly ? (
-        <Text style={s.canalCellValRO} numberOfLines={1}>{value ?? '—'}</Text>
-      ) : (
-        <TextInput
-          style={s.canalCellInput}
-          value={value != null ? String(value) : ''}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          placeholder="—"
-          placeholderTextColor="#94A3B8"
-        />
-      )}
-    </View>
-  );
-}
-
-function CanalesGrid({ canales, canalesInfo, mediciones, onChange, readOnly }) {
-  const { t } = useTranslation();
-  return (
-    <View style={s.canalesGrid}>
-      {canales.map((canal) => {
-        const color = (canalesInfo?.[canal]?.color) || '#94A3B8';
-        const meds = mediciones?.[canal] || {};
-        const setMed = (key, val) => onChange && onChange(canal, key, val);
-        const showAnilox = readOnly ? !!meds.anilox : true;
-        return (
-          <View key={canal} style={s.canalCard}>
-            {/* Header: dot + nombre */}
-            <View style={s.canalHeader}>
-              <View style={[s.canalDot, { backgroundColor: color }]} />
-              <Text style={s.canalLabel}>{canal}</Text>
-            </View>
-            {/* Campos apilados: anilox, densidad, luego L/a/b en fila */}
-            <View style={s.canalFields}>
-              {showAnilox && (
-                readOnly ? (
-                  <CanalField label="anilox" value={meds.anilox} readOnly fullWidth />
-                ) : (
-                  <View style={[s.canalCell, { width: '100%' }]}>
-                    <Text style={s.canalCellKey}>anilox</Text>
-                    <TextInput
-                      style={s.canalCellInput}
-                      value={meds.anilox != null ? String(meds.anilox) : ''}
-                      onChangeText={(v) => setMed('anilox', v)}
-                      keyboardType="default"
-                      placeholder={t('screens.produccion.condiciones.form.aniloxPlaceholder')}
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                )
-              )}
-              <CanalField label="densidad" value={meds.densidad} onChangeText={(v) => setMed('densidad', v)} readOnly={readOnly} fullWidth />
-              {/* L, a, b en la misma fila */}
-              <View style={s.canalLabRow}>
-                <CanalField label="L" value={meds.L} onChangeText={(v) => setMed('L', v)} readOnly={readOnly} flex={1} />
-                <CanalField label="a" value={meds.a} onChangeText={(v) => setMed('a', v)} readOnly={readOnly} flex={1} />
-                <CanalField label="b" value={meds.b} onChangeText={(v) => setMed('b', v)} readOnly={readOnly} flex={1} />
-              </View>
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-// ── Panel de deltas en columnas por canal ─────────────────────────────────────
-function DeltasPanel({ deltas, canalesInfo }) {
-  if (!deltas) return null;
-  const { t } = useTranslation();
-  const { mediciones, ...escalares } = deltas;
-  const hasEscalares = Object.keys(escalares).length > 0;
-  const hasMeds = mediciones && Object.keys(mediciones).length > 0;
-  if (!hasEscalares && !hasMeds) return null;
-
-  const fmtDelta = (v) => v == null ? '—' : (v > 0 ? `+${v}` : String(v));
-
-  return (
-    <View style={s.deltaPanel}>
-      <Text style={s.deltaPanelTitle}>{t('screens.produccion.condiciones.form.deltasTitle')}</Text>
-
-      {/* Escalares: velocidad, etc. */}
-      {hasEscalares && (
-        <View style={s.deltaEscalaresRow}>
-          {Object.entries(escalares).map(([k, v]) => (
-            <View key={k} style={s.deltaEscalarChip}>
-              <Text style={s.deltaEscalarKey}>{k.replace('_', ' ')}</Text>
-              <Text style={[s.deltaEscalarVal, { color: deltaColor(v, 'lab') }]}>{fmtDelta(v)}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Columnas por canal */}
-      {hasMeds && (
-        <View style={s.deltaCanalGrid}>
-          {Object.entries(mediciones).map(([canal, meds]) => {
-            const color = canalesInfo?.[canal]?.color || '#94A3B8';
-            // ΔE = √(ΔL² + Δa² + Δb²)
-            const dL = meds.L, da = meds.a, db = meds.b;
-            const deltaE = (dL != null && da != null && db != null)
-              ? Math.round(Math.sqrt(dL ** 2 + da ** 2 + db ** 2) * 100) / 100
-              : null;
-            const deColor = deltaColor(deltaE, 'deltaE');
-            return (
-              <View key={canal} style={s.deltaCanalCol}>
-                {/* Cabecera canal */}
-                <View style={s.deltaCanalHead}>
-                  <View style={[s.deltaCanalDot, { backgroundColor: color }]} />
-                  <Text style={s.deltaCanalName}>{canal}</Text>
-                </View>
-                {/* ΔE prominente */}
-                {deltaE != null && (
-                  <View style={[s.deltaEBadge, { borderColor: deColor }]}>
-                    <Text style={s.deltaELabel}>ΔE</Text>
-                    <Text style={[s.deltaEVal, { color: deColor }]}>{deltaE}</Text>
-                  </View>
-                )}
-                {/* Métricas individuales */}
-                {meds.densidad != null && (
-                  <View style={s.deltaMetricRow}>
-                    <Text style={s.deltaMetricKey}>dens</Text>
-                    <Text style={[s.deltaMetricVal, { color: deltaColor(meds.densidad, 'densidad') }]}>{fmtDelta(meds.densidad)}</Text>
-                  </View>
-                )}
-                {['L', 'a', 'b'].map((k) => meds[k] != null ? (
-                  <View key={k} style={s.deltaMetricRow}>
-                    <Text style={s.deltaMetricKey}>{k}*</Text>
-                    <Text style={[s.deltaMetricVal, { color: deltaColor(meds[k], 'lab') }]}>{fmtDelta(meds[k])}</Text>
-                  </View>
-                ) : null)}
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
 }
 
 // ── Formulario de valores reales (Con desviación) ─────────────────────────────
@@ -246,6 +80,7 @@ function FormValoresReales({ refSnap, form, setForm }) {
             mediciones={form.mediciones}
             onChange={setMed}
             readOnly={false}
+            layout="reel"
           />
         </>
       )}
@@ -289,14 +124,72 @@ export default function RegistroCondicionesModal({ visible, trabajo, maquinas, o
       .then((data) => {
         setLatestTest(data.test || null);
         if (data.test) {
-          // Pre-rellenar formulario de desviación con los valores del test
-          const t = data.test;
+          const testData = data.test;
+
+          // ── Canales del test de máquina ──────────────────────────────
+          const testCanales = testData.canales_activos || [];
+          const testCanalesInfo = testData.canales_info || {};
+
+          // ── Canales extra del trabajo (Pantones / spots) ─────────────
+          const CMYK_COLORS = { C: '#00AEEF', M: '#EC008C', Y: '#FFF200', K: '#231F20' };
+          // Buscar datos en datos_presupuesto Y en la raíz del trabajo (el backend guarda en ambos sitios)
+          const dp = trabajo?.datos_presupuesto || {};
+          const rootSelectedTintas = trabajo?.selectedTintas || [];
+          const allSelectedTintas = dp.selectedTintas?.length ? dp.selectedTintas : rootSelectedTintas;
+          const allPantones = dp.pantones || trabajo?.pantones || [];
+          const allDetalleTinta = dp.detalleTintaEspecial || trabajo?.detalleTintaEspecial || [];
+
+          const jobCanalesInfo = {};
+          const jobExtra = []; // canales del trabajo no presentes en el test
+
+          // CMYK del pedido (por si el test no los incluye todos)
+          allSelectedTintas.filter((x) => ['C', 'M', 'Y', 'K'].includes(x)).forEach((x) => {
+            if (!testCanales.includes(x)) {
+              jobExtra.push(x);
+              jobCanalesInfo[x] = { color: CMYK_COLORS[x], tipo: 'cmyk' };
+            }
+          });
+
+          // Tintas planas (Pantones) del pedido — de las 3 fuentes posibles
+          const spotSet = new Set();
+          allSelectedTintas.filter((x) => !['C', 'M', 'Y', 'K'].includes(x)).forEach((x) => spotSet.add(x));
+          allPantones.forEach((p) => {
+            const n = p.label || p.key || '';
+            if (n && !['C', 'M', 'Y', 'K'].includes(n)) spotSet.add(n);
+          });
+          // detalleTintaEspecial puede ser string[] o string
+          (Array.isArray(allDetalleTinta) ? allDetalleTinta : (allDetalleTinta ? [allDetalleTinta] : [])).forEach((x) => {
+            if (x && !['C', 'M', 'Y', 'K'].includes(x)) spotSet.add(x);
+          });
+
+          spotSet.forEach((name) => {
+            jobCanalesInfo[name] = { color: '#8B5CF6', tipo: 'spot' };
+          });
+
+          // Canales del trabajo: CMYK del pedido + spots del pedido
+          const jobCmyk = allSelectedTintas.filter((x) => ['C', 'M', 'Y', 'K'].includes(x));
+          const jobSpots = [...spotSet];
+          // Si el pedido no tiene canales definidos (datos antiguos), usar los del test
+          let mergedCanales = [...jobCmyk, ...jobSpots];
+          if (mergedCanales.length === 0) mergedCanales = [...testCanales];
+
+          // canalesInfo: test tiene prioridad para CMYK compartidos, jobCanalesInfo para spots
+          const mergedCanalesInfo = { ...jobCanalesInfo, ...testCanalesInfo };
+
+          // Pre-rellenar mediciones con los valores del test para canales que coincidan
+          const mergedMeds = {};
+          mergedCanales.forEach((c) => {
+            mergedMeds[c] = testData.mediciones?.[c]
+              ? JSON.parse(JSON.stringify(testData.mediciones[c]))
+              : {};
+          });
+
           setFormDesviacion({
-            velocidad_mmin: t.velocidad_mmin != null ? String(t.velocidad_mmin) : '',
+            velocidad_mmin: testData.velocidad_mmin != null ? String(testData.velocidad_mmin) : '',
             notas_operario: '',
-            canales_activos: t.canales_activos || [],
-            canales_info: t.canales_info || {},
-            mediciones: JSON.parse(JSON.stringify(t.mediciones || {})),
+            canales_activos: mergedCanales,
+            canales_info: mergedCanalesInfo,
+            mediciones: mergedMeds,
           });
         }
       })
@@ -391,6 +284,7 @@ export default function RegistroCondicionesModal({ visible, trabajo, maquinas, o
                       canalesInfo={latestTest.canales_info}
                       mediciones={latestTest.mediciones}
                       readOnly
+                      layout="reel"
                     />
                   )}
                   {latestTest.notas ? <Text style={s.notasText}>📝 {latestTest.notas}</Text> : null}
@@ -423,7 +317,7 @@ export default function RegistroCondicionesModal({ visible, trabajo, maquinas, o
     return (
       <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
         <View style={s.overlay}>
-          <View style={[s.card, { maxHeight: '95%' }]}>
+          <View style={[s.card, { maxHeight: '90%' }]}>
             <TouchableOpacity style={s.backBtn} onPress={() => setPaso('elegir')}>
               <Text style={s.backBtnText}>{t('screens.produccion.condiciones.volver')}</Text>
             </TouchableOpacity>
@@ -477,9 +371,9 @@ const s = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF', borderRadius: 16,
-    width: '100%', maxWidth: 860, padding: 24,
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 }, elevation: 10,
+    width: '100%', maxWidth: 560, padding: 20,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 8,
   },
   cardTitle: { fontSize: 17, fontWeight: '800', color: '#1E1B4B', marginBottom: 4 },
   cardSub: { fontSize: 13, color: '#475569', marginBottom: 4 },
@@ -510,26 +404,6 @@ const s = StyleSheet.create({
   snapVal: { fontSize: 12, fontWeight: '600', color: '#1E1B4B', flex: 1 },
   notasText: { fontSize: 12, color: '#475569', marginTop: 10, fontStyle: 'italic' },
   subTitle: { fontSize: 12, fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 22, marginBottom: 12 },
-  canalesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  canalCard: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12,
-    padding: 14, minWidth: 130, flex: 1,
-    backgroundColor: '#FAFBFF',
-  },
-  canalHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
-  canalDot: { width: 10, height: 10, borderRadius: 5 },
-  canalLabel: { fontSize: 14, fontWeight: '800', color: '#1E1B4B' },
-  canalFields: { gap: 8 },
-  canalLabRow: { flexDirection: 'row', gap: 6 },
-  canalCell: { marginBottom: 0 },
-  canalCellKey: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 },
-  canalCellValRO: { fontSize: 13, fontWeight: '700', color: '#1E1B4B' },
-  canalCellInput: {
-    fontSize: 13, color: '#1E1B4B', fontWeight: '600',
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9DBFF',
-    borderRadius: 7, paddingHorizontal: 8, paddingVertical: 6,
-    textAlign: 'center', width: '100%',
-  },
   fieldRow: { marginBottom: 20 },
   fieldLabel: { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   fieldInput: {
@@ -537,29 +411,4 @@ const s = StyleSheet.create({
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
     fontSize: 14, color: '#0F172A',
   },
-  deltaPanel: {
-    backgroundColor: '#F8FAFF', borderRadius: 12,
-    borderWidth: 1, borderColor: '#C7D2FE',
-    padding: 16, marginTop: 20,
-  },
-  deltaPanelTitle: { fontSize: 10, fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 },
-  // Escalares (velocidad, etc.)
-  deltaEscalaresRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  deltaEscalarChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  deltaEscalarKey: { fontSize: 11, color: '#64748B', fontWeight: '600' },
-  deltaEscalarVal: { fontSize: 13, fontWeight: '800' },
-  // Grid de columnas por canal
-  deltaCanalGrid: { flexDirection: 'row', gap: 8 },
-  deltaCanalCol: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E4E7ED', padding: 12 },
-  deltaCanalHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  deltaCanalDot: { width: 9, height: 9, borderRadius: 5 },
-  deltaCanalName: { fontSize: 13, fontWeight: '800', color: '#1E1B4B' },
-  // ΔE badge prominente
-  deltaEBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 10 },
-  deltaELabel: { fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
-  deltaEVal: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
-  // Métricas individuales
-  deltaMetricRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  deltaMetricKey: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
-  deltaMetricVal: { fontSize: 13, fontWeight: '700' },
 });

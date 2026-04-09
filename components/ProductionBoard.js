@@ -10,7 +10,7 @@ import { useSettings } from '../SettingsContext';
 import RegistroCondicionesModal from './RegistroCondicionesModal';
 import CondicionesPanel from './CondicionesPanel';
 
-export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage }) {
+export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage, onOpenDetalle }) {
   const { t } = useTranslation();
   const [maquinaActual, setMaquinaActual] = useState(0);
   const [trabajos, setTrabajos] = useState([]);
@@ -474,6 +474,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         formatearFecha={formatearFecha}
         onMarcarImpreso={handleMarcarImpreso}
         onVerCondiciones={condicionesModuloActivo ? (t) => setCondicionesPanel(t) : undefined}
+        onOpenDetalle={onOpenDetalle}
         isFinalizado={estadosFinalizadosSlugs.has(slugifyEstado(item.estado))}
         impresionRegistrada={!!item.impresion_registrada}
         styles={styles}
@@ -499,6 +500,9 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         <View style={styles.tableHeader}>
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.headerText}>#</Text>
+          </View>
+          <View style={[styles.tableCell, styles.colNumPedido]}>
+            <Text style={styles.headerText}>{t('screens.produccion.colNumPedido')}</Text>
           </View>
           <View style={[styles.tableCell, styles.colNombre]}>
             <Text style={styles.headerText}>{t('screens.produccion.colPedido')}</Text>
@@ -796,28 +800,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECEFFE',
     borderWidth: 1,
     borderColor: '#D9DBFF',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    marginTop: 10,
-    borderRadius: 10,
-    minHeight: 40,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 8,
+    minHeight: 36,
     alignItems: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 3,
-    alignItems: 'center',
-    minHeight: 40,
+    borderRadius: 10,
+    marginBottom: 4,
     borderLeftWidth: 3,
-    borderLeftColor: '#4F46E5',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
-  rowAlternate: {
-    backgroundColor: '#FAFBFF',
-  },
+  rowAlternate: {},
   draggedRow: {
     opacity: 0.75,
     backgroundColor: '#EFF6FF',
@@ -835,9 +839,12 @@ const styles = StyleSheet.create({
     flex: 0.12,
     alignItems: 'center',
   },
-  colNombre: {
-    flex: 0.22,
+  colNumPedido: {
+    flex: 0.10,
     alignItems: 'center',
+  },
+  colNombre: {
+    flex: 0.18,
   },
   colCliente: {
     flex: 0.12,
@@ -894,6 +901,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     textAlign: 'center',
+  },
+  numeroPedidoPill: {
+    backgroundColor: '#ECEFFE',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  numeroPedidoPillText: {
+    color: '#4F46E5',
+    fontWeight: '800',
+    fontSize: 12,
   },
   dragHandle: {
     fontSize: 16,

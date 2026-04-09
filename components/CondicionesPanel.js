@@ -3,6 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { CanalesGrid } from './CondicionesView';
 
 const API = 'http://localhost:8080';
 
@@ -43,32 +44,13 @@ function TestSnapshot({ test, materialMatch }) {
       {canales.length > 0 && (
         <View style={s.canalesWrap}>
           <Text style={s.canalSectionLabel}>Mediciones por canal</Text>
-          <View style={s.canalesGrid}>
-            {canales.map((canal) => {
-              const color = (test.canales_info?.[canal]?.color) || '#94A3B8';
-              const meds = (test.mediciones || {})[canal] || {};
-              return (
-                <View key={canal} style={s.canalCard}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <View style={[s.canalDot, { backgroundColor: color }]} />
-                    <Text style={s.canalLabel}>{canal}</Text>
-                  </View>
-                  {meds.anilox ? (
-                    <View style={s.canalRow}>
-                      <Text style={s.canalKey}>anilox</Text>
-                      <Text style={[s.canalVal, { fontSize: 10 }]} numberOfLines={1}>{meds.anilox}</Text>
-                    </View>
-                  ) : null}
-                  {['densidad', 'L', 'a', 'b'].map((key) => (
-                    <View key={key} style={s.canalRow}>
-                      <Text style={s.canalKey}>{key}</Text>
-                      <Text style={s.canalVal}>{meds[key] ?? '—'}</Text>
-                    </View>
-                  ))}
-                </View>
-              );
-            })}
-          </View>
+          <CanalesGrid
+            canales={canales}
+            canalesInfo={test.canales_info}
+            mediciones={test.mediciones}
+            readOnly
+            layout="grid"
+          />
         </View>
       )}
       {test.notas ? <Text style={s.notasText}>📝 {test.notas}</Text> : null}
@@ -266,7 +248,7 @@ export default function CondicionesPanel({ visible, trabajo, maquinas, onClose }
 
 const s = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, width: '100%', maxWidth: 480, padding: 20, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, width: '100%', maxWidth: 560, padding: 20, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   cardTitle: { fontSize: 17, fontWeight: '800', color: '#1E1B4B', marginBottom: 4 },
   cardSub: { fontSize: 13, color: '#475569', marginBottom: 4 },
   maquinaTag: { fontSize: 12, color: '#4F46E5', fontWeight: '600', marginBottom: 16 },
@@ -290,13 +272,6 @@ const s = StyleSheet.create({
   warnBadgeText: { fontSize: 12, color: '#92400E' },
   canalesWrap: { marginTop: 12 },
   canalSectionLabel: { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-  canalesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  canalCard: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, minWidth: 80, flex: 1 },
-  canalDot: { width: 8, height: 8, borderRadius: 4 },
-  canalLabel: { fontSize: 12, fontWeight: '700', color: '#1E1B4B' },
-  canalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
-  canalKey: { fontSize: 11, color: '#64748B' },
-  canalVal: { fontSize: 11, fontWeight: '600', color: '#1E1B4B' },
   searchRow: { flexDirection: 'row', gap: 8, marginVertical: 12 },
   searchInput: { flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, color: '#0F172A' },
   searchBtn: { backgroundColor: '#4F46E5', borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' },

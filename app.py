@@ -1875,6 +1875,111 @@ def delete_maquina(maquina_id):
         tb = _traceback.format_exc()
         return jsonify({'error': str(e), 'trace': tb}), 500
 
+# ═══════════════════════════════════════════════════════════════
+# MAQUINA TESTS (historial de tests de impresión por máquina)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/maquinas/<maquina_id>/tests', methods=['OPTIONS'])
+def options_maquina_tests(maquina_id):
+    return make_response('', 200)
+
+@app.route('/api/maquinas/<maquina_id>/tests/<test_id>', methods=['OPTIONS'])
+def options_maquina_test_id(maquina_id, test_id):
+    return make_response('', 200)
+
+@app.route('/api/maquinas/<maquina_id>/tests/latest', methods=['GET', 'OPTIONS'])
+def get_maquina_test_latest(maquina_id):
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('maquina_tests', empresa_id)
+        material = request.args.get('material', '').strip()
+        query = {'maquina_id': maquina_id, 'empresa_id': empresa_id}
+        test = None
+        material_match = False
+        if material:
+            import re as _re
+            docs = list(col.find({**query, 'material': {'$regex': _re.escape(material), '$options': 'i'}}).sort('fecha', -1).limit(1))
+            if docs:
+                test = fix_id(docs[0])
+                material_match = True
+        if test is None:
+            docs = list(col.find(query).sort('fecha', -1).limit(1))
+            if docs:
+                test = fix_id(docs[0])
+                material_match = False
+        return jsonify({'test': test, 'material_match': material_match}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/maquinas/<maquina_id>/tests', methods=['GET'])
+def get_maquina_tests(maquina_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('maquina_tests', empresa_id)
+        docs = list(col.find({'maquina_id': maquina_id, 'empresa_id': empresa_id}).sort('fecha', pymongo.DESCENDING))
+        docs = [fix_id(d) for d in docs]
+        return jsonify({'tests': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/maquinas/<maquina_id>/tests', methods=['POST'])
+def create_maquina_test(maquina_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        doc = {
+            'maquina_id': maquina_id,
+            'empresa_id': empresa_id,
+            'fecha': data.get('fecha') or datetime.utcnow().strftime('%Y-%m-%d'),
+            'material': data.get('material') or '',
+            'velocidad_mmin': data.get('velocidad_mmin'),
+            'fabricante_tintas': data.get('fabricante_tintas') or '',
+            'fabricante_plancha': data.get('fabricante_plancha') or '',
+            'referencia_plancha': data.get('referencia_plancha') or '',
+            'canales_activos': data.get('canales_activos') or [],
+            'canales_info': data.get('canales_info') or {},
+            'mediciones': data.get('mediciones') or {},
+            'notas': data.get('notas') or '',
+            'created_at': datetime.utcnow().isoformat(),
+        }
+        col = get_empresa_collection('maquina_tests', empresa_id)
+        result = col.insert_one(doc)
+        doc = col.find_one({'_id': result.inserted_id})
+        return jsonify(fix_id(doc)), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/maquinas/<maquina_id>/tests/<test_id>', methods=['DELETE'])
+def delete_maquina_test(maquina_id, test_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('maquina_tests', empresa_id)
+        try:
+            oid = ObjectId(test_id)
+        except Exception:
+            return jsonify({'error': 'ID de test inválido'}), 400
+        result = col.delete_one({'_id': oid, 'maquina_id': maquina_id, 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Test no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # Endpoints para clientes
 @app.route('/api/clientes', methods=['GET'])
 def get_clientes():
@@ -2399,20 +2504,25 @@ def api_usuarios():
         if col.find_one({'email': email}):
             return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
 
-        # Generar contraseña aleatoria temporal y guardarla como hash
-        temp_pwd = secrets.token_hex(6)
+        # Generar token de invitación de un solo uso (48h)
+        invite_raw = secrets.token_urlsafe(32)
+        invite_hash = hashlib.sha256(invite_raw.encode()).hexdigest()
+        invite_expires = (datetime.now() + timedelta(hours=48)).isoformat()
         doc = {
             'nombre': nombre,
             'email': email,
             'rol': rol,
-            'password_hash': hash_password(temp_pwd),
+            'password_hash': '',
+            'invite_token_hash': invite_hash,
+            'invite_expires_at': invite_expires,
+            'invite_accepted': False,
             'empresa_id': empresa_id,
             'fecha_creacion': time.strftime('%Y-%m-%dT%H:%M:%S')
         }
         result = col.insert_one(doc)
         usuario = col.find_one({'_id': result.inserted_id})
         out = fix_id(usuario)
-        out['_temp_password'] = temp_pwd
+        out['_invite_token'] = invite_raw
         # Audit log
         try:
             log_audit('create_user', request_user, {'created_user_id': out.get('id'), 'created_user_email': out.get('email')})
@@ -2423,6 +2533,108 @@ def api_usuarios():
         return jsonify({'error': str(e)}), 500
 
 
+
+
+@app.route('/api/auth/invite-info', methods=['GET', 'OPTIONS'])
+def api_invite_info():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        raw = (request.args.get('token') or '').strip()
+        if not raw:
+            return jsonify({'error': 'Token requerido'}), 400
+        token_hash = hashlib.sha256(raw.encode()).hexdigest()
+        # Search across all empresa collections
+        from pymongo import MongoClient
+        db = mongo.db
+        collection_names = [n for n in db.list_collection_names() if n.endswith('_usuarios')]
+        user_doc = None
+        for col_name in collection_names:
+            col = db[col_name]
+            doc = col.find_one({'invite_token_hash': token_hash, 'invite_accepted': False})
+            if doc:
+                user_doc = doc
+                break
+        if not user_doc:
+            return jsonify({'error': 'Invitación no válida o ya utilizada'}), 404
+        expires = user_doc.get('invite_expires_at', '')
+        if expires and datetime.fromisoformat(expires) < datetime.now():
+            return jsonify({'error': 'La invitación ha expirado'}), 410
+        return jsonify({'nombre': user_doc.get('nombre', ''), 'email': user_doc.get('email', '')}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/accept-invite', methods=['POST', 'OPTIONS'])
+def api_accept_invite():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        data = request.get_json() or {}
+        raw = str(data.get('token') or '').strip()
+        password = str(data.get('password') or '').strip()
+        if not raw or not password:
+            return jsonify({'error': 'Token y contraseña requeridos'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'La contraseña debe tener al menos 8 caracteres'}), 400
+        token_hash = hashlib.sha256(raw.encode()).hexdigest()
+        db = mongo.db
+        collection_names = [n for n in db.list_collection_names() if n.endswith('_usuarios')]
+        user_doc = None
+        col_found = None
+        for col_name in collection_names:
+            col = db[col_name]
+            doc = col.find_one({'invite_token_hash': token_hash, 'invite_accepted': False})
+            if doc:
+                user_doc = doc
+                col_found = col
+                break
+        if not user_doc:
+            return jsonify({'error': 'Invitación no válida o ya utilizada'}), 404
+        expires = user_doc.get('invite_expires_at', '')
+        if expires and datetime.fromisoformat(expires) < datetime.now():
+            return jsonify({'error': 'La invitación ha expirado'}), 410
+        # Activate account
+        col_found.update_one(
+            {'_id': user_doc['_id']},
+            {'$set': {
+                'password_hash': hash_password(password),
+                'invite_accepted': True,
+                'invite_token_hash': None,
+                'fecha_activacion': datetime.now().isoformat(),
+            }}
+        )
+        # Issue JWT (same as login flow)
+        user = fix_id(dict(user_doc))
+        usuario_id = str(user.get('id') or '')
+        rol = str(user.get('rol') or 'operario').strip()
+        empresa_id = normalize_empresa_id(user.get('empresa_id'))
+        now_sec = int(time.time())
+        access_ttl = 60 * 60 * 24
+        access_expires_at = now_sec + access_ttl
+        access_token = None
+        if ENABLE_JWT:
+            access_token = create_jwt({
+                'usuario_id': usuario_id,
+                'email': user.get('email', ''),
+                'rol': rol,
+                'empresa_id': empresa_id,
+            }, ttl_seconds=access_ttl)
+        usuario_out = {
+            'id': usuario_id,
+            'nombre': user.get('nombre', ''),
+            'email': user.get('email', ''),
+            'rol': rol,
+            'empresa_id': empresa_id,
+        }
+        return jsonify({
+            'usuario': usuario_out,
+            'access_token': access_token,
+            'refresh_token': access_token,
+            'access_expires_at': access_expires_at,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/auth/mfa/verify', methods=['POST'])
@@ -3634,6 +3846,7 @@ def api_settings_modulos():
             'consumo_material': False,
             'produccion': False,
             'produccion_trigger_estado': '',
+            'condiciones_impresion': False,
         }
 
         if request.method == 'GET':
@@ -7351,6 +7564,29 @@ def _mark_deprecated_and_forward(result):
     return resp
 
 
+@app.route('/api/pedidos/<pedido_id>/condiciones', methods=['GET', 'OPTIONS'])
+def get_pedido_condiciones(pedido_id):
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedidos', empresa_id)
+        try:
+            oid = ObjectId(pedido_id)
+        except Exception:
+            return jsonify({'error': 'ID de pedido inválido'}), 400
+        doc = col.find_one({'_id': oid, 'empresa_id': empresa_id}, {'condiciones_impresion': 1})
+        if not doc:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+        cond = doc.get('condiciones_impresion')
+        return jsonify({'condiciones': cond, 'tiene_condiciones': cond is not None}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/pedidos/<pedido_id>/marcar-impreso', methods=['POST', 'OPTIONS'])
 def marcar_pedido_impreso(pedido_id):
     if request.method == 'OPTIONS':
@@ -7406,6 +7642,48 @@ def marcar_pedido_impreso(pedido_id):
             'tipo': 'sin_consumo',
             'maquina': _maquina_nombre,
         }
+        # Condiciones de impresión (módulo opcional)
+        data = request.get_json(silent=True) or {}
+        cond = data.get('condiciones_impresion')
+        if cond and isinstance(cond, dict) and cond.get('origen') != 'no_registrado':
+            # Recalcular deltas en el backend para garantizar consistencia
+            ref_snap = cond.get('test_referencia_snapshot') or {}
+            vals = cond.get('valores_reales') or {}
+            deltas = {}
+            for campo in ['velocidad_mmin']:
+                rv = ref_snap.get(campo)
+                vv = vals.get(campo)
+                if rv is not None and vv is not None:
+                    try:
+                        deltas[campo] = round(float(vv) - float(rv), 4)
+                    except Exception:
+                        pass
+            meds_delta = {}
+            for canal, meds_ref in (ref_snap.get('mediciones') or {}).items():
+                meds_val = (vals.get('mediciones') or {}).get(canal) or {}
+                canal_delta = {}
+                for key in ['densidad', 'L', 'a', 'b']:
+                    rv2 = meds_ref.get(key)
+                    vv2 = meds_val.get(key)
+                    if rv2 is not None and vv2 is not None:
+                        try:
+                            canal_delta[key] = round(float(vv2) - float(rv2), 4)
+                        except Exception:
+                            pass
+                if canal_delta:
+                    meds_delta[canal] = canal_delta
+            if meds_delta:
+                deltas['mediciones'] = meds_delta
+            condiciones_enriquecidas = {
+                **cond,
+                'fecha_registro': now,
+                'usuario': request_user.get('nombre') or request_user.get('email', 'Sistema'),
+                'maquina_nombre': cond.get('maquina_nombre') or _maquina_nombre,
+                'deltas': deltas,
+            }
+            update_fields['condiciones_impresion'] = condiciones_enriquecidas
+            # Guardar también en el historial para tener registro histórico por impresión
+            historial_entry['condiciones_impresion'] = condiciones_enriquecidas
         col.update_one(
             {'_id': oid, 'empresa_id': empresa_id},
             {'$set': update_fields, '$push': {'historial_impresiones': historial_entry}}
@@ -7452,6 +7730,57 @@ def cancelar_pedido_endpoint(pedido_id):
             }}
         )
         return jsonify({'success': True, 'nuevo_estado': cancelado_label}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/produccion/buscar-con-condiciones', methods=['GET', 'OPTIONS'])
+def buscar_pedidos_con_condiciones():
+    """Busca pedidos impresos que tengan condiciones_impresion registradas."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedidos', empresa_id)
+        q = request.args.get('q', '').strip()
+        maquina_id = request.args.get('maquina_id', '').strip()
+        query = {'empresa_id': empresa_id, 'condiciones_impresion': {'$exists': True, '$ne': None}}
+        if maquina_id:
+            query['$or'] = [{'maquina_id': maquina_id}, {'condiciones_impresion.maquina_id': maquina_id}]
+        docs = list(col.find(query, {
+            '_id': 1, 'numero_pedido': 1, 'nombre': 1, 'cliente': 1,
+            'fecha_impresion': 1, 'condiciones_impresion': 1,
+        }).sort('fecha_impresion', -1).limit(200))
+        resultados = []
+        for d in docs:
+            cond = d.get('condiciones_impresion') or {}
+            nombre = d.get('nombre') or ''
+            numero = str(d.get('numero_pedido') or '')
+            cliente = d.get('cliente') or ''
+            if isinstance(cliente, dict):
+                cliente = cliente.get('nombre', '')
+            if q:
+                haystack = f"{nombre} {numero} {cliente}".lower()
+                if q.lower() not in haystack:
+                    continue
+            resultados.append({
+                'id': str(d['_id']),
+                'numero_pedido': numero,
+                'nombre': nombre,
+                'cliente': cliente,
+                'fecha_impresion': d.get('fecha_impresion'),
+                'maquina_nombre': cond.get('maquina_nombre'),
+                'origen': cond.get('origen'),
+                'resumen': {
+                    'material': (cond.get('test_referencia_snapshot') or {}).get('material') or (cond.get('valores_reales') or {}).get('material'),
+                    'velocidad_mmin': (cond.get('valores_reales') or cond.get('test_referencia_snapshot') or {}).get('velocidad_mmin'),
+                    'fabricante_tintas': (cond.get('valores_reales') or cond.get('test_referencia_snapshot') or {}).get('fabricante_tintas'),
+                },
+            })
+        return jsonify({'resultados': resultados[:30]}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

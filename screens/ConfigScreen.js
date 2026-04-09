@@ -988,6 +988,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [paginaUsuarios, setPaginaUsuarios] = useState(1);
   const [activeTabUsRol, setActiveTabUsRol] = useState('usuarios'); // 'usuarios' | 'roles'
   const [modalNuevoRolVisible, setModalNuevoRolVisible] = useState(false);
+  const [inviteModal, setInviteModal] = useState({ visible: false, url: '', email: '', nombre: '' });
   const [nuevoRolNombre, setNuevoRolNombre] = useState('');
   const [nuevoRolColor, setNuevoRolColor] = useState('');
   const [modalUsuarioVisible, setModalUsuarioVisible] = useState(false);
@@ -1520,11 +1521,13 @@ export default function ConfigScreen({ route, currentUser }) {
         return;
       }
 
-      // On success, show created/updated id and any temp password returned
-      const id = data.id || data._id || (data.usuario && data.usuario.id) || null;
-      const temp = data._temp_password || (data.usuario && data.usuario._temp_password) || null;
-      if (id) {
-        Alert.alert(t('screens.config.okUserCreated'), `${t('screens.config.okUserId', { id })}${temp ? `\n${t('screens.config.okTempPassword', { temp })}` : ''}`);
+      const inviteToken = data._invite_token || null;
+      if (inviteToken && !usuarioEditandoId) {
+        const base = Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://app.printforgepro.com';
+        const inviteUrl = `${base}/?invite=${inviteToken}`;
+        setInviteModal({ visible: true, url: inviteUrl, email: data.email || '', nombre: data.nombre || '' });
       }
 
       limpiarFormularioUsuario();
@@ -2671,6 +2674,37 @@ export default function ConfigScreen({ route, currentUser }) {
             </>
           )}
         </View>
+
+        {/* Modal enlace de invitación */}
+        {inviteModal.visible && (
+          <View style={styles.usersModalBackdrop}>
+            <View style={[styles.usersModalCard, { maxWidth: 420 }]}>
+              <Text style={styles.usersFormTitle}>Invitación creada</Text>
+              <Text style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 20 }}>
+                Comparte este enlace con <Text style={{ fontWeight: '700', color: '#0F172A' }}>{inviteModal.nombre}</Text>. Expira en 48 horas y es de un solo uso.
+              </Text>
+              <View style={{ backgroundColor: '#EEF2FF', borderRadius: 8, borderWidth: 1, borderColor: '#C7D2FE', padding: 12, marginBottom: 12 }}>
+                <Text selectable style={{ fontSize: 12, color: '#1E1B4B', fontWeight: '600', lineHeight: 18 }} numberOfLines={3}>
+                  {inviteModal.url}
+                </Text>
+              </View>
+              {Platform.OS === 'web' && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginBottom: 8 }}
+                  onPress={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(inviteModal.url); } }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Copiar enlace</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.usersBtn, { marginTop: 4 }]}
+                onPress={() => setInviteModal({ visible: false, url: '', email: '', nombre: '' })}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Modal Nuevo Rol */}
         <Modal visible={modalNuevoRolVisible} transparent animationType="fade" onRequestClose={() => { setNuevoRolNombre(''); setNuevoRolColor(''); setModalNuevoRolVisible(false); }}>

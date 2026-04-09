@@ -258,14 +258,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 560,
     maxHeight: '90%',
   },
   title: {

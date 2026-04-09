@@ -7,6 +7,7 @@ const MODULOS_DEFAULT = {
   produccion: false,
   produccion_trigger_estado: '',
   presupuestos: true,
+  condiciones_impresion: false,
 };
 
 export const ModulosContext = createContext({ modulos: MODULOS_DEFAULT, setModulo: () => {} });
