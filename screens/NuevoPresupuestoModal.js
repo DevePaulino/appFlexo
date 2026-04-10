@@ -909,6 +909,7 @@ export default function NuevoPresupuestoModal({
                 referencia,
                 vendedor,
                 maquina,
+                maquina_id: maquinaSeleccionadaObj?.id || maquinaSeleccionadaObj?._id || null,
                 material,
                 acabado: Array.isArray(acabado) ? [...acabado] : acabado,
                 tirada,

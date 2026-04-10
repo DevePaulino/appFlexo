@@ -51,6 +51,7 @@ export default function BillingScreen({ navigation, currentUser }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(null);
+  const [subscribing, setSubscribing] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [expandedTx, setExpandedTx] = useState(new Set());
 
@@ -90,6 +91,47 @@ export default function BillingScreen({ navigation, currentUser }) {
     } catch (_) {}
   }, [authHeader, load]);
 
+  const confirmSubscription = useCallback(async (sessionId) => {
+    try {
+      const res = await fetch(`${API}/api/billing/subscription-confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      if (res.ok && !data.already_activated) {
+        Alert.alert(t('billing.subSuccessTitle'), t('billing.subSuccess'));
+      }
+      load();
+    } catch (_) {}
+  }, [authHeader, load]);
+
+  const handleSubscribe = useCallback(async () => {
+    setSubscribing(true);
+    try {
+      const res = await fetch(`${API}/api/billing/subscription-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert(t('billing.errorTitle'), data.error || t('common.error'));
+      } else if (data.simulated) {
+        Alert.alert(t('billing.subSuccessTitle'), t('billing.subSuccess'));
+        load();
+      } else {
+        if (Platform.OS === 'web') {
+          window.location.href = data.session_url;
+        } else {
+          Linking.openURL(data.session_url);
+        }
+      }
+    } catch (e) {
+      Alert.alert(t('billing.errorTitle'), t('common.error'));
+    }
+    setSubscribing(false);
+  }, [authHeader, load]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const url = new URL(window.location.href);
@@ -100,6 +142,11 @@ export default function BillingScreen({ navigation, currentUser }) {
       url.searchParams.delete('session_id');
       window.history.replaceState({}, '', url.toString());
       confirmCheckout(sessionId);
+    } else if (billing === 'sub_success' && sessionId) {
+      url.searchParams.delete('billing');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.toString());
+      confirmSubscription(sessionId);
     } else if (billing === 'cancel') {
       url.searchParams.delete('billing');
       window.history.replaceState({}, '', url.toString());
@@ -253,8 +300,8 @@ export default function BillingScreen({ navigation, currentUser }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.planToggleBtn, isSub && s.planToggleBtnActive]}
-                onPress={() => !isSub && handleChangePlan('suscripcion')}
-                disabled={isSub || changingPlan}
+                onPress={() => !isSub && (status?.stripe_enabled ? handleSubscribe() : handleChangePlan('suscripcion'))}
+                disabled={isSub || changingPlan || subscribing}
               >
                 <Text style={[s.planToggleBtnText, isSub && s.planToggleBtnTextActive]}>
                   {t('billing.modeSubscription')}
@@ -262,6 +309,38 @@ export default function BillingScreen({ navigation, currentUser }) {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* ── Pago de suscripción ───────────────────────────────────── */}
+          {isSub && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('billing.subscriptionPayment')}</Text>
+              {status?.subscription_active ? (
+                <View style={[s.warnBox, { backgroundColor: C.greenDim, borderColor: C.greenBorder }]}>
+                  <Text style={[s.warnText, { color: C.green }]}>{t('billing.subscriptionActive')}</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={[s.planDesc, { marginBottom: 12 }]}>{t('billing.subscriptionPaymentDesc')}</Text>
+                  {!status?.stripe_enabled && (
+                    <View style={s.warnBox}>
+                      <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={[s.buyBtn, s.buyBtnPopular, subscribing && { opacity: 0.6 }]}
+                    onPress={handleSubscribe}
+                    disabled={subscribing}
+                  >
+                    <Text style={[s.buyBtnText, s.buyBtnTextPopular]}>
+                      {subscribing
+                        ? t('billing.buying')
+                        : `${t('billing.subscribe')} · ${status?.subscription_price_eur != null ? status.subscription_price_eur.toFixed(2) : '—'} €/${t('billing.perMonth')}`}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
 
           {/* ── Coste de acciones (solo créditos) ─────────────────────── */}
           {isCredits && (

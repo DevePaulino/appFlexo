@@ -668,6 +668,11 @@
       "moduloProduccion": "Producción",
       "moduloProduccionHint": "Activa la cola de producción y la pestaña de Producción.",
       "moduloProduccionTrigger": "Estado que lanza el selector de máquina:",
+      "moduloProduccionTriggerRequired": "Estado obligatorio",
+      "moduloProduccionTriggerRequiredHint": "Debes asignar un estado trigger en Ajustes › Configuración de pedidos antes de activar el módulo de producción.",
+      "triggerHintPre": "El estado marcado como",
+      "triggerHintLabel": "Producción",
+      "triggerHintPost": "enviará automáticamente el pedido a producción (usando la máquina asignada) al avanzar a ese estado.",
       "seleccionarTriggerEstado": "Selecciona el estado trigger",
       "seleccionarTriggerEstadoHint": "Al avanzar a este estado se abrirá el selector de máquina.",
       "creditosTitle": "Créditos",
@@ -1042,6 +1047,12 @@
     "action_pedido": "Pedido creado",
     "action_features": "Funcionalidades premium",
     "action_purchase": "Recarga de créditos",
-    "action_signup_bonus": "Créditos de bienvenida"
+    "action_signup_bonus": "Créditos de bienvenida",
+    "subscriptionPayment": "Activar suscripción",
+    "subscriptionActive": "✓ Suscripción activa",
+    "subscriptionPaymentDesc": "Activa tu suscripción mensual para disfrutar de acceso ilimitado.",
+    "subscribe": "Suscribirse",
+    "subSuccessTitle": "¡Suscripción activada!",
+    "subSuccess": "Tu suscripción mensual está activa. Disfruta del acceso ilimitado."
   }
 }

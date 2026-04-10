@@ -10,8 +10,8 @@ import Toast from '../components/Toast';
 import useToast from '../components/useToast';
 import EmptyState from '../components/EmptyState';
 import { useSettings } from '../SettingsContext';
-import { useMaquinas } from '../MaquinasContext';
 import { useModulos } from '../ModulosContext';
+import { useMaquinas } from '../MaquinasContext';
 
 const styles = StyleSheet.create({
   // ─── Layout ──────────────────────────────────────────────────────────────────
@@ -339,8 +339,6 @@ export default function TrabajoScreen({ currentUser }) {
   const [detalleRefreshKey, setDetalleRefreshKey] = useState(0);
   const { settings, estadoRules, modoCreacion } = useSettings();
   const { maquinas } = useMaquinas();
-  const [modalMaquinasVisible, setModalMaquinasVisible] = useState(false);
-  const [trabajoParaProduccion, setTrabajoParaProduccion] = useState(null);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
   const [subTab, setSubTab] = useState('activos');
   const [hoverNuevo, setHoverNuevo] = useState(false);
@@ -764,30 +762,35 @@ export default function TrabajoScreen({ currentUser }) {
     const estadoActual = normalizarEstadoValue(trabajo?.estado || '');
     const newLabel = resolveStateLabel(estadoActual, direction);
     if (!newLabel) return;
-    // Si el módulo de producción está activo y el estado destino es el trigger → abrir selector de máquina
+    // Si el módulo de producción está activo y el estado destino es el trigger → enviar a producción automáticamente
     if (
       direction === 1 &&
       modulos.produccion === true &&
       modulos.produccion_trigger_estado &&
       slugifyEstado(newLabel) === slugifyEstado(modulos.produccion_trigger_estado)
     ) {
-      setTrabajoParaProduccion(trabajo);
-      setModalMaquinasVisible(true);
+      enviarAProduccionAutomatico(trabajo, newLabel);
       return;
     }
     handleCambiarEstado(trabajo, newLabel);
   };
 
-  const handleEnviarAProduccion = async (maquinaId, maquinaNombre, force = false) => {
-    if (!trabajoParaProduccion) return;
-    try {
-      const trabajoIdToSend = (
-        (trabajoParaProduccion && trabajoParaProduccion.trabajo && (trabajoParaProduccion.trabajo.id || trabajoParaProduccion.trabajo._id || trabajoParaProduccion.trabajo.trabajo_id))
-        || trabajoParaProduccion.trabajo_id
-        || trabajoParaProduccion.id
-        || trabajoParaProduccion._id
-      );
+  const enviarAProduccionAutomatico = async (trabajo, newLabel, force = false) => {
+    const trabajoId = (
+      (trabajo.trabajo && (trabajo.trabajo.id || trabajo.trabajo._id || trabajo.trabajo.trabajo_id))
+      || trabajo.trabajo_id
+      || trabajo.id
+      || trabajo._id
+    );
+    const maquinaNombre = trabajo.maquina || trabajo.datos_presupuesto?.maquina;
+    let maquinaId = trabajo.maquina_id || trabajo._maquina_id || trabajo.datos_presupuesto?.maquina_id;
+    // Resolver por nombre si no hay ID (pedidos creados antes de guardar maquina_id)
+    if (!maquinaId && maquinaNombre && maquinas?.length) {
+      const found = maquinas.find(m => m.nombre === maquinaNombre);
+      if (found) maquinaId = found.id || found._id;
+    }
 
+    try {
       const token = global.__MIAPP_ACCESS_TOKEN;
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -795,7 +798,7 @@ export default function TrabajoScreen({ currentUser }) {
       const res = await fetch('http://localhost:8080/api/produccion/enviar', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ trabajo_id: trabajoIdToSend, maquina_id: maquinaId, force }),
+        body: JSON.stringify({ trabajo_id: trabajoId, maquina_id: maquinaId, force }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -806,13 +809,11 @@ export default function TrabajoScreen({ currentUser }) {
           return `• ${a.tipo}`;
         }).join('\n');
         const confirmar = window.confirm(`Incompatibilidad detectada:\n\n${msgs}\n\n¿Desea asignar igualmente?`);
-        if (confirmar) handleEnviarAProduccion(maquinaId, maquinaNombre, true);
+        if (confirmar) enviarAProduccionAutomatico(trabajo, newLabel, true);
         return;
       }
       if (res.ok) {
-        setModalMaquinasVisible(false);
-        setTrabajoParaProduccion(null);
-        cargarPedidos();
+        handleCambiarEstado(trabajo, newLabel);
       } else {
         showToast(data.error || 'No se pudo enviar a producción', 'error');
       }
@@ -1205,49 +1206,6 @@ export default function TrabajoScreen({ currentUser }) {
         puedeCrear={puedeCrear}
       />
 
-      <Modal
-        visible={modalMaquinasVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalMaquinasVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>{t('screens.trabajos.enviarProduccion')}</Text>
-              <TouchableOpacity onPress={() => { setModalMaquinasVisible(false); setTrabajoParaProduccion(null); }}>
-                <Text style={styles.modalCloseX}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 260 }}>
-              {maquinas.map((maq) => (
-                (() => {
-                  const tintasTrabajo = Number(trabajoParaProduccion?.numero_tintas || 0);
-                  const coloresMaquina = Number(maq.numero_colores || 0);
-                  const capacidadInsuficiente = tintasTrabajo > 0 && coloresMaquina > 0 && coloresMaquina < tintasTrabajo;
-                  return (
-                    <TouchableOpacity
-                      key={maq.id}
-                      style={[styles.maquinaItem, capacidadInsuficiente && styles.maquinaItemAtenuada]}
-                      onPress={() => {
-                        if (!capacidadInsuficiente) {
-                          handleEnviarAProduccion(maq.id, maq.nombre);
-                        }
-                      }}
-                      disabled={capacidadInsuficiente}
-                    >
-                      <Text style={styles.maquinaItemText}>{maq.nombre}</Text>
-                      <Text style={styles.maquinaItemSubText}>
-                        {`Colores máquina: ${coloresMaquina || '-'}${tintasTrabajo > 0 ? ` • Tintas trabajo: ${tintasTrabajo}` : ''}`}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })()
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
       <Toast message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   );

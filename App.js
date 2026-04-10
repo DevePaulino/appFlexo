@@ -98,6 +98,7 @@ const linking = {
           Setting: {
             screens: {
               SettingsMenu: 'setting',
+              SettingsBilling: 'setting/billing',
               SettingsFuncionalidades: 'setting/funcionalidades',
               SettingsImpresion: 'setting/impresion',
               SettingsModulos: 'setting/modulos',

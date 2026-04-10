@@ -672,6 +672,11 @@
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Enables the production queue and the Production tab.",
       "moduloProduccionTrigger": "State that triggers the machine selector:",
+      "moduloProduccionTriggerRequired": "Trigger state required",
+      "moduloProduccionTriggerRequiredHint": "You must assign a trigger state in Settings › Order configuration before enabling the production module.",
+      "triggerHintPre": "The state marked as",
+      "triggerHintLabel": "Production",
+      "triggerHintPost": "will automatically send the job to production (using the assigned machine) when advanced to that state.",
       "seleccionarTriggerEstado": "Select trigger state",
       "seleccionarTriggerEstadoHint": "When advancing to this state the machine selector will open.",
       "creditosTitle": "Credits",
@@ -1046,6 +1051,12 @@
     "action_pedido": "Order created",
     "action_features": "Premium features",
     "action_purchase": "Credit top-up",
-    "action_signup_bonus": "Welcome credits"
+    "action_signup_bonus": "Welcome credits",
+    "subscriptionPayment": "Activate subscription",
+    "subscriptionActive": "✓ Subscription active",
+    "subscriptionPaymentDesc": "Activate your monthly subscription for unlimited access.",
+    "subscribe": "Subscribe",
+    "subSuccessTitle": "Subscription activated!",
+    "subSuccess": "Your monthly subscription is active. Enjoy unlimited access."
   }
 }

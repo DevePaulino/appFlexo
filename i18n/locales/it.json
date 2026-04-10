@@ -668,6 +668,11 @@
       "moduloProduccion": "Produzione",
       "moduloProduccionHint": "Attiva la coda di produzione e la scheda Produzione.",
       "moduloProduccionTrigger": "Stato che attiva il selettore macchina:",
+      "moduloProduccionTriggerRequired": "Stato obbligatorio",
+      "moduloProduccionTriggerRequiredHint": "Devi assegnare uno stato trigger in Impostazioni › Configurazione ordini prima di attivare il modulo di produzione.",
+      "triggerHintPre": "Lo stato contrassegnato come",
+      "triggerHintLabel": "Produzione",
+      "triggerHintPost": "invierà automaticamente il lavoro in produzione (usando la macchina assegnata) quando si avanza a quello stato.",
       "seleccionarTriggerEstado": "Seleziona stato trigger",
       "seleccionarTriggerEstadoHint": "Avanzando a questo stato si aprirà il selettore macchina.",
       "creditosTitle": "Crediti",
@@ -1042,6 +1047,12 @@
     "action_pedido": "Ordine creato",
     "action_features": "Funzionalità premium",
     "action_purchase": "Ricarica crediti",
-    "action_signup_bonus": "Crediti di benvenuto"
+    "action_signup_bonus": "Crediti di benvenuto",
+    "subscriptionPayment": "Attiva abbonamento",
+    "subscriptionActive": "✓ Abbonamento attivo",
+    "subscriptionPaymentDesc": "Attiva il tuo abbonamento mensile per accesso illimitato.",
+    "subscribe": "Abbonati",
+    "subSuccessTitle": "Abbonamento attivato!",
+    "subSuccess": "Il tuo abbonamento mensile è attivo. Goditi l'accesso illimitato."
   }
 }

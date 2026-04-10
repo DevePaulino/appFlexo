@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSettings } from '../SettingsContext';
+import { useModulos } from '../ModulosContext';
 import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Linking, Switch, Image } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -224,6 +225,43 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   chipDeleteText: { color: '#DC2626', fontWeight: '900' },
+  chipTrigger: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginRight: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipTriggerActive: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#ECEFFE',
+  },
+  chipTriggerText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  chipTriggerTextActive: {
+    color: '#4F46E5',
+    fontWeight: '700',
+  },
+  triggerHint: {
+    backgroundColor: '#ECEFFE',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  triggerHintText: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+  },
   chipEdit: {
     width: 22,
     height: 22,
@@ -854,7 +892,7 @@ function ColorPickerInput({ value, onChange, inputRef: externalRef }) {
   );
 }
 
-function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette, editColorInputRef }) {
+function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, editing, onEditChange, onEditColorChange, onEditSave, palette, editColorInputRef, produccionActivo, isTrigger, onSetTrigger }) {
   const { t } = useTranslation();
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: item.id });
@@ -909,6 +947,16 @@ function SortableEstadoChip({ item, isProtected, onEdit, onDelete, getColor, edi
           </View>
           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: displayColor, marginRight: 8, flexShrink: 0 }} />
           <Text style={[styles.chipText, { flex: 1 }]}>{item.label || item.valor}</Text>
+          {produccionActivo && (
+            <TouchableOpacity
+              style={[styles.chipTrigger, isTrigger && styles.chipTriggerActive]}
+              onPress={() => onSetTrigger(isTrigger ? '' : item.valor)}
+            >
+              <Text style={[styles.chipTriggerText, isTrigger && styles.chipTriggerTextActive]}>
+                {isTrigger ? 'Producción' : 'Marcar producción'}
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.chipEdit, isProtected && styles.chipEditDisabled]}
             disabled={isProtected}
@@ -974,6 +1022,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const { t } = useTranslation();
   const ITEMS_PER_PAGE = 100;
   const { settings, setSettings, estadoRules: ctxEstadoRules, modoCreacion, recargarSettings, setModoCreacion: setModoCreacionCtx } = useSettings();
+  const { modulos, setModulo } = useModulos();
   const [estadoRules, setEstadoRules] = React.useState(ctxEstadoRules);
   React.useEffect(() => { setEstadoRules(ctxEstadoRules); }, [ctxEstadoRules]);
   const [inputs, setInputs] = useState({
@@ -2237,6 +2286,16 @@ export default function ConfigScreen({ route, currentUser }) {
         {items.length === 0 ? (
           <EmptyState variant="inline" title={t('screens.config.sinValores')} message={t('screens.config.noValoresConfigurados')} />
         ) : categoryKey === 'estados_pedido' ? (
+          <>
+          {!!modulos.produccion && (
+            <View style={styles.triggerHint}>
+              <Text style={styles.triggerHintText}>
+                {t('screens.config.triggerHintPre')}{' '}
+                <Text style={{ fontWeight: '700', color: '#4F46E5' }}>{t('screens.config.triggerHintLabel')}</Text>
+                {' '}{t('screens.config.triggerHintPost')}
+              </Text>
+            </View>
+          )}
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleEstadosDragEnd}>
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
               <View style={styles.estadoChipList}>
@@ -2256,12 +2315,25 @@ export default function ConfigScreen({ route, currentUser }) {
                       onEditSave={saveEditedValor}
                       palette={ESTADO_PALETTE}
                       editColorInputRef={editColorInputRef}
+                      produccionActivo={!!modulos.produccion}
+                      isTrigger={!!modulos.produccion_trigger_estado && slugifyEstado(item.valor) === slugifyEstado(modulos.produccion_trigger_estado)}
+                      onSetTrigger={(valor) => {
+                        if (!valor && modulos.produccion) {
+                          Alert.alert(
+                            t('screens.config.moduloProduccionTriggerRequired'),
+                            t('screens.config.moduloProduccionTriggerRequiredHint')
+                          );
+                          return;
+                        }
+                        setModulo('produccion_trigger_estado', valor);
+                      }}
                     />
                   );
                 })}
               </View>
             </SortableContext>
           </DndContext>
+          </>
         ) : (
           <View style={styles.estadoChipList}>
             {items.map((item) => {

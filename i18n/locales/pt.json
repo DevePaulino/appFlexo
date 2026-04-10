@@ -668,6 +668,11 @@
       "moduloProduccion": "Produção",
       "moduloProduccionHint": "Ativa a fila de produção e o separador Produção.",
       "moduloProduccionTrigger": "Estado que aciona o seletor de máquina:",
+      "moduloProduccionTriggerRequired": "Estado obrigatório",
+      "moduloProduccionTriggerRequiredHint": "Deve atribuir um estado gatilho em Definições › Configuração de pedidos antes de ativar o módulo de produção.",
+      "triggerHintPre": "O estado marcado como",
+      "triggerHintLabel": "Produção",
+      "triggerHintPost": "enviará automaticamente o pedido para produção (usando a máquina atribuída) ao avançar para esse estado.",
       "seleccionarTriggerEstado": "Selecionar estado gatilho",
       "seleccionarTriggerEstadoHint": "Ao avançar para este estado, o seletor de máquina abrirá.",
       "creditosTitle": "Créditos",
@@ -1042,6 +1047,12 @@
     "action_pedido": "Pedido criado",
     "action_features": "Funcionalidades premium",
     "action_purchase": "Recarga de créditos",
-    "action_signup_bonus": "Créditos de boas-vindas"
+    "action_signup_bonus": "Créditos de boas-vindas",
+    "subscriptionPayment": "Ativar assinatura",
+    "subscriptionActive": "✓ Assinatura ativa",
+    "subscriptionPaymentDesc": "Ative sua assinatura mensal para acesso ilimitado.",
+    "subscribe": "Assinar",
+    "subSuccessTitle": "Assinatura ativada!",
+    "subSuccess": "Sua assinatura mensal está ativa. Aproveite o acesso ilimitado."
   }
 }

@@ -668,6 +668,11 @@
       "moduloProduccion": "Produktion",
       "moduloProduccionHint": "Aktiviert die Produktionswarteschlange und den Reiter Produktion.",
       "moduloProduccionTrigger": "Status, der die Maschinenauswahl auslöst:",
+      "moduloProduccionTriggerRequired": "Auslöserstatus erforderlich",
+      "moduloProduccionTriggerRequiredHint": "Sie müssen einen Auslöserstatus unter Einstellungen › Auftragseinstellungen festlegen, bevor Sie das Produktionsmodul aktivieren.",
+      "triggerHintPre": "Der als",
+      "triggerHintLabel": "Produktion",
+      "triggerHintPost": "markierte Status sendet den Auftrag automatisch in die Produktion (unter Verwendung der zugewiesenen Maschine), wenn er auf diesen Status vorrückt.",
       "seleccionarTriggerEstado": "Auslöserstatus auswählen",
       "seleccionarTriggerEstadoHint": "Beim Vorrücken zu diesem Status öffnet sich die Maschinenauswahl.",
       "creditosTitle": "Guthaben",
@@ -1042,6 +1047,12 @@
     "action_pedido": "Auftrag erstellt",
     "action_features": "Premium-Funktionen",
     "action_purchase": "Guthaben aufgeladen",
-    "action_signup_bonus": "Willkommensguthaben"
+    "action_signup_bonus": "Willkommensguthaben",
+    "subscriptionPayment": "Abonnement aktivieren",
+    "subscriptionActive": "✓ Abonnement aktiv",
+    "subscriptionPaymentDesc": "Aktivieren Sie Ihr monatliches Abonnement für unbegrenzten Zugang.",
+    "subscribe": "Abonnieren",
+    "subSuccessTitle": "Abonnement aktiviert!",
+    "subSuccess": "Ihr monatliches Abonnement ist aktiv. Genießen Sie unbegrenzten Zugang."
   }
 }

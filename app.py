@@ -3211,6 +3211,7 @@ def get_billing_status():
         resp = {
             'billing_model': model,
             'creditos': status['creditos'],
+            'subscription_active': status['subscription_active'],
             'credit_cost_pedido': CREDIT_COST_PEDIDO,
             'credit_cost_features': CREDIT_COST_FEATURES,
             'credit_packages': CREDIT_PACKAGES,
@@ -3285,6 +3286,117 @@ def change_billing_plan():
         if result.matched_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
         return jsonify({'billing_model': new_plan}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/subscription-checkout', methods=['POST'])
+def create_subscription_checkout():
+    """Crea una sesión de pago de Stripe para activar la suscripción mensual."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
+        email = str(request_user.get('email') or '').strip().lower()
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        price_eur = SUBSCRIPTION_PRICE_EUR
+        price_cents = int(round(price_eur * 100))
+
+        if not stripe_enabled():
+            # Simulación: activa directamente sin pago
+            billing_col = get_empresa_collection('empresa_billing', None)
+            billing_col.update_one(
+                {'empresa_id': empresa_id},
+                {'$set': {'billing_model': 'suscripcion', 'subscription_active': True}},
+                upsert=True,
+            )
+            return jsonify({'simulated': True, 'activated': True}), 200
+
+        success_url = STRIPE_CHECKOUT_SUCCESS_URL.replace('billing=success', 'billing=sub_success')
+        cancel_url = STRIPE_CHECKOUT_CANCEL_URL
+
+        stripe_payload = {
+            'mode': 'subscription',
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'customer_email': email,
+            'line_items[0][price_data][currency]': STRIPE_CURRENCY,
+            'line_items[0][price_data][unit_amount]': str(price_cents),
+            'line_items[0][price_data][recurring][interval]': 'month',
+            'line_items[0][price_data][product_data][name]': 'PrintForgePro - Suscripción mensual',
+            'line_items[0][quantity]': '1',
+            'metadata[email]': email,
+            'metadata[empresa_id]': str(empresa_id),
+            'metadata[type]': 'subscription',
+            'payment_method_types[]': 'card',
+        }
+
+        session = stripe_api_request('/checkout/sessions', method='POST', payload=stripe_payload)
+        session_id = str(session.get('id') or '').strip()
+        session_url = str(session.get('url') or '').strip()
+        if not session_id or not session_url:
+            return jsonify({'error': 'No se pudo crear la sesión de Stripe'}), 500
+
+        col = get_empresa_collection('stripe_checkouts', None)
+        col.insert_one({
+            'session_id': session_id,
+            'email': email,
+            'empresa_id': str(empresa_id),
+            'type': 'subscription',
+            'price_eur': price_eur,
+            'status': 'pending',
+            'created_at': datetime.now().isoformat(),
+        })
+
+        return jsonify({'session_id': session_id, 'session_url': session_url}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/subscription-confirm', methods=['POST'])
+def confirm_subscription_checkout():
+    """Confirma la sesión de Stripe de suscripción y activa el plan."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+
+        if not stripe_enabled():
+            return jsonify({'error': 'Pasarela no configurada. Define STRIPE_SECRET_KEY.'}), 503
+
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        session_id = str(data.get('session_id') or '').strip()
+        if not session_id:
+            return jsonify({'error': 'session_id requerido'}), 400
+
+        col = get_empresa_collection('stripe_checkouts', None)
+        record = col.find_one({'session_id': session_id, 'type': 'subscription'})
+        if not record:
+            return jsonify({'error': 'Sesión de suscripción no encontrada'}), 404
+
+        if record.get('status') == 'completed':
+            return jsonify({'already_activated': True}), 200
+
+        stripe_session = stripe_api_request(f'/checkout/sessions/{session_id}', method='GET')
+        payment_status = str(stripe_session.get('payment_status') or '').strip()
+        if payment_status not in ('paid', 'no_payment_required'):
+            return jsonify({'error': f'Pago no completado (estado: {payment_status})'}), 402
+
+        billing_col = get_empresa_collection('empresa_billing', None)
+        billing_col.update_one(
+            {'empresa_id': empresa_id},
+            {'$set': {
+                'billing_model': 'suscripcion',
+                'subscription_active': True,
+                'subscription_started_at': datetime.now().isoformat(),
+            }},
+            upsert=True,
+        )
+        col.update_one({'session_id': session_id}, {'$set': {'status': 'completed', 'completed_at': datetime.now().isoformat()}})
+
+        return jsonify({'activated': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -6194,6 +6306,7 @@ def crear_pedido():
         referencia = data.get('referencia')
         fecha_pedido = data.get('fecha_pedido')
         datos_presupuesto = data.get('datos_presupuesto')
+        maquina_id = data.get('maquina_id') or (datos_presupuesto or {}).get('maquina_id')
         if not trabajo_id:
             return jsonify({'error': 'Faltan datos obligatorios: trabajo_id'}), 400
 
@@ -6235,7 +6348,8 @@ def crear_pedido():
             'numero_pedido': numero_pedido,
             'referencia': referencia,
             'fecha_pedido': fecha_pedido,
-            'datos_presupuesto': datos_presupuesto
+            'datos_presupuesto': datos_presupuesto,
+            'maquina_id': maquina_id,
         }
         # Establecer estado por defecto ('En Diseño') usando las etiquetas configuradas
         try:

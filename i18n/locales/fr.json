@@ -668,6 +668,11 @@
       "moduloProduccion": "Production",
       "moduloProduccionHint": "Active la file de production et l'onglet Production.",
       "moduloProduccionTrigger": "État qui déclenche le sélecteur de machine :",
+      "moduloProduccionTriggerRequired": "État obligatoire",
+      "moduloProduccionTriggerRequiredHint": "Vous devez assigner un état déclencheur dans Paramètres › Configuration des commandes avant d'activer le module de production.",
+      "triggerHintPre": "L'état marqué comme",
+      "triggerHintLabel": "Production",
+      "triggerHintPost": "enverra automatiquement la commande en production (en utilisant la machine assignée) lors du passage à cet état.",
       "seleccionarTriggerEstado": "Sélectionner l'état déclencheur",
       "seleccionarTriggerEstadoHint": "En avançant à cet état, le sélecteur de machine s'ouvrira.",
       "creditosTitle": "Crédits",
@@ -1042,6 +1047,12 @@
     "action_pedido": "Commande créée",
     "action_features": "Fonctionnalités premium",
     "action_purchase": "Recharge de crédits",
-    "action_signup_bonus": "Crédits de bienvenue"
+    "action_signup_bonus": "Crédits de bienvenue",
+    "subscriptionPayment": "Activer l'abonnement",
+    "subscriptionActive": "✓ Abonnement actif",
+    "subscriptionPaymentDesc": "Activez votre abonnement mensuel pour un accès illimité.",
+    "subscribe": "S'abonner",
+    "subSuccessTitle": "Abonnement activé !",
+    "subSuccess": "Votre abonnement mensuel est actif. Profitez d'un accès illimité."
   }
 }

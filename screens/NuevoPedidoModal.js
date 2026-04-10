@@ -31,6 +31,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           referencia: formulario.referencia,
           fecha: formulario.fecha,
           maquina: formulario.maquina,
+          maquina_id: formulario.maquina_id || null,
           material: formulario.material,
           acabado: formulario.acabado,
           tirada: formulario.tirada,
@@ -43,6 +44,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           troquelId: formulario.troquelId || null,
           observaciones: formulario.observaciones,
         };
+        updateBody['maquina_id'] = formulario.maquina_id || null;
 
         try {
           const res = await fetch(`http://localhost:8080/api/pedidos/${editingPedidoId}`, {
@@ -104,6 +106,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           referencia: formulario.referencia,
           fecha: formulario.fecha,
           maquina: formulario.maquina,
+          maquina_id: formulario.maquina_id || null,
           material: formulario.material,
           acabado: formulario.acabado,
           tirada: formulario.tirada,
@@ -115,7 +118,8 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
           troquelCoste: formulario.troquelCoste,
           troquelId: formulario.troquelId || null,
           observaciones: formulario.observaciones,
-        }
+        },
+        maquina_id: formulario.maquina_id || null,
       };
 
       const respPedido = await fetch('http://localhost:8080/api/pedidos', {
