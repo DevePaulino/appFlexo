@@ -169,6 +169,7 @@ export default function NuevoPedidoModal({ visible, onClose, onSave, initialValu
       showMaquinaField={true}
       maquinaLabel={t('forms.maquina')}
       currentUser={currentUser}
+      formTipo="pedido"
     />
   );
 }

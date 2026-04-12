@@ -1,6 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Fragment } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
+const TROQUEL_BASE_DEF = [
+  { campo_id: '__base_tq_numero',        col: 0, fila: 0, ancho: 4 },
+  { campo_id: '__base_tq_tipo',          col: 4, fila: 0, ancho: 4 },
+  { campo_id: '__base_tq_forma',         col: 8, fila: 0, ancho: 4 },
+  { campo_id: '__base_tq_estado',        col: 0, fila: 1, ancho: 4 },
+  { campo_id: '__base_tq_sentido',       col: 4, fila: 1, ancho: 8 },
+  { campo_id: '__base_tq_ancho_motivo',  col: 0, fila: 2, ancho: 4 },
+  { campo_id: '__base_tq_alto_motivo',   col: 4, fila: 2, ancho: 4 },
+  { campo_id: '__base_tq_motivos_ancho', col: 8, fila: 2, ancho: 4 },
+  { campo_id: '__base_tq_separacion',    col: 0, fila: 3, ancho: 4 },
+  { campo_id: '__base_tq_valor_z',       col: 4, fila: 3, ancho: 4 },
+  { campo_id: '__base_tq_dist_sesgado',  col: 8, fila: 3, ancho: 4 },
+];
 
 export default function NuevoTroquelModal({
   visible,
@@ -14,6 +28,7 @@ export default function NuevoTroquelModal({
   puedeCrear = true,
 }) {
   const { t } = useTranslation();
+  const [baseLayoutData, setBaseLayoutData] = useState({});
   const [refTroquel, setRefTroquel]           = useState('');
   const [tipoTroquel, setTipoTroquel]         = useState('regular');
   const [forma, setForma]                     = useState('Rectangular');
@@ -55,6 +70,45 @@ export default function NuevoTroquelModal({
       }
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const token = global.__MIAPP_ACCESS_TOKEN;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    fetch('http://localhost:8080/api/campos-base-layout?form=troquel', { headers })
+      .then(r => r.json())
+      .then(d => setBaseLayoutData(d.layout || {}))
+      .catch(() => {});
+  }, [visible]);
+
+  const layoutRows = (renderMap) => {
+    const withLayout = TROQUEL_BASE_DEF.map(c => {
+      const ov = baseLayoutData[c.campo_id];
+      return { ...c, col: ov?.col ?? c.col, fila: ov?.fila ?? c.fila, ancho: ov?.ancho ?? c.ancho };
+    });
+    withLayout.sort((a, b) => (a.fila * 100 + a.col) - (b.fila * 100 + b.col));
+    const groups = {};
+    withLayout.forEach(c => { (groups[c.fila] = groups[c.fila] || []).push(c); });
+    const rows = Object.entries(groups)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([fila, items]) => {
+        const GAP = 12;
+        const cells = items.map(item => {
+          const el = renderMap[item.campo_id];
+          if (el == null) return null;
+          const pct = `${((item.ancho / 12) * 100).toFixed(4)}%`;
+          return <View key={item.campo_id} style={{ flexBasis: pct, flexShrink: 0, flexGrow: 0, paddingRight: GAP }}>{el}</View>;
+        }).filter(Boolean);
+        if (cells.length === 0) return null;
+        return (
+          <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 12, alignItems: 'flex-start' }}>
+            {cells}
+          </View>
+        );
+      }).filter(Boolean);
+    return <Fragment>{rows}</Fragment>;
+  };
 
   const resetAndClose = () => {
     setRefTroquel('');
@@ -136,97 +190,98 @@ export default function NuevoTroquelModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Referencia */}
-            <Text style={styles.label}>Número / Referencia *</Text>
-            <TextInput
-              style={styles.input}
-              value={refTroquel}
-              onChangeText={setRefTroquel}
-              placeholder="Ej. TR-001"
-              placeholderTextColor="#94A3B8"
-              autoFocus
-            />
-
-            {/* Tipo */}
-            <Text style={[styles.label, { marginTop: 4 }]}>Tipo</Text>
-            <View style={styles.pillRow}>
-              {['regular', 'irregular', 'corbata'].map((t) => (
-                <TouchableOpacity key={t} onPress={() => setTipoTroquel(t)} style={pill(tipoTroquel === t)}>
-                  <Text style={pillTxt(tipoTroquel === t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Forma */}
-            <Text style={styles.label}>Forma</Text>
-            <View style={styles.pillRow}>
-              {['Rectangular', 'Circular', 'Irregular', 'Ovalado'].map((f) => (
-                <TouchableOpacity key={f} onPress={() => setForma(f)} style={pill(forma === f)}>
-                  <Text style={pillTxt(forma === f)}>{f}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Estado */}
-            <Text style={styles.label}>Estado</Text>
-            <View style={[styles.pillRow, { marginBottom: 16 }]}>
-              {['Disponible', 'En uso'].map((e) => (
-                <TouchableOpacity key={e} onPress={() => setEstado(e)} style={pill(estado === e)}>
-                  <Text style={pillTxt(estado === e)}>{e}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Sentido de impresión */}
-            <Text style={styles.label}>{t('screens.troqueles.sentidoImpresion')}</Text>
-            <View style={[styles.pillRow, { marginBottom: 16 }]}>
-              {[
-                { value: 'vertical',   label: t('screens.troqueles.sentidoVertical') },
-                { value: 'horizontal', label: t('screens.troqueles.sentidoHorizontal') },
-              ].map((s) => (
-                <TouchableOpacity key={s.value} onPress={() => setSentidoImpresion(s.value)} style={pill(sentidoImpresion === s.value)}>
-                  <Text style={pillTxt(sentidoImpresion === s.value)}>{s.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Medidas — fila 1 */}
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <Text style={styles.label}>Ancho motivo (mm)</Text>
-                <TextInput style={styles.input} value={anchoMotivo} onChangeText={setAnchoMotivo}
-                  placeholder="Ej. 100" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>Alto motivo (mm)</Text>
-                <TextInput style={styles.input} value={altoMotivo} onChangeText={setAltoMotivo}
-                  placeholder="Ej. 150" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>Motivos ancho</Text>
-                <TextInput style={styles.input} value={motivosAncho} onChangeText={setMotivosAncho}
-                  placeholder="Ej. 4" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-            </View>
-
-            {/* Medidas — fila 2 */}
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <Text style={styles.label}>Separación (mm)</Text>
-                <TextInput style={styles.input} value={separacionAncho} onChangeText={setSeparacionAncho}
-                  placeholder="Ej. 3" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>Valor Z (mm)</Text>
-                <TextInput style={styles.input} value={valorZ} onChangeText={setValorZ}
-                  placeholder="Ej. 110" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>Dist. sesgado (mm)</Text>
-                <TextInput style={styles.input} value={distanciaSesgado} onChangeText={setDistanciaSesgado}
-                  placeholder="Ej. 0" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
-              </View>
-            </View>
+            {layoutRows({
+              '__base_tq_numero': (
+                <View>
+                  <Text style={styles.label}>Número / Referencia *</Text>
+                  <TextInput style={styles.input} value={refTroquel} onChangeText={setRefTroquel} placeholder="Ej. TR-001" placeholderTextColor="#94A3B8" autoFocus />
+                </View>
+              ),
+              '__base_tq_tipo': (
+                <View>
+                  <Text style={styles.label}>Tipo</Text>
+                  <View style={styles.pillRow}>
+                    {['regular', 'irregular', 'corbata'].map((v) => (
+                      <TouchableOpacity key={v} onPress={() => setTipoTroquel(v)} style={pill(tipoTroquel === v)}>
+                        <Text style={pillTxt(tipoTroquel === v)}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ),
+              '__base_tq_forma': (
+                <View>
+                  <Text style={styles.label}>Forma</Text>
+                  <View style={styles.pillRow}>
+                    {['Rectangular', 'Circular', 'Irregular', 'Ovalado'].map((v) => (
+                      <TouchableOpacity key={v} onPress={() => setForma(v)} style={pill(forma === v)}>
+                        <Text style={pillTxt(forma === v)}>{v}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ),
+              '__base_tq_estado': (
+                <View>
+                  <Text style={styles.label}>Estado</Text>
+                  <View style={styles.pillRow}>
+                    {['Disponible', 'En uso'].map((v) => (
+                      <TouchableOpacity key={v} onPress={() => setEstado(v)} style={pill(estado === v)}>
+                        <Text style={pillTxt(estado === v)}>{v}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ),
+              '__base_tq_sentido': (
+                <View>
+                  <Text style={styles.label}>{t('screens.troqueles.sentidoImpresion')}</Text>
+                  <View style={styles.pillRow}>
+                    {[{ value: 'vertical', label: t('screens.troqueles.sentidoVertical') }, { value: 'horizontal', label: t('screens.troqueles.sentidoHorizontal') }].map((s) => (
+                      <TouchableOpacity key={s.value} onPress={() => setSentidoImpresion(s.value)} style={pill(sentidoImpresion === s.value)}>
+                        <Text style={pillTxt(sentidoImpresion === s.value)}>{s.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ),
+              '__base_tq_ancho_motivo': (
+                <View>
+                  <Text style={styles.label}>Ancho motivo (mm)</Text>
+                  <TextInput style={styles.input} value={anchoMotivo} onChangeText={setAnchoMotivo} placeholder="Ej. 100" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+              '__base_tq_alto_motivo': (
+                <View>
+                  <Text style={styles.label}>Alto motivo (mm)</Text>
+                  <TextInput style={styles.input} value={altoMotivo} onChangeText={setAltoMotivo} placeholder="Ej. 150" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+              '__base_tq_motivos_ancho': (
+                <View>
+                  <Text style={styles.label}>Motivos ancho</Text>
+                  <TextInput style={styles.input} value={motivosAncho} onChangeText={setMotivosAncho} placeholder="Ej. 4" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+              '__base_tq_separacion': (
+                <View>
+                  <Text style={styles.label}>Separación (mm)</Text>
+                  <TextInput style={styles.input} value={separacionAncho} onChangeText={setSeparacionAncho} placeholder="Ej. 3" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+              '__base_tq_valor_z': (
+                <View>
+                  <Text style={styles.label}>Valor Z (mm)</Text>
+                  <TextInput style={styles.input} value={valorZ} onChangeText={setValorZ} placeholder="Ej. 110" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+              '__base_tq_dist_sesgado': (
+                <View>
+                  <Text style={styles.label}>Dist. sesgado (mm)</Text>
+                  <TextInput style={styles.input} value={distanciaSesgado} onChangeText={setDistanciaSesgado} placeholder="Ej. 0" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
+                </View>
+              ),
+            })}
           </ScrollView>
 
           {!puedeCrear && (

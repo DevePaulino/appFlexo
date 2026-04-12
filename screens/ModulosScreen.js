@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#C7D2FE',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     minHeight: 54,
   },
   headerTopRow: {
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1E1B4B',
     letterSpacing: -0.3,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   content: {
     padding: 12,
@@ -99,9 +99,7 @@ export default function ModulosScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <View style={{ width: 38 }} />
           <Text style={styles.headerTitle}>{t('nav.modulos')}</Text>
-          <View style={{ width: 38 }} />
         </View>
       </View>
       <ScrollView style={styles.content}>

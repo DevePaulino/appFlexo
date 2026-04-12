@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import NuevaMaquinaModal from './NuevaMaquinaModal';
 import EmptyState from '../components/EmptyState';
+import CamposDinamicos from '../components/CamposDinamicos';
 import { useSettings } from '../SettingsContext';
 import { useMaquinas } from '../MaquinasContext';
 import { useClientes } from '../ClientesContext';
@@ -467,6 +468,7 @@ export default function NuevoPresupuestoModal({
     readOnly = false,
     currentUser = null,
     puedeCrear = true,
+    formTipo = 'presupuesto',
 }) {
     const isReadOnly = !!readOnly;
     const { t } = useTranslation();
@@ -504,6 +506,10 @@ export default function NuevoPresupuestoModal({
     const [observaciones, setObservaciones] = useState('');
     const [coberturaResult, setCoberturaResult] = useState(null);
     const [submitted, setSubmitted] = useState(false);
+    const [camposExtra, setCamposExtra] = useState({});
+    const [camposPersonalizados, setCamposPersonalizados] = useState([]);
+    const [contenedoresFormulario, setContenedoresFormulario] = useState([]);
+    const [baseLayoutData, setBaseLayoutData] = useState({});
     const [coberturaError, setCoberturaError] = useState('');
     const { clientes: rawClientes } = useClientes();
     const clientesGuardados = rawClientes || [];
@@ -559,10 +565,28 @@ export default function NuevoPresupuestoModal({
             setTroquelFormaSel(initialValues.datos_presupuesto?.troquelFormaSel || initialValues.troquelFormaSel || '');
             setTroquelCoste(initialValues.datos_presupuesto?.troquelCoste || initialValues.troquelCoste || '');
             setObservaciones(initialValues.datos_presupuesto?.observaciones || initialValues.observaciones || '');
+            setCamposExtra(initialValues.datos_presupuesto?.campos_extra || initialValues.campos_extra || {});
         } catch (e) {
             // ignore
         }
     }, [initialValues]);
+
+    // Cargar campos personalizados + contenedores (se recarga cada vez que se abre el modal)
+    useEffect(() => {
+        if (!visible) return;
+        const token = global.__MIAPP_ACCESS_TOKEN;
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        Promise.all([
+            fetch(`http://localhost:8080/api/campos-formulario?form=${formTipo}`, { headers }).then(r => r.json()),
+            fetch(`http://localhost:8080/api/contenedores-formulario?form=${formTipo}`, { headers }).then(r => r.json()),
+            fetch(`http://localhost:8080/api/campos-base-layout?form=${formTipo}`, { headers }).then(r => r.json()),
+        ]).then(([dCampos, dCont, dBase]) => {
+            setCamposPersonalizados(dCampos.campos || []);
+            setContenedoresFormulario(dCont.contenedores || []);
+            setBaseLayoutData(dBase.layout || {});
+        }).catch(() => {});
+    }, [visible]);
 
     // Auto-select troquel when catalog loads (for editing existing pedidos)
     useEffect(() => {
@@ -910,6 +934,7 @@ export default function NuevoPresupuestoModal({
                 vendedor,
                 maquina,
                 maquina_id: maquinaSeleccionadaObj?.id || maquinaSeleccionadaObj?._id || null,
+                campos_extra: camposExtra,
                 material,
                 acabado: Array.isArray(acabado) ? [...acabado] : acabado,
                 tirada,
@@ -1011,567 +1036,365 @@ export default function NuevoPresupuestoModal({
                 </View>
 
                 <ScrollView style={styles.container}>
-                    {/* DATOS GENERALES */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('forms.sectionGeneral')}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: 18 }}>
-                            <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', gap: 16 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>{t('forms.cliente')}</Text>
-                                        <TouchableOpacity
-                                            style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#EEF2F8' } : null]}
-                                            onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}
-                                        >
-                                            <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>
-                                                {cliente ? (razonSocial || cliente) : t('forms.selectCliente')}
-                                            </Text>
-                                        </TouchableOpacity>
-                                        {!cliente && <Text style={styles.clientePickerHint}>{t('forms.clienteHint')}</Text>}
-                                        {/* eliminado campo placeholder innecesario para aprovechar espacio */}
-                                    </View>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>{fechaLabel}</Text>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                            <TextInput
-                                                value={formatDateDisplay(fecha)}
-                                                style={[styles.input(fecha, true, false, submitted), { flex: 1, marginBottom: 0 }]}
-                                                editable={false}
-                                            />
-                                            {Platform.OS === 'web' ? (
-                                                <View
-                                                    style={{
-                                                        width: 38,
-                                                        height: 38,
-                                                        borderRadius: 8,
-                                                        borderWidth: 1,
-                                                        borderColor: '#CCC',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        backgroundColor: '#FBFBFD',
-                                                        position: 'relative'
-                                                    }}
-                                                >
-                                                    <Text style={{ fontSize: 16 }}>📅</Text>
-                                                    <input
-                                                        type="date"
-                                                        value={fecha}
-                                                        onChange={(e) => {
-                                                            const valor = e?.target?.value || '';
-                                                            if (!valor) return;
-                                                            setFecha(valor);
-                                                        }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            opacity: 0,
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    />
-                                                </View>
-                                            ) : (
-                                                <TouchableOpacity
-                                                    onPress={() => abrirDatePicker('fecha')}
-                                                    style={{
-                                                        width: 38,
-                                                        height: 38,
-                                                        borderRadius: 8,
-                                                        borderWidth: 1,
-                                                        borderColor: '#CCC',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        backgroundColor: '#FBFBFD'
-                                                    }}
-                                                >
-                                                    <Text style={{ fontSize: 16 }}>📅</Text>
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    </View>
-                                    {showFechaEntrega && (
-                                        <View style={styles.col}>
-                                            <Text style={styles.label}>{fechaEntregaLabel}</Text>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                <TextInput
-                                                    value={formatDateDisplay(fechaEntrega)}
-                                                    style={[
-                                                        styles.input(fechaEntrega, true, false, submitted),
-                                                        { flex: 1, marginBottom: 0 },
-                                                        submitted && fechaEntregaAntesCreacion ? { borderColor: '#D21820' } : null
-                                                    ]}
-                                                    editable={false}
-                                                />
-                                                {Platform.OS === 'web' ? (
-                                                    <View
-                                                        style={{
-                                                            width: 38,
-                                                            height: 38,
-                                                            borderRadius: 8,
-                                                            borderWidth: 1,
-                                                            borderColor: '#CCC',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            backgroundColor: '#FBFBFD',
-                                                            position: 'relative'
-                                                        }}
-                                                    >
-                                                        <Text style={{ fontSize: 16 }}>📅</Text>
-                                                        <input
-                                                            type="date"
-                                                            value={fechaEntrega}
-                                                            min={fecha || undefined}
-                                                            onChange={(e) => {
-                                                                const valor = e?.target?.value || '';
-                                                                if (!valor) return;
-                                                                setFechaEntrega(valor);
-                                                            }}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                opacity: 0,
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        />
-                                                    </View>
-                                                ) : (
-                                                    <TouchableOpacity
-                                                        onPress={() => abrirDatePicker('fechaEntrega')}
-                                                        style={{
-                                                            width: 38,
-                                                            height: 38,
-                                                            borderRadius: 8,
-                                                            borderWidth: 1,
-                                                            borderColor: '#CCC',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            backgroundColor: '#FBFBFD'
-                                                        }}
-                                                    >
-                                                        <Text style={{ fontSize: 16 }}>📅</Text>
-                                                    </TouchableOpacity>
-                                                )}
-                                            </View>
-                                            {submitted && fechaEntregaAntesCreacion && (
-                                                <Text style={styles.errorText}>{t('forms.errorFechaEntrega')}</Text>
-                                            )}
-                                        </View>
-                                    )}
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>{t('forms.comercial')}</Text>
-                                        {Platform.OS === 'web' ? (
-                                            <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
-                                                <select
-                                                    value={vendedor}
-                                                    onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }}
-                                                    disabled={isReadOnly}
-                                                    style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 14, color: '#0F172A', outlineWidth: 0, WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}
-                                                >
-                                                    <option value="">{t('forms.selectComercial')}</option>
-                                                    {usuariosComerciales.map((u) => (
-                                                        <option key={u.id || u.usuario_id || u.nombre} value={u.nombre}>{u.nombre}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        ) : (
-                                            <BotonSelector
-                                                opciones={comerciales}
-                                                valorSeleccionado={vendedor}
-                                                onSelect={setVendedor}
-                                                required={true}
-                                                submitted={submitted}
-                                                disabled={isReadOnly}
-                                            />
-                                        )}
-                                    </View>
-                                </View>
-                                <View style={{ flexDirection: 'row', gap: 16, marginTop: 0 }}>
-                                    <View style={styles.col}>
-                                        <Text style={styles.label}>{t('forms.referencia')}</Text>
-                                        <TextInput
-                                            value={referencia}
-                                            onChangeText={(t) => { if (isReadOnly) return; setReferencia(t); }}
-                                            placeholder={t('forms.refereciaPlaceholder')}
-                                            placeholderTextColor="#94A3B8"
-                                            style={styles.input(referencia, true, false, submitted)}
-                                            editable={!isReadOnly}
-                                        />
-                                    </View>
-                                </View>
-                                {cliente ? (
-                                    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 8 }}>
-                                        <TouchableOpacity
-                                            onPress={() => setClienteExpandido(v => !v)}
-                                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F1F5F9' }}
-                                        >
-                                            <Text style={{ fontSize: 12, color: '#64748B', flex: 1 }} numberOfLines={1}>
-                                                {[cif, personasContacto, email].filter(Boolean).join(' · ')}
-                                            </Text>
-                                            <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', marginLeft: 10 }}>
-                                                {clienteExpandido ? t('forms.menosDatos') : t('forms.verDatos')}
-                                            </Text>
-                                        </TouchableOpacity>
-                                        {clienteExpandido && (
-                                            <View style={{ padding: 12, paddingTop: 8 }}>
-                                                <View style={{ flexDirection: 'row', gap: 16 }}>
-                                                    <View style={styles.col}>
-                                                        <Text style={styles.label}>{t('forms.razonSocial')}</Text>
-                                                        <TextInput
-                                                            value={razonSocial}
-                                                            onChangeText={() => {}}
-                                                            placeholder={t('forms.razonSocialPlaceholder')}
-                                                            placeholderTextColor="#94A3B8"
-                                                            style={styles.input(razonSocial, false, false, submitted)}
-                                                            editable={false}
-                                                        />
-                                                    </View>
-                                                    <View style={styles.col}>
-                                                        <Text style={styles.label}>{t('forms.cif')}</Text>
-                                                        <TextInput
-                                                            value={cif}
-                                                            onChangeText={() => {}}
-                                                            placeholder={t('forms.cifPlaceholder')}
-                                                            placeholderTextColor="#94A3B8"
-                                                            style={[
-                                                                styles.input(cif, false, false, submitted),
-                                                                submitted && cifInvalido ? { borderColor: '#D21820' } : null
-                                                            ]}
-                                                            editable={false}
-                                                        />
-                                                        {submitted && cifInvalido && (
-                                                            <Text style={styles.errorText}>{t('forms.errorCif')}</Text>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', gap: 16 }}>
-                                                    <View style={styles.col}>
-                                                        <Text style={styles.label}>{t('forms.personasContacto')}</Text>
-                                                        <TextInput
-                                                            value={personasContacto}
-                                                            onChangeText={() => {}}
-                                                            placeholder={t('forms.personasContactoPlaceholder')}
-                                                            placeholderTextColor="#94A3B8"
-                                                            style={styles.input(personasContacto, false, false, submitted)}
-                                                            editable={false}
-                                                        />
-                                                    </View>
-                                                    <View style={styles.col}>
-                                                        <Text style={styles.label}>{t('forms.email')}</Text>
-                                                        <TextInput
-                                                            value={email}
-                                                            onChangeText={() => {}}
-                                                            placeholder={t('forms.emailPlaceholder')}
-                                                            placeholderTextColor="#94A3B8"
-                                                            style={[
-                                                                styles.input(email, false, false, submitted),
-                                                                submitted && emailInvalido ? { borderColor: '#D21820' } : null
-                                                            ]}
-                                                            keyboardType="email-address"
-                                                            autoCapitalize="none"
-                                                            editable={false}
-                                                        />
-                                                        {submitted && emailInvalido && (
-                                                            <Text style={styles.errorText}>{t('forms.errorEmail')}</Text>
-                                                        )}
-                                                        {submitted && emailVacio && (
-                                                            <Text style={styles.errorText}>{t('forms.errorEmailRequired')}</Text>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        )}
-                                    </View>
-                                ) : null}
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.divider} />
-
-                    {/* PRODUCTO */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('forms.sectionProducto')}</Text>
-                        <View style={[styles.row, { alignItems: 'flex-start' }]}>
-                            {showMaquinaField && (
-                            <View style={styles.col}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                    <Text style={[styles.label, { marginBottom: 0 }]}>{maquinaLabel}</Text>
-                                    {!isReadOnly && (
-                                        <TouchableOpacity
-                                            onPress={() => setShowMaquinaCreate(true)}
-                                            style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
-                                        >
-                                            <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevaMaquina')}</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                {Platform.OS === 'web' ? (
-                                    <View style={{
-                                        borderWidth: 1,
-                                        borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted),
-                                        backgroundColor: '#F1F5F9',
-                                        borderRadius: 10,
-                                        marginBottom: 8,
-                                        overflow: 'hidden'
-                                    }}>
-                                        <select
-                                            value={maquina}
-                                            onChange={(e) => setMaquina(e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                borderWidth: 0,
-                                                backgroundColor: 'transparent',
-                                                paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10,
-                                                fontSize: 14,
-                                                color: '#0F172A',
-                                                outlineWidth: 0,
-                                                cursor: 'pointer',
-                                            }}
-                                        >
-                                            <option value="">{t('forms.selectMaquina')}</option>
-                                            {maquinasActivas.map((itemMaquina) => (
-                                                <option
-                                                    key={itemMaquina.id}
-                                                    value={itemMaquina.nombre}
-                                                >
-                                                    {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'} ${t('forms.colores')})${!puedeSeleccionarMaquina(itemMaquina) ? ` ${t('forms.noCompatible')}` : ''}`}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </View>
-                                ) : (
-                                    <View style={styles.selectorRow}>
-                                        {maquinasActivas.map((itemMaquina) => {
-                                            const activa = maquina === itemMaquina.nombre;
-                                            const habilitada = puedeSeleccionarMaquina(itemMaquina);
-                                            return (
-                                                <TouchableOpacity
-                                                    key={itemMaquina.id}
-                                                    style={{
-                                                        paddingHorizontal: 12,
-                                                        paddingVertical: 8,
-                                                        backgroundColor: activa ? '#E8E8EC' : '#FBFBFD',
-                                                        borderRadius: 22,
-                                                        borderWidth: 2,
-                                                        borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#E55A2B' : '#CCC'),
-                                                        marginRight: 8,
-                                                        marginBottom: 8,
-                                                        minWidth: 90,
-                                                        alignItems: 'center',
-                                                        opacity: habilitada ? 1 : 0.35,
-                                                    }}
-                                                    onPress={() => setMaquina(itemMaquina.nombre)}
-                                                >
-                                                    <Text style={{
-                                                        color: activa ? '#393B3F' : '#6C6C70',
-                                                        fontWeight: activa ? '700' : '500',
-                                                        fontSize: 13,
-                                                    }}>
-                                                        {`${itemMaquina.nombre} (${itemMaquina.numero_colores || '-'})${!habilitada ? '' : ''}`}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
-                                )}
-                                {submitted && !maquina && (
-                                    <Text style={styles.errorText}>{t('forms.errorMaquinaRequired')}</Text>
-                                )}
-                                {submitted && maquinaIncompatible && (
-                                    <Text style={styles.errorText}>
-                                        {t('forms.errorMaquinaIncompatible')} ({numeroTintasSeleccionadas}).
-                                    </Text>
-                                )}
-                            </View>
-                            )}
-                        <View style={styles.col}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <Text style={styles.label}>{t('forms.troquel')}</Text>
-                                {!isReadOnly && (
-                                    <TouchableOpacity
-                                        onPress={() => setShowTroquelCreate(true)}
-                                        style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
-                                    >
-                                        <Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevoTroquel')}</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                            {troquelesCat.length === 0 ? (
-                                <EmptyState variant="inline" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} />
-                            ) : Platform.OS === 'web' ? (
-                                <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
-                                    <select
-                                        style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }}
-                                        value={troquelSel?._id || troquelSel?.id || ''}
-                                        disabled={isReadOnly}
-                                        onChange={e => {
-                                            const found = troquelesCat.find(t => (t._id || t.id) === e.target.value);
-                                            handleTroquelSelect(found || null);
-                                        }}
-                                    >
-                                        <option value="">{t('forms.sinTroquel')}</option>
-                                        {troquelesCat.map((t, i) => (
-                                            <option key={t._id || t.id || i} value={t._id || t.id}>
-                                                {t.numero}{t.tipo ? ` · ${t.tipo}` : ''}{t.estado ? ` · ${t.estado}` : ''}{t.anchoMotivo && t.altoMotivo ? ` · ${t.anchoMotivo}×${t.altoMotivo}mm` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </View>
-                            ) : (
-                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                                    <TouchableOpacity
-                                        disabled={isReadOnly}
-                                        onPress={() => handleTroquelSelect(null)}
-                                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#EEF2F8' }}
-                                    >
-                                        <Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>{t('forms.sinTroquel')}</Text>
-                                    </TouchableOpacity>
-                                    {troquelesCat.map((t, i) => {
-                                        const isSelected = troquelSel && (troquelSel._id || troquelSel.id) === (t._id || t.id);
+                    {(() => {
+                        // ── Helper: aplica baseLayout y renderiza filas de campos base ──
+                        const layoutRows = (defCampos, renderMap) => {
+                            const GAP = 12;
+                            const COLS = 12;
+                            const withLayout = defCampos.map(c => {
+                                const ov = baseLayoutData[c.campo_id];
+                                return { ...c, col: ov?.col ?? c.col, fila: ov?.fila ?? c.fila, ancho: ov?.ancho ?? c.ancho };
+                            });
+                            withLayout.sort((a, b) => (a.fila * 100 + a.col) - (b.fila * 100 + b.col));
+                            const groups = {};
+                            withLayout.forEach(c => { (groups[c.fila] = groups[c.fila] || []).push(c); });
+                            const rows = Object.entries(groups)
+                                .sort(([a], [b]) => Number(a) - Number(b))
+                                .map(([fila, items]) => {
+                                    const cells = items.map(item => {
+                                        const el = renderMap[item.campo_id];
+                                        if (el == null) return null;
+                                        const pct = `${((item.ancho / COLS) * 100).toFixed(4)}%`;
                                         return (
-                                            <TouchableOpacity
-                                                key={t._id || t.id || i}
-                                                disabled={isReadOnly}
-                                                onPress={() => handleTroquelSelect(t)}
-                                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSelected ? '#475569' : '#EEF2F8' }}
-                                            >
-                                                <Text style={{ color: isSelected ? '#fff' : '#475569', fontSize: 13 }}>{t.numero}</Text>
-                                            </TouchableOpacity>
+                                            <View key={item.campo_id} style={{ flexBasis: pct, flexShrink: 0, flexGrow: 0, paddingRight: GAP }}>
+                                                {el}
+                                            </View>
                                         );
-                                    })}
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                    {troquelSel && (
-                        <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 10 }}>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                                {[
-                                    { label: 'Número', value: troquelSel.numero },
-                                    { label: 'Tipo', value: troquelSel.tipo },
-                                    { label: 'Forma', value: troquelSel.forma },
-                                    { label: 'Estado', value: troquelSel.estado },
-                                    { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null },
-                                    { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null },
-                                    { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null },
-                                    { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null },
-                                    { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null },
-                                    { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null },
-                                ].filter(f => f.value != null && f.value !== '').map(f => (
-                                    <View key={f.label} style={{ minWidth: 110 }}>
-                                        <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text>
-                                        <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>{t('forms.material')}</Text>
-                                <BotonSelector
-                                    opciones={materiales}
-                                    valorSeleccionado={material}
-                                    onSelect={setMaterial}
-                                    required={true}
-                                    submitted={submitted}
-                                    disabled={isReadOnly}
-                                />
-                            </View>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>{t('forms.acabado')}</Text>
-                                <BotonSelector
-                                    opciones={acabados}
-                                    valorSeleccionado={acabado}
-                                    onSelect={setAcabado}
-                                    multiple={true}
-                                    required={false}
-                                    submitted={submitted}
-                                    disabled={isReadOnly}
-                                />
-                            </View>
-                        </View>
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>{t('forms.tirada')}</Text>
-                                <TextInput
-                                    value={tirada}
-                                    onChangeText={(t) => { if (isReadOnly) return; setTirada(t); }}
-                                    keyboardType="numeric"
-                                    placeholder={t('forms.tiradaPlaceholder')}
-                                    placeholderTextColor="#94A3B8"
-                                    style={styles.input(tirada, true, true, submitted)}
-                                    editable={!isReadOnly}
-                                />
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.divider} />
+                                    }).filter(Boolean);
+                                    if (cells.length === 0) return null;
+                                    return (
+                                        <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 8, alignItems: 'flex-start' }}>
+                                            {cells}
+                                        </View>
+                                    );
+                                }).filter(Boolean);
+                            return <React.Fragment>{rows}</React.Fragment>;
+                        };
 
-                    {/* IMPRESIÓN */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('forms.sectionImpresion')}</Text>
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>{t('forms.tintas')}</Text>
-                                <TintasSelector
-                                    selectedTintas={selectedTintas}
-                                    setSelectedTintas={setSelectedTintas}
-                                    opcionesTintas={tintasOpciones}
-                                    pantones={pantones}
-                                    onRemovePantone={removePantoneAt}
-                                    onStartAdd={() => { if (isReadOnly) return; setAddingPantone(true); setPantoneInput(''); }}
-                                    addingPantone={addingPantone}
-                                    addingValue={pantoneInput}
-                                    onChangeAdding={(t) => { if (isReadOnly) return; setPantoneInput(t); }}
-                                    onConfirmAdding={(txt) => {
-                                        const val = (txt || '').trim();
-                                        if (val && !isReadOnly) addPantone(val);
-                                        setAddingPantone(false);
-                                        setPantoneInput('');
-                                    }}
-                                    addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null}
-                                    disabled={isReadOnly}
-                                />
-                                <Text style={styles.tintaCounter}>{t('forms.nTintasSeleccionadas')}: {numeroTintasSeleccionadas}</Text>
-                                
-                            </View>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>{t('forms.tintaEspecial')}</Text>
-                                {tintasEspeciales.length > 0 ? (
-                                    <BotonSelector
-                                        opciones={tintasEspeciales}
-                                        valorSeleccionado={detalleTintaEspecial}
-                                        onSelect={setDetalleTintaEspecial}
-                                        multiple={true}
-                                        required={false}
+                        const renderSeccionGeneral = (cont) => {
+                            const campoCliente = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.cliente')}</Text>
+                                    <TouchableOpacity style={[styles.clientePickerBtn, cliente ? { borderColor: '#475569', backgroundColor: '#EEF2F8' } : null]} onPress={() => { if (isReadOnly) return; setClientePickerVisible(true); }}>
+                                        <Text style={[styles.clientePickerBtnText, cliente ? { color: '#334155', fontWeight: '700' } : null]}>{cliente ? (razonSocial || cliente) : t('forms.selectCliente')}</Text>
+                                    </TouchableOpacity>
+                                    {!cliente && <Text style={styles.clientePickerHint}>{t('forms.clienteHint')}</Text>}
+                                </View>
+                            );
+                            const campoFecha = (
+                                <View>
+                                    <Text style={styles.label}>{fechaLabel}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <TextInput value={formatDateDisplay(fecha)} style={[styles.input(fecha, true, false, submitted), { flex: 1, marginBottom: 0 }]} editable={false} />
+                                        {Platform.OS === 'web' ? (
+                                            <View style={{ width: 38, height: 38, borderRadius: 8, borderWidth: 1, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFBFD', position: 'relative' }}>
+                                                <Text style={{ fontSize: 16 }}>📅</Text>
+                                                <input type="date" value={fecha} onChange={(e) => { const valor = e?.target?.value || ''; if (!valor) return; setFecha(valor); }} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                                            </View>
+                                        ) : (
+                                            <TouchableOpacity onPress={() => abrirDatePicker('fecha')} style={{ width: 38, height: 38, borderRadius: 8, borderWidth: 1, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFBFD' }}>
+                                                <Text style={{ fontSize: 16 }}>📅</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            );
+                            const campoEntrega = showFechaEntrega ? (
+                                <View>
+                                    <Text style={styles.label}>{fechaEntregaLabel}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <TextInput value={formatDateDisplay(fechaEntrega)} style={[styles.input(fechaEntrega, true, false, submitted), { flex: 1, marginBottom: 0 }, submitted && fechaEntregaAntesCreacion ? { borderColor: '#D21820' } : null]} editable={false} />
+                                        {Platform.OS === 'web' ? (
+                                            <View style={{ width: 38, height: 38, borderRadius: 8, borderWidth: 1, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFBFD', position: 'relative' }}>
+                                                <Text style={{ fontSize: 16 }}>📅</Text>
+                                                <input type="date" value={fechaEntrega} min={fecha || undefined} onChange={(e) => { const valor = e?.target?.value || ''; if (!valor) return; setFechaEntrega(valor); }} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                                            </View>
+                                        ) : (
+                                            <TouchableOpacity onPress={() => abrirDatePicker('fechaEntrega')} style={{ width: 38, height: 38, borderRadius: 8, borderWidth: 1, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFBFD' }}>
+                                                <Text style={{ fontSize: 16 }}>📅</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    {submitted && fechaEntregaAntesCreacion && <Text style={styles.errorText}>{t('forms.errorFechaEntrega')}</Text>}
+                                </View>
+                            ) : null;
+                            const campoVendedor = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.comercial')}</Text>
+                                    {Platform.OS === 'web' ? (
+                                        <div style={{ borderWidth: 1, borderStyle: 'solid', borderColor: borderColorState(vendedor, true, false, submitted), backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 10, overflow: 'hidden', padding: 0 }}>
+                                            <select value={vendedor} onChange={(e) => { if (isReadOnly) return; setVendedor(e.target.value); }} disabled={isReadOnly} style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8, fontSize: 14, color: '#0F172A', outlineWidth: 0, WebkitAppearance: 'none', appearance: 'none', cursor: isReadOnly ? 'default' : 'pointer' }}>
+                                                <option value="">{t('forms.selectComercial')}</option>
+                                                {usuariosComerciales.map((u) => <option key={u.id || u.usuario_id || u.nombre} value={u.nombre}>{u.nombre}</option>)}
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <BotonSelector opciones={comerciales} valorSeleccionado={vendedor} onSelect={setVendedor} required={true} submitted={submitted} disabled={isReadOnly} />
+                                    )}
+                                </View>
+                            );
+                            const campoReferencia = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.referencia')}</Text>
+                                    <TextInput value={referencia} onChangeText={(v) => { if (isReadOnly) return; setReferencia(v); }} placeholder={t('forms.refereciaPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(referencia, true, false, submitted)} editable={!isReadOnly} />
+                                </View>
+                            );
+                            const renderMap = {
+                                '__base_cliente':    campoCliente,
+                                '__base_fecha':      campoFecha,
+                                '__base_entrega':    campoEntrega,
+                                '__base_vendedor':   campoVendedor,
+                                '__base_referencia': campoReferencia,
+                            };
+                            return (
+                                <View style={styles.section}>
+                                    <Text style={styles.sectionTitle}>{cont?.nombre || t('forms.sectionGeneral')}</Text>
+                                    {layoutRows([
+                                        { campo_id: '__base_cliente',    col: 0, fila: 0, ancho: 6 },
+                                        { campo_id: '__base_referencia', col: 6, fila: 0, ancho: 6 },
+                                        { campo_id: '__base_fecha',      col: 0, fila: 1, ancho: 4 },
+                                        { campo_id: '__base_entrega',    col: 4, fila: 1, ancho: 4 },
+                                        { campo_id: '__base_vendedor',   col: 8, fila: 1, ancho: 4 },
+                                    ], renderMap)}
+                                    {!!cliente && (
+                                        <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden', marginBottom: 8 }}>
+                                            <TouchableOpacity onPress={() => setClienteExpandido(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F1F5F9' }}>
+                                                <Text style={{ fontSize: 12, color: '#64748B', flex: 1 }} numberOfLines={1}>{[cif, personasContacto, email].filter(Boolean).join(' · ')}</Text>
+                                                <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', marginLeft: 10 }}>{clienteExpandido ? t('forms.menosDatos') : t('forms.verDatos')}</Text>
+                                            </TouchableOpacity>
+                                            {clienteExpandido && (
+                                                <View style={{ padding: 12, paddingTop: 8 }}>
+                                                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                        <View style={styles.col}>
+                                                            <Text style={styles.label}>{t('forms.razonSocial')}</Text>
+                                                            <TextInput value={razonSocial} onChangeText={() => {}} placeholder={t('forms.razonSocialPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(razonSocial, false, false, submitted)} editable={false} />
+                                                        </View>
+                                                        <View style={styles.col}>
+                                                            <Text style={styles.label}>{t('forms.cif')}</Text>
+                                                            <TextInput value={cif} onChangeText={() => {}} placeholder={t('forms.cifPlaceholder')} placeholderTextColor="#94A3B8" style={[styles.input(cif, false, false, submitted), submitted && cifInvalido ? { borderColor: '#D21820' } : null]} editable={false} />
+                                                            {submitted && cifInvalido && <Text style={styles.errorText}>{t('forms.errorCif')}</Text>}
+                                                        </View>
+                                                    </View>
+                                                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                                                        <View style={styles.col}>
+                                                            <Text style={styles.label}>{t('forms.personasContacto')}</Text>
+                                                            <TextInput value={personasContacto} onChangeText={() => {}} placeholder={t('forms.personasContactoPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(personasContacto, false, false, submitted)} editable={false} />
+                                                        </View>
+                                                        <View style={styles.col}>
+                                                            <Text style={styles.label}>{t('forms.email')}</Text>
+                                                            <TextInput value={email} onChangeText={() => {}} placeholder={t('forms.emailPlaceholder')} placeholderTextColor="#94A3B8" style={[styles.input(email, false, false, submitted), submitted && emailInvalido ? { borderColor: '#D21820' } : null]} keyboardType="email-address" autoCapitalize="none" editable={false} />
+                                                            {submitted && emailInvalido && <Text style={styles.errorText}>{t('forms.errorEmail')}</Text>}
+                                                            {submitted && emailVacio && <Text style={styles.errorText}>{t('forms.errorEmailRequired')}</Text>}
+                                                        </View>
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        };
+
+                        const renderSeccionProducto = (cont) => {
+                            const campoMaquina = showMaquinaField ? (
+                                <View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                        <Text style={[styles.label, { marginBottom: 0 }]}>{maquinaLabel}</Text>
+                                        {!isReadOnly && <TouchableOpacity onPress={() => setShowMaquinaCreate(true)} style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevaMaquina')}</Text></TouchableOpacity>}
+                                    </View>
+                                    {Platform.OS === 'web' ? (
+                                        <View style={{ borderWidth: 1, borderColor: submitted && maquinaIncompatible ? '#D21820' : borderColorState(maquina, true, false, submitted), backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                            <select value={maquina} onChange={(e) => setMaquina(e.target.value)} style={{ width: '100%', borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, fontSize: 14, color: '#0F172A', outlineWidth: 0, cursor: 'pointer' }}>
+                                                <option value="">{t('forms.selectMaquina')}</option>
+                                                {maquinasActivas.map((m) => <option key={m.id} value={m.nombre}>{`${m.nombre} (${m.numero_colores || '-'} ${t('forms.colores')})${!puedeSeleccionarMaquina(m) ? ` ${t('forms.noCompatible')}` : ''}`}</option>)}
+                                            </select>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.selectorRow}>
+                                            {maquinasActivas.map((m) => { const activa = maquina === m.nombre; const habilitada = puedeSeleccionarMaquina(m); return <TouchableOpacity key={m.id} style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: activa ? '#E8E8EC' : '#FBFBFD', borderRadius: 22, borderWidth: 2, borderColor: submitted && activa && !habilitada ? '#D21820' : (activa ? '#E55A2B' : '#CCC'), marginRight: 8, marginBottom: 8, minWidth: 90, alignItems: 'center', opacity: habilitada ? 1 : 0.35 }} onPress={() => setMaquina(m.nombre)}><Text style={{ color: activa ? '#393B3F' : '#6C6C70', fontWeight: activa ? '700' : '500', fontSize: 13 }}>{`${m.nombre} (${m.numero_colores || '-'})`}</Text></TouchableOpacity>; })}
+                                        </View>
+                                    )}
+                                    {submitted && !maquina && <Text style={styles.errorText}>{t('forms.errorMaquinaRequired')}</Text>}
+                                    {submitted && maquinaIncompatible && <Text style={styles.errorText}>{t('forms.errorMaquinaIncompatible')} ({numeroTintasSeleccionadas}).</Text>}
+                                </View>
+                            ) : null;
+                            const campoMaterial = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.material')}</Text>
+                                    <BotonSelector opciones={materiales} valorSeleccionado={material} onSelect={setMaterial} required={true} submitted={submitted} disabled={isReadOnly} />
+                                </View>
+                            );
+                            const campoAcabado = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.acabado')}</Text>
+                                    <BotonSelector opciones={acabados} valorSeleccionado={acabado} onSelect={setAcabado} multiple={true} required={false} submitted={submitted} disabled={isReadOnly} />
+                                </View>
+                            );
+                            const campoTirada = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.tirada')}</Text>
+                                    <TextInput value={tirada} onChangeText={(v) => { if (isReadOnly) return; setTirada(v); }} keyboardType="numeric" placeholder={t('forms.tiradaPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(tirada, true, true, submitted)} editable={!isReadOnly} />
+                                </View>
+                            );
+                            const campoTroquel = (
+                                <View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                        <Text style={styles.label}>{t('forms.troquel')}</Text>
+                                        {!isReadOnly && <TouchableOpacity onPress={() => setShowTroquelCreate(true)} style={{ backgroundColor: '#EEF2F8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#475569', fontWeight: '600', fontSize: 13 }}>{t('forms.nuevoTroquel')}</Text></TouchableOpacity>}
+                                    </View>
+                                    {troquelesCat.length === 0 ? <EmptyState variant="inline" title={t('forms.sinTroqueles')} message={t('forms.sinTroquelesMensaje')} /> : Platform.OS === 'web' ? (
+                                        <View style={{ borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F1F5F9', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+                                            <select style={{ fontSize: 14, borderWidth: 0, backgroundColor: 'transparent', paddingTop: 8, paddingBottom: 8, paddingLeft: 10, paddingRight: 10, width: '100%', color: '#0F172A', cursor: isReadOnly ? 'not-allowed' : 'pointer', outlineWidth: 0 }} value={troquelSel?._id || troquelSel?.id || ''} disabled={isReadOnly} onChange={e => { const found = troquelesCat.find(tr => (tr._id || tr.id) === e.target.value); handleTroquelSelect(found || null); }}>
+                                                <option value="">{t('forms.sinTroquel')}</option>
+                                                {troquelesCat.map((tr, i) => <option key={tr._id || tr.id || i} value={tr._id || tr.id}>{tr.numero}{tr.tipo ? ` · ${tr.tipo}` : ''}{tr.estado ? ` · ${tr.estado}` : ''}{tr.anchoMotivo && tr.altoMotivo ? ` · ${tr.anchoMotivo}×${tr.altoMotivo}mm` : ''}</option>)}
+                                            </select>
+                                        </View>
+                                    ) : (
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                            <TouchableOpacity disabled={isReadOnly} onPress={() => handleTroquelSelect(null)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: !troquelSel ? '#475569' : '#EEF2F8' }}><Text style={{ color: !troquelSel ? '#fff' : '#475569', fontSize: 13 }}>{t('forms.sinTroquel')}</Text></TouchableOpacity>
+                                            {troquelesCat.map((tr, i) => { const isSel = troquelSel && (troquelSel._id || troquelSel.id) === (tr._id || tr.id); return <TouchableOpacity key={tr._id || tr.id || i} disabled={isReadOnly} onPress={() => handleTroquelSelect(tr)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: isSel ? '#475569' : '#EEF2F8' }}><Text style={{ color: isSel ? '#fff' : '#475569', fontSize: 13 }}>{tr.numero}</Text></TouchableOpacity>; })}
+                                        </View>
+                                    )}
+                                    {troquelSel && (
+                                        <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 10 }}>
+                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                                                {[{ label: 'Número', value: troquelSel.numero }, { label: 'Tipo', value: troquelSel.tipo }, { label: 'Forma', value: troquelSel.forma }, { label: 'Estado', value: troquelSel.estado }, { label: 'Ancho motivo', value: troquelSel.anchoMotivo ? `${troquelSel.anchoMotivo} mm` : null }, { label: 'Alto motivo', value: troquelSel.altoMotivo ? `${troquelSel.altoMotivo} mm` : null }, { label: 'Motivos ancho', value: troquelSel.motivosAncho ? String(troquelSel.motivosAncho) : null }, { label: 'Separación ancho', value: troquelSel.separacionAncho ? `${troquelSel.separacionAncho} mm` : null }, { label: 'Valor Z', value: troquelSel.valorZ ? String(troquelSel.valorZ) : null }, { label: 'Dist. sesgado', value: troquelSel.distanciaSesgado ? `${troquelSel.distanciaSesgado} mm` : null }].filter(f => f.value != null && f.value !== '').map(f => (
+                                                    <View key={f.label} style={{ minWidth: 110 }}><Text style={{ fontSize: 11, color: '#475569', fontWeight: '600', marginBottom: 2 }}>{f.label}</Text><Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{f.value}</Text></View>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                            const renderMap = {
+                                '__base_maquina':  campoMaquina,
+                                '__base_material': campoMaterial,
+                                '__base_acabado':  campoAcabado,
+                                '__base_tirada':   campoTirada,
+                                '__base_troquel':  campoTroquel,
+                            };
+                            return (
+                                <>
+                                    <View style={styles.section}>
+                                        <Text style={styles.sectionTitle}>{cont?.nombre || t('forms.sectionProducto')}</Text>
+                                        {layoutRows([
+                                            { campo_id: '__base_maquina',  col: 0, fila: 0, ancho: 6 },
+                                            { campo_id: '__base_material', col: 6, fila: 0, ancho: 6 },
+                                            { campo_id: '__base_acabado',  col: 0, fila: 1, ancho: 6 },
+                                            { campo_id: '__base_tirada',   col: 6, fila: 1, ancho: 3 },
+                                            { campo_id: '__base_troquel',  col: 9, fila: 1, ancho: 3 },
+                                        ], renderMap)}
+                                    </View>
+                                    {(() => {
+                                        const filtered = camposPersonalizados.filter(c => cont ? (c.contenedor_id === cont.contenedor_id || (!c.contenedor_id && c.seccion === 'producto')) : c.seccion === 'producto');
+                                        return filtered.length > 0 ? (
+                                            <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
+                                                <CamposDinamicos seccion="producto" contenedorId={cont?.contenedor_id} campos={camposPersonalizados} valores={camposExtra} onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))} submitted={submitted} />
+                                            </View>
+                                        ) : null;
+                                    })()}
+                                </>
+                            );
+                        };
+
+                        const renderSeccionImpresion = (cont) => {
+                            const campoTintas = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.tintas')}</Text>
+                                    <TintasSelector selectedTintas={selectedTintas} setSelectedTintas={setSelectedTintas} opcionesTintas={tintasOpciones} pantones={pantones} onRemovePantone={removePantoneAt} onStartAdd={() => { if (isReadOnly) return; setAddingPantone(true); setPantoneInput(''); }} addingPantone={addingPantone} addingValue={pantoneInput} onChangeAdding={(v) => { if (isReadOnly) return; setPantoneInput(v); }} onConfirmAdding={(txt) => { const val = (txt || '').trim(); if (val && !isReadOnly) addPantone(val); setAddingPantone(false); setPantoneInput(''); }} addingMatchHex={(findPantoneInMap(pantoneInput) || {}).data ? srgbToHex((findPantoneInMap(pantoneInput) || {}).data.srgb) : null} disabled={isReadOnly} />
+                                    <Text style={styles.tintaCounter}>{t('forms.nTintasSeleccionadas')}: {numeroTintasSeleccionadas}</Text>
+                                </View>
+                            );
+                            const campoTintaEspecial = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.tintaEspecial')}</Text>
+                                    {tintasEspeciales.length > 0 ? (
+                                        <BotonSelector opciones={tintasEspeciales} valorSeleccionado={detalleTintaEspecial} onSelect={setDetalleTintaEspecial} multiple={true} required={false} submitted={submitted} />
+                                    ) : (
+                                        <TextInput value={Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.join(', ') : ''} onChangeText={(text) => setDetalleTintaEspecial(parseTintasEspecialesTexto(text))} placeholder={t('forms.tintaEspecialPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(detalleTintaEspecial, false, false, submitted)} />
+                                    )}
+                                </View>
+                            );
+                            const campoObserv = (
+                                <View>
+                                    <Text style={styles.label}>{t('forms.observaciones')}</Text>
+                                    <TextInput
+                                        value={observaciones}
+                                        onChangeText={setObservaciones}
+                                        placeholder={t('forms.observacionesPlaceholder')}
+                                        placeholderTextColor="#94A3B8"
+                                        multiline
+                                        numberOfLines={3}
+                                        style={[styles.input(observaciones, false, false, submitted), { minHeight: 72, textAlignVertical: 'top' }]}
+                                        editable={!isReadOnly}
+                                    />
+                                </View>
+                            );
+                            const renderMap = {
+                                '__base_tintas':         campoTintas,
+                                '__base_tinta_especial': campoTintaEspecial,
+                                '__base_observ':         campoObserv,
+                            };
+                            return (
+                                <>
+                                    <View style={styles.section}>
+                                        <Text style={styles.sectionTitle}>{cont?.nombre || t('forms.sectionImpresion')}</Text>
+                                        {layoutRows([
+                                            { campo_id: '__base_tintas',         col: 0, fila: 0, ancho: 6 },
+                                            { campo_id: '__base_tinta_especial', col: 6, fila: 0, ancho: 6 },
+                                            { campo_id: '__base_observ',         col: 0, fila: 1, ancho: 12 },
+                                        ], renderMap)}
+                                    </View>
+                                    {(() => {
+                                        const filtered = camposPersonalizados.filter(c => cont ? (c.contenedor_id === cont.contenedor_id || (!c.contenedor_id && c.seccion === 'impresion')) : c.seccion === 'impresion');
+                                        return filtered.length > 0 ? (
+                                            <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
+                                                <CamposDinamicos seccion="impresion" contenedorId={cont?.contenedor_id} campos={camposPersonalizados} valores={camposExtra} onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))} submitted={submitted} />
+                                            </View>
+                                        ) : null;
+                                    })()}
+                                </>
+                            );
+                        };
+
+                        const renderSeccionCustom = (cont) => {
+                            const filtered = camposPersonalizados.filter(c => c.contenedor_id === cont.contenedor_id);
+                            if (filtered.length === 0) return null;
+                            return (
+                                <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginBottom: 6, marginTop: 4 }}>
+                                        {cont.nombre}
+                                    </Text>
+                                    <CamposDinamicos
+                                        contenedorId={cont.contenedor_id}
+                                        campos={camposPersonalizados}
+                                        valores={camposExtra}
+                                        onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))}
                                         submitted={submitted}
                                     />
-                                ) : (
-                                    <TextInput
-                                        value={Array.isArray(detalleTintaEspecial) ? detalleTintaEspecial.join(', ') : ''}
-                                        onChangeText={(text) => setDetalleTintaEspecial(parseTintasEspecialesTexto(text))}
-                                        placeholder={t('forms.tintaEspecialPlaceholder')}
-                                        placeholderTextColor="#94A3B8"
-                                        style={styles.input(detalleTintaEspecial, false, false, submitted)}
-                                    />
-                                )}
-                            </View>
-                        </View>
-                    </View>
+                                </View>
+                            );
+                        };
 
-                    {/* ── Observaciones ── */}
-                    <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
-                        <Text style={styles.label}>{t('forms.observaciones')}</Text>
-                        <TextInput
-                            value={observaciones}
-                            onChangeText={setObservaciones}
-                            placeholder={t('forms.observacionesPlaceholder')}
-                            placeholderTextColor="#94A3B8"
-                            multiline
-                            numberOfLines={3}
-                            style={[styles.input(observaciones, false, false, submitted), { minHeight: 72, textAlignVertical: 'top' }]}
-                            editable={!isReadOnly}
-                        />
-                    </View>
+                        const renderSeccion = (cont) => {
+                            switch (cont.tipo) {
+                                case 'general':    return renderSeccionGeneral(cont);
+                                case 'producto':   return renderSeccionProducto(cont);
+                                case 'impresion':  return renderSeccionImpresion(cont);
+                                case 'custom':     return renderSeccionCustom(cont);
+                                default:           return null;
+                            }
+                        };
+
+                        const sortedContenedores = [...contenedoresFormulario].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
+
+                        return sortedContenedores.map((cont, i) => (
+                            <React.Fragment key={cont.contenedor_id}>
+                                {renderSeccion(cont)}
+                                {i < sortedContenedores.length - 1 && <View style={styles.divider} />}
+                            </React.Fragment>
+                        ));
+                    })()}
 
                 </ScrollView>
 

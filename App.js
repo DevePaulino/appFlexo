@@ -29,6 +29,7 @@ import SettingMenuScreen from './screens/SettingMenuScreen';
 import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 import BillingScreen from './screens/BillingScreen';
+import FormBuilderScreen from './screens/FormBuilderScreen';
 import CookieBanner from './components/CookieBanner';
 
 // Inject global web CSS: placeholder text italic + muted color
@@ -65,6 +66,7 @@ const buildSettingsSubmenu = (t) => [
   { key: 'settings-impresion', label: t('nav.impresion'), target: { type: 'stack', tab: 'Setting', route: 'SettingsImpresion' } },
   { key: 'settings-funcionalidades', label: t('nav.pedidosConfig'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFuncionalidades' } },
   { key: 'settings-modulos', label: t('nav.modulos'), target: { type: 'stack', tab: 'Setting', route: 'SettingsModulos' } },
+  { key: 'settings-form-builder', label: t('nav.formBuilder'), target: { type: 'stack', tab: 'Setting', route: 'SettingsFormBuilder' } },
   { key: 'settings-usuarios-roles', label: t('nav.usuariosRoles'), target: { type: 'stack', tab: 'Setting', route: 'SettingsUsuariosRoles' } },
 ];
 
@@ -102,6 +104,7 @@ const linking = {
               SettingsFuncionalidades: 'setting/funcionalidades',
               SettingsImpresion: 'setting/impresion',
               SettingsModulos: 'setting/modulos',
+              SettingsFormBuilder: 'setting/form-builder',
               SettingsUsuariosRoles: 'setting/usuarios-roles',
             },
           },
@@ -945,6 +948,10 @@ function SettingsNavigator({ currentUser }) {
       <SettingsStack.Screen
         name="SettingsModulos"
         children={(props) => <ModulosScreen {...props} />}
+      />
+      <SettingsStack.Screen
+        name="SettingsFormBuilder"
+        children={(props) => <FormBuilderScreen {...props} />}
       />
       <SettingsStack.Screen
         name="SettingsUsuariosRoles"

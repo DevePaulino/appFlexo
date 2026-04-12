@@ -346,6 +346,7 @@ PERMISSION_KEYS = [
     'edit_modo_creacion',
     'manage_billing',
     'manage_modulos',
+    'manage_form_builder',
 ]
 ROLE_PERMISSIONS_DEFAULT = {
     'operario': {
@@ -366,6 +367,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
     'administrador': {
         'manage_empresa_branding': True,
@@ -385,6 +387,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': True,
         'manage_billing': True,
         'manage_modulos': True,
+        'manage_form_builder': True,
     },
     'root': {
         'manage_empresa_branding': True,
@@ -404,6 +407,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': True,
         'manage_billing': True,
         'manage_modulos': True,
+        'manage_form_builder': True,
     },
     # Department roles
     'comercial': {
@@ -424,6 +428,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
     'diseno': {
         'manage_empresa_branding': False,
@@ -443,6 +448,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
     'impresion': {
         'manage_empresa_branding': False,
@@ -462,6 +468,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
     'post-impresion': {
         'manage_empresa_branding': False,
@@ -481,6 +488,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
     'oficina': {
         'manage_empresa_branding': False,
@@ -500,6 +508,7 @@ ROLE_PERMISSIONS_DEFAULT = {
         'edit_modo_creacion': False,
         'manage_billing': False,
         'manage_modulos': False,
+        'manage_form_builder': False,
     },
 }
 
@@ -856,6 +865,7 @@ def get_billing_status_for_user(email, empresa_id=None):
         'billing_model': str(user.get('billing_model') or 'creditos'),
         'creditos': int(user.get('creditos') or 0),
         'nombre': str(user.get('nombre') or ''),
+        'subscription_active': bool(user.get('subscription_active', False)),
     }
 
 
@@ -9091,6 +9101,370 @@ def metadatos_archivo(archivo_id):
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Form Builder — campos personalizados del formulario de pedido/presupuesto
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _campos_col_name(form_tipo):
+    """Devuelve el nombre de la colección según el tipo de formulario."""
+    if form_tipo == 'presupuesto':
+        return 'campos_formulario_presupuesto'
+    if form_tipo == 'troquel':
+        return 'campos_formulario_troquel'
+    return 'campos_formulario'
+
+
+def _base_layout_col_name(form_tipo):
+    if form_tipo == 'presupuesto':
+        return 'campos_base_layout_presupuesto'
+    if form_tipo == 'troquel':
+        return 'campos_base_layout_troquel'
+    return 'campos_base_layout'
+
+
+def _contenedores_col_name(form_tipo):
+    if form_tipo == 'presupuesto':
+        return 'contenedores_formulario_presupuesto'
+    if form_tipo == 'troquel':
+        return 'contenedores_formulario_troquel'
+    return 'contenedores_formulario'
+
+
+_SEED_CONTENEDORES = {
+    'pedido':      [('Datos Generales', 'general', 0), ('Producto', 'producto', 1), ('Impresión', 'impresion', 2)],
+    'presupuesto': [('Datos Generales', 'general', 0), ('Producto', 'producto', 1), ('Impresión', 'impresion', 2)],
+    'troquel':     [('Troquel', 'troquel', 0)],
+}
+_BASE_TIPOS = {
+    'pedido':      ['general', 'producto', 'impresion'],
+    'presupuesto': ['general', 'producto', 'impresion'],
+    'troquel':     ['troquel'],
+}
+
+
+@app.route('/api/campos-formulario', methods=['GET'])
+def get_campos_formulario():
+    """Devuelve los campos personalizados. ?form=pedido|presupuesto"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        col = get_empresa_collection(_campos_col_name(form_tipo), empresa_id)
+        campos = list(col.find({'empresa_id': empresa_id, 'activo': {'$ne': False}}).sort('orden', 1))
+        return jsonify({'campos': [fix_id(c) for c in campos]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/campos-formulario', methods=['POST'])
+def create_campo_formulario():
+    """Crea un nuevo campo personalizado. ?form=pedido|presupuesto"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        import uuid
+        campo = {
+            'empresa_id': empresa_id,
+            'campo_id': str(uuid.uuid4()),
+            'etiqueta': data.get('etiqueta', ''),
+            'tipo': data.get('tipo', 'texto'),
+            'seccion': data.get('seccion', 'producto'),
+            'opciones': data.get('opciones', []),
+            'obligatorio': bool(data.get('obligatorio', False)),
+            'orden': int(data.get('orden', 999)),
+            'ancho': int(data.get('ancho', 6)),
+            'alto': int(data.get('alto', 1)),
+            'col': int(data.get('col', 0)),
+            'fila': int(data.get('fila', 0)),
+            'contenedor_id': data.get('contenedor_id', ''),
+            'activo': True,
+        }
+        col = get_empresa_collection(_campos_col_name(form_tipo), empresa_id)
+        result = col.insert_one(campo)
+        campo['id'] = str(result.inserted_id)
+        del campo['_id']
+        return jsonify({'campo': campo}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/campos-formulario/<campo_id>', methods=['PUT'])
+def update_campo_formulario(campo_id):
+    """Actualiza un campo personalizado. ?form=pedido|presupuesto"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        allowed = ['etiqueta', 'tipo', 'seccion', 'opciones', 'obligatorio', 'orden', 'ancho', 'alto', 'col', 'fila', 'activo', 'contenedor_id']
+        update = {k: data[k] for k in allowed if k in data}
+        col = get_empresa_collection(_campos_col_name(form_tipo), empresa_id)
+        result = None
+        try:
+            result = col.update_one({'_id': ObjectId(campo_id), 'empresa_id': empresa_id}, {'$set': update})
+        except Exception:
+            pass
+        if not result or result.matched_count == 0:
+            result = col.update_one({'campo_id': campo_id, 'empresa_id': empresa_id}, {'$set': update})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Campo no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/campos-formulario/<campo_id>', methods=['DELETE'])
+def delete_campo_formulario(campo_id):
+    """Elimina un campo personalizado. ?form=pedido|presupuesto"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        col = get_empresa_collection(_campos_col_name(form_tipo), empresa_id)
+        result = None
+        try:
+            result = col.delete_one({'_id': ObjectId(campo_id), 'empresa_id': empresa_id})
+        except Exception:
+            pass
+        if not result or result.deleted_count == 0:
+            result = col.delete_one({'campo_id': campo_id, 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Campo no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/campos-formulario/layout', methods=['PUT'])
+def update_campos_layout():
+    """Guarda las posiciones de los campos. ?form=pedido|presupuesto"""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        items = data.get('layout', [])
+        col = get_empresa_collection(_campos_col_name(form_tipo), empresa_id)
+        for item in items:
+            cid = item.get('campo_id') or item.get('i')
+            if not cid:
+                continue
+            update = {'col': item.get('x', 0), 'fila': item.get('y', 0), 'ancho': item.get('w', 6), 'alto': item.get('h', 1)}
+            if item.get('contenedor_id'):
+                update['contenedor_id'] = item['contenedor_id']
+            try:
+                col.update_one({'_id': ObjectId(cid), 'empresa_id': empresa_id}, {'$set': update})
+            except Exception:
+                col.update_one({'campo_id': cid, 'empresa_id': empresa_id}, {'$set': update})
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Contenedores de formulario ───────────────────────────────────────────────
+
+def _seed_contenedores_default(col, empresa_id, form_tipo='pedido'):
+    import uuid as _uuid
+    seed = _SEED_CONTENEDORES.get(form_tipo, _SEED_CONTENEDORES['pedido'])
+    defaults = [
+        {'empresa_id': empresa_id, 'contenedor_id': str(_uuid.uuid4()), 'nombre': nombre, 'tipo': tipo, 'orden': orden}
+        for nombre, tipo, orden in seed
+    ]
+    col.insert_many(defaults)
+    return [fix_id(c) for c in defaults]
+
+
+@app.route('/api/contenedores-formulario', methods=['GET'])
+def get_contenedores_formulario():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        col = get_empresa_collection(_contenedores_col_name(form_tipo), empresa_id)
+        items = list(col.find({'empresa_id': empresa_id}).sort('orden', 1))
+        if not items:
+            return jsonify({'contenedores': _seed_contenedores_default(col, empresa_id, form_tipo)}), 200
+        # Limpieza: eliminar contenedores cuyo tipo no es válido para este form_tipo
+        tipos_validos = {tipo for _, tipo, _ in _SEED_CONTENEDORES.get(form_tipo, [])}
+        tipos_base_validos = set(_BASE_TIPOS.get(form_tipo, []))
+        tipos_permitidos = tipos_validos | tipos_base_validos | {'custom'}
+        ids_invalidos = [c.get('contenedor_id') for c in items if c.get('tipo') not in tipos_permitidos and c.get('tipo')]
+        if ids_invalidos:
+            col.delete_many({'empresa_id': empresa_id, 'contenedor_id': {'$in': ids_invalidos}})
+            items = [c for c in items if c.get('contenedor_id') not in ids_invalidos]
+        # Si tras la limpieza no quedan items, resembrar
+        if not items:
+            return jsonify({'contenedores': _seed_contenedores_default(col, empresa_id, form_tipo)}), 200
+        # Migración: asegurar que existen los contenedores base para este form_tipo
+        tipos_existentes = {c.get('tipo') for c in items}
+        import uuid as _uuid
+        for nombre, tipo, orden in _SEED_CONTENEDORES.get(form_tipo, []):
+            if tipo not in tipos_existentes:
+                nuevo = {'empresa_id': empresa_id, 'contenedor_id': str(_uuid.uuid4()), 'nombre': nombre, 'tipo': tipo, 'orden': orden}
+                col.insert_one(nuevo)
+                items.append(nuevo)
+        items.sort(key=lambda c: c.get('orden', 99))
+        return jsonify({'contenedores': [fix_id(c) for c in items]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/contenedores-formulario', methods=['POST'])
+def create_contenedor_formulario():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        import uuid
+        col = get_empresa_collection(_contenedores_col_name(form_tipo), empresa_id)
+        max_orden = col.count_documents({'empresa_id': empresa_id})
+        contenedor = {
+            'empresa_id': empresa_id,
+            'contenedor_id': str(uuid.uuid4()),
+            'nombre': data.get('nombre', 'Nuevo contenedor'),
+            'tipo': 'custom',
+            'orden': int(data.get('orden', max_orden)),
+        }
+        result = col.insert_one(contenedor)
+        contenedor['id'] = str(result.inserted_id)
+        del contenedor['_id']
+        return jsonify({'contenedor': contenedor}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/contenedores-formulario/<contenedor_id>', methods=['PUT'])
+def update_contenedor_formulario(contenedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        allowed = ['nombre', 'orden']
+        update = {k: data[k] for k in allowed if k in data}
+        col = get_empresa_collection(_contenedores_col_name(form_tipo), empresa_id)
+        result = col.update_one({'contenedor_id': contenedor_id, 'empresa_id': empresa_id}, {'$set': update})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Contenedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/contenedores-formulario/<contenedor_id>', methods=['DELETE'])
+def delete_contenedor_formulario(contenedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        col = get_empresa_collection(_contenedores_col_name(form_tipo), empresa_id)
+        doc = col.find_one({'contenedor_id': contenedor_id, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Contenedor no encontrado'}), 404
+        if doc.get('tipo') in ('general', 'producto', 'impresion'):
+            return jsonify({'error': 'No se pueden eliminar las secciones por defecto'}), 400
+        remaining = col.count_documents({'empresa_id': empresa_id})
+        if remaining <= 1:
+            return jsonify({'error': 'Debe quedar al menos un contenedor'}), 400
+        col.delete_one({'contenedor_id': contenedor_id, 'empresa_id': empresa_id})
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Layout campos base (overrides por empresa) ───────────────────────────────
+
+@app.route('/api/campos-base-layout', methods=['GET'])
+def get_campos_base_layout():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        col = get_empresa_collection(_base_layout_col_name(form_tipo), empresa_id)
+        items = list(col.find({'empresa_id': empresa_id}))
+        layout = {item['campo_id']: fix_id(item) for item in items}
+        return jsonify({'layout': layout}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/campos-base-layout', methods=['PUT'])
+def update_campos_base_layout():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        if not can_role_permission(request_user.get('rol'), 'manage_form_builder'):
+            return jsonify({'error': 'Permiso denegado'}), 403
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        form_tipo = request.args.get('form', 'pedido')
+        data = request.get_json() or {}
+        items = data.get('layout', [])
+        col = get_empresa_collection(_base_layout_col_name(form_tipo), empresa_id)
+        for item in items:
+            cid = item.get('campo_id')
+            if not cid:
+                continue
+            update = {
+                'empresa_id': empresa_id,
+                'campo_id': cid,
+                'col': item.get('x', item.get('col', 0)),
+                'fila': item.get('y', item.get('fila', 0)),
+                'ancho': item.get('w', item.get('ancho', 6)),
+                'alto': item.get('h', item.get('alto', 1)),
+                'contenedor_id': item.get('contenedor_id', ''),
+            }
+            if 'etiqueta' in item:
+                update['etiqueta'] = item['etiqueta']
+            if 'opciones' in item:
+                update['opciones'] = item['opciones']
+            col.update_one({'campo_id': cid, 'empresa_id': empresa_id}, {'$set': update}, upsert=True)
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Also extend campos_formulario PUT to support contenedor_id
+# (already handled by adding 'contenedor_id' to allowed list in update_campo_formulario above)
 
 
 if __name__ == '__main__':

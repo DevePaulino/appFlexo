@@ -29,37 +29,36 @@ const PEDIDO_RULES_EXPANDED_KEY = 'config_pedido_rules_expanded';
 const ROLE_RULES_EXPANDED_KEY = 'config_role_rules_expanded';
 
 const ROLE_PERMISSION_CONFIG = [
-  { key: 'manage_empresa_branding', title: 'Personalización de empresa',               hint: 'Editar nombre visible y logo de la empresa.' },
-  { key: 'manage_app_settings',    title: 'Editar configuración de la app',           hint: 'Modificar catálogos y reglas globales.' },
-  { key: 'manage_roles_permissions',title: 'Editar roles y permisos',                  hint: 'Cambiar el rol activo y la matriz de permisos.' },
-  { key: 'manage_usuarios',         title: 'Gestionar usuarios',                       hint: 'Añadir, editar y eliminar usuarios.' },
-  { key: 'manage_session_timeout',  title: 'Tiempo de sesión',                         hint: 'Configurar el timeout de inactividad por usuario.' },
-  { key: 'manage_billing',          title: 'Facturación',                              hint: 'Plan de pago, créditos e historial.' },
-  { key: 'manage_modulos',          title: 'Módulos',                                  hint: 'Activar o desactivar módulos opcionales.' },
-  { key: 'edit_pedidos',            title: 'Editar pedidos',                           hint: 'Creación y cambios de pedidos y trabajos.' },
-  { key: 'edit_presupuestos',       title: 'Editar presupuestos',                      hint: 'Creación, edición y aprobación de presupuestos.' },
-  { key: 'manage_estados_pedido',   title: 'Editar estados de pedidos',                hint: 'Crear, modificar y eliminar estados.' },
-  { key: 'editar_estado_finalizado',title: 'Editar pedidos finalizados',               hint: 'Avanzar o retroceder el estado de pedidos finalizados.' },
-  { key: 'cancelar_pedido',         title: 'Cancelar / reactivar pedidos',             hint: 'Cancelar un pedido o reactivarlo desde estado cancelado.' },
-  { key: 'edit_modo_creacion',      title: 'Modo de creación',                         hint: 'Alternar entre modo manual y automático.' },
-  { key: 'edit_produccion',         title: 'Editar producción',                        hint: 'Enviar, mover, reordenar y cambiar estado.' },
-  { key: 'eliminar_archivos',       title: 'Eliminar archivos',                        hint: 'Borrar artes y versiones en el detalle de un pedido.' },
-  { key: 'edit_clientes',           title: 'Editar clientes',                          hint: 'Alta, edición y eliminación de clientes.' },
-  { key: 'edit_maquinas',           title: 'Editar máquinas',                          hint: 'Alta, edición y eliminación de máquinas.' },
+  { key: 'manage_empresa_branding' },
+  { key: 'manage_app_settings' },
+  { key: 'manage_roles_permissions' },
+  { key: 'manage_usuarios' },
+  { key: 'manage_session_timeout' },
+  { key: 'manage_billing' },
+  { key: 'manage_modulos' },
+  { key: 'manage_form_builder' },
+  { key: 'edit_pedidos' },
+  { key: 'edit_presupuestos' },
+  { key: 'manage_estados_pedido' },
+  { key: 'editar_estado_finalizado' },
+  { key: 'cancelar_pedido' },
+  { key: 'edit_modo_creacion' },
+  { key: 'edit_produccion' },
+  { key: 'eliminar_archivos' },
+  { key: 'edit_clientes' },
+  { key: 'edit_maquinas' },
 ];
 
 const PERMISSION_GROUPS = [
   {
     key: 'admin',
-    label: 'Administración',
     color: '#6D28D9',
     bg: '#F5F3FF',
     border: '#DDD6FE',
-    permissions: ['manage_empresa_branding', 'manage_app_settings', 'manage_roles_permissions', 'manage_usuarios', 'manage_session_timeout', 'manage_billing', 'manage_modulos'],
+    permissions: ['manage_empresa_branding', 'manage_app_settings', 'manage_roles_permissions', 'manage_usuarios', 'manage_session_timeout', 'manage_billing', 'manage_modulos', 'manage_form_builder'],
   },
   {
     key: 'pedidos',
-    label: 'Pedidos y presupuestos',
     color: '#1D4ED8',
     bg: '#EFF6FF',
     border: '#BFDBFE',
@@ -67,7 +66,6 @@ const PERMISSION_GROUPS = [
   },
   {
     key: 'produccion',
-    label: 'Producción',
     color: '#065F46',
     bg: '#ECFDF5',
     border: '#A7F3D0',
@@ -75,7 +73,6 @@ const PERMISSION_GROUPS = [
   },
   {
     key: 'activos',
-    label: 'Activos',
     color: '#92400E',
     bg: '#FFFBEB',
     border: '#FDE68A',
@@ -1098,6 +1095,12 @@ export default function ConfigScreen({ route, currentUser }) {
   const pageTitle = titleBySection[section] || t('nav.pedidosConfig');
   const showBlockTitles = section === 'all';
   const showTopUsersPlus = section === 'usuarios-roles';
+
+  const rolLabel = (key) => {
+    const k = String(key || '').toLowerCase();
+    const base = t(`screens.config.baseRoles.${k}`, { defaultValue: '' });
+    return base || capitalizeFirst(k);
+  };
 
   const slugifyEstado = (texto) => {
     return String(texto || '')
@@ -2388,7 +2391,7 @@ export default function ConfigScreen({ route, currentUser }) {
                         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: itemColor, marginRight: 8, flexShrink: 0 }} />
                       )}
                       <Text style={[styles.chipText, { flex: 1 }]}>
-                        {categoryKey === 'roles' ? capitalizeFirst(item.valor) : (item.label || item.valor)}
+                        {categoryKey === 'roles' ? rolLabel(item.valor) : (item.label || item.valor)}
                       </Text>
                       <TouchableOpacity
                         style={[styles.chipEdit, esRolProtegido && styles.chipEditDisabled]}
@@ -2602,7 +2605,7 @@ export default function ConfigScreen({ route, currentUser }) {
                               style={[styles.selectChip, active && styles.selectChipActive]}
                               onPress={() => setNuevoUsuarioRol(role.key)}
                             >
-                              <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{capitalizeFirst(role.label)}</Text>
+                              <Text style={[styles.selectChipText, active && styles.selectChipTextActive]}>{rolLabel(role.label || role.key)}</Text>
                             </TouchableOpacity>
                           );
                         })}
@@ -2669,7 +2672,7 @@ export default function ConfigScreen({ route, currentUser }) {
                     {(availableRoles || []).map((role) => {
                       const roleKey = String(role?.key || '').toLowerCase();
                       const isAdmin = roleKey === 'administrador';
-                      const label = capitalizeFirst(role?.label || roleKey);
+                      const label = rolLabel(role?.label || roleKey);
                       return (
                         <View key={roleKey} style={styles.matrixRoleCol}>
                           <View style={[
@@ -2696,15 +2699,15 @@ export default function ConfigScreen({ route, currentUser }) {
                         {/* Cabecera del grupo */}
                         <View style={styles.matrixGroupHeader}>
                           <View style={[styles.matrixGroupDot, { backgroundColor: group.color }]} />
-                          <Text style={styles.matrixGroupLabel}>{group.label}</Text>
+                          <Text style={styles.matrixGroupLabel}>{t(`screens.config.permGroup_${group.key}`)}</Text>
                         </View>
 
                         {/* Filas del grupo */}
                         {groupPerms.map((perm, i) => (
                           <View key={perm.key} style={[styles.matrixRow, i % 2 === 0 && styles.matrixRowAlt]}>
                             <View style={styles.matrixPermCol}>
-                              <Text style={styles.matrixPermTitle}>{perm.title}</Text>
-                              <Text style={styles.matrixPermHint} numberOfLines={2}>{perm.hint}</Text>
+                              <Text style={styles.matrixPermTitle}>{t(`screens.config.perm_${perm.key}_title`)}</Text>
+                              <Text style={styles.matrixPermHint} numberOfLines={2}>{t(`screens.config.perm_${perm.key}_hint`)}</Text>
                             </View>
                             {(availableRoles || []).map((role) => {
                               const roleKey = String(role?.key || '').toLowerCase();
@@ -2741,7 +2744,7 @@ export default function ConfigScreen({ route, currentUser }) {
               {/* Leyenda */}
               <View style={styles.matrixLegend}>
                 <View style={[styles.matrixDot, styles.matrixDotProtected, { width: 14, height: 14, borderRadius: 4 }]} />
-                <Text style={styles.matrixLegendText}>Administrador — siempre activo (protegido)</Text>
+                <Text style={styles.matrixLegendText}>{t('screens.config.matrixLegendAdmin')}</Text>
               </View>
             </>
           )}
@@ -2751,9 +2754,9 @@ export default function ConfigScreen({ route, currentUser }) {
         {inviteModal.visible && (
           <View style={styles.usersModalBackdrop}>
             <View style={[styles.usersModalCard, { maxWidth: 420 }]}>
-              <Text style={styles.usersFormTitle}>Invitación creada</Text>
+              <Text style={styles.usersFormTitle}>{t('screens.config.inviteTitle')}</Text>
               <Text style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 20 }}>
-                Comparte este enlace con <Text style={{ fontWeight: '700', color: '#0F172A' }}>{inviteModal.nombre}</Text>. Expira en 48 horas y es de un solo uso.
+                {t('screens.config.inviteMsgPre')}<Text style={{ fontWeight: '700', color: '#0F172A' }}>{inviteModal.nombre}</Text>{t('screens.config.inviteMsgPost')}
               </Text>
               <View style={{ backgroundColor: '#EEF2FF', borderRadius: 8, borderWidth: 1, borderColor: '#C7D2FE', padding: 12, marginBottom: 12 }}>
                 <Text selectable style={{ fontSize: 12, color: '#1E1B4B', fontWeight: '600', lineHeight: 18 }} numberOfLines={3}>
@@ -2765,14 +2768,14 @@ export default function ConfigScreen({ route, currentUser }) {
                   style={{ backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginBottom: 8 }}
                   onPress={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(inviteModal.url); } }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Copiar enlace</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>{t('screens.config.inviteCopyLink')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={[styles.usersBtn, { marginTop: 4 }]}
                 onPress={() => setInviteModal({ visible: false, url: '', email: '', nombre: '' })}
               >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>Cerrar</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>{t('common.close')}</Text>
               </TouchableOpacity>
             </View>
           </View>

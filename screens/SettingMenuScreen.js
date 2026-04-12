@@ -83,6 +83,11 @@ export default function SettingMenuScreen() {
       description: 'Activa o desactiva funcionalidades opcionales de la aplicación.',
       route: 'SettingsModulos',
     },
+    {
+      title: 'Constructor de formulario',
+      description: 'Añade campos personalizados al formulario de pedido y presupuesto.',
+      route: 'SettingsFormBuilder',
+    },
   ];
 
   return (
