@@ -808,7 +808,7 @@
     },
     "pedidoDetalle": {
       "title": "Detalle del Pedido",
-      "tabDatos": "Pedido",
+      "tabDatos": "Información",
       "tabArchivos": "Archivos",
       "secPedido": "Pedido",
       "secCliente": "Cliente / Contacto",
@@ -1099,7 +1099,7 @@
     "cancelMsg": "La compra fue cancelada. Puedes intentarlo de nuevo cuando quieras.",
     "errorTitle": "Error",
     "insufficientCredits": "Créditos insuficientes",
-    "insufficientCreditsMsg": "Necesitas {{required}} créditos para crear un pedido. Saldo actual: {{balance}}. Ve a Ajustes › Facturación para recargar.",
+    "insufficientCreditsMsg": "Necesitas {{required}} créditos para esta acción. Saldo actual: {{balance}}. Ve a Ajustes › Facturación para recargar.",
     "action_pedido": "Pedido creado",
     "action_features": "Funcionalidades premium",
     "action_purchase": "Recarga de créditos",
@@ -1109,7 +1109,12 @@
     "subscriptionPaymentDesc": "Activa tu suscripción mensual para disfrutar de acceso ilimitado.",
     "subscribe": "Suscribirse",
     "subSuccessTitle": "¡Suscripción activada!",
-    "subSuccess": "Tu suscripción mensual está activa. Disfruta del acceso ilimitado."
+    "subSuccess": "Tu suscripción mensual está activa. Disfruta del acceso ilimitado.",
+    "storageTitle": "Almacenamiento",
+    "storageTotal": "Espacio usado",
+    "storageFiles": "Archivos",
+    "storageOrders": "Pedidos con archivos",
+    "storageCost": "Coste estimado: {{coste}} €/mes · Tarifa: {{tarifa}} €/GB/mes (orientativo)"
   },
   "formBuilder": {
     "title": "Constructor de formulario",

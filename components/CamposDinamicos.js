@@ -156,27 +156,53 @@ export default function CamposDinamicos({ seccion, contenedorId, campos = [], va
     }
   };
 
+  const COLS = 12;
+  const GAP = 10;
+
+  // Agrupar por fila
+  const filaGroups = {};
+  camposSeccion.forEach(c => {
+    const f = c.fila ?? 0;
+    (filaGroups[f] = filaGroups[f] || []).push(c);
+  });
+
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
-        {camposSeccion.map(campo => {
-          const id = campo.campo_id || campo.id;
-          const valor = valores[id] ?? '';
-          const invalid = submitted && campo.obligatorio && !valor && valor !== false;
-          const widthPct = `${((Math.min(12, campo.ancho || 6) / 12) * 100).toFixed(4)}%`;
-
-          return (
-            <View key={id} style={[styles.fieldWrap, { flexBasis: widthPct, flexShrink: 0, flexGrow: 0 }]}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>{campo.etiqueta}</Text>
-                {campo.obligatorio && <Text style={styles.required}> *</Text>}
+      {Object.entries(filaGroups)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([fila, items]) => {
+          const cells = [];
+          let cursor = 0;
+          items.forEach(campo => {
+            const id = campo.campo_id || campo.id;
+            const col = campo.col ?? 0;
+            const ancho = Math.min(COLS, campo.ancho || 6);
+            const gap = col - cursor;
+            if (gap > 0) {
+              cells.push(
+                <View key={`sp_${fila}_${col}`} style={{ flexBasis: `${((gap / COLS) * 100).toFixed(4)}%`, flexShrink: 0, flexGrow: 0 }} />
+              );
+            }
+            const valor = valores[id] ?? '';
+            const invalid = submitted && campo.obligatorio && !valor && valor !== false;
+            cells.push(
+              <View key={id} style={[styles.fieldWrap, { flexBasis: `${((ancho / COLS) * 100).toFixed(4)}%`, flexShrink: 0, flexGrow: 0 }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>{campo.etiqueta}</Text>
+                  {campo.obligatorio && <Text style={styles.required}> *</Text>}
+                </View>
+                {renderCampo(campo)}
+                {invalid && <Text style={styles.errorText}>{t('formBuilder.requiredField')}</Text>}
               </View>
-              {renderCampo(campo)}
-              {invalid && <Text style={styles.errorText}>{t('formBuilder.requiredField')}</Text>}
+            );
+            cursor = col + ancho;
+          });
+          return (
+            <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 4 }}>
+              {cells}
             </View>
           );
         })}
-      </View>
     </View>
   );
 }
@@ -208,13 +234,8 @@ const webDateStyle = (invalid) => ({
 
 const styles = StyleSheet.create({
   container: { marginTop: 8 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginRight: -10,
-  },
   fieldWrap: {
-    minWidth: 120,
+    minWidth: 80,
     paddingRight: 10,
   },
   labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },

@@ -808,7 +808,7 @@
     },
     "pedidoDetalle": {
       "title": "Détail de la commande",
-      "tabDatos": "Commande",
+      "tabDatos": "Informations",
       "tabArchivos": "Fichiers",
       "secPedido": "Commande",
       "secCliente": "Client / Contact",
@@ -1099,7 +1099,7 @@
     "cancelMsg": "L'achat a été annulé. Vous pouvez réessayer quand vous le souhaitez.",
     "errorTitle": "Erreur",
     "insufficientCredits": "Crédits insuffisants",
-    "insufficientCreditsMsg": "Il vous faut {{required}} crédits pour créer une commande. Solde actuel : {{balance}}. Allez dans Paramètres › Facturation pour recharger.",
+    "insufficientCreditsMsg": "Il vous faut {{required}} crédits pour cette action. Solde actuel : {{balance}}. Allez dans Paramètres › Facturation pour recharger.",
     "action_pedido": "Commande créée",
     "action_features": "Fonctionnalités premium",
     "action_purchase": "Recharge de crédits",
@@ -1109,7 +1109,12 @@
     "subscriptionPaymentDesc": "Activez votre abonnement mensuel pour un accès illimité.",
     "subscribe": "S'abonner",
     "subSuccessTitle": "Abonnement activé !",
-    "subSuccess": "Votre abonnement mensuel est actif. Profitez d'un accès illimité."
+    "subSuccess": "Votre abonnement mensuel est actif. Profitez d'un accès illimité.",
+    "storageTitle": "Stockage",
+    "storageTotal": "Espace utilisé",
+    "storageFiles": "Fichiers",
+    "storageOrders": "Commandes avec fichiers",
+    "storageCost": "Coût estimé: {{coste}} €/mois · Tarif: {{tarifa}} €/Go/mois (indicatif)"
   },
   "formBuilder": {
     "title": "Constructeur de formulaire",

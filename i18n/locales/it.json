@@ -808,7 +808,7 @@
     },
     "pedidoDetalle": {
       "title": "Dettaglio ordine",
-      "tabDatos": "Ordine",
+      "tabDatos": "Informazioni",
       "tabArchivos": "File",
       "secPedido": "Ordine",
       "secCliente": "Cliente / Contatto",
@@ -1099,7 +1099,7 @@
     "cancelMsg": "L'acquisto è stato annullato. Puoi riprovare quando vuoi.",
     "errorTitle": "Errore",
     "insufficientCredits": "Crediti insufficienti",
-    "insufficientCreditsMsg": "Servono {{required}} crediti per creare un ordine. Saldo attuale: {{balance}}. Vai a Impostazioni › Fatturazione per ricaricare.",
+    "insufficientCreditsMsg": "Servono {{required}} crediti per questa azione. Saldo attuale: {{balance}}. Vai a Impostazioni › Fatturazione per ricaricare.",
     "action_pedido": "Ordine creato",
     "action_features": "Funzionalità premium",
     "action_purchase": "Ricarica crediti",
@@ -1109,7 +1109,12 @@
     "subscriptionPaymentDesc": "Attiva il tuo abbonamento mensile per accesso illimitato.",
     "subscribe": "Abbonati",
     "subSuccessTitle": "Abbonamento attivato!",
-    "subSuccess": "Il tuo abbonamento mensile è attivo. Goditi l'accesso illimitato."
+    "subSuccess": "Il tuo abbonamento mensile è attivo. Goditi l'accesso illimitato.",
+    "storageTitle": "Archiviazione",
+    "storageTotal": "Spazio usato",
+    "storageFiles": "File",
+    "storageOrders": "Ordini con file",
+    "storageCost": "Costo stimato: {{coste}} €/mese · Tariffa: {{tarifa}} €/GB/mese (indicativo)"
   },
   "formBuilder": {
     "title": "Costruttore di moduli",

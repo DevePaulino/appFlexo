@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -49,11 +50,18 @@ export default function BillingScreen({ navigation, currentUser }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [history, setHistory] = useState([]);
+  const [storageInfo, setStorageInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(null);
   const [subscribing, setSubscribing] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [expandedTx, setExpandedTx] = useState(new Set());
+  const [promoCode, setPromoCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemMsg, setRedeemMsg] = useState(null); // { type: 'ok'|'error', text }
+  const [autoRecarga, setAutoRecarga] = useState(null);
+  const [savingAR, setSavingAR] = useState(false);
+  const [arMsg, setArMsg] = useState(null);
 
   const token = currentUser?.access_token;
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
@@ -61,20 +69,41 @@ export default function BillingScreen({ navigation, currentUser }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, hRes] = await Promise.all([
+      const [sRes, hRes, stRes] = await Promise.all([
         fetch(`${API}/api/billing/status`, { headers: authHeader }),
         fetch(`${API}/api/billing/history?limit=30`, { headers: authHeader }),
+        fetch(`${API}/api/storage/resumen`, { headers: authHeader }),
       ]);
       if (sRes.ok) setStatus(await sRes.json());
       if (hRes.ok) {
         const hData = await hRes.json();
         setHistory(hData.transactions || []);
       }
+      if (stRes.ok) setStorageInfo(await stRes.json());
     } catch (_) {}
     setLoading(false);
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    fetch(`${API}/api/billing/auto-recarga`, { headers: authHeader })
+      .then((r) => r.json()).then(setAutoRecarga).catch(() => {});
+  }, [load]));
+
+  const saveAutoRecarga = async () => {
+    if (!autoRecarga) return;
+    setSavingAR(true); setArMsg(null);
+    try {
+      const res = await fetch(`${API}/api/billing/auto-recarga`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify(autoRecarga),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setArMsg({ type: 'ok', text: 'Configuración guardada' });
+    } catch (e) { setArMsg({ type: 'error', text: e.message }); }
+    setSavingAR(false);
+  };
 
   const confirmCheckout = useCallback(async (sessionId) => {
     try {
@@ -213,6 +242,31 @@ export default function BillingScreen({ navigation, currentUser }) {
     setChangingPlan(false);
   };
 
+  const handleRedeemPromo = async () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    setRedeeming(true);
+    setRedeemMsg(null);
+    try {
+      const res = await fetch(`${API}/api/billing/redeem-promo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRedeemMsg({ type: 'error', text: data.error || t('common.error') });
+      } else {
+        setRedeemMsg({ type: 'ok', text: `+${data.credits_added} créditos añadidos. Saldo: ${data.new_balance}` });
+        setPromoCode('');
+        load();
+      }
+    } catch (_) {
+      setRedeemMsg({ type: 'error', text: t('common.error') });
+    }
+    setRedeeming(false);
+  };
+
   const toggleTx = (i) => {
     setExpandedTx((prev) => {
       const next = new Set(prev);
@@ -240,6 +294,25 @@ export default function BillingScreen({ navigation, currentUser }) {
     }
     catch { return iso.slice(0, 16).replace('T', ' '); }
   };
+
+  // Empresas gestionadas por un revendedor no ven facturación
+  if (currentUser?.reseller_id) {
+    return (
+      <View style={s.root}>
+        <View style={s.header}>
+          <Text style={s.headerTitle}>{t('billing.title')}</Text>
+        </View>
+        <View style={s.resellerNotice}>
+          <Text style={s.resellerIcon}>🤝</Text>
+          <Text style={s.resellerTitle}>Gestionado por tu distribuidor</Text>
+          <Text style={s.resellerSub}>
+            El uso de esta aplicación está cubierto por tu distribuidor.{'\n'}
+            Para cualquier consulta sobre facturación, contacta directamente con él.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root}>
@@ -405,6 +478,133 @@ export default function BillingScreen({ navigation, currentUser }) {
             </>
           )}
 
+          {/* ── Código promocional ───────────────────────────────────── */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Código promocional</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={[s.promoInput]}
+                placeholder="Introduce tu código"
+                placeholderTextColor={C.textMuted}
+                value={promoCode}
+                onChangeText={(v) => { setPromoCode(v.toUpperCase()); setRedeemMsg(null); }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[s.promoBtn, redeeming && { opacity: 0.6 }]}
+                onPress={handleRedeemPromo}
+                disabled={redeeming || !promoCode.trim()}
+              >
+                {redeeming
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <Text style={s.promoBtnText}>Canjear</Text>
+                }
+              </TouchableOpacity>
+            </View>
+            {redeemMsg && (
+              <View style={[s.redeemMsg, redeemMsg.type === 'ok' ? s.redeemMsgOk : s.redeemMsgError]}>
+                <Text style={[s.redeemMsgText, redeemMsg.type === 'ok' ? { color: C.green } : { color: '#DC2626' }]}>
+                  {redeemMsg.text}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* ── Auto-recarga ─────────────────────────────────────────── */}
+          {autoRecarga && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>Auto-recarga de créditos</Text>
+              <View style={s.arRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.arLabel}>Activar auto-recarga</Text>
+                  <Text style={s.arSub}>Recarga automática al bajar del umbral</Text>
+                </View>
+                <TouchableOpacity
+                  style={[s.arToggle, autoRecarga.auto_recarga_enabled && s.arToggleOn]}
+                  onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_enabled: !ar.auto_recarga_enabled }))}
+                >
+                  <Text style={[s.arToggleText, autoRecarga.auto_recarga_enabled && { color: C.accent }]}>
+                    {autoRecarga.auto_recarga_enabled ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {autoRecarga.auto_recarga_enabled && (
+                <>
+                  <Text style={s.arFieldLabel}>Umbral mínimo (créditos)</Text>
+                  <TextInput
+                    style={s.arInput}
+                    value={String(autoRecarga.auto_recarga_umbral ?? 20)}
+                    onChangeText={(v) => setAutoRecarga((ar) => ({ ...ar, auto_recarga_umbral: parseInt(v) || 0 }))}
+                    keyboardType="numeric"
+                    placeholder="Ej: 20"
+                    placeholderTextColor={C.textMuted}
+                  />
+                  <Text style={[s.arSub, { marginBottom: 8 }]}>Se recargará cuando el saldo baje de este número</Text>
+
+                  <Text style={s.arFieldLabel}>Pack a recargar automáticamente</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 12 }}>
+                    {(autoRecarga.packs || []).map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[s.arPackBtn, autoRecarga.auto_recarga_pack === p.id && s.arPackBtnActive]}
+                        onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_pack: p.id }))}
+                      >
+                        <Text style={[s.arPackText, autoRecarga.auto_recarga_pack === p.id && { color: C.accent }]}>
+                          {p.credits} créditos — {p.price_eur} €
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {arMsg && (
+                <View style={[s.redeemMsg, arMsg.type === 'ok' ? s.redeemMsgOk : s.redeemMsgError]}>
+                  <Text style={[s.redeemMsgText, { color: arMsg.type === 'ok' ? C.green : '#DC2626' }]}>{arMsg.text}</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={[s.promoBtn, savingAR && { opacity: 0.6 }]}
+                onPress={saveAutoRecarga} disabled={savingAR}
+              >
+                {savingAR ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.promoBtnText}>Guardar configuración</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Almacenamiento ────────────────────────────────────────── */}
+          {storageInfo && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('billing.storageTitle')}</Text>
+              <View style={s.storageRow}>
+                <View style={s.storageStat}>
+                  <Text style={s.storageStatNum}>{storageInfo.total_human}</Text>
+                  <Text style={s.storageStatLabel}>{t('billing.storageTotal')}</Text>
+                </View>
+                <View style={s.storageDivider} />
+                <View style={s.storageStat}>
+                  <Text style={s.storageStatNum}>{storageInfo.total_archivos}</Text>
+                  <Text style={s.storageStatLabel}>{t('billing.storageFiles')}</Text>
+                </View>
+                <View style={s.storageDivider} />
+                <View style={s.storageStat}>
+                  <Text style={s.storageStatNum}>{storageInfo.num_pedidos}</Text>
+                  <Text style={s.storageStatLabel}>{t('billing.storageOrders')}</Text>
+                </View>
+              </View>
+              <View style={[s.warnBox, { backgroundColor: C.accentDim, borderColor: C.accentBorder, marginTop: 12 }]}>
+                <Text style={[s.warnText, { color: C.accent }]}>
+                  {t('billing.storageCost', {
+                    coste: storageInfo.coste_mes_eur.toFixed(4),
+                    tarifa: storageInfo.coste_por_gb_eur.toFixed(2),
+                  })}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Historial ─────────────────────────────────────────────── */}
           <View style={s.section}>
             <Text style={s.sectionTitle}>{t('billing.historyTitle')}</Text>
@@ -476,6 +676,11 @@ export default function BillingScreen({ navigation, currentUser }) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+
+  resellerNotice: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  resellerIcon:   { fontSize: 48, marginBottom: 16 },
+  resellerTitle:  { fontSize: 18, fontWeight: '700', color: '#1E1B4B', marginBottom: 10, textAlign: 'center' },
+  resellerSub:    { fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 },
 
   // Header
   header: {
@@ -666,6 +871,13 @@ const s = StyleSheet.create({
 
   emptyHistory: { fontSize: 13, color: C.textMuted, textAlign: 'center', paddingVertical: 12 },
 
+  // Storage
+  storageRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 8 },
+  storageStat: { alignItems: 'center', flex: 1 },
+  storageStatNum: { fontSize: 22, fontWeight: '900', color: C.text },
+  storageStatLabel: { fontSize: 11, color: C.textMuted, marginTop: 2, textAlign: 'center' },
+  storageDivider: { width: 1, height: 36, backgroundColor: C.border },
+
   // Plan toggle
   planToggleRow: {
     flexDirection: 'row',
@@ -690,5 +902,61 @@ const s = StyleSheet.create({
   },
   planToggleBtnTextActive: {
     color: '#FFFFFF',
+  },
+  promoInput: {
+    flex: 1,
+    backgroundColor: C.surface,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.accent,
+    letterSpacing: 1,
+  },
+  promoBtn: {
+    backgroundColor: C.accent,
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  arRow:        { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  arLabel:      { fontSize: 14, fontWeight: '600', color: C.text },
+  arSub:        { fontSize: 12, color: C.textMuted, marginTop: 1 },
+  arToggle:     { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  arToggleOn:   { borderColor: C.accent, backgroundColor: C.accentDim },
+  arToggleText: { fontSize: 13, fontWeight: '700', color: C.textMuted },
+  arFieldLabel: { fontSize: 12, fontWeight: '600', color: C.textSec, marginBottom: 4 },
+  arInput:      { backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: C.text, marginBottom: 4 },
+  arPackBtn:    { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  arPackBtnActive: { borderColor: C.accent, backgroundColor: C.accentDim },
+  arPackText:   { fontSize: 12, fontWeight: '600', color: C.textSec },
+
+  redeemMsg: {
+    marginTop: 8,
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+  },
+  redeemMsgOk: {
+    backgroundColor: C.greenDim,
+    borderColor: C.greenBorder,
+  },
+  redeemMsgError: {
+    backgroundColor: 'rgba(220,38,38,0.06)',
+    borderColor: 'rgba(220,38,38,0.2)',
+  },
+  redeemMsgText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

@@ -466,9 +466,8 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   revocarConfirmRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 6,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
@@ -478,31 +477,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   revocarConfirmText: {
-    flex: 1,
     fontSize: 11,
     fontWeight: '600',
     color: '#B91C1C',
   },
   revocarConfirmNo: {
-    paddingVertical: 4,
+    flex: 1,
+    paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#CBD5E1',
+    alignItems: 'center',
   },
   revocarConfirmNoText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: '#475569',
   },
   revocarConfirmYes: {
-    paddingVertical: 4,
+    flex: 1,
+    paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 6,
     backgroundColor: '#DC2626',
+    alignItems: 'center',
   },
   revocarConfirmYesText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -551,6 +553,51 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     backgroundColor: '#FFFFFF',
     position: 'relative',
+  },
+  pdfPreviewWrapperLarge: {
+    width: '58%',
+    aspectRatio: 3 / 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    flexShrink: 0,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+  },
+  versionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
+  },
+  versionPillActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  versionPillApproved: {
+    borderColor: '#16A34A',
+  },
+  versionPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  versionPillTextActive: {
+    color: '#F1F5F9',
+  },
+  versionPillDate: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  versionPillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
   },
   metaColumn: {
     flex: 1,
@@ -1170,10 +1217,7 @@ const styles = StyleSheet.create({
     padding: 10,
     minWidth: 180,
     zIndex: 999,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    boxShadow: '0px 3px 8px rgba(0,0,0,0.15)',
   },
   cmpEyedropCMYK: {
     fontSize: 12,
@@ -1311,10 +1355,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.10,
-    shadowRadius: 3,
+    boxShadow: '0px 1px 3px rgba(15,23,42,0.10)',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -1405,10 +1446,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     minWidth: 130,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    boxShadow: '0px 3px 6px rgba(15,23,42,0.12)',
   },
   bottomEditBtnText: {
     color: '#F1F5F9',
@@ -2117,7 +2155,17 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) { Alert.alert(t('screens.pedidoDetalle.errNoPuedeDescargar'), data.error || t('common.error')); return; }
+      if (!response.ok) {
+        if (response.status === 402) {
+          Alert.alert(
+            t('billing.insufficientCredits'),
+            t('billing.insufficientCreditsMsg', { required: data.required ?? '', balance: data.balance ?? '' })
+          );
+        } else {
+          Alert.alert(t('screens.pedidoDetalle.errNoPuedeDescargar'), data.error || t('common.error'));
+        }
+        return;
+      }
       const charged = Number(data.charged_credits || 0);
       const saldo = Number(data.creditos || 0);
       if (charged > 0) {
@@ -2478,6 +2526,46 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       );
                     })()}
 
+                    {/* ── Almacenamiento ── */}
+                    {(() => {
+                      const allFiles = [
+                        ...archivos.artes,
+                        ...archivos.unitario,
+                        ...Object.values(archivos.esko).filter(Boolean),
+                      ];
+                      const totalBytes = allFiles.reduce((s, f) => s + (f.tamanio || 0), 0);
+                      if (totalBytes === 0) return null;
+                      const toHuman = (b) => {
+                        if (b < 1024) return `${b} B`;
+                        if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB`;
+                        if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(2)} MB`;
+                        return `${(b / 1024 ** 3).toFixed(3)} GB`;
+                      };
+                      const byTipo = {};
+                      allFiles.forEach(f => {
+                        const t2 = f.tipo || 'otro';
+                        byTipo[t2] = (byTipo[t2] || 0) + (f.tamanio || 0);
+                      });
+                      return (
+                        <View style={[styles.sectionCard, { marginTop: 4 }]}>
+                          <Text style={styles.sectionTitle}>Almacenamiento</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+                            {renderRow('Total archivos', String(allFiles.length))}
+                            {renderRow('Tamaño total', toHuman(totalBytes))}
+                          </View>
+                          {Object.entries(byTipo).length > 1 && (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                              {Object.entries(byTipo).map(([tipo, bytes]) => (
+                                <View key={tipo} style={{ backgroundColor: '#F1F5F9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>{tipo}: {toHuman(bytes)}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })()}
+
                   </>
                 );
               })()}
@@ -2485,9 +2573,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
               {activeTab === 'archivos' && (
                 <>
-                {/* ── Unitario + Artes | Comparador | Esko ── */}
-                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
-                <View style={{ flex: 4, gap: 10 }}>
+                {/* ── Grid 2x2: Unitario | Esko / Artes | Comparador ── */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginRight: -10 }}>
+                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
@@ -2520,186 +2608,167 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     <Text style={styles.emptyFilesText}>{t('screens.pedidoDetalle.sinUnitario')}</Text>
                   ) : (
                     <>
-                      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
-
-                        {/* LEFT: Tabs de versión en vertical */}
-                        <View style={styles.versionTabsCol}>
-                          {archivos.unitario.map((u) => {
-                            const isActive = u.version === selectedVersion;
-                            const isApproved = !!u.aprobado;
-                            const isApproving = approvingArchivoId === u.id;
-                            const fecha = u.fecha_subida ? u.fecha_subida.split('T')[0].split('-').reverse().join('/') : '';
-                            return (
-                              <View key={u.id} style={[styles.versionTab, isActive && styles.versionTabActive, isApproved && styles.versionTabApproved]}>
-                                <TouchableOpacity
-                                  onPress={() => setSelectedVersion(u.version)}
-                                  style={{ flex: 1 }}
-                                >
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                    <Text style={[styles.versionTabText, isActive && styles.versionTabTextActive]}>
-                                      v{u.version}
-                                    </Text>
-                                    {isApproved && (
-                                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' }} />
-                                    )}
-                                  </View>
-                                  {fecha ? <Text style={[styles.versionDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
-                                </TouchableOpacity>
-                                {canDelete && (
-                                  confirmingDeleteArchivo === u.id ? (
-                                    <DeleteConfirmRow
-                                      onCancel={() => setConfirmingDeleteArchivo(null)}
-                                      onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(u.id); }}
-                                    />
-                                  ) : (
-                                    <TouchableOpacity
-                                      onPress={() => setConfirmingDeleteArchivo(u.id)}
-                                      style={[styles.versionTabDeleteBtn, isActive && { backgroundColor: '#475569' }]}
-                                    >
-                                      <Text style={styles.versionTabDeleteBtnText}>✕</Text>
-                                    </TouchableOpacity>
-                                  )
-                                )}
-                              </View>
-                            );
-                          })}
-                          {/* Botón aprobar versión seleccionada */}
-                          {(() => {
-                            const sel = archivos.unitario.find((u) => u.version === selectedVersion);
-                            if (!sel || sel.aprobado || confirmingRevocarId === sel.id) return null;
-                            if (approvingArchivoId === sel.id) return <ActivityIndicator size="small" color="#16A34A" style={{ marginTop: 6 }} />;
-                            return (
-                              <TouchableOpacity style={[styles.approvalPanelBtn, { marginTop: 6 }]} onPress={() => toggleAprobarVersion(sel.id, false)}>
-                                <Text style={styles.approvalPanelBtnText}>✓ {t('screens.pedidoDetalle.aprobarBtn')}</Text>
+                      {/* ── Fila de versiones (pastillas horizontales) ── */}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                        {archivos.unitario.map((u) => {
+                          const isActive = u.version === selectedVersion;
+                          const isApproved = !!u.aprobado;
+                          const fecha = u.fecha_subida ? u.fecha_subida.split('T')[0].split('-').reverse().join('/') : '';
+                          return (
+                            <View key={u.id} style={{ position: 'relative' }}>
+                              <TouchableOpacity
+                                onPress={() => setSelectedVersion(u.version)}
+                                style={[styles.versionPill, isActive && styles.versionPillActive, isApproved && styles.versionPillApproved]}
+                              >
+                                <Text style={[styles.versionPillText, isActive && styles.versionPillTextActive]}>
+                                  v{u.version}
+                                </Text>
+                                {isApproved && <View style={styles.versionPillDot} />}
+                                {fecha ? <Text style={[styles.versionPillDate, isActive && { color: '#CBD5E1' }]}>{fecha}</Text> : null}
                               </TouchableOpacity>
-                            );
-                          })()}
-                        </View>
-
-                        {/* MIDDLE: Preview + separaciones */}
-                        <View style={{ flex: 1, minWidth: 0 }}>
-
-                          {/* Fila: thumbnail + separaciones */}
-                          {(() => {
-                            const selected = archivos.unitario.find((u) => u.version === selectedVersion);
-                            if (!selected) return null;
-                            const inlineToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
-                            const thumbnailUrl = `${API_BASE}/api/archivos/${selected.id}/thumbnail${inlineToken}`;
-
-                            // ── Detección de mismatch tintas PDF vs pedido ──────────
-                            const CMYK_NORM = {
-                              // letras sueltas
-                              c: 'cyan', m: 'magenta', y: 'yellow', k: 'black',
-                              // nombres completos inglés
-                              cyan: 'cyan', magenta: 'magenta', yellow: 'yellow', black: 'black',
-                              // español
-                              cian: 'cyan', amarillo: 'yellow', negro: 'black',
-                              // francés / alemán comunes
-                              jaune: 'yellow', noir: 'black', schwarz: 'black',
-                            };
-                            const inkKey = (name) => {
-                              // Eliminar prefijo "Process " (ej. "Process Cyan" → "cyan")
-                              const n = String(name).toLowerCase().trim().replace(/^process\s+/, '');
-                              if (CMYK_NORM[n]) return CMYK_NORM[n];
-                              const digits = n.match(/\d+/);
-                              return digits ? digits[0] : n;
-                            };
-                            const dp = pedido?.datos_presupuesto || {};
-                            // Construir conjunto único de todas las tintas del pedido
-                            const pedidoLabels = new Set([
-                              ...(dp.selectedTintas || []),
-                              ...(dp.pantones || []).map((p) => p.label || p.key || '').filter(Boolean),
-                              ...(Array.isArray(dp.detalleTintaEspecial)
-                                ? dp.detalleTintaEspecial
-                                : dp.detalleTintaEspecial ? [String(dp.detalleTintaEspecial)] : []),
-                            ]);
-                            const pedidoKeys = new Set([...pedidoLabels].map(inkKey));
-                            const pdfSeps = pdfMeta?.separaciones || [];
-                            const pdfKeys = new Set(pdfSeps.map((s) => inkKey(s.nombre)));
-                            const hasPedidoInks = pedidoKeys.size > 0 && pdfSeps.length > 0;
-                            const extraEnPdf = hasPedidoInks
-                              ? pdfSeps.filter((s) => s.tipo !== 'especial' && !pedidoKeys.has(inkKey(s.nombre)))
-                              : [];
-                            // Usar pedidoLabels (ya deduplicado) para evitar duplicados en el mensaje
-                            const extraEnPedido = hasPedidoInks
-                              ? [...pedidoLabels].filter((t) => t && !pdfKeys.has(inkKey(t)))
-                              : [];
-                            const extraEnPdfSet = new Set(extraEnPdf.map((s) => s.nombre));
-
-                            const isApproved = !!selected.aprobado;
-                            const isApproving = approvingArchivoId === selected.id;
-                            const fechaAprobacion = selected.fecha_aprobacion
-                              ? new Date(selected.fecha_aprobacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                              : null;
-
-                            return (
-                              <View style={styles.previewRow}>
-                                {/* Thumbnail PDF */}
-                                <View style={styles.pdfPreviewWrapper}>
-                                  <Image
-                                    key={selected.id}
-                                    source={{ uri: thumbnailUrl }}
-                                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                                    resizeMode="contain"
+                              {canDelete && (
+                                confirmingDeleteArchivo === u.id ? (
+                                  <DeleteConfirmRow
+                                    onCancel={() => setConfirmingDeleteArchivo(null)}
+                                    onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(u.id); }}
                                   />
+                                ) : (
                                   <TouchableOpacity
-                                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                                    onPress={() => openViewOnlyLightbox(selected.id)}
-                                    activeOpacity={0.85}
-                                    disabled={cmpViewOnlyLoading !== null}
-                                  />
-                                  {cmpViewOnlyLoading === selected.id && (
-                                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                      <ActivityIndicator size="small" color="#FFFFFF" />
-                                    </View>
-                                  )}
+                                    onPress={() => setConfirmingDeleteArchivo(u.id)}
+                                    style={styles.versionTabDeleteBtn}
+                                  >
+                                    <Text style={styles.versionTabDeleteBtnText}>✕</Text>
+                                  </TouchableOpacity>
+                                )
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      {/* ── Preview grande + meta ── */}
+                      {(() => {
+                        const selected = archivos.unitario.find((u) => u.version === selectedVersion);
+                        if (!selected) return null;
+                        const inlineToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
+                        const thumbnailUrl = `${API_BASE}/api/archivos/${selected.id}/thumbnail${inlineToken}`;
+
+                        const CMYK_NORM = {
+                          c: 'cyan', m: 'magenta', y: 'yellow', k: 'black',
+                          cyan: 'cyan', magenta: 'magenta', yellow: 'yellow', black: 'black',
+                          cian: 'cyan', amarillo: 'yellow', negro: 'black',
+                          jaune: 'yellow', noir: 'black', schwarz: 'black',
+                        };
+                        const inkKey = (name) => {
+                          const n = String(name).toLowerCase().trim().replace(/^process\s+/, '');
+                          if (CMYK_NORM[n]) return CMYK_NORM[n];
+                          const digits = n.match(/\d+/);
+                          return digits ? digits[0] : n;
+                        };
+                        const dp = pedido?.datos_presupuesto || {};
+                        const pedidoLabels = new Set([
+                          ...(dp.selectedTintas || []),
+                          ...(dp.pantones || []).map((p) => p.label || p.key || '').filter(Boolean),
+                          ...(Array.isArray(dp.detalleTintaEspecial)
+                            ? dp.detalleTintaEspecial
+                            : dp.detalleTintaEspecial ? [String(dp.detalleTintaEspecial)] : []),
+                        ]);
+                        const pedidoKeys = new Set([...pedidoLabels].map(inkKey));
+                        const pdfSeps = pdfMeta?.separaciones || [];
+                        const pdfKeys = new Set(pdfSeps.map((s) => inkKey(s.nombre)));
+                        const hasPedidoInks = pedidoKeys.size > 0 && pdfSeps.length > 0;
+                        const extraEnPdf = hasPedidoInks
+                          ? pdfSeps.filter((s) => s.tipo !== 'especial' && !pedidoKeys.has(inkKey(s.nombre)))
+                          : [];
+                        const extraEnPedido = hasPedidoInks
+                          ? [...pedidoLabels].filter((t) => t && !pdfKeys.has(inkKey(t)))
+                          : [];
+                        const extraEnPdfSet = new Set(extraEnPdf.map((s) => s.nombre));
+
+                        const isApproved = !!selected.aprobado;
+                        const isApproving = approvingArchivoId === selected.id;
+                        const fechaAprobacion = selected.fecha_aprobacion
+                          ? new Date(selected.fecha_aprobacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          : null;
+
+                        return (
+                          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                            {/* Preview PDF — ocupa ~60% */}
+                            <View style={styles.pdfPreviewWrapperLarge}>
+                              <Image
+                                key={selected.id}
+                                source={{ uri: thumbnailUrl }}
+                                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                resizeMode="contain"
+                              />
+                              <TouchableOpacity
+                                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                onPress={() => openViewOnlyLightbox(selected.id)}
+                                activeOpacity={0.85}
+                                disabled={cmpViewOnlyLoading !== null}
+                              />
+                              {cmpViewOnlyLoading === selected.id && (
+                                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                  <ActivityIndicator size="small" color="#FFFFFF" />
                                 </View>
+                              )}
+                            </View>
 
-                                {/* Columna separaciones + aprobación */}
-                                <View style={styles.metaColumn}>
-                                  <Text style={styles.metaTitle}>{t('screens.pedidoDetalle.separacionesTitle')}</Text>
-                                  {pdfMetaLoading ? (
-                                    <ActivityIndicator size="small" color="#94A3B8" />
-                                  ) : pdfSeps.length === 0 ? (
-                                    <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
-                                  ) : (
-                                    <>
-                                      <View style={styles.sepChipsWrap}>
-                                        {pdfSeps.map((s, i) => {
-                                          const warn = extraEnPdfSet.has(s.nombre);
-                                          return (
-                                            <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
-                                              <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
-                                              <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
-                                            </View>
-                                          );
-                                        })}
-                                      </View>
-                                      {hasPedidoInks && extraEnPdf.length === 0 && extraEnPedido.length === 0 ? (
-                                        <View style={styles.matchBanner}>
-                                          <Text style={styles.matchText}>{t('screens.pedidoDetalle.tintasCoinciden')}</Text>
+                            {/* Meta: separaciones + aprobación */}
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={styles.metaTitle}>{t('screens.pedidoDetalle.separacionesTitle')}</Text>
+                              {pdfMetaLoading ? (
+                                <ActivityIndicator size="small" color="#94A3B8" />
+                              ) : pdfSeps.length === 0 ? (
+                                <Text style={{ fontSize: 11, color: '#CBD5E1', fontStyle: 'italic' }}>{t('screens.pedidoDetalle.sinSeparaciones')}</Text>
+                              ) : (
+                                <>
+                                  <View style={styles.sepChipsWrap}>
+                                    {pdfSeps.map((s, i) => {
+                                      const warn = extraEnPdfSet.has(s.nombre);
+                                      return (
+                                        <View key={i} style={[styles.sepChip, warn && styles.sepChipWarn]}>
+                                          <View style={[styles.sepSwatch, { backgroundColor: s.color || '#CBD5E1' }]} />
+                                          <Text style={styles.sepNombre} numberOfLines={1}>{s.nombre}</Text>
                                         </View>
-                                      ) : (extraEnPdf.length > 0 || extraEnPedido.length > 0) ? (
-                                        <View style={styles.mismatchBanner}>
-                                          {extraEnPdf.length > 0 && (
-                                            <Text style={styles.mismatchText}>
-                                              {t('screens.pedidoDetalle.enPdfNoPedido')}{extraEnPdf.map((s) => s.nombre).join(', ')}
-                                            </Text>
-                                          )}
-                                          {extraEnPedido.length > 0 && (
-                                            <Text style={[styles.mismatchText, { marginTop: extraEnPdf.length > 0 ? 2 : 0 }]}>
-                                              {t('screens.pedidoDetalle.enPedidoNoPdf')}{extraEnPedido.join(', ')}
-                                            </Text>
-                                          )}
-                                        </View>
-                                      ) : null}
-                                    </>
-                                  )}
+                                      );
+                                    })}
+                                  </View>
+                                  {hasPedidoInks && extraEnPdf.length === 0 && extraEnPedido.length === 0 ? (
+                                    <View style={styles.matchBanner}>
+                                      <Text style={styles.matchText}>{t('screens.pedidoDetalle.tintasCoinciden')}</Text>
+                                    </View>
+                                  ) : (extraEnPdf.length > 0 || extraEnPedido.length > 0) ? (
+                                    <View style={styles.mismatchBanner}>
+                                      {extraEnPdf.length > 0 && (
+                                        <Text style={styles.mismatchText}>
+                                          {t('screens.pedidoDetalle.enPdfNoPedido')}{extraEnPdf.map((s) => s.nombre).join(', ')}
+                                        </Text>
+                                      )}
+                                      {extraEnPedido.length > 0 && (
+                                        <Text style={[styles.mismatchText, { marginTop: extraEnPdf.length > 0 ? 2 : 0 }]}>
+                                          {t('screens.pedidoDetalle.enPedidoNoPdf')}{extraEnPedido.join(', ')}
+                                        </Text>
+                                      )}
+                                    </View>
+                                  ) : null}
+                                </>
+                              )}
 
-                                  {/* ── Aprobación (bajo separaciones) ── */}
-                                  {confirmingRevocarId === selected.id ? (
-                                    <View style={styles.revocarConfirmRow}>
-                                      <Text style={styles.revocarConfirmText}>{t('screens.pedidoDetalle.revocarConfirm')}</Text>
+                              {/* Aprobar / revocar */}
+                              {(() => {
+                                if (!isApproved && !isApproving && confirmingRevocarId !== selected.id) {
+                                  return (
+                                    <TouchableOpacity style={[styles.approvalPanelBtn, { marginTop: 8 }]} onPress={() => toggleAprobarVersion(selected.id, false)}>
+                                      <Text style={styles.approvalPanelBtnText}>✓ {t('screens.pedidoDetalle.aprobarBtn')}</Text>
+                                    </TouchableOpacity>
+                                  );
+                                }
+                                if (isApproving) return <ActivityIndicator size="small" color="#16A34A" style={{ marginTop: 8 }} />;
+                                if (confirmingRevocarId === selected.id) return (
+                                  <View style={styles.revocarConfirmRow}>
+                                    <Text style={styles.revocarConfirmText}>{t('screens.pedidoDetalle.revocarConfirm')}</Text>
+                                    <View style={{ flexDirection: 'row', gap: 6 }}>
                                       <TouchableOpacity style={styles.revocarConfirmNo} onPress={() => setConfirmingRevocarId(null)}>
                                         <Text style={styles.revocarConfirmNoText}>{t('common.cancel')}</Text>
                                       </TouchableOpacity>
@@ -2707,36 +2776,115 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                         <Text style={styles.revocarConfirmYesText}>{t('screens.pedidoDetalle.revocarBtn')}</Text>
                                       </TouchableOpacity>
                                     </View>
-                                  ) : isApproving ? (
-                                    <View style={styles.approvalPanel}>
-                                      <ActivityIndicator size="small" color="#16A34A" />
+                                  </View>
+                                );
+                                if (isApproved) return (
+                                  <View style={[styles.approvalPanelApproved, { marginTop: 8 }]}>
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={styles.approvalPanelTitle}>✓ {t('screens.pedidoDetalle.aprobadoLabel')} · v{selected.version}</Text>
+                                      {fechaAprobacion ? <Text style={styles.approvalPanelDate}>{fechaAprobacion}{selected.aprobado_por ? ` · ${selected.aprobado_por}` : ''}</Text> : null}
                                     </View>
-                                  ) : isApproved ? (
-                                    <View style={styles.approvalPanelApproved}>
-                                      <View style={{ flex: 1 }}>
-                                        <Text style={styles.approvalPanelTitle}>✓ {t('screens.pedidoDetalle.aprobadoLabel')} · v{selected.version}</Text>
-                                        {fechaAprobacion ? <Text style={styles.approvalPanelDate}>{fechaAprobacion}{selected.aprobado_por ? ` · ${selected.aprobado_por}` : ''}</Text> : null}
-                                      </View>
-                                      <TouchableOpacity onPress={() => setConfirmingRevocarId(selected.id)} style={styles.revocarBtn}>
-                                        <Text style={styles.revocarBtnText}>{t('screens.pedidoDetalle.revocarBtn')}</Text>
-                                      </TouchableOpacity>
-                                    </View>
-                                  ) : null}
-                                </View>
-                              </View>
-                            );
-                          })()}
-
-                        </View>
-
-
-                      </View>
+                                    <TouchableOpacity onPress={() => setConfirmingRevocarId(selected.id)} style={styles.revocarBtn}>
+                                      <Text style={styles.revocarBtnText}>{t('screens.pedidoDetalle.revocarBtn')}</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                );
+                                return null;
+                              })()}
+                            </View>
+                          </View>
+                        );
+                      })()}
                     </>
                   )}
 
                 </View>{/* fin unitario sectionCard */}
+                </View>{/* fin col unitario */}
+
+                {/* ── Contenedores Esko ── */}
+                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
+                <View style={styles.sectionCard}>
+                  <View style={styles.fileSectionHeader}>
+                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
+                  </View>
+                  <View style={styles.eskoActionsRow}>
+                    {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
+                      const accion2 = mapToolToAccion(title);
+                      const tipoKey2 = accion2;
+                      const isLoading2 = chargingAction === accion2;
+                      const isUploading2 = !!uploadingEsko[tipoKey2];
+                      const eskoFile2 = archivos.esko[tipoKey2] || null;
+                      return (
+                        <View key={title} style={styles.eskoToolCol}>
+                          <View style={styles.eskoCardHeader}>
+                            <Text style={styles.eskoCardLabel}>{title}</Text>
+                          </View>
+                          <View style={[styles.eskoOutputBox, eskoFile2 && styles.eskoOutputBoxFilled]}>
+                            {isUploading2 ? (
+                              <ActivityIndicator size="small" color="#475569" />
+                            ) : eskoFile2 ? (
+                              <>
+                                {eskoFile2.nombre_original?.toLowerCase().endsWith('.pdf') && (() => {
+                                  const tok2 = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
+                                  const thumbUrl2 = `${API_BASE}/api/archivos/${eskoFile2.id}/thumbnail${tok2}`;
+                                  return (
+                                    <View style={{ height: 80, width: '100%', marginBottom: 6, borderRadius: 4, overflow: 'hidden', position: 'relative', backgroundColor: '#F8FAFC' }}>
+                                      <Image source={{ uri: thumbUrl2 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
+                                      <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => openViewOnlyLightbox(eskoFile2.id)} activeOpacity={0.85} disabled={cmpViewOnlyLoading !== null} />
+                                      {cmpViewOnlyLoading === eskoFile2.id && (
+                                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                          <ActivityIndicator size="small" color="#FFFFFF" />
+                                        </View>
+                                      )}
+                                    </View>
+                                  );
+                                })()}
+                                <Text style={styles.eskoFileName} numberOfLines={1}>{eskoFile2.nombre_original}</Text>
+                                <Text style={styles.eskoFileMeta}>{formatearTamanio(eskoFile2.tamanio)}</Text>
+                                {confirmingDeleteArchivo === eskoFile2.id ? (
+                                  <DeleteConfirmRow onCancel={() => setConfirmingDeleteArchivo(null)} onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(eskoFile2.id); }} />
+                                ) : (
+                                  <View style={styles.eskoFileBtns}>
+                                    <TouchableOpacity style={styles.eskoFileBtn} onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${eskoFile2.id}`, '_blank'); }}>
+                                      <Text style={styles.eskoFileBtnText}>↓</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.eskoFileBtn, { backgroundColor: '#64748B' }]} onPress={() => fileInputEskoRefs.current[tipoKey2] && fileInputEskoRefs.current[tipoKey2].click()}>
+                                      <Text style={styles.eskoFileBtnText}>↑</Text>
+                                    </TouchableOpacity>
+                                    {canDelete && (
+                                      <TouchableOpacity style={[styles.eskoFileBtn, { backgroundColor: '#DC2626' }]} onPress={() => setConfirmingDeleteArchivo(eskoFile2.id)}>
+                                        <Text style={styles.eskoFileBtnText}>✕</Text>
+                                      </TouchableOpacity>
+                                    )}
+                                  </View>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <TouchableOpacity style={[styles.eskoGenerateBtn, isLoading2 && { opacity: 0.6 }]} onPress={() => handleDescargarTool(title)} disabled={!!isLoading2}>
+                                  <Text style={styles.eskoGenerateBtnText}>{isLoading2 ? '…' : `⬇ ${t('screens.pedidoDetalle.eskoGenerarBtn')}`}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => fileInputEskoRefs.current[tipoKey2] && fileInputEskoRefs.current[tipoKey2].click()} style={styles.eskoUploadBtn}>
+                                  <Text style={styles.eskoUploadBtnText}>↑ {t('screens.pedidoDetalle.eskoSubirBtn')}</Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                          {Platform.OS === 'web' && (
+                            <input type="file" accept=".pdf" style={{ display: 'none' }}
+                              ref={(el) => { fileInputEskoRefs.current[tipoKey2] = el; }}
+                              onChange={(e) => { if (e.target.files[0]) handleUploadEsko(tipoKey2, e.target.files[0]); }}
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+                </View>{/* fin col esko */}
 
                 {/* ── Artes Finales del Cliente ── */}
+                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
@@ -2812,9 +2960,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   ))}
                 </View>{/* fin artes sectionCard */}
 
-                </View>{/* fin columna izquierda */}
+                </View>{/* fin col artes */}
 
                 {/* ── Comparador de PDF ── */}
+                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
                 {(() => {
                   const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
                   const ESKO_LABELS = { report: 'Report', repetidora: 'Repetidora', trapping: 'Trapping', troquel: 'Troquel' };
@@ -2833,7 +2982,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                   const tgtLabel  = targetOptions.find(o => o.id === comparadorTargetArchivoId)?.label;
                   const isDisabled = !comparadorSrcArchivoId || !comparadorTargetArchivoId || comparadorSrcArchivoId === comparadorTargetArchivoId || comparadorRunning;
                   return (
-                    <View style={[styles.sectionCard, { flex: 4 }]}>
+                    <View style={styles.sectionCard}>
                       <View style={styles.fileSectionHeader}>
                         <Text style={styles.filesSectionLabel}>⇄ {t('screens.pedidoDetalle.comparadorTitle')}</Text>
                       </View>
@@ -3008,118 +3157,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     </View>
                   );
                 })()}
+                </View>{/* fin col comparador */}
 
-                {/* ── Contenedores Esko ── */}
-                <View style={[styles.sectionCard, { flex: 4 }]}>
-                  <View style={styles.fileSectionHeader}>
-                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
-                  </View>
-                  <View style={styles.eskoActionsRow}>
-                    {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
-                      const accion = mapToolToAccion(title);
-                      const tipoKey = accion;
-                      const isLoading = chargingAction === accion;
-                      const isUploading = !!uploadingEsko[tipoKey];
-                      const eskoFile = archivos.esko[tipoKey] || null;
-                      return (
-                        <View key={title} style={styles.eskoToolCol}>
-                          {/* Label — sólo identifica el tipo, no es un botón */}
-                          <View style={styles.eskoCardHeader}>
-                            <Text style={styles.eskoCardLabel}>{title}</Text>
-                          </View>
-
-                          {/* Cuerpo: acción generar o archivo resultante */}
-                          <View style={[styles.eskoOutputBox, eskoFile && styles.eskoOutputBoxFilled]}>
-                            {isUploading ? (
-                              <ActivityIndicator size="small" color="#475569" />
-                            ) : eskoFile ? (
-                              <>
-                                {eskoFile.nombre_original?.toLowerCase().endsWith('.pdf') && (() => {
-                                  const eskoThumbToken = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
-                                  const eskoThumbUrl = `${API_BASE}/api/archivos/${eskoFile.id}/thumbnail${eskoThumbToken}`;
-                                  return (
-                                    <View style={{ height: 80, width: '100%', marginBottom: 6, borderRadius: 4, overflow: 'hidden', position: 'relative', backgroundColor: '#F8FAFC' }}>
-                                      <Image source={{ uri: eskoThumbUrl }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
-                                      <TouchableOpacity
-                                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                                        onPress={() => openViewOnlyLightbox(eskoFile.id)}
-                                        activeOpacity={0.85}
-                                        disabled={cmpViewOnlyLoading !== null}
-                                      />
-                                      {cmpViewOnlyLoading === eskoFile.id && (
-                                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                          <ActivityIndicator size="small" color="#FFFFFF" />
-                                        </View>
-                                      )}
-                                    </View>
-                                  );
-                                })()}
-                                <Text style={styles.eskoFileName} numberOfLines={1}>{eskoFile.nombre_original}</Text>
-                                <Text style={styles.eskoFileMeta}>{formatearTamanio(eskoFile.tamanio)}</Text>
-                                {confirmingDeleteArchivo === eskoFile.id ? (
-                                  <DeleteConfirmRow
-                                    onCancel={() => setConfirmingDeleteArchivo(null)}
-                                    onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(eskoFile.id); }}
-                                  />
-                                ) : (
-                                  <View style={styles.eskoFileBtns}>
-                                    <TouchableOpacity
-                                      style={styles.eskoFileBtn}
-                                      onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${eskoFile.id}`, '_blank'); }}
-                                    >
-                                      <Text style={styles.eskoFileBtnText}>↓</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.eskoFileBtn, { backgroundColor: '#64748B' }]}
-                                      onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
-                                    >
-                                      <Text style={styles.eskoFileBtnText}>↑</Text>
-                                    </TouchableOpacity>
-                                    {canDelete && (
-                                      <TouchableOpacity
-                                        style={[styles.eskoFileBtn, { backgroundColor: '#DC2626' }]}
-                                        onPress={() => setConfirmingDeleteArchivo(eskoFile.id)}
-                                      >
-                                        <Text style={styles.eskoFileBtnText}>✕</Text>
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <TouchableOpacity
-                                  style={[styles.eskoGenerateBtn, isLoading && { opacity: 0.6 }]}
-                                  onPress={() => handleDescargarTool(title)}
-                                  disabled={!!isLoading}
-                                >
-                                  <Text style={styles.eskoGenerateBtnText}>{isLoading ? '…' : `⬇ ${t('screens.pedidoDetalle.eskoGenerarBtn')}`}</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => fileInputEskoRefs.current[tipoKey] && fileInputEskoRefs.current[tipoKey].click()}
-                                  style={styles.eskoUploadBtn}
-                                >
-                                  <Text style={styles.eskoUploadBtnText}>↑ {t('screens.pedidoDetalle.eskoSubirBtn')}</Text>
-                                </TouchableOpacity>
-                              </>
-                            )}
-                          </View>
-
-                          {Platform.OS === 'web' && (
-                            <input
-                              type="file"
-                              accept=".pdf"
-                              style={{ display: 'none' }}
-                              ref={(el) => { fileInputEskoRefs.current[tipoKey] = el; }}
-                              onChange={(e) => { if (e.target.files[0]) handleUploadEsko(tipoKey, e.target.files[0]); }}
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-                </View>{/* fin fila tres columnas */}
+                </View>{/* fin grid 2x2 */}
 
                 </>
               )}

@@ -214,6 +214,16 @@ def normalize_empresa_id(empresa_id):
     return s if s and s not in ('None', 'none', 'null', '') else '0'
 
 
+def resolve_empresa_id(user, req=None):
+    """Devuelve el empresa_id efectivo. Si el usuario es root puede
+    sobreescribirlo pasando ?empresa_id=xxx en la query string."""
+    if req is not None and str(user.get('rol') or '') == 'root':
+        override = str(req.args.get('empresa_id') or '').strip()
+        if override:
+            return normalize_empresa_id(override)
+    return normalize_empresa_id(user.get('empresa_id'))
+
+
 def log_audit(action, request_user=None, details=None):
     try:
         col = get_empresa_collection('audit_logs', 0)
@@ -782,26 +792,49 @@ def validate_password_strength(password):
     return True, None
 
 
-def deduct_credits(email, amount, action, pedido_id=None, metadata=None):
-    """Descuenta créditos de forma atómica. Solo descuenta si hay suficiente saldo.
+def _get_reseller_admin_email(empresa_id):
+    """Si la empresa tiene reseller_id, devuelve el email del admin del revendedor. Si no, None."""
+    if not empresa_id:
+        return None
+    col = get_empresa_collection('usuarios', None)
+    norm = normalize_empresa_id(empresa_id)
+    admin = col.find_one({'empresa_id': norm, 'rol': 'administrador'}, {'reseller_id': 1})
+    if not admin or not admin.get('reseller_id'):
+        return None
+    reseller_norm = normalize_empresa_id(admin['reseller_id'])
+    reseller_admin = col.find_one({'empresa_id': reseller_norm, 'rol': 'administrador'}, {'email': 1})
+    return reseller_admin.get('email') if reseller_admin else None
+
+
+def deduct_credits(email, amount, action, empresa_id=None, pedido_id=None, metadata=None):
+    """Descuenta créditos de forma atómica. Si la empresa tiene revendedor, se lo descuenta a él.
     Devuelve (nuevo_saldo, error_str). Si error_str es None, la operación fue exitosa."""
     col_usuarios = get_empresa_collection('usuarios', None)
     col_tx = get_empresa_collection('credit_transactions', None)
+
+    # Redirigir el cobro al revendedor si corresponde
+    billing_email = email
+    reseller_email = _get_reseller_admin_email(empresa_id) if empresa_id else None
+    if reseller_email:
+        billing_email = reseller_email
+
     result = col_usuarios.find_one_and_update(
-        {'email': email, 'creditos': {'$gte': amount}},
+        {'email': billing_email, 'creditos': {'$gte': amount}},
         {'$inc': {'creditos': -amount}},
         return_document=pymongo.ReturnDocument.AFTER,
     )
     if result is None:
-        user = col_usuarios.find_one({'email': email})
+        user = col_usuarios.find_one({'email': billing_email})
         if not user:
             return None, 'Usuario no encontrado'
         current = int(user.get('creditos') or 0)
-        return current, f'Créditos insuficientes (tienes {current}, necesitas {amount})'
+        label = 'tu revendedor' if reseller_email else 'la cuenta'
+        return current, f'Créditos insuficientes en {label} (disponibles: {current}, necesarios: {amount})'
     new_balance = int(result.get('creditos') or 0)
     col_tx.insert_one({
-        'email': email,
+        'email': billing_email,
         'empresa_id': str(result.get('empresa_id') or ''),
+        'client_empresa_id': str(empresa_id or ''),
         'action': action,
         'amount': -amount,
         'balance_after': new_balance,
@@ -809,7 +842,34 @@ def deduct_credits(email, amount, action, pedido_id=None, metadata=None):
         'metadata': metadata or {},
         'created_at': datetime.now().isoformat(),
     })
+    # ── Auto-recarga ────────────────────────────────────────────────
+    _try_auto_recarga(billing_email, new_balance, result)
     return new_balance, None
+
+
+def _try_auto_recarga(email, balance_after, user_doc):
+    """Dispara auto-recarga si está habilitada y el saldo está por debajo del umbral."""
+    try:
+        if not user_doc.get('auto_recarga_enabled'):
+            return
+        umbral = int(user_doc.get('auto_recarga_umbral') or 0)
+        pack_id = str(user_doc.get('auto_recarga_pack') or '')
+        if balance_after >= umbral or not pack_id:
+            return
+        cfg = _get_superadmin_config()
+        all_packs = cfg.get('packs') or CREDIT_PACKAGES
+        pkg = next((p for p in all_packs if p.get('id') == pack_id), None)
+        if not pkg:
+            return
+        credits = int(pkg.get('credits', 0))
+        if credits <= 0:
+            return
+        add_credits(email, credits, action='auto_recarga', metadata={
+            'pack_id': pack_id, 'triggered_at_balance': balance_after,
+            'umbral': umbral, 'simulated': True,
+        })
+    except Exception:
+        pass  # auto-recarga no debe bloquear la operación principal
 
 
 def add_credits(email, amount, action='purchase', metadata=None):
@@ -2036,6 +2096,8 @@ def login_public_user():
             return jsonify({'error': 'Credenciales inválidas'}), 401
         if not verify_password(password, user.get('password_hash', '')):
             return jsonify({'error': 'Credenciales inválidas'}), 401
+        if user.get('bloqueado_por_revendedor'):
+            return jsonify({'error': 'Tu cuenta ha sido suspendida por tu distribuidor. Contacta con él para más información.'}), 403
 
         user = fix_id(user)
         usuario_id = str(user.get('id') or '')
@@ -2064,6 +2126,8 @@ def login_public_user():
             'empresa_nombre': user.get('empresa_nombre', ''),
             'idioma': user.get('idioma') or None,
             'sesion_timeout_minutos': user.get('sesion_timeout_minutos') or None,
+            'billing_model': user.get('billing_model') or 'creditos',
+            'reseller_id': user.get('reseller_id') or None,
         }
 
         try:
@@ -2273,6 +2337,22 @@ def seed_empresa_defaults(empresa_id):
                 'empresa_id': empresa_id,
                 'fecha_creacion': datetime.now().isoformat(),
             })
+
+    # Seed modulos defaults — pre-configura produccion_trigger_estado para que
+    # el usuario pueda activar producción directamente sin pasos adicionales.
+    if not col_gen.find_one({'clave': 'modulos', 'empresa_id': empresa_id}):
+        col_gen.insert_one({
+            'clave': 'modulos',
+            'valor': {
+                'consumo_material': False,
+                'produccion': False,
+                'produccion_trigger_estado': 'Pendiente de Impresión',
+                'presupuestos': True,
+                'condiciones_impresion': False,
+            },
+            'empresa_id': empresa_id,
+            'fecha_creacion': datetime.now().isoformat(),
+        })
 
 
 
@@ -3277,6 +3357,43 @@ def topup_credits():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/billing/auto-recarga', methods=['GET'])
+def get_auto_recarga():
+    try:
+        user, err = require_request_user()
+        if err: return err
+        col = get_empresa_collection('usuarios', None)
+        u = col.find_one({'email': user['email']}, {'auto_recarga_enabled': 1, 'auto_recarga_umbral': 1, 'auto_recarga_pack': 1})
+        cfg = _get_superadmin_config()
+        return jsonify({
+            'auto_recarga_enabled': bool(u.get('auto_recarga_enabled', False)),
+            'auto_recarga_umbral':  int(u.get('auto_recarga_umbral') or 20),
+            'auto_recarga_pack':    u.get('auto_recarga_pack') or '',
+            'packs': cfg.get('packs') or CREDIT_PACKAGES,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/auto-recarga', methods=['PUT'])
+def set_auto_recarga():
+    try:
+        user, err = require_request_user()
+        if err: return err
+        data = request.get_json() or {}
+        enabled = bool(data.get('auto_recarga_enabled', False))
+        umbral  = int(data.get('auto_recarga_umbral') or 20)
+        pack_id = str(data.get('auto_recarga_pack') or '').strip()
+        col = get_empresa_collection('usuarios', None)
+        col.update_one(
+            {'email': user['email']},
+            {'$set': {'auto_recarga_enabled': enabled, 'auto_recarga_umbral': umbral, 'auto_recarga_pack': pack_id}}
+        )
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/billing/change-plan', methods=['POST'])
 def change_billing_plan():
     """Cambia el modelo de facturación del usuario entre 'creditos' y 'suscripcion'."""
@@ -3967,7 +4084,7 @@ def api_settings_modulos():
         MODULOS_DEFAULT = {
             'consumo_material': False,
             'produccion': False,
-            'produccion_trigger_estado': '',
+            'produccion_trigger_estado': 'Pendiente de Impresión',
             'condiciones_impresion': False,
         }
 
@@ -3978,7 +4095,7 @@ def api_settings_modulos():
                 modulos.update(doc['valor'])
             return jsonify({'modulos': modulos}), 200
 
-        # PATCH
+        # PATCH — usa el mismo MODULOS_DEFAULT con trigger pre-configurado
         data = request.get_json() or {}
         doc = col_general.find_one({'clave': 'modulos', 'empresa_id': empresa_id})
         modulos = dict(MODULOS_DEFAULT)
@@ -3988,6 +4105,20 @@ def api_settings_modulos():
             if key in data:
                 val = data[key]
                 modulos[key] = bool(val) if isinstance(val, bool) else val
+
+        # Auto-configurar trigger de producción al activar el módulo
+        if modulos.get('produccion') and not modulos.get('produccion_trigger_estado'):
+            trigger_default = 'Pendiente de Impresión'
+            col_op = get_empresa_collection('config_opciones', empresa_id)
+            if not col_op.find_one({'categoria': 'estados_pedido', 'valor': trigger_default, 'empresa_id': empresa_id}):
+                col_op.insert_one({
+                    'categoria': 'estados_pedido', 'valor': trigger_default, 'label': trigger_default,
+                    'orden': 99, 'empresa_id': empresa_id,
+                    'color': DEFAULT_ESTADO_COLORS.get('pendiente-de-impresion', '#7B1FA2'),
+                    'fecha_creacion': datetime.now().isoformat(),
+                })
+            modulos['produccion_trigger_estado'] = trigger_default
+
         col_general.update_one(
             {'clave': 'modulos', 'empresa_id': empresa_id},
             {'$set': {'valor': modulos, 'empresa_id': empresa_id, 'fecha_actualizacion': datetime.now().isoformat()}},
@@ -4315,7 +4446,11 @@ def get_pedidos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        # Root puede acceder a cualquier empresa pasando ?empresa_id=xxx
+        if request_user.get('rol') == 'root' and request.args.get('empresa_id'):
+            empresa_id = normalize_empresa_id(request.args.get('empresa_id'))
+        else:
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         # Excluir documentos sin numero_pedido (son trabajos auxiliares de presupuestos no aprobados)
         pedidos = list(col.find({'empresa_id': empresa_id, 'numero_pedido': {'$exists': True, '$nin': [None, '']}}))
@@ -4343,7 +4478,10 @@ def get_pedido(pedido_id):
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        if request_user.get('rol') == 'root' and request.args.get('empresa_id'):
+            empresa_id = normalize_empresa_id(request.args.get('empresa_id'))
+        else:
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
         col = get_empresa_collection('pedidos', empresa_id)
         try:
             oid = ObjectId(pedido_id)
@@ -5470,6 +5608,8 @@ def create_troquel():
             'sentido_impresion': data.get('sentido_impresion', 'vertical'),
             'created_at': datetime.utcnow(),
         }
+        if isinstance(data.get('campos_extra'), dict):
+            doc['campos_extra'] = data['campos_extra']
         col = get_empresa_collection('troqueles', empresa_id)
         result = col.insert_one(doc)
         doc['_id'] = str(result.inserted_id)
@@ -5912,7 +6052,10 @@ def get_presupuestos():
         request_user, auth_error = require_request_user()
         if auth_error:
             return auth_error
-        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        if request_user.get('rol') == 'root' and request.args.get('empresa_id'):
+            empresa_id = normalize_empresa_id(request.args.get('empresa_id'))
+        else:
+            empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
 
         col = get_empresa_collection('presupuestos', empresa_id)
         presupuestos = list(col.find({'empresa_id': empresa_id}))
@@ -9409,6 +9552,86 @@ def delete_contenedor_formulario(contenedor_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ── Storage: resumen por empresa y por pedido ────────────────────────────────
+
+STORAGE_COST_EUR_PER_GB = 0.10  # €/GB/mes (orientativo)
+
+
+def _bytes_to_human(b):
+    if b < 1024:
+        return f'{b} B'
+    if b < 1024 ** 2:
+        return f'{b / 1024:.1f} KB'
+    if b < 1024 ** 3:
+        return f'{b / 1024 ** 2:.2f} MB'
+    return f'{b / 1024 ** 3:.3f} GB'
+
+
+@app.route('/api/storage/resumen', methods=['GET'])
+def storage_resumen():
+    """Devuelve bytes totales de archivos de la empresa + coste orientativo."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        pipeline = [
+            {'$match': {'empresa_id': empresa_id}},
+            {'$group': {
+                '_id': '$pedido_id',
+                'bytes': {'$sum': '$tamanio'},
+                'num_archivos': {'$sum': 1},
+            }},
+        ]
+        rows = list(col.aggregate(pipeline))
+        total_bytes = sum(r['bytes'] for r in rows)
+        total_archivos = sum(r['num_archivos'] for r in rows)
+        total_gb = total_bytes / (1024 ** 3)
+        coste_mes_eur = round(total_gb * STORAGE_COST_EUR_PER_GB, 4)
+        return jsonify({
+            'total_bytes': total_bytes,
+            'total_human': _bytes_to_human(total_bytes),
+            'total_archivos': total_archivos,
+            'num_pedidos': len(rows),
+            'coste_mes_eur': coste_mes_eur,
+            'coste_por_gb_eur': STORAGE_COST_EUR_PER_GB,
+            'pedidos': [{'pedido_id': r['_id'], 'bytes': r['bytes'], 'num_archivos': r['num_archivos']} for r in rows],
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/storage', methods=['GET'])
+def storage_pedido(pedido_id):
+    """Devuelve bytes totales de archivos de un pedido concreto."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('pedido_archivos', empresa_id)
+        docs = list(col.find({'pedido_id': pedido_id, 'empresa_id': empresa_id}, {'tamanio': 1, 'tipo': 1}))
+        total_bytes = sum(d.get('tamanio', 0) for d in docs)
+        total_gb = total_bytes / (1024 ** 3)
+        coste_mes_eur = round(total_gb * STORAGE_COST_EUR_PER_GB, 4)
+        by_tipo = {}
+        for d in docs:
+            t = d.get('tipo', 'otro')
+            by_tipo[t] = by_tipo.get(t, 0) + d.get('tamanio', 0)
+        return jsonify({
+            'pedido_id': pedido_id,
+            'total_bytes': total_bytes,
+            'total_human': _bytes_to_human(total_bytes),
+            'num_archivos': len(docs),
+            'coste_mes_eur': coste_mes_eur,
+            'coste_por_gb_eur': STORAGE_COST_EUR_PER_GB,
+            'por_tipo': {k: {'bytes': v, 'human': _bytes_to_human(v)} for k, v in by_tipo.items()},
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # ── Layout campos base (overrides por empresa) ───────────────────────────────
 
 @app.route('/api/campos-base-layout', methods=['GET'])
@@ -9465,6 +9688,1046 @@ def update_campos_base_layout():
 
 # Also extend campos_formulario PUT to support contenedor_id
 # (already handled by adding 'contenedor_id' to allowed list in update_campo_formulario above)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SUPERADMIN  (solo rol 'root')
+# ═══════════════════════════════════════════════════════════════════
+
+import sys
+import resource as _resource
+
+_SERVER_START_TIME = time.time()
+
+SUPERADMIN_CONFIG_DEFAULTS = {
+    'storage_cost_eur_per_gb': 0.10,
+    'suscripcion_mensual_eur': 29.99,
+    'credito_price_eur': 0.10,
+    'packs': [
+        {'id': 'pack_50',  'credits': 50,  'price_eur': 4.99,  'label': '50 créditos'},
+        {'id': 'pack_100', 'credits': 100, 'price_eur': 8.99,  'label': '100 créditos', 'popular': True},
+        {'id': 'pack_250', 'credits': 250, 'price_eur': 19.99, 'label': '250 créditos'},
+        {'id': 'pack_500', 'credits': 500, 'price_eur': 34.99, 'label': '500 créditos'},
+    ],
+}
+
+
+def _require_root():
+    """Devuelve (user, None) si es root, o (None, response_error) si no."""
+    user, err = require_request_user()
+    if err:
+        return None, err
+    if str(user.get('rol', '')).lower() != 'root':
+        return None, (jsonify({'error': 'Acceso denegado: se requiere rol root'}), 403)
+    return user, None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REVENDEDORES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _require_revendedor():
+    """Devuelve (user, None) si es revendedor (billing_model='revendedor' + rol administrador)."""
+    user, err = require_request_user()
+    if err:
+        return None, err
+    if str(user.get('billing_model') or '') != 'revendedor':
+        return None, (jsonify({'error': 'Acceso denegado: solo revendedores'}), 403)
+    return user, None
+
+
+def _monthly_breakdown(col_tx, match_filter, months=12):
+    """Devuelve lista [{mes, total}] de los últimos N meses y el total del mes actual."""
+    from datetime import datetime
+    now = datetime.now()
+    mes_actual = now.strftime('%Y-%m')
+    pipeline = [
+        {'$match': match_filter},
+        {'$addFields': {'mes': {'$substr': ['$created_at', 0, 7]}}},
+        {'$group': {'_id': '$mes', 'total': {'$sum': {'$abs': '$amount'}}}},
+        {'$sort': {'_id': -1}},
+        {'$limit': months},
+    ]
+    rows = list(col_tx.aggregate(pipeline))
+    meses = [{'mes': r['_id'], 'total': r['total']} for r in rows]
+    consumo_mes_actual = next((m['total'] for m in meses if m['mes'] == mes_actual), 0)
+    return meses, consumo_mes_actual
+
+
+def _reseller_data(reseller_eid):
+    """Devuelve dict con datos del revendedor: admin, clientes, balance, consumo mensual."""
+    col = get_empresa_collection('usuarios', None)
+    col_tx = get_empresa_collection('credit_transactions', None)
+    norm = normalize_empresa_id(reseller_eid)
+    admin = col.find_one({'empresa_id': norm, 'rol': 'administrador'}, {'_id': 0, 'password_hash': 0})
+    if not admin:
+        return None
+    clientes_raw = list(col.find({'reseller_id': norm, 'rol': 'administrador'}, {'_id': 0, 'password_hash': 0}))
+    seen_eids = set()
+    clientes = []
+    for c in clientes_raw:
+        if c.get('empresa_id') in seen_eids:
+            continue
+        seen_eids.add(c.get('empresa_id'))
+        ceid = normalize_empresa_id(c.get('empresa_id'))
+        consumo = list(col_tx.aggregate([
+            {'$match': {'client_empresa_id': ceid}},
+            {'$group': {'_id': None, 'total': {'$sum': {'$abs': '$amount'}}}}
+        ]))
+        txs = list(col_tx.find(
+            {'client_empresa_id': ceid},
+            {'_id': 0, 'empresa_id': 0}
+        ).sort('created_at', -1).limit(20))
+        meses_cliente, mes_actual_cliente = _monthly_breakdown(
+            col_tx, {'client_empresa_id': ceid}
+        )
+        billing_mode = c.get('reseller_billing_mode', 'pago_por_uso')
+        created_str = str(c.get('created_at', ''))
+        try:
+            from datetime import datetime
+            created_dt = datetime.fromisoformat(created_str[:10])
+            now = datetime.now()
+            meses_activos = max(1, (now.year - created_dt.year) * 12 + (now.month - created_dt.month) + 1)
+        except Exception:
+            meses_activos = 1
+        clientes.append({
+            'empresa_id': ceid,
+            'admin_email': c.get('email', ''),
+            'email': c.get('email', ''),
+            'nombre': c.get('nombre', '') or c.get('empresa_nombre', ''),
+            'empresa_nombre': c.get('empresa_nombre', ''),
+            'created_at': created_str,
+            'consumo_creditos': consumo[0]['total'] if consumo else 0,
+            'consumo_mes_actual': mes_actual_cliente,
+            'consumo_mensual': meses_cliente,
+            'transacciones': txs,
+            'reseller_billing_mode': billing_mode,
+            'meses_activos': meses_activos,
+            'bloqueado': bool(c.get('bloqueado_por_revendedor')),
+        })
+    # Calcular costes en euros usando tarifas del root + descuento del revendedor
+    cfg = _get_superadmin_config()
+    precio_credito = float(cfg.get('credito_price_eur', 0.10))
+    suscripcion_eur = float(cfg.get('suscripcion_mensual_eur', 29.99))
+    discount = float(admin.get('reseller_discount_pct', 0)) / 100.0
+    factor = 1.0 - discount
+    for c in clientes:
+        if c['reseller_billing_mode'] == 'cuota_mensual':
+            c['coste_acumulado_eur'] = round(suscripcion_eur * factor * c['meses_activos'], 2)
+            c['coste_mes_actual_eur'] = round(suscripcion_eur * factor, 2)
+        else:
+            c['coste_acumulado_eur'] = round(c['consumo_creditos'] * precio_credito * factor, 2)
+            c['coste_mes_actual_eur'] = round(c['consumo_mes_actual'] * precio_credito * factor, 2)
+    consumo_total = sum(c.get('consumo_creditos', 0) for c in clientes)
+    consumo_mes_actual_total = sum(c.get('consumo_mes_actual', 0) for c in clientes)
+    coste_total_eur = round(sum(c.get('coste_acumulado_eur', 0) for c in clientes), 2)
+    coste_mes_actual_eur = round(sum(c.get('coste_mes_actual_eur', 0) for c in clientes), 2)
+    meses_revendedor, _ = _monthly_breakdown(
+        col_tx, {'empresa_id': norm}
+    )
+    return {
+        'empresa_id': norm,
+        'admin_email': admin.get('email', ''),
+        'email': admin.get('email', ''),
+        'nombre': admin.get('nombre', '') or admin.get('empresa_nombre', ''),
+        'empresa_nombre': admin.get('empresa_nombre', ''),
+        'creditos': admin.get('creditos', 0),
+        'discount_pct': admin.get('reseller_discount_pct', 0),
+        'consumo_total': consumo_total,
+        'consumo_mes_actual': consumo_mes_actual_total,
+        'consumo_mensual': meses_revendedor,
+        'coste_total_eur': coste_total_eur,
+        'coste_mes_actual_eur': coste_mes_actual_eur,
+        'precio_credito_eur': round(precio_credito * factor, 4),
+        'suscripcion_eur': round(suscripcion_eur * factor, 2),
+        'clientes': clientes,
+    }
+
+
+@app.route('/api/superadmin/revendedores', methods=['GET'])
+def superadmin_list_revendedores():
+    try:
+        _, err = _require_root()
+        if err: return err
+        col = get_empresa_collection('usuarios', None)
+        admins = list(col.find({'billing_model': 'revendedor', 'rol': 'administrador'}, {'_id': 0, 'password_hash': 0}))
+        result = []
+        for a in admins:
+            data = _reseller_data(a.get('empresa_id'))
+            if data:
+                result.append(data)
+        return jsonify({'revendedores': result}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/revendedores', methods=['POST'])
+def superadmin_create_revendedor():
+    """Crea una cuenta de revendedor (empresa nueva con billing_model=revendedor)."""
+    try:
+        _, err = _require_root()
+        if err: return err
+        data = request.get_json() or {}
+        email = str(data.get('email') or '').strip().lower()
+        password = str(data.get('password') or '').strip()
+        nombre = str(data.get('nombre') or '').strip()
+        empresa_nombre = str(data.get('empresa_nombre') or nombre).strip()
+        discount_pct = int(data.get('discount_pct') or 0)
+        creditos_iniciales = int(data.get('creditos_iniciales') or 0)
+        if not email or not password:
+            return jsonify({'error': 'Email y contraseña requeridos'}), 400
+        col = get_empresa_collection('usuarios', None)
+        if col.find_one({'email': email}):
+            return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
+        from bson import ObjectId
+        uid = str(ObjectId())
+        empresa_id = normalize_empresa_id(uid)
+        col.insert_one({
+            '_id': ObjectId(uid),
+            'nombre': nombre,
+            'email': email,
+            'password_hash': hash_password(password),
+            'rol': 'administrador',
+            'billing_model': 'revendedor',
+            'reseller_discount_pct': discount_pct,
+            'empresa_id': empresa_id,
+            'empresa_nombre': empresa_nombre,
+            'creditos': creditos_iniciales,
+            'activo': True,
+            'created_at': datetime.now().isoformat(),
+        })
+        return jsonify({'ok': True, 'empresa_id': empresa_id, 'email': email}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/revendedores/<reseller_id>/clientes', methods=['POST'])
+def superadmin_assign_cliente(reseller_id):
+    """Asigna una empresa existente como cliente de un revendedor."""
+    try:
+        _, err = _require_root()
+        if err: return err
+        data = request.get_json() or {}
+        empresa_id = str(data.get('empresa_id') or '').strip()
+        if not empresa_id:
+            return jsonify({'error': 'empresa_id requerido'}), 400
+        col = get_empresa_collection('usuarios', None)
+        norm_reseller = normalize_empresa_id(reseller_id)
+        norm_cliente = normalize_empresa_id(empresa_id)
+        # Verificar que el revendedor existe
+        if not col.find_one({'empresa_id': norm_reseller, 'billing_model': 'revendedor'}):
+            return jsonify({'error': 'Revendedor no encontrado'}), 404
+        # Asignar reseller_id a todos los usuarios de esa empresa
+        col.update_many({'empresa_id': norm_cliente}, {'$set': {'reseller_id': norm_reseller}})
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/revendedores/<reseller_id>/clientes/<empresa_id>', methods=['DELETE'])
+def superadmin_unassign_cliente(reseller_id, empresa_id):
+    """Desvincula una empresa de un revendedor."""
+    try:
+        _, err = _require_root()
+        if err: return err
+        col = get_empresa_collection('usuarios', None)
+        norm_cliente = normalize_empresa_id(empresa_id)
+        col.update_many(
+            {'empresa_id': norm_cliente},
+            {
+                '$unset': {'reseller_id': '', 'reseller_billing_mode': ''},
+                '$set': {'billing_model': 'pago_por_uso'},
+            }
+        )
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/revendedores/<reseller_id>/descuento', methods=['PUT'])
+def superadmin_update_descuento(reseller_id):
+    try:
+        _, err = _require_root()
+        if err: return err
+        data = request.get_json() or {}
+        discount_pct = int(data.get('discount_pct') or 0)
+        col = get_empresa_collection('usuarios', None)
+        norm = normalize_empresa_id(reseller_id)
+        col.update_one({'empresa_id': norm, 'rol': 'administrador'}, {'$set': {'reseller_discount_pct': discount_pct}})
+        return jsonify({'ok': True, 'discount_pct': discount_pct}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/dashboard', methods=['GET'])
+def revendedor_dashboard():
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        data = _reseller_data(user.get('empresa_id'))
+        if not data:
+            return jsonify({'error': 'Revendedor no encontrado'}), 404
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/clientes/<empresa_id>/facturacion', methods=['PUT'])
+def revendedor_set_facturacion(empresa_id):
+    """El revendedor configura el modo de facturación de un cliente suyo."""
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        data = request.get_json() or {}
+        mode = str(data.get('reseller_billing_mode', 'pago_por_uso')).strip()
+        if mode not in ('pago_por_uso', 'cuota_mensual'):
+            return jsonify({'error': 'Modo inválido. Usa pago_por_uso o cuota_mensual'}), 400
+        cuota = float(data.get('cuota_mensual_creditos', 0) or 0)
+        col = get_empresa_collection('usuarios', None)
+        norm_reseller = normalize_empresa_id(user.get('empresa_id'))
+        norm_cliente = normalize_empresa_id(empresa_id)
+        # Verificar que el cliente pertenece a este revendedor
+        if not col.find_one({'empresa_id': norm_cliente, 'reseller_id': norm_reseller}):
+            return jsonify({'error': 'Cliente no encontrado o no pertenece a este revendedor'}), 404
+        col.update_many(
+            {'empresa_id': norm_cliente},
+            {'$set': {'reseller_billing_mode': mode}}
+        )
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/clientes/<empresa_id>/bloquear', methods=['PUT'])
+def revendedor_bloquear_cliente(empresa_id):
+    """El revendedor bloquea el acceso de un cliente suyo."""
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        col = get_empresa_collection('usuarios', None)
+        norm_reseller = normalize_empresa_id(user.get('empresa_id'))
+        norm_cliente = normalize_empresa_id(empresa_id)
+        if not col.find_one({'empresa_id': norm_cliente, 'reseller_id': norm_reseller}):
+            return jsonify({'error': 'Cliente no encontrado o no pertenece a este revendedor'}), 404
+        col.update_many({'empresa_id': norm_cliente}, {'$set': {'bloqueado_por_revendedor': True}})
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/clientes/<empresa_id>/desbloquear', methods=['PUT'])
+def revendedor_desbloquear_cliente(empresa_id):
+    """El revendedor reactiva el acceso de un cliente suyo."""
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        col = get_empresa_collection('usuarios', None)
+        norm_reseller = normalize_empresa_id(user.get('empresa_id'))
+        norm_cliente = normalize_empresa_id(empresa_id)
+        if not col.find_one({'empresa_id': norm_cliente, 'reseller_id': norm_reseller}):
+            return jsonify({'error': 'Cliente no encontrado o no pertenece a este revendedor'}), 404
+        col.update_many({'empresa_id': norm_cliente}, {'$unset': {'bloqueado_por_revendedor': ''}})
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/clientes', methods=['POST'])
+def revendedor_crear_cliente():
+    """El revendedor crea una nueva empresa cliente."""
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        data = request.get_json() or {}
+        email = str(data.get('email') or '').strip().lower()
+        password = str(data.get('password') or '').strip()
+        nombre = str(data.get('nombre') or '').strip()
+        empresa_nombre = str(data.get('empresa_nombre') or nombre).strip()
+        if not email or not password:
+            return jsonify({'error': 'Email y contraseña requeridos'}), 400
+        col = get_empresa_collection('usuarios', None)
+        if col.find_one({'email': email}):
+            return jsonify({'error': 'Ya existe un usuario con ese email'}), 409
+        from bson import ObjectId
+        uid = str(ObjectId())
+        empresa_id = normalize_empresa_id(uid)
+        reseller_norm = normalize_empresa_id(user.get('empresa_id'))
+        col.insert_one({
+            '_id': ObjectId(uid),
+            'nombre': nombre,
+            'email': email,
+            'password_hash': hash_password(password),
+            'rol': 'administrador',
+            'billing_model': 'creditos',
+            'reseller_id': reseller_norm,
+            'empresa_id': empresa_id,
+            'empresa_nombre': empresa_nombre,
+            'creditos': 0,
+            'activo': True,
+            'created_at': datetime.now().isoformat(),
+        })
+        seed_empresa_defaults(empresa_id)
+        return jsonify({'ok': True, 'empresa_id': empresa_id, 'email': email}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _get_superadmin_config():
+    col = mongo.db['superadmin_config']
+    doc = col.find_one({'_id': 'config'})
+    if not doc:
+        return dict(SUPERADMIN_CONFIG_DEFAULTS)
+    cfg = dict(SUPERADMIN_CONFIG_DEFAULTS)
+    cfg.update({k: v for k, v in doc.items() if k != '_id'})
+    return cfg
+
+
+# ── Status del servidor ──────────────────────────────────────────────────────
+
+@app.route('/api/superadmin/status', methods=['GET'])
+def superadmin_status():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        uptime_s = int(time.time() - _SERVER_START_TIME)
+        hours, rem = divmod(uptime_s, 3600)
+        minutes, seconds = divmod(rem, 60)
+        try:
+            mem_mb = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss / 1024
+        except Exception:
+            mem_mb = 0
+        return jsonify({
+            'uptime': f'{hours}h {minutes}m {seconds}s',
+            'uptime_seconds': uptime_s,
+            'python_version': sys.version,
+            'mem_mb': round(mem_mb, 1),
+            'pid': os.getpid(),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/cuenta', methods=['PUT'])
+def superadmin_update_cuenta():
+    try:
+        user, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        update = {}
+        new_email    = data.get('email', '').strip()
+        new_password = data.get('password', '').strip()
+        if new_email:
+            update['email'] = new_email
+        if new_password:
+            if len(new_password) < 8:
+                return jsonify({'error': 'La contraseña debe tener al menos 8 caracteres'}), 400
+            update['password_hash'] = hash_password(new_password)
+        if not update:
+            return jsonify({'error': 'Nada que actualizar'}), 400
+        col = get_empresa_collection('usuarios', None)
+        col.update_one({'rol': 'root'}, {'$set': update})
+        return jsonify({'ok': True, 'updated': list(update.keys())}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/restart', methods=['POST'])
+def superadmin_restart():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        import threading, subprocess
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
+        def _do_restart():
+            time.sleep(0.8)
+            with open(log_path, 'a') as lf:
+                subprocess.Popen(
+                    [sys.executable] + sys.argv,
+                    stdout=lf, stderr=lf,
+                    close_fds=True,
+                    start_new_session=True,
+                )
+            os._exit(0)
+        threading.Thread(target=_do_restart, daemon=False).start()
+        return jsonify({'ok': True, 'message': 'Reiniciando servidor…'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Monitorización de empresas ───────────────────────────────────────────────
+
+@app.route('/api/superadmin/empresas', methods=['GET'])
+def superadmin_empresas():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        # Colección global de usuarios (empresa_id = None → db name 'global')
+        col_users = get_empresa_collection('usuarios', None)
+        # Agrupar usuarios por empresa_id
+        pipeline_users = [
+            {'$group': {
+                '_id': '$empresa_id',
+                'num_usuarios': {'$sum': 1},
+                'admin_email': {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
+                'creditos': {'$max': '$creditos'},
+                'billing_model': {'$first': '$billing_model'},
+            }}
+        ]
+        empresas_raw = list(col_users.aggregate(pipeline_users))
+
+        result = []
+        for emp in empresas_raw:
+            eid = emp['_id']
+            if not eid:
+                continue
+            norm_eid = normalize_empresa_id(eid)
+
+            # Pedidos
+            col_pedidos = get_empresa_collection('pedidos', norm_eid)
+            num_pedidos = col_pedidos.count_documents({'empresa_id': norm_eid})
+
+            # Presupuestos
+            col_presup = get_empresa_collection('presupuestos', norm_eid)
+            num_presup = col_presup.count_documents({'empresa_id': norm_eid})
+
+            # Storage
+            col_arch = get_empresa_collection('pedido_archivos', norm_eid)
+            agg = list(col_arch.aggregate([
+                {'$match': {'empresa_id': norm_eid}},
+                {'$group': {'_id': None, 'bytes': {'$sum': '$tamanio'}, 'num_arch': {'$sum': 1}}}
+            ]))
+            total_bytes = agg[0]['bytes'] if agg else 0
+            num_archivos = agg[0]['num_arch'] if agg else 0
+
+            result.append({
+                'empresa_id': norm_eid,
+                'num_usuarios': emp.get('num_usuarios', 0),
+                'admin_email': emp.get('admin_email'),
+                'creditos': emp.get('creditos') or 0,
+                'billing_model': emp.get('billing_model') or 'creditos',
+                'num_pedidos': num_pedidos,
+                'num_presupuestos': num_presup,
+                'storage_bytes': total_bytes,
+                'storage_human': _bytes_to_human(total_bytes),
+                'num_archivos': num_archivos,
+            })
+
+        result.sort(key=lambda x: x['num_pedidos'], reverse=True)
+        return jsonify({'empresas': result}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Detalle completo de una empresa ─────────────────────────────────────────
+
+@app.route('/api/superadmin/empresas/<empresa_id>/detalle', methods=['GET'])
+def superadmin_empresa_detalle(empresa_id):
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        norm = normalize_empresa_id(empresa_id)
+
+        # ── Usuarios ──────────────────────────────────────────────────────────
+        col_users = get_empresa_collection('usuarios', None)
+        usuarios_raw = list(col_users.find(
+            {'empresa_id': norm},
+            {'_id': 0, 'password_hash': 0}
+        ))
+        usuarios = []
+        for u in usuarios_raw:
+            usuarios.append({
+                'id': str(u.get('_id', '')),
+                'nombre': u.get('nombre', ''),
+                'email': u.get('email', ''),
+                'rol': u.get('rol', ''),
+                'creditos': u.get('creditos', 0),
+                'billing_model': u.get('billing_model', ''),
+                'fecha_creacion': str(u.get('fecha_creacion', '')),
+                'ultimo_acceso': str(u.get('ultimo_acceso', '')),
+            })
+
+        # ── Pedidos: resumen por estado + últimos 20 ──────────────────────────
+        col_pedidos = get_empresa_collection('pedidos', norm)
+        pedidos_estados = list(col_pedidos.aggregate([
+            {'$match': {'empresa_id': norm}},
+            {'$group': {'_id': '$estado', 'count': {'$sum': 1}}},
+        ]))
+        ultimos_pedidos = list(col_pedidos.find(
+            {'empresa_id': norm},
+            {'_id': 0, 'numero_pedido': 1, 'estado': 1, 'fecha_creacion': 1,
+             'datos_presupuesto.nombre': 1, 'datos_presupuesto.referencia': 1,
+             'cliente': 1, 'creado_por_nombre': 1}
+        ).sort('fecha_creacion', -1).limit(20))
+        for p in ultimos_pedidos:
+            dp = p.pop('datos_presupuesto', {}) or {}
+            p['nombre_trabajo'] = dp.get('nombre') or dp.get('referencia') or ''
+            c = p.get('cliente')
+            p['cliente_nombre'] = c.get('nombre') if isinstance(c, dict) else str(c or '')
+            p.pop('cliente', None)
+            p['fecha_creacion'] = str(p.get('fecha_creacion', ''))
+
+        # ── Presupuestos ──────────────────────────────────────────────────────
+        col_presup = get_empresa_collection('presupuestos', norm)
+        presup_estados = list(col_presup.aggregate([
+            {'$match': {'empresa_id': norm}},
+            {'$group': {'_id': '$estado', 'count': {'$sum': 1}}},
+        ]))
+        num_presup = sum(e['count'] for e in presup_estados)
+
+        # ── Storage por tipo ─────────────────────────────────────────────────
+        col_arch = get_empresa_collection('pedido_archivos', norm)
+        storage_raw = list(col_arch.aggregate([
+            {'$match': {'empresa_id': norm}},
+            {'$group': {'_id': '$tipo', 'bytes': {'$sum': '$tamanio'}, 'count': {'$sum': 1}}},
+        ]))
+        storage_total = sum(r['bytes'] for r in storage_raw)
+        storage_gb = storage_total / (1024 ** 3)
+        cfg = _get_superadmin_config()
+        coste_storage = round(storage_gb * cfg.get('storage_cost_eur_per_gb', 0.10), 4)
+
+        # ── Créditos: transacciones de toda la empresa ────────────────────────
+        col_tx = get_empresa_collection('credit_transactions', None)
+        admin_email = next((u['email'] for u in usuarios_raw if u.get('rol') == 'administrador'), None)
+
+        def _concepto(tx):
+            action = tx.get('action') or tx.get('accion') or ''
+            if action.startswith('promo:'):
+                return f'🎁 Código promo: {action[6:]}'
+            if action == 'purchase':
+                return '💳 Compra de créditos'
+            if action == 'signup_bonus':
+                return '🎉 Bono de registro'
+            if action == 'pedido':
+                return '📦 Pedido creado'
+            if action == 'features':
+                return '⚙️ Uso de funciones'
+            return action or 'Transacción'
+
+        import datetime as _dt
+        ultimas_tx = []
+        for tx in col_tx.find({'empresa_id': norm}).sort('created_at', -1).limit(20):
+            ultimas_tx.append({
+                'concepto': _concepto(tx),
+                'cantidad': tx.get('amount') or tx.get('cantidad', 0),
+                'fecha': str(tx.get('created_at') or tx.get('fecha', '')),
+                'saldo': tx.get('balance_after') or tx.get('saldo_tras', ''),
+                'email': tx.get('email', ''),
+            })
+
+        # ── Consumo e ingresos créditos últimos 30 días ───────────────────────
+        hace30 = (_dt.datetime.utcnow() - _dt.timedelta(days=30)).isoformat()
+        creditos_30d_consumo = 0
+        creditos_30d_recarga = 0
+        for tx in col_tx.find({'empresa_id': norm, 'created_at': {'$gte': hace30}}):
+            amt = tx.get('amount') or tx.get('cantidad', 0)
+            if (amt or 0) < 0:
+                creditos_30d_consumo += abs(amt)
+            elif (amt or 0) > 0:
+                creditos_30d_recarga += amt
+        creditos_30d = creditos_30d_consumo  # backwards compat
+
+        return jsonify({
+            'empresa_id': norm,
+            'admin_email': admin_email,
+            'billing_model': next((u.get('billing_model') for u in usuarios_raw if u.get('rol') == 'administrador'), None) or 'creditos',
+            'usuarios': usuarios,
+            'num_usuarios': len(usuarios),
+            'pedidos': {
+                'total': sum(e['count'] for e in pedidos_estados),
+                'por_estado': {e['_id']: e['count'] for e in pedidos_estados if e['_id']},
+                'ultimos': ultimos_pedidos,
+            },
+            'presupuestos': {
+                'total': num_presup,
+                'por_estado': {e['_id']: e['count'] for e in presup_estados if e['_id']},
+            },
+            'storage': {
+                'total_bytes': storage_total,
+                'total_human': _bytes_to_human(storage_total),
+                'coste_mes_eur': coste_storage,
+                'por_tipo': [{'tipo': r['_id'] or 'otro', 'bytes': r['bytes'], 'human': _bytes_to_human(r['bytes']), 'count': r['count']} for r in sorted(storage_raw, key=lambda x: -x['bytes'])],
+            },
+            'creditos': {
+                'saldo_actual': next((u['creditos'] for u in usuarios if u['rol'] == 'administrador'), 0),
+                'consumo_30d': creditos_30d_consumo,
+                'recarga_30d': creditos_30d_recarga,
+                'ultimas_tx': ultimas_tx,
+            },
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Actividad reciente (cross-empresa) ───────────────────────────────────────
+
+@app.route('/api/superadmin/actividad', methods=['GET'])
+def superadmin_actividad():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        limit = min(int(request.args.get('limit', 50)), 200)
+
+        col_users = get_empresa_collection('usuarios', None)
+        empresa_ids = [u['empresa_id'] for u in col_users.find({}, {'empresa_id': 1}) if u.get('empresa_id')]
+        empresa_ids = list(set(empresa_ids))
+
+        eventos = []
+        for eid in empresa_ids:
+            norm = normalize_empresa_id(eid)
+            col_p = get_empresa_collection('pedidos', norm)
+            for p in col_p.find(
+                {'empresa_id': norm},
+                {'numero_pedido': 1, 'fecha_creacion': 1, 'estado': 1,
+                 'datos_presupuesto.nombre': 1, 'datos_presupuesto.referencia': 1,
+                 'cliente': 1, 'creado_por': 1, 'creado_por_nombre': 1}
+            ).sort('fecha_creacion', -1).limit(10):
+                dp = p.get('datos_presupuesto') or {}
+                cliente = p.get('cliente') or {}
+                nombre_trabajo = dp.get('nombre') or dp.get('referencia') or ''
+                nombre_cliente = cliente.get('nombre') if isinstance(cliente, dict) else str(cliente or '')
+                eventos.append({
+                    'tipo': 'pedido',
+                    'empresa_id': norm,
+                    'referencia': f"#{p.get('numero_pedido', '?')}",
+                    'nombre_trabajo': nombre_trabajo,
+                    'cliente': nombre_cliente,
+                    'usuario': p.get('creado_por_nombre') or p.get('creado_por') or '',
+                    'estado': p.get('estado'),
+                    'fecha': str(p.get('fecha_creacion', '')),
+                })
+            col_pr = get_empresa_collection('presupuestos', norm)
+            for pr in col_pr.find(
+                {'empresa_id': norm},
+                {'numero_presupuesto': 1, 'fecha_creacion': 1, 'estado': 1,
+                 'datos_presupuesto.nombre': 1, 'datos_presupuesto.referencia': 1,
+                 'cliente': 1, 'creado_por': 1, 'creado_por_nombre': 1}
+            ).sort('fecha_creacion', -1).limit(5):
+                dp = pr.get('datos_presupuesto') or {}
+                cliente = pr.get('cliente') or {}
+                nombre_trabajo = dp.get('nombre') or dp.get('referencia') or ''
+                nombre_cliente = cliente.get('nombre') if isinstance(cliente, dict) else str(cliente or '')
+                eventos.append({
+                    'tipo': 'presupuesto',
+                    'empresa_id': norm,
+                    'referencia': f"#{pr.get('numero_presupuesto', '?')}",
+                    'nombre_trabajo': nombre_trabajo,
+                    'cliente': nombre_cliente,
+                    'usuario': pr.get('creado_por_nombre') or pr.get('creado_por') or '',
+                    'estado': pr.get('estado'),
+                    'fecha': str(pr.get('fecha_creacion', '')),
+                })
+
+        eventos.sort(key=lambda x: x['fecha'], reverse=True)
+        return jsonify({'eventos': eventos[:limit]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+# ── Panel de monitorización: registros, alertas, logins, transacciones ────────
+
+@app.route('/api/superadmin/panel', methods=['GET'])
+def superadmin_panel():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        col_users = get_empresa_collection('usuarios', None)
+        col_audit = get_empresa_collection('audit_logs', 0)
+        col_tx    = get_empresa_collection('credit_transactions', None)
+
+        # 1. Últimas empresas registradas (administradores ordenados por created_at)
+        registros_raw = list(col_users.find(
+            {'rol': 'administrador'},
+            {'_id': 0, 'email': 1, 'empresa_id': 1, 'created_at': 1, 'billing_model': 1}
+        ).sort('created_at', -1).limit(6))
+        registros = [
+            {
+                'email': r.get('email', ''),
+                'empresa_id': str(r.get('empresa_id', '')),
+                'created_at': str(r.get('created_at', '')),
+                'billing_model': r.get('billing_model') or 'creditos',
+            }
+            for r in registros_raw
+        ]
+
+        # 2. Alertas: créditos bajos (<20) o storage alto (>500MB)
+        empresas_raw = list(col_users.aggregate([
+            {'$group': {
+                '_id': '$empresa_id',
+                'admin_email': {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
+                'creditos': {'$max': '$creditos'},
+                'billing_model': {'$first': '$billing_model'},
+            }}
+        ]))
+        alertas = []
+        for emp in empresas_raw:
+            eid = emp.get('_id')
+            if not eid:
+                continue
+            norm_eid = normalize_empresa_id(eid)
+            creditos = emp.get('creditos') or 0
+            billing  = emp.get('billing_model') or 'creditos'
+            email    = emp.get('admin_email') or str(eid)
+            if billing == 'creditos' and creditos < 20:
+                alertas.append({'tipo': 'creditos_bajos', 'email': email, 'empresa_id': norm_eid, 'valor': creditos})
+            col_arch = get_empresa_collection('pedido_archivos', norm_eid)
+            agg = list(col_arch.aggregate([
+                {'$match': {'empresa_id': norm_eid}},
+                {'$group': {'_id': None, 'bytes': {'$sum': '$tamanio'}}}
+            ]))
+            storage_bytes = agg[0]['bytes'] if agg else 0
+            if storage_bytes > 500 * 1024 * 1024:
+                alertas.append({'tipo': 'storage_alto', 'email': email, 'empresa_id': norm_eid, 'valor': _bytes_to_human(storage_bytes)})
+        alertas = alertas[:10]
+
+        # 3. Últimos logins
+        logins_raw = list(col_audit.find(
+            {'action': 'login'},
+            {'_id': 0, 'user': 1, 'ts': 1, 'ip': 1, 'details': 1}
+        ).sort('ts', -1).limit(8))
+        logins = [
+            {
+                'email': l.get('user', {}).get('email', ''),
+                'rol':   l.get('user', {}).get('rol', ''),
+                'ts':    str(l.get('ts', '')),
+                'ip':    l.get('ip', ''),
+            }
+            for l in logins_raw
+        ]
+
+        # 4. Últimas transacciones globales de créditos
+        def _concepto_panel(tx):
+            action = tx.get('action') or tx.get('accion') or ''
+            if action.startswith('promo:'):
+                return f'🎁 Promo: {action[6:]}'
+            if action == 'purchase':      return '💳 Compra'
+            if action == 'signup_bonus':  return '🎉 Bono registro'
+            if action == 'pedido':        return '📦 Pedido'
+            if action == 'features':      return '⚙️ Funciones'
+            return action or 'Transacción'
+
+        txs_raw = list(col_tx.find({}, {'_id': 0, 'email': 1, 'empresa_id': 1, 'action': 1, 'amount': 1, 'created_at': 1}).sort('created_at', -1).limit(8))
+        transacciones = [
+            {
+                'concepto':    _concepto_panel(tx),
+                'email':       tx.get('email', ''),
+                'empresa_id':  str(tx.get('empresa_id', '')),
+                'cantidad':    tx.get('amount') or 0,
+                'created_at':  str(tx.get('created_at', '')),
+            }
+            for tx in txs_raw
+        ]
+
+        return jsonify({
+            'registros':     registros,
+            'alertas':       alertas,
+            'logins':        logins,
+            'transacciones': transacciones,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Créditos por empresa (ajuste manual) ─────────────────────────────────────
+
+@app.route('/api/superadmin/empresas/<empresa_id>/creditos', methods=['POST'])
+def superadmin_ajustar_creditos(empresa_id):
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        cantidad = int(data.get('cantidad', 0))
+        if cantidad == 0:
+            return jsonify({'error': 'cantidad requerida (positiva o negativa)'}), 400
+        norm = normalize_empresa_id(empresa_id)
+        col = get_empresa_collection('usuarios', None)
+        # Actualiza el administrador de esa empresa
+        result = col.find_one_and_update(
+            {'empresa_id': norm, 'rol': 'administrador'},
+            {'$inc': {'creditos': cantidad}},
+            return_document=ReturnDocument.AFTER
+        )
+        if not result:
+            return jsonify({'error': 'Empresa no encontrada'}), 404
+        return jsonify({'ok': True, 'creditos_nuevos': result.get('creditos', 0)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Tarifas ──────────────────────────────────────────────────────────────────
+
+@app.route('/api/superadmin/tarifas', methods=['GET'])
+def superadmin_get_tarifas():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        return jsonify(_get_superadmin_config()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/tarifas', methods=['PUT'])
+def superadmin_put_tarifas():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        col = mongo.db['superadmin_config']
+        allowed = {'storage_cost_eur_per_gb', 'suscripcion_mensual_eur', 'credito_price_eur', 'packs'}
+        update = {k: v for k, v in data.items() if k in allowed}
+        if not update:
+            return jsonify({'error': 'Sin campos válidos'}), 400
+        col.update_one({'_id': 'config'}, {'$set': update}, upsert=True)
+        return jsonify({'ok': True, 'config': _get_superadmin_config()}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Códigos promocionales ────────────────────────────────────────────────────
+
+@app.route('/api/superadmin/promos', methods=['GET'])
+def superadmin_list_promos():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        col = mongo.db['promo_codes']
+        docs = list(col.find({}, {'_id': 0}).sort('created_at', -1).limit(200))
+        return jsonify({'promos': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/promos', methods=['POST'])
+def superadmin_create_promo():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        credits = int(data.get('credits', 0))
+        if credits <= 0:
+            return jsonify({'error': 'credits debe ser > 0'}), 400
+        prefix = str(data.get('prefix', 'PROMO')).upper().strip()[:10]
+        max_uses = int(data.get('max_uses', 1))
+        expires_at = data.get('expires_at')  # ISO string o None
+        # Generar código único
+        col = mongo.db['promo_codes']
+        for _ in range(10):
+            suffix = secrets.token_hex(3).upper()
+            code = f'{prefix}-{suffix}'
+            if not col.find_one({'code': code}):
+                break
+        doc = {
+            'code': code,
+            'credits': credits,
+            'max_uses': max_uses,
+            'uses': 0,
+            'active': True,
+            'expires_at': expires_at,
+            'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+        }
+        col.insert_one(doc)
+        doc.pop('_id', None)
+        return jsonify({'ok': True, 'promo': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/promos/<code>', methods=['DELETE'])
+def superadmin_delete_promo(code):
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        col = mongo.db['promo_codes']
+        col.delete_one({'code': code.upper()})
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/promos/<code>/toggle', methods=['POST'])
+def superadmin_toggle_promo(code):
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        col = mongo.db['promo_codes']
+        doc = col.find_one({'code': code.upper()})
+        if not doc:
+            return jsonify({'error': 'Código no encontrado'}), 404
+        new_state = not doc.get('active', True)
+        col.update_one({'code': code.upper()}, {'$set': {'active': new_state}})
+        return jsonify({'ok': True, 'active': new_state}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Canjear código promo (clientes) ─────────────────────────────────────────
+
+@app.route('/api/billing/redeem-promo', methods=['POST'])
+def billing_redeem_promo():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        data = request.get_json() or {}
+        code = str(data.get('code', '')).upper().strip()
+        if not code:
+            return jsonify({'error': 'Código requerido'}), 400
+
+        col = mongo.db['promo_codes']
+        promo = col.find_one({'code': code})
+        if not promo:
+            return jsonify({'error': 'Código no válido'}), 404
+        if not promo.get('active', True):
+            return jsonify({'error': 'Código desactivado'}), 400
+        if promo.get('expires_at'):
+            import datetime
+            exp = promo['expires_at']
+            if isinstance(exp, str) and exp < time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()):
+                return jsonify({'error': 'Código caducado'}), 400
+        if promo.get('uses', 0) >= promo.get('max_uses', 1):
+            return jsonify({'error': 'Código ya agotado'}), 400
+
+        # Verificar que este usuario no lo haya canjeado ya
+        col_redemptions = mongo.db['promo_redemptions']
+        user_id = str(request_user.get('id') or request_user.get('_id', ''))
+        if col_redemptions.find_one({'code': code, 'user_id': user_id}):
+            return jsonify({'error': 'Ya canjeaste este código'}), 400
+
+        credits = int(promo.get('credits', 0))
+        email = request_user.get('email', '')
+        add_credits(email, credits, action=f'promo:{code}')
+
+        col.update_one({'code': code}, {'$inc': {'uses': 1}})
+        col_redemptions.insert_one({
+            'code': code,
+            'user_id': user_id,
+            'email': email,
+            'credits': credits,
+            'redeemed_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+        })
+
+        col_users = get_empresa_collection('usuarios', None)
+        user_doc = col_users.find_one({'email': email}, {'creditos': 1})
+        new_balance = (user_doc or {}).get('creditos', 0)
+        return jsonify({'ok': True, 'credits_added': credits, 'new_balance': new_balance, 'message': f'+{credits} créditos añadidos'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

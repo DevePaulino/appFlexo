@@ -812,7 +812,7 @@
     },
     "pedidoDetalle": {
       "title": "Order Details",
-      "tabDatos": "Order",
+      "tabDatos": "Information",
       "tabArchivos": "Files",
       "secPedido": "Order",
       "secCliente": "Client / Contact",
@@ -1103,7 +1103,7 @@
     "cancelMsg": "The purchase was cancelled. You can try again whenever you want.",
     "errorTitle": "Error",
     "insufficientCredits": "Insufficient credits",
-    "insufficientCreditsMsg": "You need {{required}} credits to create an order. Current balance: {{balance}}. Go to Settings › Billing to top up.",
+    "insufficientCreditsMsg": "You need {{required}} credits for this action. Current balance: {{balance}}. Go to Settings › Billing to top up.",
     "action_pedido": "Order created",
     "action_features": "Premium features",
     "action_purchase": "Credit top-up",
@@ -1113,7 +1113,12 @@
     "subscriptionPaymentDesc": "Activate your monthly subscription for unlimited access.",
     "subscribe": "Subscribe",
     "subSuccessTitle": "Subscription activated!",
-    "subSuccess": "Your monthly subscription is active. Enjoy unlimited access."
+    "subSuccess": "Your monthly subscription is active. Enjoy unlimited access.",
+    "storageTitle": "Storage",
+    "storageTotal": "Space used",
+    "storageFiles": "Files",
+    "storageOrders": "Orders with files",
+    "storageCost": "Estimated cost: {{coste}} €/month · Rate: {{tarifa}} €/GB/month (indicative)"
   },
   "formBuilder": {
     "title": "Form builder",

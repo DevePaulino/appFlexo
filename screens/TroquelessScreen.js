@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal,
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoTroquelModal from './NuevoTroquelModal';
+import TroquelImportModal from './TroquelImportModal';
 import { usePermission } from './usePermission';
 import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
+import * as XLSX from 'xlsx';
 
 function calcularSiguienteNumeroTroquel(lista) {
   let maxNumero = 0;
@@ -470,6 +472,9 @@ export default function TroquelessScreen({ currentUser, navigation }) {
   const [confirmingDeleteTroquel, setConfirmingDeleteTroquel] = useState(null);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importFileHeaders, setImportFileHeaders] = useState([]);
+  const [importFileRows, setImportFileRows] = useState([]);
 
   const siguienteNumeroTroquel = calcularSiguienteNumeroTroquel(troqueles);
   const numerosExistentesTroquel = troqueles
@@ -689,80 +694,6 @@ export default function TroquelessScreen({ currentUser, navigation }) {
     await cargarTroqueles();
   };
 
-  const importarTroquelesDesdeCsv = async (csvText) => {
-    const lineas = String(csvText || '')
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    if (lineas.length < 2) {
-      Alert.alert(t('common.import'), t('screens.troqueles.importNoData'));
-      return;
-    }
-
-    const headers = parseCsvLine(lineas[0]).map(normalizarClave);
-    const baseNumeros = new Set(troqueles.map((t) => normalizarNumeroTroquel(t.numero || t.referencia)));
-    const nuevosNumeros = new Set();
-    const importados = [];
-    const errores = [];
-
-    for (let i = 1; i < lineas.length; i += 1) {
-      const valores = parseCsvLine(lineas[i]);
-      const row = {};
-      headers.forEach((h, idx) => {
-        row[h] = valores[idx] ?? '';
-      });
-
-      const troquel = construirTroquelDesdeFila(row, '');
-      const numeroNormalizado = normalizarNumeroTroquel(troquel.numero);
-
-      if (!numeroNormalizado) {
-        errores.push(`Línea ${i + 1}: falta número/referencia`);
-        continue;
-      }
-
-      if (baseNumeros.has(numeroNormalizado) || nuevosNumeros.has(numeroNormalizado)) {
-        errores.push(`Línea ${i + 1}: número duplicado (${troquel.numero})`);
-        continue;
-      }
-
-      nuevosNumeros.add(numeroNormalizado);
-      importados.push(troquel);
-    }
-
-    let importadosOk = 0;
-    const erroresApi = [];
-
-    if (importados.length > 0) {
-      for (const t of importados) {
-        try {
-          const resp = await fetch(API_TROQUELES, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(t),
-          });
-          if (resp.ok) {
-            importadosOk += 1;
-          } else {
-            erroresApi.push(t.numero);
-          }
-        } catch (e) {
-          erroresApi.push(t.numero);
-        }
-      }
-      await cargarTroqueles();
-    }
-
-    const resumenErrores = errores.length > 0 ? `\nErrores de formato: ${errores.length}` : '';
-    const resumenApi = erroresApi.length > 0 ? `\nErrores al guardar: ${erroresApi.length}` : '';
-    const previewErrores = errores.slice(0, 3).join('\n');
-    const detalleErrores = previewErrores ? `\n\n${previewErrores}${errores.length > 3 ? '\n...' : ''}` : '';
-    Alert.alert(
-      t('screens.troqueles.importFinish'),
-      `${t('screens.troqueles.importedCount', { count: importadosOk })}${resumenErrores}${resumenApi}${detalleErrores}`
-    );
-  };
-
   const handleImportarCsv = () => {
     if (!puedeImportarTroqueles) {
       Alert.alert(t('forms.permisoDenegado'), t('screens.troqueles.importPermiso'));
@@ -781,18 +712,77 @@ export default function TroquelessScreen({ currentUser, navigation }) {
 
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv,text/csv';
+    input.accept = '.csv,.xls,.xlsx,.ods,text/csv';
     input.onchange = async (event) => {
       try {
         const file = event?.target?.files?.[0];
         if (!file) return;
-        const text = await file.text();
-        await importarTroquelesDesdeCsv(text);
+
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const jsonRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        if (!jsonRows || jsonRows.length < 2) {
+          Alert.alert(t('common.import'), t('screens.troqueles.importNoData'));
+          return;
+        }
+
+        const headers = (jsonRows[0] || []).map((h) => String(h ?? '').trim()).filter(Boolean);
+        if (!headers.length) {
+          Alert.alert(t('common.import'), t('screens.troqueles.importNoData'));
+          return;
+        }
+
+        const rows = jsonRows.slice(1).map((rowArr) => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = String(rowArr[i] ?? '').trim(); });
+          return obj;
+        }).filter((r) => Object.values(r).some((v) => v));
+
+        setImportFileHeaders(headers);
+        setImportFileRows(rows);
+        setImportModalVisible(true);
       } catch (e) {
-        Alert.alert('Importación CSV', `No se pudo importar el archivo: ${e.message}`);
+        Alert.alert(t('common.import'), `No se pudo leer el archivo: ${e.message}`);
       }
     };
     input.click();
+  };
+
+  const handleImportConfirm = async (troqueles) => {
+    const token = global.__MIAPP_ACCESS_TOKEN;
+    let importadosOk = 0;
+    const erroresApi = [];
+
+    for (const troquel of troqueles) {
+      try {
+        const resp = await fetch(API_TROQUELES, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(troquel),
+        });
+        if (resp.ok) {
+          importadosOk += 1;
+        } else {
+          erroresApi.push(troquel.numero);
+        }
+      } catch (e) {
+        erroresApi.push(troquel.numero);
+      }
+    }
+
+    await cargarTroqueles();
+    setImportModalVisible(false);
+
+    const resumenApi = erroresApi.length > 0 ? `\nErrores al guardar: ${erroresApi.length}` : '';
+    Alert.alert(
+      t('screens.troqueles.importFinish'),
+      `${t('screens.troqueles.importedCount', { count: importadosOk })}${resumenApi}`
+    );
   };
 
   const abrirDetalle = (troquel) => {
@@ -1096,6 +1086,14 @@ export default function TroquelessScreen({ currentUser, navigation }) {
           </View>
         </View>
       </Modal>
+
+      <TroquelImportModal
+        visible={importModalVisible}
+        fileHeaders={importFileHeaders}
+        fileRows={importFileRows}
+        onClose={() => setImportModalVisible(false)}
+        onImport={handleImportConfirm}
+      />
     </View>
   );
 }

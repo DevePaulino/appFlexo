@@ -808,7 +808,7 @@
     },
     "pedidoDetalle": {
       "title": "Auftragsdetails",
-      "tabDatos": "Auftrag",
+      "tabDatos": "Information",
       "tabArchivos": "Dateien",
       "secPedido": "Auftrag",
       "secCliente": "Kunde / Kontakt",
@@ -1099,7 +1099,7 @@
     "cancelMsg": "Der Kauf wurde abgebrochen. Sie können es jederzeit erneut versuchen.",
     "errorTitle": "Fehler",
     "insufficientCredits": "Guthaben nicht ausreichend",
-    "insufficientCreditsMsg": "Sie benötigen {{required}} Guthaben, um einen Auftrag zu erstellen. Aktuelles Guthaben: {{balance}}. Gehen Sie zu Einstellungen › Abrechnung zum Aufladen.",
+    "insufficientCreditsMsg": "Sie benötigen {{required}} Guthaben für diese Aktion. Aktuelles Guthaben: {{balance}}. Gehen Sie zu Einstellungen › Abrechnung zum Aufladen.",
     "action_pedido": "Auftrag erstellt",
     "action_features": "Premium-Funktionen",
     "action_purchase": "Guthaben aufgeladen",
@@ -1109,7 +1109,12 @@
     "subscriptionPaymentDesc": "Aktivieren Sie Ihr monatliches Abonnement für unbegrenzten Zugang.",
     "subscribe": "Abonnieren",
     "subSuccessTitle": "Abonnement aktiviert!",
-    "subSuccess": "Ihr monatliches Abonnement ist aktiv. Genießen Sie unbegrenzten Zugang."
+    "subSuccess": "Ihr monatliches Abonnement ist aktiv. Genießen Sie unbegrenzten Zugang.",
+    "storageTitle": "Speicher",
+    "storageTotal": "Genutzter Speicher",
+    "storageFiles": "Dateien",
+    "storageOrders": "Aufträge mit Dateien",
+    "storageCost": "Geschätzte Kosten: {{coste}} €/Monat · Tarif: {{tarifa}} €/GB/Monat (Richtwert)"
   },
   "formBuilder": {
     "title": "Formular-Builder",

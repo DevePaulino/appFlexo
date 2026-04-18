@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useModulos } from '../ModulosContext';
 
@@ -129,16 +129,7 @@ export default function ModulosScreen() {
             </View>
             <Switch
               value={!!modulos.produccion}
-              onValueChange={(v) => {
-                if (v && !modulos.produccion_trigger_estado) {
-                  Alert.alert(
-                    t('screens.config.moduloProduccionTriggerRequired'),
-                    t('screens.config.moduloProduccionTriggerRequiredHint')
-                  );
-                  return;
-                }
-                setModulo('produccion', v);
-              }}
+              onValueChange={(v) => setModulo('produccion', v)}
               trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />

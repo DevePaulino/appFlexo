@@ -30,6 +30,8 @@ import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 import BillingScreen from './screens/BillingScreen';
 import FormBuilderScreen from './screens/FormBuilderScreen';
+import SuperAdminScreen from './screens/SuperAdminScreen';
+import ResellerScreen from './screens/ResellerScreen';
 import CookieBanner from './components/CookieBanner';
 
 // Inject global web CSS: placeholder text italic + muted color
@@ -54,8 +56,8 @@ const Stack = createNativeStackNavigator();
 const SettingsStack = createNativeStackNavigator();
 const ActivosStack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
-const VALID_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting'];
-const VISIBLE_TOP_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting'];
+const VALID_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting', 'Admin'];
+const VISIBLE_TOP_TABS = ['Presupuesto', 'Pedidos', 'Producción', 'Activos', 'Setting', 'Admin'];
 const DROPDOWN_TABS = ['Setting', 'Activos'];
 
 // Tabs que ya no existen como pestaña general → redirigir
@@ -855,7 +857,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
         <EmpresaBranding currentUser={currentUser} />
         <View style={styles.tabsList}>
           {state.routes
-            .filter((route) => VISIBLE_TOP_TABS.includes(route.name) && (route.name !== 'Producción' || produccionModuloActivo) && (route.name !== 'Presupuesto' || presupuestosModuloActivo))
+            .filter((route) => VISIBLE_TOP_TABS.includes(route.name) && (route.name !== 'Producción' || produccionModuloActivo) && (route.name !== 'Presupuesto' || presupuestosModuloActivo) && (route.name !== 'Admin' || currentUser?.rol === 'root'))
             .map((route) => {
               const options = descriptors[route.key]?.options || {};
               const label = options.tabBarLabel || options.title || route.name;
@@ -1030,6 +1032,11 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvat
         name="Setting"
         children={(props) => <SettingsNavigator {...props} currentUser={currentUser} />}
         options={{ tabBarLabel: t('nav.ajustes') }}
+      />
+      <Tab.Screen
+        name="Admin"
+        children={(props) => <SuperAdminScreen {...props} currentUser={currentUser} />}
+        options={{ tabBarLabel: '⚡ Admin' }}
       />
     </Tab.Navigator>
   );
@@ -1847,6 +1854,12 @@ export default function App() {
             <Stack.Screen
               name="Auth"
               children={() => <AuthHomeScreen onAuthSuccess={handleAuthSuccess} />}
+              options={{ headerShown: false }}
+            />
+          ) : authUser.billing_model === 'revendedor' ? (
+            <Stack.Screen
+              name="Revendedor"
+              children={() => <ResellerScreen currentUser={authUser} onLogout={handleLogout} />}
               options={{ headerShown: false }}
             />
           ) : (

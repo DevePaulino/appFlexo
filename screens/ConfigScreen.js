@@ -13,7 +13,6 @@ import { usePermission } from './usePermission';
 
 const API_BASE = 'http://localhost:8080';
 const API_URL = 'http://localhost:8080/api/settings';
-const API_MODO_URL = 'http://localhost:8080/api/settings/modo-creacion';
 const API_SESSION_TIMEOUT_URL = 'http://localhost:8080/api/settings/session-timeout';
 const API_ESTADOS_RULES_URL = 'http://localhost:8080/api/settings/estados-pedido-rules';
 const API_SETTINGS_REORDER_URL = 'http://localhost:8080/api/settings/reorder';
@@ -1062,6 +1061,7 @@ export default function ConfigScreen({ route, currentUser }) {
   const [guardandoSessionTimeout, setGuardandoSessionTimeout] = useState(false);
   const [forceRootEnabled, setForceRootEnabled] = useState(false);
   const [apiExamplesExpanded, setApiExamplesExpanded] = useState(false);
+  const [apiCampos, setApiCampos] = useState([]);
   const [guardandoModoCreacion, setGuardandoModoCreacion] = useState(false);
   const [billingConfig, setBillingConfig] = useState({
     checkout_enabled: false,
@@ -2845,85 +2845,97 @@ export default function ConfigScreen({ route, currentUser }) {
                   <Text style={[styles.modeBtnText, modoCreacion === 'automatico' && styles.modeBtnTextActive]}>{t('screens.config.automatico')}</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.rulesToggleBtn} onPress={() => setApiExamplesExpanded((v) => !v)}>
+              <TouchableOpacity style={styles.rulesToggleBtn} onPress={async () => {
+                const next = !apiExamplesExpanded;
+                setApiExamplesExpanded(next);
+                if (next && apiCampos.length === 0) {
+                  try {
+                    const token = global.__MIAPP_ACCESS_TOKEN;
+                    const res = await fetch(`${API_BASE}/api/campos-formulario?form=pedido`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    if (res.ok) {
+                      const d = await res.json();
+                      setApiCampos(d.campos || []);
+                    }
+                  } catch (_) {}
+                }
+              }}>
                 <Text style={styles.rulesToggleBtnText}>{apiExamplesExpanded ? t('screens.config.ocultarEjemplosApi') : t('screens.config.verEjemplosApi')}</Text>
               </TouchableOpacity>
             </View>
 
-            {apiExamplesExpanded && (
-              <>
-                <Text style={styles.codeTitle}>1. Cambiar modo (curl)</Text>
-                <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`curl -X PUT ${API_MODO_URL} \\
-  -H 'Content-Type: application/json' \\
-  -H 'X-Empresa-Id: 1' \\
-  -H 'X-User-Id: admin' \\
-  -H 'X-Role: administrador' \\
-  -d '{"modo":"automatico"}'`}</Text>
-                </View>
-
-                <Text style={styles.codeTitle}>2. Crear pedido desde ERP (curl)</Text>
-                <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`curl -X POST http://localhost:8080/api/pedidos/crear-desde-erp \\
-  -H 'Content-Type: application/json' \\
-  -H 'X-Empresa-Id: 1' \\
-  -H 'X-User-Id: erp-system' \\
-  -H 'X-Role: erp' \\
+            {apiExamplesExpanded && (() => {
+              const sampleValorPorTipo = (campo) => {
+                switch (campo.tipo) {
+                  case 'numero':    return 0;
+                  case 'checkbox':  return false;
+                  case 'fecha':     return '2026-01-15';
+                  case 'select':    return campo.opciones?.[0] || 'opcion1';
+                  case 'multiselect': return [campo.opciones?.[0] || 'opcion1'];
+                  default:          return `Ejemplo ${campo.etiqueta}`;
+                }
+              };
+              const datosPresupuesto = {};
+              (apiCampos || []).forEach((c) => { datosPresupuesto[c.campo_id] = sampleValorPorTipo(c); });
+              const dpJson = JSON.stringify(datosPresupuesto, null, 4).split('\n').map((l, i) => i === 0 ? l : `    ${l}`).join('\n');
+              const headers = `-H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer <TU_TOKEN_JWT>'`;
+              return (
+                <>
+                  <Text style={styles.codeTitle}>1. Crear pedido (POST)</Text>
+                  <View style={styles.codeBlock}>
+                    <Text style={styles.codeText}>{`curl -X POST ${API_BASE}/api/pedidos/crear-desde-erp \\
+  ${headers} \\
   -d '{
-    "trabajo_id": "ERP-2026-001",
-    "cliente": "Cliente ABC",
+    "trabajo_id": "ERP-001",
+    "nombre": "Nombre del trabajo",
+    "cliente": "Nombre del cliente",
     "referencia": "REF-001",
-    "nombre": "Pedido desde ERP",
-    "fecha_entrega": "2026-03-15",
-    "datos_presupuesto": {
-      "tirada": 1000,
-      "material": "PP",
-      "acabado": ["Mate"]
-    }
+    "fecha_entrega": "2026-06-30",
+    "datos_presupuesto": ${dpJson}
   }'`}</Text>
-                </View>
+                  </View>
 
-                <Text style={styles.codeTitle}>3. Verificar si modo automático está activo (curl)</Text>
-                <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`curl -X GET http://localhost:8080/api/pedidos/validar-modo-automatico \\
-  -H 'X-Empresa-Id: 1' \\
-  -H 'X-User-Id: erp-system' \\
-  -H 'X-Role: erp'`}</Text>
-                </View>
+                  <Text style={styles.codeTitle}>2. Editar pedido (PUT)</Text>
+                  <View style={styles.codeBlock}>
+                    <Text style={styles.codeText}>{`curl -X PUT ${API_BASE}/api/pedidos/<ID_PEDIDO> \\
+  ${headers} \\
+  -d '{
+    "nombre": "Nuevo nombre",
+    "datos_presupuesto": ${dpJson}
+  }'`}</Text>
+                  </View>
 
-                <Text style={styles.codeTitle}>4. Cambiar estado de un pedido (fetch)</Text>
-                <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`const updatePedido = (pedidoId, nuevoEstado) => {
-  fetch(\`http://localhost:8080/api/pedidos/\${pedidoId}\`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Empresa-Id': '1',
-      'X-User-Id': 'admin',
-      'X-Role': 'administrador'
-    },
-    body: JSON.stringify({
-      estado: nuevoEstado,
-      // Soporta campos adicionales
-      observaciones: '',
-      datos_presupuesto: {}
-    })
-  }).then(r => r.json())
-   .then(d => console.log(d));
-};`}</Text>
-                </View>
+                  <Text style={styles.codeTitle}>3. Eliminar pedido (DELETE)</Text>
+                  <View style={styles.codeBlock}>
+                    <Text style={styles.codeText}>{`curl -X DELETE ${API_BASE}/api/pedidos/<ID_PEDIDO> \\
+  ${headers}`}</Text>
+                  </View>
 
-                <Text style={styles.codeTitle}>Notas importantes:</Text>
-                <View style={styles.codeBlock}>
-                  <Text style={styles.codeText}>{`• Los headers X-Empresa-Id, X-User-Id y X-Role son OBLIGATORIOS
-• Para ERP: X-Role puede ser "erp" o similar
-• El modo automático: "automatico" o "manual"
-• Los campos adicionales en pedidos/presupuestos se
-  guardan en "datos_presupuesto" para compatibilidad futura
-• Idempotencia: crear 2 veces mismo trabajo_id retorna el existente`}</Text>
-                </View>
-              </>
-            )}
+                  {apiCampos.length > 0 && (
+                    <>
+                      <Text style={styles.codeTitle}>Campos de datos_presupuesto</Text>
+                      <View style={styles.codeBlock}>
+                        {apiCampos.map((c) => (
+                          <Text key={c.campo_id} style={styles.codeText}>
+                            {`"${c.campo_id}"  →  ${c.etiqueta}  [${c.tipo}]${c.obligatorio ? '  *' : ''}`}
+                          </Text>
+                        ))}
+                      </View>
+                    </>
+                  )}
+
+                  <Text style={styles.codeTitle}>Notas</Text>
+                  <View style={styles.codeBlock}>
+                    <Text style={styles.codeText}>{`• Reemplaza <TU_TOKEN_JWT> por el token de acceso
+• trabajo_id en crear es el ID de tu ERP (idempotente)
+• Los campos marcados con * son obligatorios
+• datos_presupuesto se ignora si no se envía`}</Text>
+                  </View>
+                </>
+              );
+            })()}
           </View>
 
           {renderCategoria('estados_pedido', t('screens.config.estadosPedidoTitle'))}

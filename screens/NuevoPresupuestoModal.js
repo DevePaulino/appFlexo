@@ -1051,17 +1051,24 @@ export default function NuevoPresupuestoModal({
                             const rows = Object.entries(groups)
                                 .sort(([a], [b]) => Number(a) - Number(b))
                                 .map(([fila, items]) => {
-                                    const cells = items.map(item => {
-                                        const el = renderMap[item.campo_id];
-                                        if (el == null) return null;
+                                    const visibles = items.filter(item => renderMap[item.campo_id] != null);
+                                    if (visibles.length === 0) return null;
+                                    const cells = [];
+                                    let cursor = 0;
+                                    visibles.forEach(item => {
+                                        const gap = item.col - cursor;
+                                        if (gap > 0) {
+                                            const spacerPct = `${((gap / COLS) * 100).toFixed(4)}%`;
+                                            cells.push(<View key={`sp_${fila}_${item.col}`} style={{ flexBasis: spacerPct, flexShrink: 0, flexGrow: 0 }} />);
+                                        }
                                         const pct = `${((item.ancho / COLS) * 100).toFixed(4)}%`;
-                                        return (
+                                        cells.push(
                                             <View key={item.campo_id} style={{ flexBasis: pct, flexShrink: 0, flexGrow: 0, paddingRight: GAP }}>
-                                                {el}
+                                                {renderMap[item.campo_id]}
                                             </View>
                                         );
-                                    }).filter(Boolean);
-                                    if (cells.length === 0) return null;
+                                        cursor = item.col + item.ancho;
+                                    });
                                     return (
                                         <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 8, alignItems: 'flex-start' }}>
                                             {cells}
