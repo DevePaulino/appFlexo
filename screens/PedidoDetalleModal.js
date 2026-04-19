@@ -2575,7 +2575,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 <>
                 {/* ── Grid 2x2: Unitario | Esko / Artes | Comparador ── */}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginRight: -10 }}>
-                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
+                <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.unitarioTitle')}</Text>
@@ -2802,7 +2802,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>{/* fin col unitario */}
 
                 {/* ── Contenedores Esko ── */}
-                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
+                <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
@@ -2884,7 +2884,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>{/* fin col esko */}
 
                 {/* ── Artes Finales del Cliente ── */}
-                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
+                <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
@@ -2963,7 +2963,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>{/* fin col artes */}
 
                 {/* ── Comparador de PDF ── */}
-                <View style={{ flexBasis: '50%', paddingRight: 10, marginBottom: 10 }}>
+                <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 {(() => {
                   const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
                   const ESKO_LABELS = { report: 'Report', repetidora: 'Repetidora', trapping: 'Trapping', troquel: 'Troquel' };
