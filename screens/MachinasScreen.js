@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
@@ -409,7 +409,7 @@ export default function MachinasScreen({ currentUser }) {
         ) : (
           <ScrollView style={styles.tableContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-            <View style={{ minWidth: 640 }}>
+            <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 640 } })}>
             {/* ── Cabecera ── */}
             <View style={styles.tableHeader}>
               <View style={[styles.tableCell, styles.colNombre]}>

@@ -633,7 +633,6 @@ const styles = StyleSheet.create({
   },
   usersTableWrap: {
     maxHeight: 280,
-    minWidth: 520,
   },
   usersTableHeader: {
     flexDirection: 'row',
@@ -2487,8 +2486,8 @@ export default function ConfigScreen({ route, currentUser }) {
                 <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
               ) : (
                 <>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.usersTableWrap}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+                  <View style={[styles.usersTableWrap, Platform.select({ web: { width: '100%' }, default: { minWidth: 520 } })]}>
                     <View style={styles.usersTableHeader}>
                       <View style={styles.usersColAvatar} />
                       <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
@@ -2964,8 +2963,8 @@ export default function ConfigScreen({ route, currentUser }) {
             <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
           ) : (
             <>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.usersTableWrap}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+              <View style={[styles.usersTableWrap, Platform.select({ web: { width: '100%' }, default: { minWidth: 520 } })]}>
                 <View style={styles.usersTableHeader}>
                   <View style={styles.usersColNombre}><Text style={styles.usersHeaderText}>{t('screens.config.colNombre')}</Text></View>
                   <View style={styles.usersColEmail}><Text style={styles.usersHeaderText}>{t('screens.config.colEmail')}</Text></View>

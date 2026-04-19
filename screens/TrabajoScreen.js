@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPedidoModal from './NuevoPedidoModal';
@@ -968,7 +968,7 @@ export default function TrabajoScreen({ currentUser }) {
       ) : (
         <ScrollView style={styles.tableContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={{ minWidth: 620 }}>
+          <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 620 } })}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumeroPedido]}>
               <Text style={styles.headerText}>{t('screens.trabajos.colNumeroPedido')}</Text>

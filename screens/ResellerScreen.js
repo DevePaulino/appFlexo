@@ -3,7 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   ActivityIndicator, StyleSheet, RefreshControl, Modal,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
+import { changeLanguage, LANGUAGES } from '../i18n/index';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -30,6 +32,7 @@ function _humanBytes(b) {
 
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 export default function ResellerScreen({ currentUser, onLogout }) {
+  const { t, i18n } = useTranslation();
   const api = apiFetch(currentUser?.access_token);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,16 +40,13 @@ export default function ResellerScreen({ currentUser, onLogout }) {
   const [error, setError] = useState(null);
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
   const [expandedCliente, setExpandedCliente] = useState(null);
-  // facturacion: { empresaId, mode } — null = cerrado
   const [editFacturacion, setEditFacturacion] = useState(null);
   const [savingFacturacion, setSavingFacturacion] = useState(false);
   const [factMsg, setFactMsg] = useState(null);
 
-  // Bloquear/desbloquear cliente
-  const [confirmBloquear, setConfirmBloquear] = useState(null); // empresa_id
-  const [toggling, setToggling] = useState(null); // empresa_id en proceso
+  const [confirmBloquear, setConfirmBloquear] = useState(null);
+  const [toggling, setToggling] = useState(null);
 
-  // Créditos y auto-recarga
   const [autoRecarga, setAutoRecarga] = useState(null);
   const [buyingPack, setBuyingPack] = useState(null);
   const [buyMsg, setBuyMsg] = useState(null);
@@ -61,7 +61,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
     setBuyingPack(packId); setBuyMsg(null);
     try {
       const res = await api('/api/billing/creditos/topup', { method: 'POST', body: JSON.stringify({ package_id: packId }) });
-      setBuyMsg({ type: 'ok', text: `+${res.credits_added} créditos añadidos. Saldo: ${res.new_balance}` });
+      setBuyMsg({ type: 'ok', text: `+${res.credits_added} ${t('screens.reseller.creditosUnit')}. ${res.new_balance}` });
       load();
     } catch (e) { setBuyMsg({ type: 'error', text: e.message }); }
     setBuyingPack(null);
@@ -72,7 +72,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
     setSavingAR(true); setArMsg(null);
     try {
       await api('/api/billing/auto-recarga', { method: 'PUT', body: JSON.stringify(autoRecarga) });
-      setArMsg({ type: 'ok', text: 'Configuración guardada' });
+      setArMsg({ type: 'ok', text: t('screens.reseller.configGuardada') });
     } catch (e) { setArMsg({ type: 'error', text: e.message }); }
     setSavingAR(false);
   };
@@ -85,7 +85,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
         method: 'PUT',
         body: JSON.stringify({ reseller_billing_mode: editFacturacion.mode }),
       });
-      setFactMsg({ type: 'ok', text: 'Guardado' });
+      setFactMsg({ type: 'ok', text: t('screens.reseller.guardado') });
       setTimeout(() => { setEditFacturacion(null); setFactMsg(null); load(); }, 700);
     } catch (e) { setFactMsg({ type: 'error', text: e.message }); }
     setSavingFacturacion(false);
@@ -125,11 +125,25 @@ export default function ResellerScreen({ currentUser, onLogout }) {
       {/* Header */}
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>{data?.empresa_nombre || data?.nombre || 'Portal Revendedor'}</Text>
+          <Text style={s.headerTitle}>{data?.empresa_nombre || data?.nombre || t('screens.reseller.portalTitle')}</Text>
           <Text style={s.headerSub}>{currentUser?.email}</Text>
         </View>
-        <TouchableOpacity style={s.logoutBtn} onPress={onLogout}>
-          <Text style={s.logoutBtnText}>Cerrar sesión</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {LANGUAGES.map((lang) => {
+            const active = i18n.language === lang.code;
+            return (
+              <TouchableOpacity
+                key={lang.code}
+                onPress={() => changeLanguage(lang.code)}
+                style={[s.langBtn, active && s.langBtnActive]}
+              >
+                <Text style={s.langFlag}>{lang.flag}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <TouchableOpacity style={[s.logoutBtn, { marginLeft: 10 }]} onPress={onLogout}>
+          <Text style={s.logoutBtnText}>{t('screens.reseller.cerrarSesion')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -142,36 +156,36 @@ export default function ResellerScreen({ currentUser, onLogout }) {
 
         {/* KPIs */}
         <View style={s.kpiRow}>
-          <KpiCard label="Créditos disponibles" value={data?.creditos ?? 0} color="#4F46E5" big />
-          <KpiCard label="Coste este mes" value={`${data?.coste_mes_actual_eur ?? 0} €`} color="#EF4444" big />
+          <KpiCard label={t('screens.reseller.kpiCreditos')} value={data?.creditos ?? 0} color="#4F46E5" big />
+          <KpiCard label={t('screens.reseller.kpiCosteMes')} value={`${data?.coste_mes_actual_eur ?? 0} €`} color="#EF4444" big />
         </View>
         <View style={s.kpiRow}>
-          <KpiCard label="Empresas cliente" value={data?.clientes?.length ?? 0} color="#0EA5E9" />
-          <KpiCard label="Descuento aplicado" value={`${data?.discount_pct ?? 0}%`} color="#10B981" />
-          <KpiCard label="Coste total acum." value={`${data?.coste_total_eur ?? 0} €`} color="#F59E0B" />
+          <KpiCard label={t('screens.reseller.kpiEmpresas')} value={data?.clientes?.length ?? 0} color="#0EA5E9" />
+          <KpiCard label={t('screens.reseller.kpiDescuento')} value={`${data?.discount_pct ?? 0}%`} color="#10B981" />
+          <KpiCard label={t('screens.reseller.kpiCosteTotal')} value={`${data?.coste_total_eur ?? 0} €`} color="#F59E0B" />
         </View>
 
-        {/* Tarifas aplicables */}
+        {/* Tarifas */}
         <View style={s.infoBox}>
           <Text style={s.infoBoxText}>
-            Tarifas con tu descuento del {data?.discount_pct ?? 0}%{'  '}·{'  '}
-            Pago por uso: {data?.precio_credito_eur ?? 0} €/crédito{'  '}·{'  '}
-            Cuota mensual: {data?.suscripcion_eur ?? 0} €/mes
+            {t('screens.reseller.infoTarifas', {
+              pct: data?.discount_pct ?? 0,
+              precio_credito: data?.precio_credito_eur ?? 0,
+              suscripcion: data?.suscripcion_eur ?? 0,
+            })}
           </Text>
         </View>
 
-        {/* Info descuento */}
         {(data?.discount_pct ?? 0) > 0 && (
           <View style={s.infoBox}>
             <Text style={s.infoBoxText}>
-              Tienes un descuento del {data.discount_pct}% sobre las tarifas estándar.
-              El consumo de todas tus empresas cliente se descuenta de tu saldo de créditos.
+              {t('screens.reseller.infoDescuento', { pct: data.discount_pct })}
             </Text>
           </View>
         )}
 
         {/* ── Compra de créditos ── */}
-        <Text style={s.sectionTitle}>Recargar créditos</Text>
+        <Text style={s.sectionTitle}>{t('screens.reseller.recargarCreditos')}</Text>
         {buyMsg && (
           <View style={[s.alertBox, buyMsg.type === 'ok' ? s.alertOk : s.alertError, { marginBottom: 8 }]}>
             <Text style={s.alertText}>{buyMsg.text}</Text>
@@ -185,13 +199,13 @@ export default function ResellerScreen({ currentUser, onLogout }) {
               onPress={() => buyPack(p.id)}
               disabled={!!buyingPack}
             >
-              {p.popular && <View style={s.packPopular}><Text style={s.packPopularText}>Popular</Text></View>}
+              {p.popular && <View style={s.packPopular}><Text style={s.packPopularText}>{t('screens.reseller.packPopular')}</Text></View>}
               <Text style={s.packCredits}>{p.credits}</Text>
-              <Text style={s.packLabel}>créditos</Text>
+              <Text style={s.packLabel}>{t('screens.reseller.packCreditos')}</Text>
               <Text style={s.packPrice}>{p.price_eur} €</Text>
               {buyingPack === p.id
                 ? <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 6 }} />
-                : <Text style={s.packBuy}>Comprar</Text>}
+                : <Text style={s.packBuy}>{t('screens.reseller.packComprar')}</Text>}
             </TouchableOpacity>
           ))}
         </View>
@@ -199,43 +213,40 @@ export default function ResellerScreen({ currentUser, onLogout }) {
         {/* ── Auto-recarga ── */}
         {autoRecarga && (
           <>
-            <Text style={[s.sectionTitle, { marginTop: 16 }]}>Auto-recarga</Text>
+            <Text style={[s.sectionTitle, { marginTop: 16 }]}>{t('screens.reseller.autoRecarga')}</Text>
             <View style={s.card}>
-              {/* Toggle */}
               <View style={[s.infoRow, { marginBottom: 4 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.rowPrimary}>Activar auto-recarga</Text>
-                  <Text style={s.rowSecondary}>Recarga automática cuando los créditos bajan del umbral</Text>
+                  <Text style={s.rowPrimary}>{t('screens.reseller.autoRecargaActivar')}</Text>
+                  <Text style={s.rowSecondary}>{t('screens.reseller.autoRecargaDesc')}</Text>
                 </View>
                 <TouchableOpacity
                   style={[s.toggleBtn, autoRecarga.auto_recarga_enabled && s.toggleBtnOn]}
                   onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_enabled: !ar.auto_recarga_enabled }))}
                 >
                   <Text style={[s.toggleBtnText, autoRecarga.auto_recarga_enabled && { color: '#4F46E5' }]}>
-                    {autoRecarga.auto_recarga_enabled ? 'ON' : 'OFF'}
+                    {autoRecarga.auto_recarga_enabled ? t('screens.reseller.autoRecargaOn') : t('screens.reseller.autoRecargaOff')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {autoRecarga.auto_recarga_enabled && (
                 <>
-                  {/* Umbral */}
                   <View style={s.formRow}>
-                    <Text style={s.formLabel}>Umbral mínimo de créditos</Text>
+                    <Text style={s.formLabel}>{t('screens.reseller.umbralLabel')}</Text>
                     <TextInput
                       style={s.formInput}
                       value={String(autoRecarga.auto_recarga_umbral ?? 20)}
                       onChangeText={(v) => setAutoRecarga((ar) => ({ ...ar, auto_recarga_umbral: parseInt(v) || 0 }))}
                       keyboardType="numeric"
-                      placeholder="Ej: 20"
+                      placeholder="20"
                       placeholderTextColor="#94A3B8"
                     />
-                    <Text style={s.rowSecondary}>Se recargará automáticamente cuando el saldo baje de este número</Text>
+                    <Text style={s.rowSecondary}>{t('screens.reseller.umbralHint')}</Text>
                   </View>
 
-                  {/* Pack a usar */}
                   <View style={s.formRow}>
-                    <Text style={s.formLabel}>Pack a recargar automáticamente</Text>
+                    <Text style={s.formLabel}>{t('screens.reseller.packAutoLabel')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
                       {(autoRecarga.packs || []).map((p) => (
                         <TouchableOpacity
@@ -244,7 +255,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                           onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_pack: p.id }))}
                         >
                           <Text style={[s.packSelectText, autoRecarga.auto_recarga_pack === p.id && { color: '#4F46E5' }]}>
-                            {p.credits} créditos — {p.price_eur} €
+                            {p.credits} {t('screens.reseller.creditosUnit')} — {p.price_eur} €
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -262,34 +273,34 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                 style={[s.primaryBtn, savingAR && { opacity: 0.6 }]}
                 onPress={saveAutoRecarga} disabled={savingAR}
               >
-                {savingAR ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.primaryBtnText}>Guardar configuración</Text>}
+                {savingAR ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.primaryBtnText}>{t('screens.reseller.guardarConfig')}</Text>}
               </TouchableOpacity>
             </View>
           </>
         )}
 
-        {/* Clientes con detalle de facturación */}
+        {/* Clientes */}
         <View style={s.sectionHeader}>
-          <Text style={s.sectionTitle}>Empresas cliente ({data?.clientes?.length ?? 0})</Text>
+          <Text style={s.sectionTitle}>{t('screens.reseller.empresasCliente', { count: data?.clientes?.length ?? 0 })}</Text>
           <TouchableOpacity style={s.addBtn} onPress={() => setShowNuevoCliente(true)}>
-            <Text style={s.addBtnText}>+ Nuevo cliente</Text>
+            <Text style={s.addBtnText}>{t('screens.reseller.nuevoCliente')}</Text>
           </TouchableOpacity>
         </View>
 
         {(data?.clientes || []).length === 0 ? (
           <View style={s.card}>
             <View style={s.emptyState}>
-              <Text style={s.emptyTitle}>Sin clientes aún</Text>
-              <Text style={s.emptySub}>Añade tu primera empresa cliente para empezar.</Text>
+              <Text style={s.emptyTitle}>{t('screens.reseller.sinClientes')}</Text>
+              <Text style={s.emptySub}>{t('screens.reseller.sinClientesSub')}</Text>
               <TouchableOpacity style={[s.addBtn, { marginTop: 12 }]} onPress={() => setShowNuevoCliente(true)}>
-                <Text style={s.addBtnText}>+ Añadir empresa cliente</Text>
+                <Text style={s.addBtnText}>{t('screens.reseller.addEmpresaCliente')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (data?.clientes || []).map((c) => (
           <View key={c.empresa_id} style={s.card}>
 
-            {/* Cabecera cliente — pulsable */}
+            {/* Cabecera cliente */}
             <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
               onPress={() => setExpandedCliente(expandedCliente === c.empresa_id ? null : c.empresa_id)}
@@ -300,12 +311,14 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                 <View style={{ flexDirection: 'row', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                   <View style={[s.modeBadge, c.reseller_billing_mode === 'cuota_mensual' ? s.modeBadgeSub : s.modeBadgePpu]}>
                     <Text style={s.modeBadgeText}>
-                      {c.reseller_billing_mode === 'cuota_mensual' ? '📅 Cuota mensual' : '📊 Pago por uso'}
+                      {c.reseller_billing_mode === 'cuota_mensual'
+                        ? t('screens.reseller.cuotaMensual')
+                        : t('screens.reseller.pagoPorUso')}
                     </Text>
                   </View>
                   {c.bloqueado && (
                     <View style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: '#FECACA' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>🔒 Bloqueado</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>{t('screens.reseller.bloqueado')}</Text>
                     </View>
                   )}
                 </View>
@@ -314,11 +327,11 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                 <Text style={s.consumoBadge}>{c.coste_acumulado_eur ?? 0} €</Text>
                 <Text style={[s.rowSecondary, { fontSize: 10 }]}>
                   {c.reseller_billing_mode === 'cuota_mensual'
-                    ? `${c.meses_activos ?? 1} mes(es)`
-                    : `${c.consumo_creditos ?? 0} cr. usados`}
+                    ? t('screens.reseller.mesActivo', { count: c.meses_activos ?? 1 })
+                    : t('screens.reseller.creditosUsados', { count: c.consumo_creditos ?? 0 })}
                 </Text>
                 <Text style={[s.rowSecondary, { fontSize: 10, color: '#EF4444' }]}>
-                  este mes: {c.coste_mes_actual_eur ?? 0} €
+                  {t('screens.reseller.esteMes', { eur: c.coste_mes_actual_eur ?? 0 })}
                 </Text>
               </View>
               <Text style={{ fontSize: 14, color: '#94A3B8', marginLeft: 4 }}>
@@ -330,8 +343,8 @@ export default function ResellerScreen({ currentUser, onLogout }) {
             {confirmBloquear === c.empresa_id ? (
               <View style={{ marginTop: 8 }}>
                 <DeleteConfirmRow
-                  message={c.bloqueado ? '¿Reactivar acceso de este cliente?' : '¿Bloquear acceso de este cliente?'}
-                  confirmLabel={c.bloqueado ? 'Reactivar' : 'Bloquear'}
+                  message={c.bloqueado ? t('screens.reseller.confirmarReactivar') : t('screens.reseller.confirmarBloquear')}
+                  confirmLabel={c.bloqueado ? t('screens.reseller.reactivar') : t('screens.reseller.bloquear')}
                   onCancel={() => setConfirmBloquear(null)}
                   onConfirm={() => toggleBloqueo(c.empresa_id, c.bloqueado)}
                 />
@@ -345,7 +358,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                 {toggling === c.empresa_id
                   ? <ActivityIndicator size="small" color="#64748B" />
                   : <Text style={[s.editFactBtnText, c.bloqueado && { color: '#DC2626' }]}>
-                      {c.bloqueado ? '🔓 Reactivar cliente' : '🔒 Bloquear cliente'}
+                      {c.bloqueado ? t('screens.reseller.reactivarCliente') : t('screens.reseller.bloquearCliente')}
                     </Text>
                 }
               </TouchableOpacity>
@@ -355,10 +368,10 @@ export default function ResellerScreen({ currentUser, onLogout }) {
             {expandedCliente === c.empresa_id && (
               <View style={{ marginTop: 12 }}>
 
-                {/* ── Modo de facturación ── */}
+                {/* Modo de facturación */}
                 {editFacturacion?.empresaId === c.empresa_id ? (
                   <View style={s.factBox}>
-                    <Text style={s.txSectionLabel}>Modo de facturación</Text>
+                    <Text style={s.txSectionLabel}>{t('screens.reseller.modFacturacion')}</Text>
                     <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
                       {['pago_por_uso', 'cuota_mensual'].map((m) => (
                         <TouchableOpacity
@@ -367,7 +380,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                           onPress={() => setEditFacturacion((f) => ({ ...f, mode: m }))}
                         >
                           <Text style={[s.modeBtnText, editFacturacion.mode === m && s.modeBtnTextActive]}>
-                            {m === 'cuota_mensual' ? '📅 Cuota mensual' : '📊 Pago por uso'}
+                            {m === 'cuota_mensual' ? t('screens.reseller.cuotaMensual') : t('screens.reseller.pagoPorUso')}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -375,8 +388,10 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                     {editFacturacion.mode === 'cuota_mensual' && (
                       <View style={[s.alertBox, s.alertOk, { marginBottom: 8 }]}>
                         <Text style={[s.alertText, { color: '#166534' }]}>
-                          Cuota fijada por el proveedor: {data?.suscripcion_eur ?? 0} €/mes
-                          {(data?.discount_pct ?? 0) > 0 ? ` (${data.discount_pct}% dto. aplicado)` : ''}
+                          {t('screens.reseller.cuotaFijada', { eur: data?.suscripcion_eur ?? 0 })}
+                          {(data?.discount_pct ?? 0) > 0
+                            ? t('screens.reseller.dtoAplicado', { pct: data.discount_pct })
+                            : ''}
                         </Text>
                       </View>
                     )}
@@ -392,13 +407,13 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                       >
                         {savingFacturacion
                           ? <ActivityIndicator size="small" color="#FFF" />
-                          : <Text style={s.primaryBtnText}>Guardar</Text>}
+                          : <Text style={s.primaryBtnText}>{t('screens.reseller.guardar')}</Text>}
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.secondaryBtn, { flex: 1 }]}
                         onPress={() => { setEditFacturacion(null); setFactMsg(null); }}
                       >
-                        <Text style={s.secondaryBtnText}>Cancelar</Text>
+                        <Text style={s.secondaryBtnText}>{t('screens.reseller.cancelar')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -410,24 +425,26 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                       mode: c.reseller_billing_mode || 'pago_por_uso',
                     })}
                   >
-                    <Text style={s.editFactBtnText}>✎ Cambiar modo de facturación</Text>
+                    <Text style={s.editFactBtnText}>{t('screens.reseller.cambiarModo')}</Text>
                   </TouchableOpacity>
                 )}
 
-                {/* Resumen mensual */}
-                <Text style={s.txSectionLabel}>Consumo por mes</Text>
+                {/* Consumo mensual */}
+                <Text style={s.txSectionLabel}>{t('screens.reseller.consumoPorMes')}</Text>
                 {(c.consumo_mensual || []).length === 0 ? (
-                  <Text style={[s.rowSecondary, { marginBottom: 8 }]}>Sin datos mensuales</Text>
+                  <Text style={[s.rowSecondary, { marginBottom: 8 }]}>{t('screens.reseller.sinDatosMensuales')}</Text>
                 ) : (
                   <View style={[s.card, { padding: 10, marginBottom: 10 }]}>
                     <View style={s.tblHead}>
-                      <Text style={[s.tblCol, { flex: 2 }]}>Mes</Text>
-                      <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Créditos</Text>
+                      <Text style={[s.tblCol, { flex: 2 }]}>{t('screens.reseller.colMes')}</Text>
+                      <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>{t('screens.reseller.colCreditos')}</Text>
                     </View>
                     {(c.consumo_mensual || []).map((m, i) => (
                       <View key={i} style={[s.tblRow, m.mes === new Date().toISOString().slice(0, 7) && { backgroundColor: '#FFFBEB' }]}>
                         <Text style={[s.rowPrimary, { flex: 2 }]}>
-                          {m.mes === new Date().toISOString().slice(0, 7) ? `${m.mes} ← actual` : m.mes}
+                          {m.mes === new Date().toISOString().slice(0, 7)
+                            ? `${m.mes} ${t('screens.reseller.mesActualSuffix')}`
+                            : m.mes}
                         </Text>
                         <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#F59E0B', textAlign: 'right' }}>{m.total}</Text>
                       </View>
@@ -435,16 +452,16 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                   </View>
                 )}
 
-                {/* Transacciones recientes */}
-                <Text style={s.txSectionLabel}>Últimas transacciones</Text>
+                {/* Transacciones */}
+                <Text style={s.txSectionLabel}>{t('screens.reseller.ultimasTransacciones')}</Text>
                 {(c.transacciones || []).length === 0 ? (
-                  <Text style={s.rowSecondary}>Sin transacciones registradas</Text>
+                  <Text style={s.rowSecondary}>{t('screens.reseller.sinTransacciones')}</Text>
                 ) : (
                   <>
                     <View style={s.tblHead}>
-                      <Text style={[s.tblCol, { flex: 3 }]}>Concepto</Text>
-                      <Text style={[s.tblCol, { flex: 2 }]}>Fecha</Text>
-                      <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Créd.</Text>
+                      <Text style={[s.tblCol, { flex: 3 }]}>{t('screens.reseller.colConcepto')}</Text>
+                      <Text style={[s.tblCol, { flex: 2 }]}>{t('screens.reseller.colFecha')}</Text>
+                      <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>{t('screens.reseller.colCred')}</Text>
                     </View>
                     {(c.transacciones || []).map((tx, i) => (
                       <View key={i} style={s.tblRow}>
@@ -458,8 +475,8 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                       </View>
                     ))}
                     <View style={s.txTotal}>
-                      <Text style={s.txTotalLabel}>Total acumulado</Text>
-                      <Text style={s.txTotalValue}>{c.consumo_creditos ?? 0} créditos</Text>
+                      <Text style={s.txTotalLabel}>{t('screens.reseller.totalAcumulado')}</Text>
+                      <Text style={s.txTotalValue}>{c.consumo_creditos ?? 0} {t('screens.reseller.creditosUnit')}</Text>
                     </View>
                   </>
                 )}
@@ -469,7 +486,6 @@ export default function ResellerScreen({ currentUser, onLogout }) {
         ))}
       </ScrollView>
 
-      {/* Modal nuevo cliente */}
       <NuevoClienteModal
         visible={showNuevoCliente}
         onClose={() => setShowNuevoCliente(false)}
@@ -482,6 +498,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
 
 // ─── Modal: nuevo cliente ─────────────────────────────────────────────────────
 function NuevoClienteModal({ visible, onClose, onCreated, api }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ nombre: '', empresa_nombre: '', email: '', password: '' });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -490,12 +507,12 @@ function NuevoClienteModal({ visible, onClose, onCreated, api }) {
 
   const submit = async () => {
     if (!form.email.trim() || !form.password.trim()) {
-      setMsg({ type: 'error', text: 'Email y contraseña son obligatorios' }); return;
+      setMsg({ type: 'error', text: t('screens.reseller.emailRequired') }); return;
     }
     setSaving(true); setMsg(null);
     try {
       await api('/api/revendedor/clientes', { method: 'POST', body: JSON.stringify(form) });
-      setMsg({ type: 'ok', text: 'Cliente creado correctamente' });
+      setMsg({ type: 'ok', text: t('screens.reseller.clienteCreado') });
       reset();
       setTimeout(onCreated, 800);
     } catch (e) { setMsg({ type: 'error', text: e.message }); }
@@ -507,26 +524,26 @@ function NuevoClienteModal({ visible, onClose, onCreated, api }) {
       <View style={s.modalOverlay}>
         <View style={s.modalBox}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Nueva empresa cliente</Text>
+            <Text style={s.modalTitle}>{t('screens.reseller.modalTitle')}</Text>
             <TouchableOpacity onPress={() => { reset(); onClose(); }}>
               <Text style={s.modalClose}>✕</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView>
-            <FormField label="Nombre del contacto" value={form.nombre}
+            <FormField label={t('screens.reseller.fieldNombreContacto')} value={form.nombre}
               onChange={(v) => setForm((f) => ({ ...f, nombre: v }))}
-              placeholder="Ej: Juan García" />
-            <FormField label="Nombre de la empresa" value={form.empresa_nombre}
+              placeholder={t('screens.reseller.placeholderNombre')} />
+            <FormField label={t('screens.reseller.fieldNombreEmpresa')} value={form.empresa_nombre}
               onChange={(v) => setForm((f) => ({ ...f, empresa_nombre: v }))}
-              placeholder="Ej: Imprenta López S.L." />
-            <FormField label="Email de acceso *" value={form.email}
+              placeholder={t('screens.reseller.placeholderEmpresa')} />
+            <FormField label={t('screens.reseller.fieldEmail')} value={form.email}
               onChange={(v) => setForm((f) => ({ ...f, email: v }))}
-              placeholder="cliente@empresa.com"
+              placeholder={t('screens.reseller.placeholderEmail')}
               keyboardType="email-address" autoCapitalize="none" />
-            <FormField label="Contraseña inicial *" value={form.password}
+            <FormField label={t('screens.reseller.fieldPassword')} value={form.password}
               onChange={(v) => setForm((f) => ({ ...f, password: v }))}
-              placeholder="Mín. 8 caracteres"
+              placeholder={t('screens.reseller.placeholderPassword')}
               secureTextEntry />
 
             {msg && (
@@ -541,7 +558,7 @@ function NuevoClienteModal({ visible, onClose, onCreated, api }) {
             >
               {saving
                 ? <ActivityIndicator size="small" color="#FFF" />
-                : <Text style={s.primaryBtnText}>Crear empresa cliente</Text>
+                : <Text style={s.primaryBtnText}>{t('screens.reseller.crearEmpresaBtn')}</Text>
               }
             </TouchableOpacity>
           </ScrollView>
@@ -586,6 +603,9 @@ const s = StyleSheet.create({
   headerSub:      { fontSize: 12, color: '#A5B4FC', marginTop: 2 },
   logoutBtn:      { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#A5B4FC' },
   logoutBtnText:  { fontSize: 13, fontWeight: '600', color: '#A5B4FC' },
+  langBtn:        { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  langBtnActive:  { borderColor: '#A5B4FC', backgroundColor: 'rgba(165,180,252,0.15)' },
+  langFlag:       { fontSize: 16 },
 
   kpiRow:         { flexDirection: 'row', gap: 10, marginBottom: 16, flexWrap: 'wrap' },
   kpiCard:        { flex: 1, minWidth: 120, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, alignItems: 'center' },

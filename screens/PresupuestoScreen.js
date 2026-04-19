@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
@@ -977,7 +977,7 @@ export default function PresupuestoScreen({ currentUser }) {
       ) : (
         <ScrollView style={styles.tableContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={{ minWidth: 560 }}>
+          <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 560 } })}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumero]}>
               <Text style={styles.headerText}>{t('screens.presupuesto.colNumero')}</Text>

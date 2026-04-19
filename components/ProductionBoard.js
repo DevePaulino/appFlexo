@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, TextInput, Platform } from 'react-native';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
@@ -498,7 +498,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
 
         {/* Column headers */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={{ minWidth: 780 }}>
+        <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 780 } })}>
         <View style={styles.tableHeader}>
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.headerText}>#</Text>
@@ -537,13 +537,13 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               <ScrollView style={styles.rowsContainer}>
-                <View style={{ minWidth: 780 }}>{rowList}</View>
+                <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 780 } })}>{rowList}</View>
               </ScrollView>
             </SortableContext>
           </DndContext>
         ) : (
           <ScrollView style={styles.rowsContainer}>
-            <View style={{ minWidth: 780 }}>{rowList}</View>
+            <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 780 } })}>{rowList}</View>
           </ScrollView>
         )}
         </View>

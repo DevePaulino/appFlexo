@@ -56,6 +56,7 @@ export default function BillingScreen({ navigation, currentUser }) {
   const [subscribing, setSubscribing] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [expandedTx, setExpandedTx] = useState(new Set());
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [redeemMsg, setRedeemMsg] = useState(null); // { type: 'ok'|'error', text }
@@ -100,7 +101,7 @@ export default function BillingScreen({ navigation, currentUser }) {
         body: JSON.stringify(autoRecarga),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      setArMsg({ type: 'ok', text: 'Configuración guardada' });
+      setArMsg({ type: 'ok', text: t('billing.autoRechargeSaved') });
     } catch (e) { setArMsg({ type: 'error', text: e.message }); }
     setSavingAR(false);
   };
@@ -257,7 +258,7 @@ export default function BillingScreen({ navigation, currentUser }) {
       if (!res.ok) {
         setRedeemMsg({ type: 'error', text: data.error || t('common.error') });
       } else {
-        setRedeemMsg({ type: 'ok', text: `+${data.credits_added} créditos añadidos. Saldo: ${data.new_balance}` });
+        setRedeemMsg({ type: 'ok', text: t('billing.promoSuccess', { credits: data.credits_added, balance: data.new_balance }) });
         setPromoCode('');
         load();
       }
@@ -304,11 +305,8 @@ export default function BillingScreen({ navigation, currentUser }) {
         </View>
         <View style={s.resellerNotice}>
           <Text style={s.resellerIcon}>🤝</Text>
-          <Text style={s.resellerTitle}>Gestionado por tu distribuidor</Text>
-          <Text style={s.resellerSub}>
-            El uso de esta aplicación está cubierto por tu distribuidor.{'\n'}
-            Para cualquier consulta sobre facturación, contacta directamente con él.
-          </Text>
+          <Text style={s.resellerTitle}>{t('billing.resellerTitle')}</Text>
+          <Text style={s.resellerSub}>{t('billing.resellerSub')}</Text>
         </View>
       </View>
     );
@@ -328,34 +326,71 @@ export default function BillingScreen({ navigation, currentUser }) {
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
 
-          {/* ── Plan actual ────────────────────────────────────────────── */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>{t('billing.currentPlan')}</Text>
-            <View style={s.planRow}>
-              <View style={[s.modeBadge, isSub ? s.modeBadgeSub : s.modeBadgeCredits]}>
-                <Text style={[s.modeBadgeText, isSub ? s.modeBadgeTextSub : s.modeBadgeTextCredits]}>
-                  {isSub ? t('billing.modeSubscription') : t('billing.modeCredits')}
-                </Text>
+          {/* ── Plan actual + Coste por acción (misma fila) ───────────── */}
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
+
+            {/* Plan actual */}
+            <View style={[s.section, { flex: 1 }]}>
+              <Text style={s.sectionTitle}>{t('billing.currentPlan')}</Text>
+              <View style={s.planRow}>
+                <View style={[s.modeBadge, isSub ? s.modeBadgeSub : s.modeBadgeCredits]}>
+                  <Text style={[s.modeBadgeText, isSub ? s.modeBadgeTextSub : s.modeBadgeTextCredits]}>
+                    {isSub ? t('billing.modeSubscription') : t('billing.modeCredits')}
+                  </Text>
+                </View>
               </View>
+
+              {isCredits && (
+                <>
+                  <Text style={s.balanceNumber}>{status?.creditos ?? '—'}</Text>
+                  <Text style={s.balanceLabel}>{t('billing.creditsAvailable')}</Text>
+                </>
+              )}
+              {isSub && (
+                <>
+                  <Text style={s.unlimitedText}>{t('billing.unlimited')}</Text>
+                  <Text style={s.planDesc}>{t('billing.subscriptionDesc')}</Text>
+                  <Text style={[s.planPriceLabel, { marginTop: 8 }]}>
+                    {status?.subscription_price_eur
+                      ? `${status.subscription_price_eur.toFixed(2)} € / ${t('billing.perMonth')}`
+                      : t('billing.priceOnRequest')}
+                  </Text>
+                </>
+              )}
             </View>
 
+            {/* Coste por acción (solo créditos) */}
             {isCredits && (
-              <>
-                <Text style={s.balanceNumber}>{status?.creditos ?? '—'}</Text>
-                <Text style={s.balanceLabel}>{t('billing.creditsAvailable')}</Text>
-              </>
+              <View style={[s.section, { flex: 1 }]}>
+                <Text style={s.sectionTitle}>{t('billing.costsTitle')}</Text>
+                <View style={s.costRow}>
+                  <Text style={s.costIcon}>•</Text>
+                  <View style={s.costInfo}>
+                    <Text style={s.costName}>{t('billing.costOrder')}</Text>
+                  </View>
+                  <View style={s.costBadge}>
+                    <Text style={s.costBadgeText}>{status?.credit_cost_pedido ?? 5} {t('billing.credits')}</Text>
+                  </View>
+                </View>
+                <View style={s.costDivider} />
+                <View style={s.costRow}>
+                  <Text style={s.costIcon}>•</Text>
+                  <View style={s.costInfo}>
+                    <Text style={s.costName}>{t('billing.costFeatures')}</Text>
+                    <Text style={s.costHint}>{t('billing.costFeaturesHint')}</Text>
+                  </View>
+                  <View style={s.costBadge}>
+                    <Text style={s.costBadgeText}>{status?.credit_cost_features ?? 10} {t('billing.credits')}</Text>
+                  </View>
+                </View>
+                {!status?.stripe_enabled && (
+                  <View style={s.warnBox}>
+                    <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
+                  </View>
+                )}
+              </View>
             )}
-            {isSub && (
-              <>
-                <Text style={s.unlimitedText}>{t('billing.unlimited')}</Text>
-                <Text style={s.planDesc}>{t('billing.subscriptionDesc')}</Text>
-                <Text style={[s.planPriceLabel, { marginTop: 8 }]}>
-                  {status?.subscription_price_eur
-                    ? `${status.subscription_price_eur.toFixed(2)} € / ${t('billing.perMonth')}`
-                    : t('billing.priceOnRequest')}
-                </Text>
-              </>
-            )}
+
           </View>
 
           {/* ── Cambiar plan ───────────────────────────────────────────── */}
@@ -415,39 +450,9 @@ export default function BillingScreen({ navigation, currentUser }) {
             </View>
           )}
 
-          {/* ── Coste de acciones (solo créditos) ─────────────────────── */}
+          {/* ── Comprar créditos ─────────────────────────────────────── */}
           {isCredits && (
             <>
-              <View style={s.section}>
-                <Text style={s.sectionTitle}>{t('billing.costsTitle')}</Text>
-                <View style={s.costRow}>
-                  <Text style={s.costIcon}>•</Text>
-                  <View style={s.costInfo}>
-                    <Text style={s.costName}>{t('billing.costOrder')}</Text>
-                  </View>
-                  <View style={s.costBadge}>
-                    <Text style={s.costBadgeText}>{status?.credit_cost_pedido ?? 5} {t('billing.credits')}</Text>
-                  </View>
-                </View>
-                <View style={s.costDivider} />
-                <View style={s.costRow}>
-                  <Text style={s.costIcon}>•</Text>
-                  <View style={s.costInfo}>
-                    <Text style={s.costName}>{t('billing.costFeatures')}</Text>
-                    <Text style={s.costHint}>{t('billing.costFeaturesHint')}</Text>
-                  </View>
-                  <View style={s.costBadge}>
-                    <Text style={s.costBadgeText}>{status?.credit_cost_features ?? 10} {t('billing.credits')}</Text>
-                  </View>
-                </View>
-
-                {!status?.stripe_enabled && (
-                  <View style={s.warnBox}>
-                    <Text style={s.warnText}>{t('billing.simulatedNotice')}</Text>
-                  </View>
-                )}
-              </View>
-
               {/* ── Comprar créditos ──────────────────────────────────── */}
               <View style={s.section}>
                 <Text style={s.sectionTitle}>{t('billing.buyCredits')}</Text>
@@ -480,11 +485,11 @@ export default function BillingScreen({ navigation, currentUser }) {
 
           {/* ── Código promocional ───────────────────────────────────── */}
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Código promocional</Text>
+            <Text style={s.sectionTitle}>{t('billing.promoTitle')}</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 style={[s.promoInput]}
-                placeholder="Introduce tu código"
+                placeholder={t('billing.promoPlaceholder')}
                 placeholderTextColor={C.textMuted}
                 value={promoCode}
                 onChangeText={(v) => { setPromoCode(v.toUpperCase()); setRedeemMsg(null); }}
@@ -498,7 +503,7 @@ export default function BillingScreen({ navigation, currentUser }) {
               >
                 {redeeming
                   ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={s.promoBtnText}>Canjear</Text>
+                  : <Text style={s.promoBtnText}>{t('billing.promoRedeem')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -514,36 +519,36 @@ export default function BillingScreen({ navigation, currentUser }) {
           {/* ── Auto-recarga ─────────────────────────────────────────── */}
           {autoRecarga && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>Auto-recarga de créditos</Text>
+              <Text style={s.sectionTitle}>{t('billing.autoRechargeTitle')}</Text>
               <View style={s.arRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.arLabel}>Activar auto-recarga</Text>
-                  <Text style={s.arSub}>Recarga automática al bajar del umbral</Text>
+                  <Text style={s.arLabel}>{t('billing.autoRechargeEnable')}</Text>
+                  <Text style={s.arSub}>{t('billing.autoRechargeDesc')}</Text>
                 </View>
                 <TouchableOpacity
                   style={[s.arToggle, autoRecarga.auto_recarga_enabled && s.arToggleOn]}
                   onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_enabled: !ar.auto_recarga_enabled }))}
                 >
                   <Text style={[s.arToggleText, autoRecarga.auto_recarga_enabled && { color: C.accent }]}>
-                    {autoRecarga.auto_recarga_enabled ? 'ON' : 'OFF'}
+                    {autoRecarga.auto_recarga_enabled ? t('billing.autoRechargeOn') : t('billing.autoRechargeOff')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {autoRecarga.auto_recarga_enabled && (
                 <>
-                  <Text style={s.arFieldLabel}>Umbral mínimo (créditos)</Text>
+                  <Text style={s.arFieldLabel}>{t('billing.autoRechargeThreshold')}</Text>
                   <TextInput
                     style={s.arInput}
                     value={String(autoRecarga.auto_recarga_umbral ?? 20)}
                     onChangeText={(v) => setAutoRecarga((ar) => ({ ...ar, auto_recarga_umbral: parseInt(v) || 0 }))}
                     keyboardType="numeric"
-                    placeholder="Ej: 20"
+                    placeholder={t('billing.autoRechargeThresholdPlaceholder')}
                     placeholderTextColor={C.textMuted}
                   />
-                  <Text style={[s.arSub, { marginBottom: 8 }]}>Se recargará cuando el saldo baje de este número</Text>
+                  <Text style={[s.arSub, { marginBottom: 8 }]}>{t('billing.autoRechargeThresholdHint')}</Text>
 
-                  <Text style={s.arFieldLabel}>Pack a recargar automáticamente</Text>
+                  <Text style={s.arFieldLabel}>{t('billing.autoRechargePack')}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 12 }}>
                     {(autoRecarga.packs || []).map((p) => (
                       <TouchableOpacity
@@ -552,7 +557,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                         onPress={() => setAutoRecarga((ar) => ({ ...ar, auto_recarga_pack: p.id }))}
                       >
                         <Text style={[s.arPackText, autoRecarga.auto_recarga_pack === p.id && { color: C.accent }]}>
-                          {p.credits} créditos — {p.price_eur} €
+                          {t('billing.packLabel', { credits: p.credits, price: p.price_eur })}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -569,7 +574,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                 style={[s.promoBtn, savingAR && { opacity: 0.6 }]}
                 onPress={saveAutoRecarga} disabled={savingAR}
               >
-                {savingAR ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.promoBtnText}>Guardar configuración</Text>}
+                {savingAR ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.promoBtnText}>{t('billing.autoRechargeSave')}</Text>}
               </TouchableOpacity>
             </View>
           )}
@@ -607,8 +612,15 @@ export default function BillingScreen({ navigation, currentUser }) {
 
           {/* ── Historial ─────────────────────────────────────────────── */}
           <View style={s.section}>
-            <Text style={s.sectionTitle}>{t('billing.historyTitle')}</Text>
-            {history.length === 0 ? (
+            <TouchableOpacity
+              style={s.sectionTitleRow}
+              onPress={() => setHistoryOpen((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.sectionTitle, s.sectionTitleCollapsible]}>{t('billing.historyTitle')}</Text>
+              <Text style={s.sectionTitleChevron}>{historyOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {historyOpen && (history.length === 0 ? (
               <Text style={s.emptyHistory}>{t('billing.historyEmpty')}</Text>
             ) : (
               history.map((tx, i) => {
@@ -664,7 +676,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                   </View>
                 );
               })
-            )}
+            ))}
           </View>
 
           <View style={{ height: 40 }} />
@@ -705,31 +717,46 @@ const s = StyleSheet.create({
   scrollContent: { padding: 12, paddingTop: 14 },
 
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFBFF',
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E4E7ED',
+    padding: 12,
     marginBottom: 10,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
     overflow: 'hidden',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECEFFE',
+    marginHorizontal: -12,
+    marginTop: -12,
+    marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#4F46E5',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    backgroundColor: C.navDark,
+    backgroundColor: '#ECEFFE',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginHorizontal: -16,
-    marginTop: -16,
+    marginHorizontal: -12,
+    marginTop: -12,
     marginBottom: 14,
+  },
+  sectionTitleCollapsible: {
+    flex: 1,
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  sectionTitleChevron: {
+    fontSize: 9,
+    color: '#4F46E5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 
   // Plan
