@@ -497,6 +497,8 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         )}
 
         {/* Column headers */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={{ minWidth: 780 }}>
         <View style={styles.tableHeader}>
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.headerText}>#</Text>
@@ -535,15 +537,17 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               <ScrollView style={styles.rowsContainer}>
-                {rowList}
+                <View style={{ minWidth: 780 }}>{rowList}</View>
               </ScrollView>
             </SortableContext>
           </DndContext>
         ) : (
           <ScrollView style={styles.rowsContainer}>
-            {rowList}
+            <View style={{ minWidth: 780 }}>{rowList}</View>
           </ScrollView>
         )}
+        </View>
+        </ScrollView>
 
         {/* Pagination */}
         <View style={styles.paginationContainer}>

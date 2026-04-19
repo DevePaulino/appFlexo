@@ -928,7 +928,8 @@ export default function TroquelessScreen({ currentUser, navigation }) {
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
-              <View style={styles.tableContent}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+              <View style={[styles.tableContent, { minWidth: 820 }]}>
                 <View style={styles.tableHeader}>
                 <View style={[styles.tableCell, styles.colNumero]}>
                   <Text style={styles.headerText}>{t('screens.troqueles.colNumero')}</Text>
@@ -1026,6 +1027,7 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                   </View>
                 )}
               </View>
+            </ScrollView>
           </ScrollView>
         )}
 

@@ -521,6 +521,8 @@ export default function ClientesScreen({ currentUser }) {
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ minWidth: 560 }}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNombre]}>
               <Text style={styles.headerText}>{t('forms.fieldCliente')}</Text>
@@ -592,6 +594,8 @@ export default function ClientesScreen({ currentUser }) {
               </TouchableOpacity>
             </View>
           )}
+          </View>
+          </ScrollView>
         </ScrollView>
       )}
 

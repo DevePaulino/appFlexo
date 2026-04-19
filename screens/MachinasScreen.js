@@ -407,7 +407,8 @@ export default function MachinasScreen({ currentUser }) {
           </View>
         ) : (
           <ScrollView style={styles.tableContainer}>
-
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={{ minWidth: 640 }}>
             {/* ── Cabecera ── */}
             <View style={styles.tableHeader}>
               <View style={[styles.tableCell, styles.colNombre]}>
@@ -556,6 +557,8 @@ export default function MachinasScreen({ currentUser }) {
                 </TouchableOpacity>
               </View>
             )}
+            </View>
+            </ScrollView>
           </ScrollView>
         )}
 

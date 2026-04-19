@@ -975,6 +975,8 @@ export default function PresupuestoScreen({ currentUser }) {
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ minWidth: 560 }}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumero]}>
               <Text style={styles.headerText}>{t('screens.presupuesto.colNumero')}</Text>
@@ -1065,6 +1067,8 @@ export default function PresupuestoScreen({ currentUser }) {
               </TouchableOpacity>
             </View>
           )}
+          </View>
+          </ScrollView>
         </ScrollView>
       )}
 

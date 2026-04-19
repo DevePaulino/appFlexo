@@ -686,7 +686,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
   const renderCatalogoTab = () => (
     <ScrollView style={styles.tabContent}>
       {loadingCatalogo && <Text style={styles.loadingText}>{t('common.loading')}</Text>}
-
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+      <View style={{ minWidth: 460 }}>
       {/* Table Header */}
       <View style={styles.tableHeader}>
         <Text style={[styles.th, { flex: 2 }]}>{t('screens.materiales.colMaterial')}</Text>
@@ -752,6 +753,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
           )}
         </View>
       ))}
+      </View>
+      </ScrollView>
     </ScrollView>
   );
 
@@ -889,6 +892,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
         </Text>
       </View>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+      <View style={{ minWidth: 760 }}>
       {/* Table Header */}
       <View style={styles.tableHeader}>
         <TouchableOpacity style={[styles.thSortable, { flex: 2 }]} onPress={() => toggleStockSort('nombre')}>
@@ -951,6 +956,8 @@ export default function MaterialScreen({ currentUser, navigation }) {
           </TouchableOpacity>
         );
       })}
+      </View>
+      </ScrollView>
     </ScrollView>
     );
   };

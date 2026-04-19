@@ -966,6 +966,8 @@ export default function TrabajoScreen({ currentUser }) {
         </View>
       ) : (
         <ScrollView style={styles.tableContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ minWidth: 620 }}>
           <View style={styles.tableHeader}>
             <View style={[styles.tableCell, styles.colNumeroPedido]}>
               <Text style={styles.headerText}>{t('screens.trabajos.colNumeroPedido')}</Text>
@@ -1121,6 +1123,8 @@ export default function TrabajoScreen({ currentUser }) {
               </TouchableOpacity>
             </View>
           )}
+          </View>
+          </ScrollView>
         </ScrollView>
       )}
 
