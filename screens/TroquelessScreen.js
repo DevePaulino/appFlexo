@@ -136,7 +136,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#C7D2FE',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
     minHeight: 54,
   },
   headerTitle: {
@@ -147,6 +148,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 140,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
@@ -155,7 +157,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     fontSize: 13,
     color: '#0F172A',
-    maxWidth: 320,
   },
   btn: {
     backgroundColor: 'transparent',

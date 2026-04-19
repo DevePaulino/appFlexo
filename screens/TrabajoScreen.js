@@ -28,20 +28,22 @@ const styles = StyleSheet.create({
     borderBottomColor: '#C7D2FE',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
     minHeight: 54,
   },
-  headerTopRow: { flexDirection: 'row', alignItems: 'center' }, // kept for compatibility
-  headerSearchRow: {},                                            // kept for compatibility
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  headerSearchRow: {},
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1E1B4B',  // indigo-950 — dark but colored
+    color: '#1E1B4B',
     letterSpacing: -0.3,
     marginRight: 4,
   },
   searchInput: {
     flex: 1,
+    minWidth: 140,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
@@ -50,7 +52,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     fontSize: 13,
     color: '#0F172A',
-    maxWidth: 320,
   },
 
   // ─── Sub-tab switcher — mismo lenguaje que header/submenu (#EEF2FF) ───────
