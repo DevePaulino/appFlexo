@@ -914,11 +914,13 @@ def get_billing_status_for_user(email, empresa_id=None):
     col = get_empresa_collection('usuarios', None)
     user = None
     if email:
-        user = col.find_one({'email': email}, {'creditos': 1, 'billing_model': 1, 'nombre': 1})
+        user = col.find_one({'email': email}, {'creditos': 1, 'billing_model': 1, 'nombre': 1, 'billing_discount_pct': 1})
     # Dev-mode fallback: no email → pick any user in the empresa
     if not user and empresa_id:
         norm_eid = normalize_empresa_id(empresa_id)
-        user = col.find_one({'empresa_id': norm_eid}, {'creditos': 1, 'billing_model': 1, 'nombre': 1})
+        user = col.find_one({'empresa_id': norm_eid, 'rol': 'administrador'}, {'creditos': 1, 'billing_model': 1, 'nombre': 1, 'billing_discount_pct': 1})
+        if not user:
+            user = col.find_one({'empresa_id': norm_eid}, {'creditos': 1, 'billing_model': 1, 'nombre': 1, 'billing_discount_pct': 1})
     if not user:
         return None
     return {
@@ -926,6 +928,7 @@ def get_billing_status_for_user(email, empresa_id=None):
         'creditos': int(user.get('creditos') or 0),
         'nombre': str(user.get('nombre') or ''),
         'subscription_active': bool(user.get('subscription_active', False)),
+        'billing_discount_pct': int(user.get('billing_discount_pct') or 0),
     }
 
 
@@ -3264,13 +3267,15 @@ def serve_empresa_logo(empresa_id, filename):
 
 @app.route('/api/billing/config', methods=['GET'])
 def get_billing_config():
+    cfg = _get_superadmin_config()
+    cc  = cfg.get('credit_costs', {})
     return jsonify({
         'free_signup_credits': FREE_SIGNUP_CREDITS,
-        'credit_cost_pedido': CREDIT_COST_PEDIDO,
-        'credit_cost_features': CREDIT_COST_FEATURES,
-        'pricing_credits': CREDIT_COSTS,
-        'credit_packages': CREDIT_PACKAGES,
-        'subscription_price_eur': SUBSCRIPTION_PRICE_EUR,
+        'credit_cost_pedido':   cc.get('pedido',   CREDIT_COST_PEDIDO),
+        'credit_cost_features': cc.get('features', CREDIT_COST_FEATURES),
+        'pricing_credits': {**{k: cc.get(k, v) for k, v in CREDIT_COSTS.items()}, 'storage_gb': cc.get('storage_gb', 2)},
+        'credit_packages': cfg.get('packs', CREDIT_PACKAGES),
+        'subscription_price_eur': cfg.get('suscripcion_mensual_eur', SUBSCRIPTION_PRICE_EUR),
         'checkout_enabled': stripe_enabled(),
         'checkout_provider': 'stripe',
         'currency': STRIPE_CURRENCY,
@@ -3298,14 +3303,23 @@ def get_billing_status():
         if not status:
             return jsonify({'error': 'Usuario no encontrado'}), 404
         model = status['billing_model']
+        cfg = _get_superadmin_config()
+        cc  = cfg.get('credit_costs', {})
+        discount_pct       = int(status.get('billing_discount_pct') or 0)
+        base_price         = float(cfg.get('suscripcion_mensual_eur', SUBSCRIPTION_PRICE_EUR))
+        final_price        = round(base_price * (1 - discount_pct / 100), 2) if discount_pct else base_price
+        storage_eur_per_gb = float(cfg.get('storage_cost_eur_per_gb', 0.10))
         resp = {
             'billing_model': model,
             'creditos': status['creditos'],
             'subscription_active': status['subscription_active'],
-            'credit_cost_pedido': CREDIT_COST_PEDIDO,
-            'credit_cost_features': CREDIT_COST_FEATURES,
-            'credit_packages': CREDIT_PACKAGES,
-            'subscription_price_eur': SUBSCRIPTION_PRICE_EUR,
+            'credit_cost_pedido':        cc.get('pedido',   CREDIT_COST_PEDIDO),
+            'credit_cost_features':      cc.get('features', CREDIT_COST_FEATURES),
+            'credit_packages':           cfg.get('packs', CREDIT_PACKAGES),
+            'subscription_price_eur':    final_price,
+            'subscription_price_base_eur': base_price,
+            'billing_discount_pct':      discount_pct,
+            'storage_cost_eur_per_gb':   storage_eur_per_gb,
             'stripe_enabled': stripe_enabled(),
         }
         return jsonify(resp), 200
@@ -3427,7 +3441,7 @@ def create_subscription_checkout():
 
         email = str(request_user.get('email') or '').strip().lower()
         empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
-        price_eur = SUBSCRIPTION_PRICE_EUR
+        price_eur = _get_superadmin_config().get('suscripcion_mensual_eur', SUBSCRIPTION_PRICE_EUR)
         price_cents = int(round(price_eur * 100))
 
         if not stripe_enabled():
@@ -3736,11 +3750,169 @@ def consumir_creditos_billing():
             if already:
                 return jsonify({'charged': False, 'reason': 'already_charged', 'balance': status['creditos']}), 200
 
-        cost = CREDIT_COST_FEATURES
+        cost = _get_credit_cost(accion) or _get_credit_cost('features')
         new_balance, err = deduct_credits(email, cost, 'features', pedido_id=pedido_id, metadata={'accion': accion, **metadata})
         if err:
             return jsonify({'error': err, 'balance': status['creditos'], 'required': cost}), 402
         return jsonify({'charged': True, 'amount': cost, 'balance': new_balance}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/consumo-mes', methods=['GET'])
+def billing_consumo_mes():
+    """Devuelve el desglose de costes acumulados en el mes actual para plan suscripción."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email      = str(request_user.get('email') or '').strip().lower()
+        empresa_id = request_user.get('empresa_id')
+        norm_eid   = normalize_empresa_id(empresa_id) if empresa_id else None
+        status = get_billing_status_for_user(email, empresa_id=empresa_id)
+        if not status:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        cfg              = _get_superadmin_config()
+        cc               = cfg.get('credit_costs', {})
+        credito_price    = float(cfg.get('credito_price_eur', 0.10))
+        storage_eur_per_gb = float(cfg.get('storage_cost_eur_per_gb', 0.10))
+        model            = status['billing_model']
+
+        from datetime import datetime as _dt2
+        mes_actual  = _dt2.utcnow().strftime('%Y-%m')
+        inicio_mes  = f'{mes_actual}-01T00:00:00'
+
+        # Storage actual (acumulativo — mismo en ambos planes)
+        col_arch = get_empresa_collection('pedido_archivos', norm_eid)
+        agg = list(col_arch.aggregate([
+            {'$match': {'empresa_id': norm_eid}},
+            {'$group': {'_id': None, 'bytes': {'$sum': '$tamanio'}}},
+        ])) if norm_eid else []
+        storage_bytes = agg[0]['bytes'] if agg else 0
+        storage_gb    = round(storage_bytes / (1024 ** 3), 4)
+        coste_storage_eur = round(storage_gb * storage_eur_per_gb, 4)
+
+        if model == 'suscripcion':
+            discount_pct = int(status.get('billing_discount_pct') or 0)
+            base_cuota   = float(cfg.get('suscripcion_mensual_eur', SUBSCRIPTION_PRICE_EUR))
+            cuota_eur    = round(base_cuota * (1 - discount_pct / 100), 2) if discount_pct else base_cuota
+            total_eur    = round(cuota_eur + coste_storage_eur, 2)
+            return jsonify({
+                'billing_model': model,
+                'mes': mes_actual,
+                'cuota_fija_eur': cuota_eur,
+                'cuota_base_eur': base_cuota,
+                'billing_discount_pct': discount_pct,
+                'storage_gb': storage_gb,
+                'storage_cost_eur_per_gb': storage_eur_per_gb,
+                'coste_storage_eur': coste_storage_eur,
+                'total_estimado_eur': total_eur,
+            }), 200
+
+        # ── Plan créditos: agregar transacciones del mes por acción ──────────
+        discount_pct        = int(status.get('billing_discount_pct') or 0)
+        credito_price_final = round(credito_price * (1 - discount_pct / 100), 6) if discount_pct else credito_price
+
+        col_tx = get_empresa_collection('credit_transactions', None)
+        txs_mes = list(col_tx.find({
+            'empresa_id': norm_eid,
+            'created_at': {'$gte': inicio_mes},
+            'amount':     {'$lt': 0},
+        }))
+
+        accion_labels = {
+            'pedido':     '📦 Pedido creado',
+            'features':   '⚙️ Funciones (cuota por pedido)',
+            'repetidora': '🔁 Repetidora',
+            'trapping':   '🎯 Trapping',
+            'troquel':    '✂️ Troquel',
+            'report':     '📄 Informe',
+            'storage':    '🗄️ Almacenamiento',
+        }
+
+        por_accion = {}
+        total_creditos = 0
+        for tx in txs_mes:
+            accion = str(tx.get('action') or tx.get('accion') or 'otro')
+            creditos = abs(int(tx.get('amount') or tx.get('cantidad') or 0))
+            total_creditos += creditos
+            if accion not in por_accion:
+                por_accion[accion] = {'creditos': 0, 'usos': 0}
+            por_accion[accion]['creditos'] += creditos
+            por_accion[accion]['usos']     += 1
+
+        detalle = []
+        for accion, data in sorted(por_accion.items()):
+            eur = round(data['creditos'] * credito_price_final, 4)
+            detalle.append({
+                'accion':   accion,
+                'label':    accion_labels.get(accion, f'🔹 {accion}'),
+                'usos':     data['usos'],
+                'creditos': data['creditos'],
+                'eur':      eur,
+            })
+
+        total_uso_eur = round(total_creditos * credito_price_final, 2)
+        total_eur     = round(total_uso_eur + coste_storage_eur, 2)
+
+        return jsonify({
+            'billing_model': model,
+            'mes': mes_actual,
+            'billing_discount_pct': discount_pct,
+            'credito_price_eur': credito_price,
+            'credito_price_final_eur': credito_price_final,
+            'detalle_acciones': detalle,
+            'total_creditos_mes': total_creditos,
+            'total_uso_eur': total_uso_eur,
+            'storage_gb': storage_gb,
+            'storage_cost_eur_per_gb': storage_eur_per_gb,
+            'coste_storage_eur': coste_storage_eur,
+            'total_estimado_eur': total_eur,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing/cobrar-storage', methods=['POST'])
+def cobrar_storage_billing():
+    """Cobra créditos por almacenamiento a la empresa autenticada.
+    Se puede llamar periódicamente (diario/mensual). Registra consumo sin bloquear en suscripción."""
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        email = str(request_user.get('email') or '').strip().lower()
+        empresa_id = request_user.get('empresa_id')
+        status = get_billing_status_for_user(email, empresa_id=empresa_id)
+        if not status:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        cost_per_gb = _get_credit_cost('storage_gb')
+        if cost_per_gb <= 0:
+            return jsonify({'charged': False, 'reason': 'storage_cost_zero'}), 200
+
+        # Calcular almacenamiento actual de la empresa
+        col_files = get_empresa_collection('archivos', empresa_id)
+        pipeline = [{'$group': {'_id': None, 'total_bytes': {'$sum': '$size'}}}]
+        agg = list(col_files.aggregate(pipeline))
+        total_bytes = agg[0]['total_bytes'] if agg else 0
+        total_gb = total_bytes / (1024 ** 3)
+        cost_credits = int(round(total_gb * cost_per_gb))
+
+        if cost_credits <= 0:
+            return jsonify({'charged': False, 'reason': 'no_storage', 'storage_gb': round(total_gb, 4)}), 200
+
+        meta = {'storage_gb': round(total_gb, 4), 'cost_per_gb': cost_per_gb}
+        if status['billing_model'] == 'creditos':
+            new_bal, err = deduct_credits(email, cost_credits, 'storage', empresa_id=empresa_id, metadata=meta)
+            if err:
+                return jsonify({'error': err, 'balance': status['creditos'], 'required': cost_credits}), 402
+            return jsonify({'charged': True, 'amount': cost_credits, 'balance': new_bal, 'storage_gb': round(total_gb, 4)}), 200
+        else:
+            # Suscripción: registrar consumo para facturación mensual
+            record_usage(email, cost_credits, 'storage', empresa_id=empresa_id, metadata=meta)
+            return jsonify({'charged': True, 'recorded': True, 'amount': cost_credits, 'storage_gb': round(total_gb, 4)}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -6444,12 +6616,14 @@ def crear_pedido():
         # ── Verificación y cobro de créditos ──────────────────────────────────
         email = str(request_user.get('email') or '').strip().lower()
         billing = get_billing_status_for_user(email, empresa_id=request_user.get('empresa_id'))
+        _cost_pedido = _get_credit_cost('pedido')
         if billing and billing['billing_model'] == 'creditos':
-            if billing['creditos'] < CREDIT_COST_PEDIDO:
+            # Pago por uso: bloquear si no hay créditos suficientes
+            if billing['creditos'] < _cost_pedido:
                 return jsonify({
                     'error': 'Créditos insuficientes para crear un pedido',
                     'balance': billing['creditos'],
-                    'required': CREDIT_COST_PEDIDO,
+                    'required': _cost_pedido,
                     'billing_model': 'creditos',
                 }), 402
 
@@ -6529,10 +6703,15 @@ def crear_pedido():
         # Descontar créditos si aplica (post-inserción para no bloquear en caso de error)
         credits_deducted = 0
         credits_balance = None
-        if billing and billing['billing_model'] == 'creditos':
-            new_bal, _ = deduct_credits(email, CREDIT_COST_PEDIDO, 'pedido', pedido_id=pedido_id, metadata={'numero_pedido': numero_pedido})
-            credits_deducted = CREDIT_COST_PEDIDO
-            credits_balance = new_bal
+        if billing:
+            _empresa_id = request_user.get('empresa_id')
+            if billing['billing_model'] == 'creditos':
+                new_bal, _ = deduct_credits(email, _cost_pedido, 'pedido', empresa_id=_empresa_id, pedido_id=pedido_id, metadata={'numero_pedido': numero_pedido})
+                credits_deducted = _cost_pedido
+                credits_balance = new_bal
+            elif billing['billing_model'] == 'suscripcion':
+                # Registra el consumo por pedido para facturación mensual (no descuenta saldo)
+                record_usage(email, _cost_pedido, 'pedido', empresa_id=_empresa_id, pedido_id=pedido_id, metadata={'numero_pedido': numero_pedido})
 
         return jsonify({
             'success': True,
@@ -8402,16 +8581,16 @@ def upload_archivos_pedido(pedido_id):
         if not pedidos_col.find_one({'_id': oid, 'empresa_id': empresa_id}):
             return jsonify({'error': 'Pedido no encontrado'}), 404
 
-        ESKO_TIPOS = ('report', 'repetidora', 'trapping', 'troquel')
+        PDF_PRODUCCION_TIPOS = ('report', 'repetidora', 'trapping', 'troquel')
         tipo = request.form.get('tipo', '').strip()
-        if tipo not in ('arte', 'unitario') + ESKO_TIPOS:
+        if tipo not in ('arte', 'unitario') + PDF_PRODUCCION_TIPOS:
             return jsonify({'error': 'tipo debe ser "arte", "unitario", "report", "repetidora", "trapping" o "troquel"'}), 400
 
         files = [f for f in request.files.getlist('files') if f.filename != '']
         if not files:
             return jsonify({'error': 'No se recibieron archivos'}), 400
-        # Esko containers and unitario accept only one file (replace semantics)
-        if tipo in ('unitario',) + ESKO_TIPOS and len(files) > 1:
+        # PDF-Produccion containers and unitario accept only one file (replace semantics)
+        if tipo in ('unitario',) + PDF_PRODUCCION_TIPOS and len(files) > 1:
             return jsonify({'error': f'"{tipo}" acepta solo un archivo por subida'}), 400
 
         allowed = ALLOWED_EXTENSIONS_ARTES if tipo == 'arte' else ALLOWED_EXTENSIONS_UNITARIO
@@ -8423,8 +8602,8 @@ def upload_archivos_pedido(pedido_id):
             if not _allowed_file(f.filename, allowed):
                 return jsonify({'error': f'Extensión no permitida para "{f.filename}". Permitidas: {", ".join(sorted(allowed))}'}), 400
 
-            # ── Esko containers: replace (delete previous file from FS + DB) ──
-            if tipo in ESKO_TIPOS:
+            # ── PDF-Produccion containers: replace (delete previous file from FS + DB) ──
+            if tipo in PDF_PRODUCCION_TIPOS:
                 prev_docs = list(col.find({'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': tipo}))
                 for prev in prev_docs:
                     prev_path = os.path.join(UPLOAD_BASE_DIR, prev.get('ruta_relativa', ''))
@@ -9051,7 +9230,7 @@ def _color_para_separacion(nombre, tint_fn_raw=None):
 
 
 def _coleccion_to_tipo(coleccion):
-    """Clasifica una separación según la colección Esko."""
+    """Clasifica una separación según la colección PDF-Produccion."""
     c = str(coleccion).lower()
     if c == 'process':
         return 'proceso'
@@ -9078,7 +9257,7 @@ def _extraer_separaciones_pdf(ruta):
     Extrae separaciones de un PDF de preimpresión.
 
     Estrategia (en orden de prioridad):
-      1) OutputIntents → PrintingOrder + Esko_Colorants  (Esko CE / ArtPro+)
+      1) OutputIntents → PrintingOrder + PDF-Produccion_Colorants  (PDF-Produccion CE / ArtPro+)
       2) ExtGState → /HT  para lineatura y ángulos si están embebidos
       3) Fallback: ColorSpace resources de página (cualquier PDF)
 
@@ -9128,7 +9307,7 @@ def _extraer_separaciones_pdf(ruta):
                 continue
             mh    = _resolve(oi.get('/MixingHints') or {})
             order = _resolve(mh.get('/PrintingOrder') or [])
-            esko  = _resolve(oi.get('/Esko_Colorants') or {})
+            pdf_produccion  = _resolve(oi.get('/PDF-Produccion_Colorants') or {})
             if not order:
                 continue
             for sep in order:
@@ -9137,7 +9316,7 @@ def _extraer_separaciones_pdf(ruta):
                     continue          # sin cobertura real en ninguna página
                 if _es_die_cut(nombre):
                     continue          # elemento técnico, no tinta de impresión
-                col_info  = _resolve(esko.get(sep) or {}) if esko else {}
+                col_info  = _resolve(pdf_produccion.get(sep) or {}) if pdf_produccion else {}
                 coleccion = str(_resolve(col_info.get('/Collection', ''))) if isinstance(col_info, dict) else ''
                 tipo  = _coleccion_to_tipo(coleccion)
                 color = _color_para_separacion(nombre, tint_fns.get(nombre))
@@ -9709,6 +9888,15 @@ SUPERADMIN_CONFIG_DEFAULTS = {
         {'id': 'pack_250', 'credits': 250, 'price_eur': 19.99, 'label': '250 créditos'},
         {'id': 'pack_500', 'credits': 500, 'price_eur': 34.99, 'label': '500 créditos'},
     ],
+    'credit_costs': {
+        'pedido':      5,   # créditos por pedido (modelo créditos)
+        'features':    10,  # cuota única por pedido con features (solo créditos)
+        'report':      7,
+        'repetidora':  16,
+        'trapping':    4,
+        'troquel':     9,
+        'storage_gb':  2,   # créditos por GB (modelo créditos)
+    },
 }
 
 
@@ -9959,6 +10147,25 @@ def superadmin_update_descuento(reseller_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/superadmin/empresas/<empresa_id>/descuento', methods=['PUT'])
+def superadmin_set_billing_discount(empresa_id):
+    """Establece el descuento de facturación (0-100%) para una empresa."""
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        pct = int(data.get('discount_pct') or 0)
+        if not (0 <= pct <= 100):
+            return jsonify({'error': 'discount_pct debe estar entre 0 y 100'}), 400
+        norm = normalize_empresa_id(empresa_id)
+        col = get_empresa_collection('usuarios', None)
+        col.update_many({'empresa_id': norm}, {'$set': {'billing_discount_pct': pct}})
+        return jsonify({'ok': True, 'empresa_id': norm, 'billing_discount_pct': pct}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/revendedor/dashboard', methods=['GET'])
 def revendedor_dashboard():
     try:
@@ -10082,6 +10289,40 @@ def _get_superadmin_config():
     return cfg
 
 
+def _get_credit_cost(key: str) -> int:
+    """Devuelve el coste en créditos para una operación, leyendo desde la config dinámica."""
+    try:
+        costs = _get_superadmin_config().get('credit_costs', {})
+    except Exception:
+        costs = {}
+    defaults = {
+        'pedido': CREDIT_COST_PEDIDO,
+        'features': CREDIT_COST_FEATURES,
+        **CREDIT_COSTS,
+    }
+    val = costs.get(key, defaults.get(key, 0))
+    return int(val) if val else 0
+
+
+def record_usage(email: str, amount: int, action: str, empresa_id=None, pedido_id=None, metadata=None):
+    """Registra consumo en credit_transactions SIN descontar saldo (para modelo suscripción)."""
+    try:
+        col_tx = get_empresa_collection('credit_transactions', None)
+        col_tx.insert_one({
+            'email': email,
+            'empresa_id': str(empresa_id or ''),
+            'action': action,
+            'amount': -amount,
+            'balance_after': None,  # sin modificar saldo
+            'pedido_id': pedido_id,
+            'billing_mode': 'suscripcion',
+            'metadata': metadata or {},
+            'created_at': datetime.now().isoformat(),
+        })
+    except Exception:
+        pass
+
+
 # ── Status del servidor ──────────────────────────────────────────────────────
 
 @app.route('/api/superadmin/status', methods=['GET'])
@@ -10176,6 +10417,7 @@ def superadmin_empresas():
                 'admin_email': {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
                 'creditos': {'$max': '$creditos'},
                 'billing_model': {'$first': '$billing_model'},
+                'billing_discount_pct': {'$max': '$billing_discount_pct'},
             }}
         ]
         empresas_raw = list(col_users.aggregate(pipeline_users))
@@ -10210,6 +10452,7 @@ def superadmin_empresas():
                 'admin_email': emp.get('admin_email'),
                 'creditos': emp.get('creditos') or 0,
                 'billing_model': emp.get('billing_model') or 'creditos',
+                'billing_discount_pct': int(emp.get('billing_discount_pct') or 0),
                 'num_pedidos': num_pedidos,
                 'num_presupuestos': num_presup,
                 'storage_bytes': total_bytes,
@@ -10585,7 +10828,7 @@ def superadmin_put_tarifas():
             return err
         data = request.get_json() or {}
         col = mongo.db['superadmin_config']
-        allowed = {'storage_cost_eur_per_gb', 'suscripcion_mensual_eur', 'credito_price_eur', 'packs'}
+        allowed = {'storage_cost_eur_per_gb', 'suscripcion_mensual_eur', 'credito_price_eur', 'packs', 'credit_costs'}
         update = {k: v for k, v in data.items() if k in allowed}
         if not update:
             return jsonify({'error': 'Sin campos válidos'}), 400
@@ -10726,6 +10969,497 @@ def billing_redeem_promo():
         user_doc = col_users.find_one({'email': email}, {'creditos': 1})
         new_balance = (user_doc or {}).get('creditos', 0)
         return jsonify({'ok': True, 'credits_added': credits, 'new_balance': new_balance, 'message': f'+{credits} créditos añadidos'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — FINANCIERO (MRR / ARR / ingresos reales)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/revenue', methods=['GET'])
+def superadmin_revenue():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        cfg          = _get_superadmin_config()
+        precio_cred  = float(cfg.get('credito_price_eur', 0.10))
+        precio_sub   = float(cfg.get('suscripcion_mensual_eur', 29.99))
+
+        col_users = get_empresa_collection('usuarios', None)
+        col_tx    = get_empresa_collection('credit_transactions', None)
+
+        # ── Empresas por modelo de facturación ─────────────────────────────────
+        empresas_raw = list(col_users.aggregate([
+            {'$group': {
+                '_id': '$empresa_id',
+                'billing_model': {'$first': '$billing_model'},
+                'admin_email':   {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
+            }}
+        ]))
+        empresas_raw = [e for e in empresas_raw if e.get('_id') and str(e['_id']) != '0']
+
+        num_suscripcion = sum(1 for e in empresas_raw if e.get('billing_model') == 'suscripcion')
+        num_creditos    = sum(1 for e in empresas_raw if e.get('billing_model') != 'suscripcion' and e.get('billing_model') != 'revendedor')
+        num_revendedor  = sum(1 for e in empresas_raw if e.get('billing_model') == 'revendedor')
+
+        mrr_suscripcion = round(num_suscripcion * precio_sub, 2)
+
+        # ── Ingresos por compras de créditos (últimos 12 meses) ────────────────
+        from datetime import datetime as _dt, timedelta as _td
+        now = _dt.now()
+        hace_12m = (now - _td(days=365)).strftime('%Y-%m-%dT%H:%M:%S')
+
+        purchases = list(col_tx.aggregate([
+            {'$match': {'action': 'purchase', 'created_at': {'$gte': hace_12m}, 'amount': {'$gt': 0}}},
+            {'$addFields': {'mes': {'$substr': ['$created_at', 0, 7]}}},
+            {'$group': {'_id': '$mes', 'creditos': {'$sum': '$amount'}}},
+            {'$sort': {'_id': -1}},
+            {'$limit': 12},
+        ]))
+        ingresos_por_mes = [
+            {'mes': p['_id'], 'creditos': p['creditos'], 'eur': round(p['creditos'] * precio_cred, 2)}
+            for p in purchases
+        ]
+
+        mes_actual = now.strftime('%Y-%m')
+        ingreso_creditos_mes = next((p['eur'] for p in ingresos_por_mes if p['mes'] == mes_actual), 0.0)
+        mrr_total  = round(mrr_suscripcion + ingreso_creditos_mes, 2)
+        arr        = round(mrr_total * 12, 2)
+
+        # ── Tendencia mensual de suscripciones nuevas ──────────────────────────
+        nuevas_subs = list(col_users.aggregate([
+            {'$match': {'rol': 'administrador', 'billing_model': 'suscripcion'}},
+            {'$addFields': {'mes': {'$substr': ['$created_at', 0, 7]}}},
+            {'$group': {'_id': '$mes', 'nuevas': {'$sum': 1}}},
+            {'$sort': {'_id': -1}},
+            {'$limit': 12},
+        ]))
+
+        return jsonify({
+            'mrr': mrr_total,
+            'arr': arr,
+            'mrr_suscripcion': mrr_suscripcion,
+            'ingreso_creditos_mes': ingreso_creditos_mes,
+            'num_suscripcion': num_suscripcion,
+            'num_creditos': num_creditos,
+            'num_revendedor': num_revendedor,
+            'precio_credito_eur': precio_cred,
+            'precio_suscripcion_eur': precio_sub,
+            'ingresos_por_mes': ingresos_por_mes,
+            'nuevas_subs_por_mes': [{'mes': n['_id'], 'nuevas': n['nuevas']} for n in nuevas_subs],
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — CRECIMIENTO Y RIESGO DE CHURN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/growth', methods=['GET'])
+def superadmin_growth():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        from datetime import datetime as _dt, timedelta as _td
+        now = _dt.now()
+        hace_30d = (now - _td(days=30)).strftime('%Y-%m-%dT%H:%M:%S')
+        hace_7d  = (now - _td(days=7)).strftime('%Y-%m-%dT%H:%M:%S')
+
+        col_users = get_empresa_collection('usuarios', None)
+
+        # ── Empresas nuevas por mes (últimos 12 meses) ─────────────────────────
+        empresas_por_mes = list(col_users.aggregate([
+            {'$match': {'rol': 'administrador'}},
+            {'$addFields': {'mes': {'$substr': ['$created_at', 0, 7]}}},
+            {'$group': {'_id': '$mes', 'nuevas': {'$sum': 1}}},
+            {'$sort': {'_id': -1}},
+            {'$limit': 12},
+        ]))
+
+        # ── Todas las empresas para detectar churn ─────────────────────────────
+        todas_empresas = list(col_users.aggregate([
+            {'$group': {
+                '_id': '$empresa_id',
+                'admin_email':   {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
+                'billing_model': {'$first': '$billing_model'},
+                'creditos':      {'$max': '$creditos'},
+                'created_at':    {'$min': '$created_at'},
+            }}
+        ]))
+
+        en_riesgo = []
+        activas_7d = []
+        activas_30d_count = 0
+
+        for emp in todas_empresas:
+            eid = emp.get('_id')
+            if not eid or str(eid) == '0':
+                continue
+            norm_eid = normalize_empresa_id(eid)
+            col_pedidos = get_empresa_collection('pedidos', norm_eid)
+
+            # Último pedido de la empresa
+            ultimo = col_pedidos.find_one(
+                {'empresa_id': norm_eid},
+                {'fecha_creacion': 1},
+                sort=[('fecha_creacion', -1)]
+            )
+            ultimo_pedido = str(ultimo.get('fecha_creacion', '')) if ultimo else None
+            total_pedidos = col_pedidos.count_documents({'empresa_id': norm_eid})
+            pedidos_30d   = col_pedidos.count_documents({
+                'empresa_id': norm_eid,
+                'fecha_creacion': {'$gte': hace_30d},
+            })
+
+            if pedidos_30d > 0:
+                activas_30d_count += 1
+            if ultimo_pedido and ultimo_pedido >= hace_7d:
+                activas_7d.append(norm_eid)
+
+            creditos = emp.get('creditos') or 0
+            billing  = emp.get('billing_model') or 'creditos'
+
+            # Criterios de riesgo: sin pedidos en 30 días Y créditos bajos O sin pedidos nunca
+            sin_actividad_reciente = pedidos_30d == 0
+            creditos_bajos = billing == 'creditos' and creditos < 15
+            sin_pedidos_nunca = total_pedidos == 0
+
+            nivel_riesgo = None
+            if sin_pedidos_nunca:
+                nivel_riesgo = 'alto'
+            elif sin_actividad_reciente and creditos_bajos:
+                nivel_riesgo = 'alto'
+            elif sin_actividad_reciente and total_pedidos > 0:
+                nivel_riesgo = 'medio'
+            elif creditos_bajos and total_pedidos > 0:
+                nivel_riesgo = 'bajo'
+
+            if nivel_riesgo:
+                en_riesgo.append({
+                    'empresa_id': norm_eid,
+                    'admin_email': emp.get('admin_email') or norm_eid,
+                    'billing_model': billing,
+                    'creditos': creditos,
+                    'total_pedidos': total_pedidos,
+                    'pedidos_30d': pedidos_30d,
+                    'ultimo_pedido': ultimo_pedido,
+                    'nivel_riesgo': nivel_riesgo,
+                    'created_at': str(emp.get('created_at') or ''),
+                })
+
+        en_riesgo.sort(key=lambda x: {'alto': 0, 'medio': 1, 'bajo': 2}[x['nivel_riesgo']])
+
+        total_empresas = len([e for e in todas_empresas if e.get('_id') and str(e['_id']) != '0'])
+        tasa_actividad = round(activas_30d_count / total_empresas * 100, 1) if total_empresas else 0
+
+        return jsonify({
+            'empresas_por_mes': [{'mes': e['_id'], 'nuevas': e['nuevas']} for e in empresas_por_mes],
+            'en_riesgo': en_riesgo[:30],
+            'total_empresas': total_empresas,
+            'activas_30d': activas_30d_count,
+            'activas_7d': len(activas_7d),
+            'tasa_actividad_pct': tasa_actividad,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — AUDITORÍA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/audit', methods=['GET'])
+def superadmin_audit():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        page     = max(1, int(request.args.get('page', 1)))
+        per_page = min(100, int(request.args.get('per_page', 50)))
+        action_f = request.args.get('action', '').strip()
+        email_f  = request.args.get('email', '').strip()
+
+        col = get_empresa_collection('audit_logs', 0)
+        query = {}
+        if action_f:
+            query['action'] = {'$regex': action_f, '$options': 'i'}
+        if email_f:
+            query['user.email'] = {'$regex': email_f, '$options': 'i'}
+
+        total  = col.count_documents(query)
+        skip   = (page - 1) * per_page
+        raw    = list(col.find(query, {'_id': 0}).sort('ts', -1).skip(skip).limit(per_page))
+
+        logs = []
+        for r in raw:
+            logs.append({
+                'action':  r.get('action', ''),
+                'email':   (r.get('user') or {}).get('email', ''),
+                'rol':     (r.get('user') or {}).get('rol', ''),
+                'ip':      r.get('ip', ''),
+                'ts':      str(r.get('ts', '')),
+                'details': r.get('details', {}),
+            })
+
+        # Acciones distintas para el filtro
+        acciones_distintas = col.distinct('action')
+
+        return jsonify({
+            'logs': logs,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': max(1, (total + per_page - 1) // per_page),
+            'acciones': sorted(acciones_distintas),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — LOGS DEL SERVIDOR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/serverlogs', methods=['GET'])
+def superadmin_serverlogs():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        lines_req = min(500, int(request.args.get('lines', 100)))
+        nivel_f   = request.args.get('nivel', '').strip().lower()  # error | warn | info | all
+
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
+        if not os.path.exists(log_path):
+            return jsonify({'logs': [], 'size_bytes': 0, 'exists': False}), 200
+
+        size_bytes = os.path.getsize(log_path)
+
+        # Leer las últimas N líneas eficientemente
+        with open(log_path, 'rb') as f:
+            f.seek(0, 2)
+            file_size = f.tell()
+            chunk = min(file_size, lines_req * 300)
+            f.seek(max(0, file_size - chunk))
+            content = f.read().decode('utf-8', errors='replace')
+
+        all_lines = content.splitlines()[-lines_req:]
+
+        # Clasificar cada línea
+        def _classify(line):
+            ll = line.lower()
+            if 'error' in ll or 'exception' in ll or 'traceback' in ll or 'critical' in ll:
+                return 'error'
+            if 'warn' in ll or 'warning' in ll:
+                return 'warn'
+            return 'info'
+
+        logs = []
+        for line in reversed(all_lines):
+            if not line.strip():
+                continue
+            nivel = _classify(line)
+            if nivel_f and nivel_f != 'all' and nivel != nivel_f:
+                continue
+            logs.append({'nivel': nivel, 'texto': line})
+
+        return jsonify({
+            'logs': logs[:lines_req],
+            'size_bytes': size_bytes,
+            'size_human': _bytes_to_human(size_bytes),
+            'exists': True,
+            'total_lines': len(all_lines),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — COMUNICACIÓN MASIVA (email a admins)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/notify', methods=['POST'])
+def superadmin_notify():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        data    = request.get_json() or {}
+        asunto  = str(data.get('asunto', '')).strip()
+        cuerpo  = str(data.get('cuerpo', '')).strip()
+        destino = str(data.get('destino', 'todos')).strip()  # todos | suscripcion | creditos | empresa_id
+        test    = bool(data.get('test', False))
+
+        if not asunto or not cuerpo:
+            return jsonify({'error': 'Asunto y cuerpo son obligatorios'}), 400
+
+        col_users = get_empresa_collection('usuarios', None)
+
+        query = {'rol': 'administrador'}
+        if destino == 'suscripcion':
+            query['billing_model'] = 'suscripcion'
+        elif destino == 'creditos':
+            query['billing_model'] = {'$ne': 'suscripcion'}
+        elif destino not in ('todos', ''):
+            # empresa_id específico
+            query['empresa_id'] = normalize_empresa_id(destino)
+
+        admins = list(col_users.find(query, {'email': 1, '_id': 0}))
+        emails = [a['email'] for a in admins if a.get('email')]
+
+        if not emails:
+            return jsonify({'error': 'No hay destinatarios para ese filtro'}), 400
+
+        if test:
+            return jsonify({'ok': True, 'destinatarios': len(emails), 'preview': emails[:5], 'test': True}), 200
+
+        enviados = 0
+        errores  = []
+        for email in emails:
+            ok, err_msg = send_email(email, asunto, cuerpo)
+            if ok:
+                enviados += 1
+            else:
+                errores.append({'email': email, 'error': err_msg})
+
+        # Guardar registro en audit
+        log_audit('superadmin_notify', details={
+            'asunto': asunto,
+            'destino': destino,
+            'enviados': enviados,
+            'errores': len(errores),
+        })
+
+        return jsonify({
+            'ok': True,
+            'destinatarios': len(emails),
+            'enviados': enviados,
+            'errores': errores[:10],
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — FEATURE FLAGS GLOBALES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+FEATURE_FLAGS_DEFAULTS = {
+    'registro_publico':        True,   # Permite que nuevas empresas se registren
+    'billing_creditos':        True,   # Modelo de créditos disponible
+    'billing_suscripcion':     True,   # Modelo de suscripción disponible
+    'revendedores_activos':    True,   # Módulo de revendedores
+    'modo_mantenimiento':      False,  # Bloquea login de no-root
+    'max_empresas':            0,      # 0 = sin límite
+    'max_usuarios_por_empresa': 0,     # 0 = sin límite
+}
+
+
+@app.route('/api/superadmin/features', methods=['GET'])
+def superadmin_get_features():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        col = mongo.db['superadmin_config']
+        doc = col.find_one({'_id': 'features'}) or {}
+        flags = dict(FEATURE_FLAGS_DEFAULTS)
+        flags.update({k: v for k, v in doc.items() if k != '_id'})
+        return jsonify({'features': flags, 'defaults': FEATURE_FLAGS_DEFAULTS}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/superadmin/features', methods=['PUT'])
+def superadmin_put_features():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+        data = request.get_json() or {}
+        allowed = set(FEATURE_FLAGS_DEFAULTS.keys())
+        updates = {k: v for k, v in data.items() if k in allowed}
+        if not updates:
+            return jsonify({'error': 'No hay flags válidos para actualizar'}), 400
+        col = mongo.db['superadmin_config']
+        col.update_one({'_id': 'features'}, {'$set': updates}, upsert=True)
+        doc = col.find_one({'_id': 'features'}) or {}
+        flags = dict(FEATURE_FLAGS_DEFAULTS)
+        flags.update({k: v for k, v in doc.items() if k != '_id'})
+        log_audit('superadmin_features_update', details={'updates': updates})
+        return jsonify({'ok': True, 'features': flags}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUPERADMIN — EXPORTAR CSV
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/superadmin/export/empresas', methods=['GET'])
+def superadmin_export_empresas():
+    try:
+        _, err = _require_root()
+        if err:
+            return err
+
+        import csv, io
+        col_users = get_empresa_collection('usuarios', None)
+        empresas_raw = list(col_users.aggregate([
+            {'$group': {
+                '_id': '$empresa_id',
+                'admin_email':   {'$first': {'$cond': [{'$eq': ['$rol', 'administrador']}, '$email', None]}},
+                'num_usuarios':  {'$sum': 1},
+                'creditos':      {'$max': '$creditos'},
+                'billing_model': {'$first': '$billing_model'},
+                'created_at':    {'$min': '$created_at'},
+            }}
+        ]))
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['empresa_id', 'admin_email', 'billing_model', 'creditos', 'num_usuarios', 'num_pedidos', 'storage', 'created_at'])
+
+        for emp in empresas_raw:
+            eid = emp.get('_id')
+            if not eid or str(eid) == '0':
+                continue
+            norm_eid = normalize_empresa_id(eid)
+            col_pedidos = get_empresa_collection('pedidos', norm_eid)
+            num_pedidos = col_pedidos.count_documents({'empresa_id': norm_eid})
+            col_arch = get_empresa_collection('pedido_archivos', norm_eid)
+            agg = list(col_arch.aggregate([
+                {'$match': {'empresa_id': norm_eid}},
+                {'$group': {'_id': None, 'bytes': {'$sum': '$tamanio'}}}
+            ]))
+            storage = _bytes_to_human(agg[0]['bytes'] if agg else 0)
+            writer.writerow([
+                norm_eid,
+                emp.get('admin_email', ''),
+                emp.get('billing_model', 'creditos'),
+                emp.get('creditos', 0),
+                emp.get('num_usuarios', 0),
+                num_pedidos,
+                storage,
+                str(emp.get('created_at', '')),
+            ])
+
+        csv_content = output.getvalue()
+        from flask import Response
+        return Response(
+            csv_content,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=empresas_export.csv'}
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

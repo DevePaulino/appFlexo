@@ -1,20 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   ActivityIndicator, StyleSheet, Platform, RefreshControl,
 } from 'react-native';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
+
 const API_BASE = 'http://localhost:8080';
 
-const TABS = [
-  { key: 'monitor',     label: '📊 Monitorización' },
-  { key: 'servidor',    label: '⚙️ Servidor' },
-  { key: 'tarifas',     label: '💶 Tarifas' },
-  { key: 'empresas',    label: '🏢 Empresas' },
-  { key: 'revendedores',label: '🤝 Revendedores' },
-  { key: 'promos',      label: '🎁 Promos' },
-  { key: 'detalle',     label: '🔍 Detalle empresa' },
+const NAV_ITEMS = [
+  { key: 'dashboard',    icon: '📊', label: 'Dashboard' },
+  { key: 'financiero',   icon: '💹', label: 'Financiero' },
+  { key: 'riesgo',       icon: '⚠️', label: 'Riesgo' },
+  { key: 'empresas',     icon: '🏢', label: 'Empresas' },
+  { key: 'revendedores', icon: '🤝', label: 'Revendedores' },
+  { key: 'tarifas',      icon: '💶', label: 'Tarifas' },
+  { key: 'promos',       icon: '🎁', label: 'Promociones' },
+  { key: 'comunicacion', icon: '📣', label: 'Comunicación' },
+  { key: 'auditoria',    icon: '🔎', label: 'Auditoría' },
+  { key: 'configuracion',icon: '🚩', label: 'Flags' },
+  { key: 'servidor',     icon: '⚙️', label: 'Servidor' },
 ];
+
+const ESTADO_COLORS = {
+  pendiente: '#F59E0B', en_proceso: '#3B82F6', finalizado: '#16A34A',
+  cancelado: '#EF4444', aprobado: '#8B5CF6',
+};
 
 function makeApiFetch(token) {
   const authHdr = token ? { Authorization: `Bearer ${token}` } : {};
@@ -29,24 +39,148 @@ function makeApiFetch(token) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Tab: Monitorización
-// ─────────────────────────────────────────────────────────────────
-const ESTADO_COLORS = {
-  pendiente: '#F59E0B', en_proceso: '#3B82F6', finalizado: '#16A34A',
-  cancelado: '#EF4444', aprobado: '#8B5CF6',
-};
+function _humanBytes(b) {
+  if (!b) return '0 B';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB`;
+  if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(2)} MB`;
+  return `${(b / 1024 ** 3).toFixed(3)} GB`;
+}
 
-function TabMonitor({ currentUser }) {
+// ─────────────────────────────────────────────────────────────────
+// UI Primitives
+// ─────────────────────────────────────────────────────────────────
+
+function Card({ children, style }) {
+  return <View style={[s.card, style]}>{children}</View>;
+}
+
+function SectionHeader({ title, action }) {
+  return (
+    <View style={s.sectionHeader}>
+      <Text style={s.sectionTitle}>{title}</Text>
+      {action}
+    </View>
+  );
+}
+
+function Badge({ label, color = '#4F46E5', bg }) {
+  return (
+    <View style={[s.badge, { backgroundColor: bg || `${color}22` }]}>
+      <Text style={[s.badgeText, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+function InfoRow({ label, value, valueColor }) {
+  return (
+    <View style={s.infoRow}>
+      <Text style={s.infoLabel}>{label}</Text>
+      <Text style={[s.infoValue, valueColor && { color: valueColor }]}>{value ?? '–'}</Text>
+    </View>
+  );
+}
+
+function FeedRow({ icon, iconBg, primary, secondary, right }) {
+  return (
+    <View style={s.feedRow}>
+      <View style={[s.feedIcon, { backgroundColor: iconBg || '#EEF2FF' }]}>
+        <Text style={{ fontSize: 12 }}>{icon}</Text>
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.rowPrimary} numberOfLines={1}>{primary}</Text>
+        {secondary ? <Text style={s.rowSecondary} numberOfLines={1}>{secondary}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+function KpiCard({ icon, label, value, color, sub }) {
+  return (
+    <View style={[s.kpiCard, { borderLeftColor: color }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <View style={[s.kpiIcon, { backgroundColor: `${color}18` }]}>
+          <Text style={{ fontSize: 13 }}>{icon}</Text>
+        </View>
+        <Text style={s.kpiLabel}>{label}</Text>
+      </View>
+      <Text style={[s.kpiValue, { color }]}>{value ?? '–'}</Text>
+      {sub ? <Text style={s.kpiSub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+function MiniKpi({ label, value, color }) {
+  return (
+    <View style={s.miniKpi}>
+      <Text style={[s.miniKpiValue, { color }]}>{value}</Text>
+      <Text style={s.miniKpiLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function FormField({ label, style, ...props }) {
+  return (
+    <View style={[{ marginBottom: 12 }, style]}>
+      <Text style={s.formLabel}>{label}</Text>
+      <TextInput style={s.formInput} placeholderTextColor="#94A3B8" {...props} />
+    </View>
+  );
+}
+
+function Btn({ label, onPress, disabled, loading: isLoading, style, textStyle }) {
+  return (
+    <TouchableOpacity style={[s.btn, disabled && { opacity: 0.6 }, style]} onPress={onPress} disabled={disabled || isLoading}>
+      {isLoading ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={[s.btnText, textStyle]}>{label}</Text>}
+    </TouchableOpacity>
+  );
+}
+
+function AlertBanner({ alerts }) {
+  if (!alerts || alerts.length === 0) return null;
+  return (
+    <View style={s.alertBanner}>
+      <Text style={{ fontSize: 18, marginRight: 10 }}>⚠️</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={s.alertBannerTitle}>{alerts.length} alerta{alerts.length > 1 ? 's' : ''} activa{alerts.length > 1 ? 's' : ''}</Text>
+        {alerts.slice(0, 3).map((a, i) => (
+          <Text key={i} style={s.alertBannerItem}>
+            {a.tipo === 'creditos_bajos' ? '💰' : '💾'} {a.email} — {a.tipo === 'creditos_bajos' ? `Créditos: ${a.valor}` : `Storage: ${a.valor}`}
+          </Text>
+        ))}
+        {alerts.length > 3 && <Text style={s.alertBannerItem}>+{alerts.length - 3} más…</Text>}
+      </View>
+    </View>
+  );
+}
+
+function StatusDot({ online }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={[s.statusDot, { backgroundColor: online ? '#16A34A' : '#EF4444' }]} />
+      <Text style={{ fontSize: 12, fontWeight: '600', color: online ? '#16A34A' : '#EF4444' }}>
+        {online ? 'Online' : 'Offline'}
+      </Text>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Dashboard
+// ─────────────────────────────────────────────────────────────────
+function TabDashboard({ currentUser }) {
   const apiFetch = makeApiFetch(currentUser?.access_token);
   const [status, setStatus]     = useState(null);
   const [empresas, setEmpresas] = useState([]);
   const [panel, setPanel]       = useState(null);
   const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError]       = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError(null);
     try {
       const [st, emp, pan] = await Promise.all([
         apiFetch('/api/superadmin/status'),
@@ -57,460 +191,24 @@ function TabMonitor({ currentUser }) {
       setEmpresas(emp.empresas || []);
       setPanel(pan);
     } catch (e) { setError(e.message); }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} color="#4F46E5" />;
-  if (error)   return <Text style={s.errorText}>{error}</Text>;
-
-  const totalPedidos  = empresas.reduce((a, e) => a + e.num_pedidos, 0);
-  const totalUsuarios = empresas.reduce((a, e) => a + e.num_usuarios, 0);
-  const totalBytes    = empresas.reduce((a, e) => a + e.storage_bytes, 0);
-  const totalCreditos = empresas.reduce((a, e) => a + (e.creditos || 0), 0);
-
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-
-      {/* ── KPIs globales ── */}
-      <View style={s.statsRow}>
-        <StatCard label="Empresas"       value={empresas.length}        color="#4F46E5" />
-        <StatCard label="Usuarios"       value={totalUsuarios}          color="#0EA5E9" />
-        <StatCard label="Pedidos"        value={totalPedidos}           color="#10B981" />
-        <StatCard label="Créditos tot."  value={totalCreditos}          color="#F59E0B" />
-      </View>
-      <View style={[s.statsRow, { marginTop: 0 }]}>
-        <StatCard label="Almacenamiento" value={_humanBytes(totalBytes)} color="#8B5CF6" wide />
-        <StatCard label="Uptime servidor" value={status?.uptime || '–'} color="#64748B" wide />
-        <StatCard label="Mem. servidor"  value={status?.mem_mb ? `${status.mem_mb} MB` : '–'} color="#475569" wide />
-      </View>
-
-      {/* ── Layout 2 columnas ── */}
-      <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-
-        {/* Columna izq: tabla empresas */}
-        <View style={{ flex: 1, minWidth: 260 }}>
-          <Text style={s.sectionTitle}>Empresas ({empresas.length})</Text>
-          <View style={s.card}>
-            <View style={s.tblHead}>
-              <Text style={[s.tblCol, { flex: 3 }]}>Empresa</Text>
-              <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Ped</Text>
-              <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Cred</Text>
-              <Text style={[s.tblCol, { flex: 2, textAlign: 'right' }]}>Storage</Text>
-            </View>
-            {empresas.map((e) => (
-              <View key={e.empresa_id} style={s.tblRow}>
-                <View style={{ flex: 3, minWidth: 0 }}>
-                  <Text style={s.rowPrimary} numberOfLines={1}>{e.admin_email || e.empresa_id}</Text>
-                  <View style={[s.planBadge, e.billing_model === 'suscripcion' ? s.planSub : s.planCred, { alignSelf: 'flex-start', marginTop: 2 }]}>
-                    <Text style={[s.planBadgeText, { fontSize: 9 }]}>{e.billing_model || 'creditos'}</Text>
-                  </View>
-                </View>
-                <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#4F46E5', textAlign: 'right' }}>{e.num_pedidos}</Text>
-                <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'right' }}>{e.creditos || 0}</Text>
-                <Text style={{ flex: 2, fontSize: 11, color: '#8B5CF6', textAlign: 'right' }}>{e.storage_human}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Columna dcha: panel de actividad */}
-        <View style={{ flex: 1, minWidth: 260 }}>
-
-          <Text style={s.sectionTitle}>Alertas</Text>
-          <View style={s.card}>
-            {(panel?.alertas || []).length === 0 ? (
-              <Text style={[s.rowPrimary, { color: '#16A34A' }]}>Sin alertas activas</Text>
-            ) : (panel?.alertas || []).map((a, i) => (
-              <View key={i} style={s.panelRow}>
-                <View style={[s.iconBox, { backgroundColor: a.tipo === 'creditos_bajos' ? '#FEF9C3' : '#FEE2E2' }]}>
-                  <Text style={{ fontSize: 13 }}>{a.tipo === 'creditos_bajos' ? '💰' : '💾'}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.rowPrimary} numberOfLines={1}>{a.email}</Text>
-                  <Text style={[s.rowSecondary, { color: a.tipo === 'creditos_bajos' ? '#B45309' : '#DC2626' }]}>
-                    {a.tipo === 'creditos_bajos' ? `Créditos: ${a.valor}` : `Storage: ${a.valor}`}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <Text style={s.sectionTitle}>Últimos accesos</Text>
-          <View style={s.card}>
-            {(panel?.logins || []).length === 0
-              ? <Text style={s.emptyText}>Sin registros</Text>
-              : (panel?.logins || []).map((l, i) => (
-              <View key={i} style={s.panelRow}>
-                <View style={[s.iconBox, { backgroundColor: '#EEF2FF' }]}>
-                  <Text style={{ fontSize: 13 }}>🔐</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.rowPrimary} numberOfLines={1}>{l.email}</Text>
-                  <Text style={s.rowSecondary}>{l.ts?.slice(0, 16).replace('T', ' ')} · {l.ip}</Text>
-                </View>
-                <View style={[s.planBadge, s.planCred]}>
-                  <Text style={[s.planBadgeText, { fontSize: 9 }]}>{l.rol}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <Text style={s.sectionTitle}>Nuevas empresas</Text>
-          <View style={s.card}>
-            {(panel?.registros || []).length === 0
-              ? <Text style={s.emptyText}>Sin registros</Text>
-              : (panel?.registros || []).map((r, i) => (
-              <View key={i} style={s.panelRow}>
-                <View style={[s.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                  <Text style={{ fontSize: 13 }}>🏢</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.rowPrimary} numberOfLines={1}>{r.email}</Text>
-                  <Text style={s.rowSecondary}>{r.created_at?.slice(0, 10)}</Text>
-                </View>
-                <View style={[s.planBadge, r.billing_model === 'suscripcion' ? s.planSub : s.planCred]}>
-                  <Text style={[s.planBadgeText, { fontSize: 9 }]}>{r.billing_model}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <Text style={s.sectionTitle}>Transacciones recientes</Text>
-          <View style={s.card}>
-            {(panel?.transacciones || []).length === 0
-              ? <Text style={s.emptyText}>Sin transacciones</Text>
-              : (panel?.transacciones || []).map((tx, i) => (
-              <View key={i} style={s.panelRow}>
-                <View style={[s.iconBox, { backgroundColor: '#FEF9C3' }]}>
-                  <Text style={{ fontSize: 13 }}>💳</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.rowPrimary}>{tx.concepto}</Text>
-                  <Text style={s.rowSecondary} numberOfLines={1}>{tx.email} · {tx.created_at?.slice(0, 10)}</Text>
-                </View>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: (tx.cantidad || 0) >= 0 ? '#16A34A' : '#EF4444' }}>
-                  {(tx.cantidad || 0) >= 0 ? '+' : ''}{tx.cantidad}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-        </View>
-
-      </View>
-    </ScrollView>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Tab: Servidor
-// ─────────────────────────────────────────────────────────────────
-function TabServidor({ currentUser }) {
-  const apiFetch = makeApiFetch(currentUser?.access_token);
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [restarting, setRestarting] = useState(false);
-  const [confirmingRestart, setConfirmingRestart] = useState(false);
-  const [msg, setMsg] = useState(null);
-
-  const loadStatus = useCallback(async () => {
-    setLoading(true);
-    try { setStatus(await apiFetch('/api/superadmin/status')); }
-    catch (e) { setMsg({ type: 'error', text: e.message }); }
-    setLoading(false);
-  }, [currentUser?.access_token]);
-
-  useEffect(() => { loadStatus(); }, [loadStatus]);
-
-  const handleRestart = async () => {
-    setRestarting(true); setConfirmingRestart(false); setMsg(null);
-    try {
-      await apiFetch('/api/superadmin/restart', { method: 'POST' });
-    } catch (_) { /* la conexión se corta al reiniciar — es normal */ }
-    setMsg({ type: 'ok', text: 'Reiniciando… esperando respuesta del servidor' });
-    let attempts = 0;
-    const poll = setInterval(async () => {
-      attempts++;
-      try {
-        await apiFetch('/api/superadmin/status');
-        clearInterval(poll);
-        setMsg({ type: 'ok', text: '✓ Servidor online' });
-        setRestarting(false);
-        loadStatus();
-      } catch (_) {
-        if (attempts >= 30) {
-          clearInterval(poll);
-          setMsg({ type: 'error', text: 'El servidor no respondió tras 30 intentos' });
-          setRestarting(false);
-        }
-      }
-    }, 1000);
-  };
-
-  const [cuentaForm, setCuentaForm] = useState({ email: '', password: '', password2: '' });
-  const [savingCuenta, setSavingCuenta] = useState(false);
-  const [msgCuenta, setMsgCuenta] = useState(null);
-
-  const saveCuenta = async () => {
-    if (cuentaForm.password && cuentaForm.password !== cuentaForm.password2) {
-      setMsgCuenta({ type: 'error', text: 'Las contraseñas no coinciden' }); return;
-    }
-    setSavingCuenta(true); setMsgCuenta(null);
-    try {
-      const payload = {};
-      if (cuentaForm.email.trim())    payload.email    = cuentaForm.email.trim();
-      if (cuentaForm.password.trim()) payload.password = cuentaForm.password.trim();
-      await apiFetch('/api/superadmin/cuenta', { method: 'PUT', body: JSON.stringify(payload) });
-      setMsgCuenta({ type: 'ok', text: 'Datos actualizados. Vuelve a iniciar sesión si cambiaste el email.' });
-      setCuentaForm({ email: '', password: '', password2: '' });
-    } catch (e) { setMsgCuenta({ type: 'error', text: e.message }); }
-    setSavingCuenta(false);
-  };
-
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-      <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-
-        {/* Columna izquierda: estado + acciones */}
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={s.sectionTitle}>Estado del servidor</Text>
-          {loading ? <ActivityIndicator color="#4F46E5" /> : (
-            <View style={s.card}>
-              <View style={s.statsRow}>
-                <StatCard label="Uptime"  value={status?.uptime || '–'}                    color="#16A34A" wide />
-                <StatCard label="Memoria" value={status?.mem_mb ? `${status.mem_mb} MB` : '–'} color="#0EA5E9" wide />
-              </View>
-              <InfoRow label="PID"    value={status?.pid} />
-              <InfoRow label="Python" value={status?.python_version?.split(' ')[0]} />
-            </View>
-          )}
-          {msg && (
-            <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertError, { marginTop: 8 }]}>
-              <Text style={s.alertText}>{msg.text}</Text>
-            </View>
-          )}
-          <TouchableOpacity style={[s.refreshBtn, { marginTop: 10 }]} onPress={loadStatus}>
-            <Text style={s.refreshBtnText}>↻ Actualizar estado</Text>
-          </TouchableOpacity>
-
-          <Text style={[s.sectionTitle, { marginTop: 20 }]}>Acciones</Text>
-          {confirmingRestart ? (
-            <View style={s.confirmRow}>
-              <Text style={s.confirmText}>¿Reiniciar el servidor? La app tardará unos segundos en volver.</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity style={s.confirmBtnCancel} onPress={() => setConfirmingRestart(false)}>
-                  <Text style={s.confirmBtnCancelText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.dangerBtn, { flex: 1, marginTop: 0 }]} onPress={handleRestart} disabled={restarting}>
-                  {restarting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.dangerBtnText}>Sí, reiniciar</Text>}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity style={s.dangerBtn} onPress={() => setConfirmingRestart(true)}>
-              <Text style={s.dangerBtnText}>⟳ Reiniciar servidor</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Columna derecha: mi cuenta */}
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={s.sectionTitle}>Mi cuenta (root)</Text>
-          <View style={s.card}>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Nuevo email</Text>
-              <TextInput style={s.formInput} value={cuentaForm.email}
-                onChangeText={(v) => setCuentaForm((f) => ({ ...f, email: v }))}
-                placeholder="nuevo@email.com" placeholderTextColor="#94A3B8"
-                keyboardType="email-address" autoCapitalize="none" />
-            </View>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Nueva contraseña</Text>
-              <TextInput style={s.formInput} value={cuentaForm.password}
-                onChangeText={(v) => setCuentaForm((f) => ({ ...f, password: v }))}
-                placeholder="mín. 8 caracteres" placeholderTextColor="#94A3B8" secureTextEntry />
-            </View>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Repetir contraseña</Text>
-              <TextInput style={s.formInput} value={cuentaForm.password2}
-                onChangeText={(v) => setCuentaForm((f) => ({ ...f, password2: v }))}
-                placeholder="repite la contraseña" placeholderTextColor="#94A3B8" secureTextEntry />
-            </View>
-            {msgCuenta && (
-              <View style={[s.alertBox, msgCuenta.type === 'ok' ? s.alertOk : s.alertError]}>
-                <Text style={s.alertText}>{msgCuenta.text}</Text>
-              </View>
-            )}
-            <TouchableOpacity style={[s.primaryBtn, savingCuenta && { opacity: 0.6 }]} onPress={saveCuenta} disabled={savingCuenta}>
-              {savingCuenta ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={s.primaryBtnText}>Guardar cambios</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-      </View>
-    </ScrollView>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Tab: Tarifas
-// ─────────────────────────────────────────────────────────────────
-function TabTarifas({ currentUser }) {
-  const apiFetch = makeApiFetch(currentUser?.access_token);
-  const [cfg, setCfg]     = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving]   = useState(false);
-  const [msg, setMsg]         = useState(null);
-  const [form, setForm]       = useState({});
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await apiFetch('/api/superadmin/tarifas');
-      setCfg(data);
-      setForm({
-        storage_cost_eur_per_gb: String(data.storage_cost_eur_per_gb ?? ''),
-        suscripcion_mensual_eur: String(data.suscripcion_mensual_eur ?? ''),
-        credito_price_eur:       String(data.credito_price_eur ?? ''),
-        packs: data.packs ? data.packs.map(p => ({ ...p })) : [],
-      });
-    } catch (e) { setMsg({ type: 'error', text: e.message }); }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const save = async () => {
-    setSaving(true); setMsg(null);
-    try {
-      const payload = {
-        storage_cost_eur_per_gb: parseFloat(form.storage_cost_eur_per_gb),
-        suscripcion_mensual_eur: parseFloat(form.suscripcion_mensual_eur),
-        credito_price_eur:       parseFloat(form.credito_price_eur),
-        packs: form.packs,
-      };
-      const res = await apiFetch('/api/superadmin/tarifas', { method: 'PUT', body: JSON.stringify(payload) });
-      setCfg(res.config);
-      setMsg({ type: 'ok', text: 'Tarifas guardadas' });
-    } catch (e) { setMsg({ type: 'error', text: e.message }); }
-    setSaving(false);
-  };
-
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} color="#4F46E5" />;
-
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-      {msg && (
-        <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertError, { marginBottom: 12 }]}>
-          <Text style={s.alertText}>{msg.text}</Text>
-        </View>
-      )}
-
-      <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-
-        {/* Columna izquierda: tarifas base */}
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={s.sectionTitle}>Tarifas base</Text>
-          <View style={s.card}>
-            <TarifaField label="Almacenamiento (€/GB/mes)" field="storage_cost_eur_per_gb" form={form} setForm={setForm} />
-            <TarifaField label="Suscripción mensual (€)"   field="suscripcion_mensual_eur"  form={form} setForm={setForm} />
-            <TarifaField label="Precio por crédito (€)"    field="credito_price_eur"         form={form} setForm={setForm} />
-          </View>
-          <TouchableOpacity style={[s.primaryBtn, { marginTop: 4 }, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-            {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={s.primaryBtnText}>Guardar tarifas</Text>}
-          </TouchableOpacity>
-        </View>
-
-        {/* Columna derecha: packs */}
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={s.sectionTitle}>Packs de créditos</Text>
-          <View style={s.card}>
-            {/* cabecera */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
-              <Text style={[s.formLabel, { flex: 2 }]}>Etiqueta</Text>
-              <Text style={[s.formLabel, { flex: 1, textAlign: 'center' }]}>Créditos</Text>
-              <Text style={[s.formLabel, { width: 64, textAlign: 'center' }]}>Precio €</Text>
-            </View>
-            {(form.packs || cfg?.packs || []).map((p, i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                <TextInput style={[s.formInput, { flex: 2, marginBottom: 0 }]}
-                  value={p.label} placeholder="Etiqueta" placeholderTextColor="#94A3B8"
-                  onChangeText={(v) => setForm((f) => { const packs = [...(f.packs || [])]; packs[i] = { ...packs[i], label: v }; return { ...f, packs }; })} />
-                <TextInput style={[s.formInput, { flex: 1, marginBottom: 0, textAlign: 'center' }]}
-                  value={String(p.credits)} keyboardType="numeric" placeholder="0" placeholderTextColor="#94A3B8"
-                  onChangeText={(v) => setForm((f) => { const packs = [...(f.packs || [])]; packs[i] = { ...packs[i], credits: parseInt(v) || 0 }; return { ...f, packs }; })} />
-                <TextInput style={[s.formInput, { width: 64, marginBottom: 0, textAlign: 'center' }]}
-                  value={String(p.price_eur)} keyboardType="decimal-pad" placeholder="€" placeholderTextColor="#94A3B8"
-                  onChangeText={(v) => setForm((f) => { const packs = [...(f.packs || [])]; packs[i] = { ...packs[i], price_eur: parseFloat(v) || 0 }; return { ...f, packs }; })} />
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity style={[s.primaryBtn, { marginTop: 4 }, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-            {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={s.primaryBtnText}>Guardar packs</Text>}
-          </TouchableOpacity>
-        </View>
-
-      </View>
-    </ScrollView>
-  );
-}
-
-function TarifaField({ label, field, form, setForm }) {
-  return (
-    <View style={s.formRow}>
-      <Text style={s.formLabel}>{label}</Text>
-      <TextInput
-        style={s.formInput}
-        value={form[field] ?? ''}
-        onChangeText={(v) => setForm((f) => ({ ...f, [field]: v }))}
-        keyboardType="decimal-pad"
-        placeholderTextColor="#94A3B8"
-      />
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Tab: Empresas
-// ─────────────────────────────────────────────────────────────────
-function TabEmpresas({ currentUser }) {
-  const apiFetch = makeApiFetch(currentUser?.access_token);
-  const [empresas, setEmpresas] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [ajuste, setAjuste]     = useState({});
-  const [msg, setMsg]           = useState({});
-  const [saving, setSaving]     = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    try {
-      const data = await apiFetch('/api/superadmin/empresas');
-      setEmpresas(data.empresas || []);
-    } catch (e) { /* ignore */ }
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const ajustarCreditos = async (eid) => {
-    const cantidad = parseInt(ajuste[eid] || '0');
-    if (!cantidad) return;
-    setSaving(eid); setMsg((m) => ({ ...m, [eid]: null }));
-    try {
-      const res = await apiFetch(`/api/superadmin/empresas/${eid}/creditos`, {
-        method: 'POST', body: JSON.stringify({ cantidad }),
-      });
-      setMsg((m) => ({ ...m, [eid]: { type: 'ok', text: `Créditos nuevos: ${res.creditos_nuevos}` } }));
-      setAjuste((a) => ({ ...a, [eid]: '' }));
-      load();
-    } catch (e) { setMsg((m) => ({ ...m, [eid]: { type: 'error', text: e.message } })); }
-    setSaving(null);
-  };
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
+  if (error) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Text style={s.errorText}>{error}</Text>
+      <Btn label="Reintentar" onPress={() => load()} style={{ marginTop: 12 }} />
+    </View>
+  );
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} color="#4F46E5" />;
+  const totalPedidos  = empresas.reduce((a, e) => a + e.num_pedidos, 0);
+  const totalUsuarios = empresas.reduce((a, e) => a + e.num_usuarios, 0);
+  const totalBytes    = empresas.reduce((a, e) => a + e.storage_bytes, 0);
+  const totalCreditos = empresas.reduce((a, e) => a + (e.creditos || 0), 0);
+  const alertas = panel?.alertas || [];
 
   return (
     <ScrollView
@@ -518,477 +216,442 @@ function TabEmpresas({ currentUser }) {
       contentContainerStyle={{ padding: 16 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
     >
-      <Text style={s.sectionTitle}>Empresas registradas ({empresas.length})</Text>
-      <View style={s.card}>
-        <View style={s.tblHead}>
-          <Text style={[s.tblCol, { flex: 3 }]}>Empresa / Email</Text>
-          <Text style={[s.tblCol, { flex: 1, textAlign: 'center' }]}>Usr</Text>
-          <Text style={[s.tblCol, { flex: 1, textAlign: 'center' }]}>Ped</Text>
-          <Text style={[s.tblCol, { flex: 1, textAlign: 'center' }]}>Cred</Text>
-          <Text style={[s.tblCol, { flex: 2, textAlign: 'right' }]}>Storage</Text>
-          <Text style={[s.tblCol, { flex: 2, textAlign: 'center' }]}>Ajuste ±</Text>
+      <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', gap: 14 }}>
+
+        <AlertBanner alerts={alertas} />
+
+        {/* KPIs */}
+        <View style={s.kpiGrid}>
+          <KpiCard icon="🏢" label="Empresas"        value={empresas.length}        color="#4F46E5" />
+          <KpiCard icon="👥" label="Usuarios"         value={totalUsuarios}          color="#0EA5E9" />
+          <KpiCard icon="📦" label="Pedidos totales"  value={totalPedidos}           color="#10B981" />
+          <KpiCard icon="💰" label="Créditos totales" value={totalCreditos}          color="#F59E0B" />
+          <KpiCard icon="💾" label="Almacenamiento"   value={_humanBytes(totalBytes)} color="#8B5CF6" />
+          <KpiCard icon="⏱️" label="Uptime servidor"  value={status?.uptime || '–'}  color="#64748B"
+            sub={status?.mem_mb ? `${status.mem_mb} MB RAM` : undefined} />
         </View>
-        {empresas.map((emp) => (
-          <View key={emp.empresa_id}>
-            <View style={s.tblRow}>
-              <View style={{ flex: 3, minWidth: 0 }}>
-                <Text style={s.rowPrimary} numberOfLines={1}>{emp.admin_email || emp.empresa_id}</Text>
-                <View style={[s.planBadge, emp.billing_model === 'suscripcion' ? s.planSub : s.planCred, { alignSelf: 'flex-start', marginTop: 2 }]}>
-                  <Text style={[s.planBadgeText, { fontSize: 9 }]}>{emp.billing_model || 'creditos'}</Text>
+
+        {/* 2 columnas: tabla empresas + feeds */}
+        <View style={s.twoCol}>
+
+          {/* Tabla empresas */}
+          <View style={{ flex: 2, minWidth: 260 }}>
+            <SectionHeader title={`Resumen empresas (${empresas.length})`} />
+            <Card>
+              <View style={s.tblHead}>
+                <Text style={[s.tblCol, { flex: 3 }]}>Empresa</Text>
+                <Text style={[s.tblCol, { width: 44, textAlign: 'right' }]}>Ped</Text>
+                <Text style={[s.tblCol, { width: 54, textAlign: 'right' }]}>Cred</Text>
+                <Text style={[s.tblCol, { width: 80, textAlign: 'right' }]}>Storage</Text>
+              </View>
+              {empresas.slice(0, 12).map((e) => (
+                <View key={e.empresa_id} style={s.tblRow}>
+                  <View style={{ flex: 3, minWidth: 0 }}>
+                    <Text style={s.rowPrimary} numberOfLines={1}>{e.admin_email || e.empresa_id}</Text>
+                    <Badge
+                      label={e.billing_model || 'creditos'}
+                      color={e.billing_model === 'suscripcion' ? '#4F46E5' : '#B45309'}
+                      bg={e.billing_model === 'suscripcion' ? '#EEF2FF' : '#FEF9C3'}
+                    />
+                  </View>
+                  <Text style={{ width: 44, fontSize: 12, fontWeight: '700', color: '#4F46E5', textAlign: 'right' }}>{e.num_pedidos}</Text>
+                  <Text style={{ width: 54, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'right' }}>{e.creditos || 0}</Text>
+                  <Text style={{ width: 80, fontSize: 11, color: '#8B5CF6', textAlign: 'right' }}>{e.storage_human}</Text>
                 </View>
-              </View>
-              <Text style={{ flex: 1, fontSize: 12, color: '#0EA5E9', fontWeight: '700', textAlign: 'center' }}>{emp.num_usuarios}</Text>
-              <Text style={{ flex: 1, fontSize: 12, color: '#4F46E5', fontWeight: '700', textAlign: 'center' }}>{emp.num_pedidos}</Text>
-              <Text style={{ flex: 1, fontSize: 12, color: '#F59E0B', fontWeight: '700', textAlign: 'center' }}>{emp.creditos || 0}</Text>
-              <Text style={{ flex: 2, fontSize: 11, color: '#8B5CF6', textAlign: 'right' }} numberOfLines={1}>{emp.storage_human}</Text>
-              <View style={{ flex: 2, flexDirection: 'row', gap: 4, paddingLeft: 6 }}>
-                <TextInput
-                  style={[s.formInput, { flex: 1, marginBottom: 0, paddingVertical: 4, paddingHorizontal: 6, fontSize: 12, textAlign: 'center' }]}
-                  placeholder="±"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numbers-and-punctuation"
-                  value={ajuste[emp.empresa_id] || ''}
-                  onChangeText={(v) => setAjuste((a) => ({ ...a, [emp.empresa_id]: v }))}
-                />
-                <TouchableOpacity
-                  style={[s.primaryBtn, { paddingHorizontal: 8, paddingVertical: 4, marginBottom: 0 }, saving === emp.empresa_id && { opacity: 0.6 }]}
-                  onPress={() => ajustarCreditos(emp.empresa_id)}
-                  disabled={saving === emp.empresa_id}
-                >
-                  {saving === emp.empresa_id
-                    ? <ActivityIndicator size="small" color="#FFF" />
-                    : <Text style={[s.primaryBtnText, { fontSize: 11 }]}>OK</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            </View>
-            {msg[emp.empresa_id] && (
-              <Text style={{ fontSize: 11, paddingVertical: 3, paddingLeft: 4, color: msg[emp.empresa_id].type === 'ok' ? '#16A34A' : '#DC2626' }}>
-                {msg[emp.empresa_id].text}
-              </Text>
-            )}
+              ))}
+              {empresas.length > 12 && (
+                <Text style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', paddingTop: 8 }}>
+                  +{empresas.length - 12} más en la sección Empresas
+                </Text>
+              )}
+            </Card>
           </View>
-        ))}
+
+          {/* Feed lateral */}
+          <View style={{ flex: 1, minWidth: 220, gap: 14 }}>
+
+            <View>
+              <SectionHeader title="Alertas" />
+              <Card>
+                {alertas.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                    <Text style={{ fontSize: 20, marginBottom: 4 }}>✅</Text>
+                    <Text style={{ fontSize: 12, color: '#16A34A', fontWeight: '600' }}>Sin alertas activas</Text>
+                  </View>
+                ) : alertas.map((a, i) => (
+                  <FeedRow
+                    key={i}
+                    icon={a.tipo === 'creditos_bajos' ? '💰' : '💾'}
+                    iconBg={a.tipo === 'creditos_bajos' ? '#FEF9C3' : '#FEE2E2'}
+                    primary={a.email}
+                    secondary={a.tipo === 'creditos_bajos' ? `Créditos: ${a.valor}` : `Storage: ${a.valor}`}
+                  />
+                ))}
+              </Card>
+            </View>
+
+            <View>
+              <SectionHeader title="Últimos accesos" />
+              <Card>
+                {(panel?.logins || []).length === 0
+                  ? <Text style={s.emptyText}>Sin registros</Text>
+                  : (panel?.logins || []).slice(0, 5).map((l, i) => (
+                  <FeedRow
+                    key={i}
+                    icon="🔐"
+                    iconBg="#EEF2FF"
+                    primary={l.email}
+                    secondary={l.ts?.slice(0, 16).replace('T', ' ')}
+                    right={<Badge label={l.rol} color="#475569" bg="#F1F5F9" />}
+                  />
+                ))}
+              </Card>
+            </View>
+
+            <View>
+              <SectionHeader title="Nuevas empresas" />
+              <Card>
+                {(panel?.registros || []).length === 0
+                  ? <Text style={s.emptyText}>Sin registros</Text>
+                  : (panel?.registros || []).slice(0, 5).map((r, i) => (
+                  <FeedRow
+                    key={i}
+                    icon="🏢"
+                    iconBg="#F0FDF4"
+                    primary={r.email}
+                    secondary={r.created_at?.slice(0, 10)}
+                    right={
+                      <Badge
+                        label={r.billing_model}
+                        color={r.billing_model === 'suscripcion' ? '#4F46E5' : '#B45309'}
+                        bg={r.billing_model === 'suscripcion' ? '#EEF2FF' : '#FEF9C3'}
+                      />
+                    }
+                  />
+                ))}
+              </Card>
+            </View>
+
+            <View>
+              <SectionHeader title="Transacciones recientes" />
+              <Card>
+                {(panel?.transacciones || []).length === 0
+                  ? <Text style={s.emptyText}>Sin transacciones</Text>
+                  : (panel?.transacciones || []).slice(0, 5).map((tx, i) => (
+                  <FeedRow
+                    key={i}
+                    icon="💳"
+                    iconBg="#FEF9C3"
+                    primary={tx.concepto}
+                    secondary={tx.email}
+                    right={
+                      <Text style={[s.rowPrimary, { color: (tx.cantidad || 0) >= 0 ? '#16A34A' : '#EF4444' }]}>
+                        {(tx.cantidad || 0) >= 0 ? '+' : ''}{tx.cantidad}
+                      </Text>
+                    }
+                  />
+                ))}
+              </Card>
+            </View>
+
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Tab: Códigos Promocionales
+// Tab: Empresas (con detalle integrado — sin tab separado)
 // ─────────────────────────────────────────────────────────────────
-function TabPromos({ currentUser }) {
+function TabEmpresas({ currentUser }) {
   const apiFetch = makeApiFetch(currentUser?.access_token);
-  const [promos, setPromos]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [msg, setMsg]           = useState(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(null); // code string
-  const [form, setForm]         = useState({ credits: '50', prefix: 'PROMO', max_uses: '1', expires_at: '' });
+  const [empresas, setEmpresas]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch]         = useState('');
+  const [expanded, setExpanded]     = useState(null);
+  const [detalle, setDetalle]       = useState({});
+  const [loadingDet, setLoadingDet] = useState(null);
+  const [ajuste, setAjuste]         = useState({});
+  const [ajusteMsg, setAjusteMsg]   = useState({});
+  const [saving, setSaving]         = useState(null);
+  const [editDto, setEditDto]       = useState({});   // { [empresa_id]: string }
+  const [savingDto, setSavingDto]   = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { setPromos((await apiFetch('/api/superadmin/promos')).promos || []); }
-    catch (e) { /* ignore */ }
-    setLoading(false);
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    try {
+      const data = await apiFetch('/api/superadmin/empresas');
+      setEmpresas(data.empresas || []);
+    } catch (_) {}
+    if (isRefresh) setRefreshing(false); else setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const create = async () => {
-    if (!form.credits || parseInt(form.credits) <= 0) {
-      setMsg({ type: 'error', text: 'Indica créditos > 0' }); return;
+  const toggleExpand = async (eid) => {
+    if (expanded === eid) { setExpanded(null); return; }
+    setExpanded(eid);
+    if (!detalle[eid]) {
+      setLoadingDet(eid);
+      try {
+        const d = await apiFetch(`/api/superadmin/empresas/${eid}/detalle`);
+        setDetalle((prev) => ({ ...prev, [eid]: d }));
+      } catch (_) {}
+      setLoadingDet(null);
     }
-    setCreating(true); setMsg(null);
+  };
+
+  const guardarDescuento = async (eid) => {
+    const pct = parseInt(editDto[eid] ?? '0') || 0;
+    setSavingDto(eid);
     try {
-      const payload = {
-        credits:   parseInt(form.credits),
-        prefix:    form.prefix || 'PROMO',
-        max_uses:  parseInt(form.max_uses) || 1,
-        expires_at: form.expires_at || null,
-      };
-      const res = await apiFetch('/api/superadmin/promos', { method: 'POST', body: JSON.stringify(payload) });
-      setMsg({ type: 'ok', text: `Código creado: ${res.promo.code}` });
+      await apiFetch(`/api/superadmin/empresas/${eid}/descuento`, {
+        method: 'PUT', body: JSON.stringify({ discount_pct: pct }),
+      });
+      setEmpresas((prev) => prev.map((e) => e.empresa_id === eid ? { ...e, billing_discount_pct: pct } : e));
+      setEditDto((d) => { const n = { ...d }; delete n[eid]; return n; });
+    } catch (e) { setAjusteMsg((m) => ({ ...m, [eid]: { type: 'error', text: e.message } })); }
+    setSavingDto(null);
+  };
+
+  const ajustarCreditos = async (eid) => {
+    const cantidad = parseInt(ajuste[eid] || '0');
+    if (!cantidad) return;
+    setSaving(eid);
+    setAjusteMsg((m) => ({ ...m, [eid]: null }));
+    try {
+      const res = await apiFetch(`/api/superadmin/empresas/${eid}/creditos`, {
+        method: 'POST', body: JSON.stringify({ cantidad }),
+      });
+      setAjusteMsg((m) => ({ ...m, [eid]: { type: 'ok', text: `Créditos nuevos: ${res.creditos_nuevos}` } }));
+      setAjuste((a) => ({ ...a, [eid]: '' }));
       load();
-    } catch (e) { setMsg({ type: 'error', text: e.message }); }
-    setCreating(false);
+    } catch (e) { setAjusteMsg((m) => ({ ...m, [eid]: { type: 'error', text: e.message } })); }
+    setSaving(null);
   };
 
-  const toggle = async (code) => {
-    try {
-      await apiFetch(`/api/superadmin/promos/${code}/toggle`, { method: 'POST' });
-      load();
-    } catch (e) { setMsg({ type: 'error', text: e.message }); }
-  };
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return empresas;
+    return empresas.filter((e) =>
+      (e.admin_email || '').toLowerCase().includes(q) ||
+      (e.empresa_id || '').toLowerCase().includes(q)
+    );
+  }, [empresas, search]);
 
-  const remove = async (code) => {
-    try {
-      await apiFetch(`/api/superadmin/promos/${code}`, { method: 'DELETE' });
-      setConfirmingDelete(null);
-      load();
-    } catch (e) { setMsg({ type: 'error', text: e.message }); }
-  };
-
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-      <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-
-        {/* Columna izquierda: formulario creación */}
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={s.sectionTitle}>Nuevo código</Text>
-          <View style={s.card}>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Prefijo</Text>
-              <TextInput style={s.formInput} value={form.prefix} onChangeText={(v) => setForm((f) => ({ ...f, prefix: v }))} placeholderTextColor="#94A3B8" />
-            </View>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Créditos</Text>
-              <TextInput style={s.formInput} value={form.credits} onChangeText={(v) => setForm((f) => ({ ...f, credits: v }))} keyboardType="numeric" placeholderTextColor="#94A3B8" />
-            </View>
-            <View style={s.formRow}>
-              <Text style={s.formLabel}>Usos máximos</Text>
-              <TextInput style={s.formInput} value={form.max_uses} onChangeText={(v) => setForm((f) => ({ ...f, max_uses: v }))} keyboardType="numeric" placeholderTextColor="#94A3B8" />
-            </View>
-            {Platform.OS === 'web' && (
-              <View style={s.formRow}>
-                <Text style={s.formLabel}>Caduca (opcional)</Text>
-                <input type="date"
-                  style={{ height: 38, borderRadius: 8, border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC', padding: '0 10px', fontSize: 13, color: '#0F172A', width: '100%' }}
-                  value={form.expires_at?.slice(0, 10) || ''}
-                  onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value ? `${e.target.value}T23:59:59Z` : '' }))}
-                />
-              </View>
-            )}
-            {msg && (
-              <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertError, { marginBottom: 8 }]}>
-                <Text style={s.alertText}>{msg.text}</Text>
-              </View>
-            )}
-            <TouchableOpacity style={[s.primaryBtn, creating && { opacity: 0.6 }]} onPress={create} disabled={creating}>
-              {creating ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.primaryBtnText}>+ Generar código</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Columna derecha: lista de códigos */}
-        <View style={{ flex: 2, minWidth: 280 }}>
-          <Text style={s.sectionTitle}>Códigos existentes ({promos.length})</Text>
-          {loading ? <ActivityIndicator color="#4F46E5" /> : promos.length === 0 ? (
-            <Text style={s.emptyText}>Sin códigos aún</Text>
-          ) : (
-            <View style={s.card}>
-              <View style={s.tblHead}>
-                <Text style={[s.tblCol, { flex: 3 }]}>Código</Text>
-                <Text style={[s.tblCol, { flex: 1, textAlign: 'center' }]}>Cred</Text>
-                <Text style={[s.tblCol, { flex: 1, textAlign: 'center' }]}>Usos</Text>
-                <Text style={[s.tblCol, { flex: 2, textAlign: 'center' }]}>Caduca</Text>
-                <Text style={[s.tblCol, { flex: 2, textAlign: 'center' }]}>Acciones</Text>
-              </View>
-              {promos.map((p) => (
-                <View key={p.code}>
-                  <View style={s.tblRow}>
-                    <View style={{ flex: 3, minWidth: 0 }}>
-                      <Text style={[s.promoCode, { fontSize: 13 }]} numberOfLines={1}>{p.code}</Text>
-                    </View>
-                    <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'center' }}>{p.credits}</Text>
-                    <Text style={{ flex: 1, fontSize: 12, color: '#64748B', textAlign: 'center' }}>{p.uses}/{p.max_uses}</Text>
-                    <Text style={{ flex: 2, fontSize: 11, color: '#94A3B8', textAlign: 'center' }} numberOfLines={1}>
-                      {p.expires_at ? p.expires_at.slice(0, 10) : '∞'}
-                    </Text>
-                    <View style={{ flex: 2, flexDirection: 'row', gap: 4, justifyContent: 'center' }}>
-                      <TouchableOpacity style={[s.smallBtn, p.active ? s.smallBtnOk : s.smallBtnGray]} onPress={() => toggle(p.code)}>
-                        <Text style={s.smallBtnText}>{p.active ? '✓' : '✗'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[s.smallBtn, s.smallBtnDanger]} onPress={() => setConfirmingDelete(p.code)}>
-                        <Text style={s.smallBtnText}>🗑</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  {confirmingDelete === p.code && (
-                    <View style={s.confirmRow}>
-                      <Text style={s.confirmText}>¿Eliminar el código {p.code}?</Text>
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                        <TouchableOpacity style={s.confirmBtnCancel} onPress={() => setConfirmingDelete(null)}>
-                          <Text style={s.confirmBtnCancelText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[s.dangerBtn, { flex: 1, marginTop: 0 }]} onPress={() => remove(p.code)}>
-                          <Text style={s.dangerBtnText}>Eliminar</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-      </View>
-    </ScrollView>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Tab: Detalle empresa
-// ─────────────────────────────────────────────────────────────────
-function TabDetalle({ currentUser }) {
-  const apiFetch = makeApiFetch(currentUser?.access_token);
-  const [empresas, setEmpresas] = useState([]);
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(null); // empresa_id string
-  const [detalle, setDetalle] = useState(null);
-  const [loadingList, setLoadingList] = useState(true);
-  const [loadingDetalle, setLoadingDetalle] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    apiFetch('/api/superadmin/empresas')
-      .then((d) => setEmpresas(d.empresas || []))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoadingList(false));
-  }, []);
-
-  const selectEmpresa = async (eid) => {
-    setSelected(eid);
-    setDetalle(null);
-    setError(null);
-    setLoadingDetalle(true);
-    try {
-      const d = await apiFetch(`/api/superadmin/empresas/${eid}/detalle`);
-      setDetalle(d);
-    } catch (e) { setError(e.message); }
-    setLoadingDetalle(false);
-  };
-
-  const filtered = search.trim()
-    ? empresas.filter((e) => (e.admin_email || '').toLowerCase().includes(search.trim().toLowerCase()))
-    : empresas;
-
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Selector de empresa */}
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', padding: 12, zIndex: 10 }}>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <TextInput
-            style={[s.formInput, { flex: 1, marginBottom: 0 }]}
-            placeholder="Buscar por email del administrador…"
-            placeholderTextColor="#94A3B8"
-            value={search}
-            onChangeText={(v) => { setSearch(v); setSelected(null); setDetalle(null); }}
-          />
-          {!!(selected || search.trim()) && (
-            <TouchableOpacity
-              style={{ padding: 8, borderRadius: 8, backgroundColor: '#F1F5F9' }}
-              onPress={() => { setSearch(''); setSelected(null); setDetalle(null); setError(null); }}
-            >
-              <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '700' }}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {!selected && (
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, marginTop: 4, maxHeight: 240, overflow: 'hidden' }}>
-            {loadingList ? (
-              <ActivityIndicator style={{ padding: 12 }} color="#4F46E5" />
-            ) : filtered.length === 0 ? (
-              <Text style={{ padding: 12, fontSize: 13, color: '#94A3B8' }}>Sin resultados</Text>
-            ) : (
-              <ScrollView keyboardShouldPersistTaps="handled">
-                {filtered.map((e) => (
-                  <TouchableOpacity
-                    key={e.empresa_id}
-                    style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
-                    onPress={() => { selectEmpresa(e.empresa_id); setSearch(e.admin_email || e.empresa_id); }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>
-                      {e.admin_email || '(sin email)'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
+      <View style={s.searchBar}>
+        <Text style={{ fontSize: 16, marginRight: 6 }}>🔍</Text>
+        <TextInput
+          style={{ flex: 1, fontSize: 14, color: '#0F172A' }}
+          placeholder="Buscar empresa por email o ID…"
+          placeholderTextColor="#94A3B8"
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} style={{ padding: 4 }}>
+            <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '700' }}>✕</Text>
+          </TouchableOpacity>
         )}
       </View>
 
-      {/* Detalle */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        {error && <Text style={s.errorText}>{error}</Text>}
-        {loadingDetalle && <ActivityIndicator style={{ marginTop: 40 }} color="#4F46E5" />}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, gap: 8 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+      >
+        <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
 
-        {!selected && !loadingDetalle && !error && (
-          <Text style={s.emptyText}>Selecciona una empresa para ver su detalle</Text>
-        )}
+          {filtered.length === 0 && (
+            <Text style={s.emptyText}>Sin resultados para "{search}"</Text>
+          )}
 
-        {detalle && !loadingDetalle && (() => {
-          const cr = detalle.creditos || {};
-          const st = detalle.storage || {};
-          return (
-            <>
-              {/* ── Header empresa ── */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>{detalle.admin_email || selected}</Text>
-                  <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>ID: {selected}</Text>
-                </View>
-                <View style={[s.planBadge, detalle.billing_model === 'suscripcion' ? s.planSub : s.planCred]}>
-                  <Text style={s.planBadgeText}>{detalle.billing_model}</Text>
-                </View>
-              </View>
+          {filtered.map((emp) => {
+            const isOpen = expanded === emp.empresa_id;
+            const det    = detalle[emp.empresa_id];
+            const isSub  = emp.billing_model === 'suscripcion';
 
-              {/* ── Fila KPIs ── */}
-              <View style={s.statsRow}>
-                <StatCard label="Créditos"   value={cr.saldo_actual ?? 0}            color="#F59E0B" />
-                <StatCard label="Pedidos"    value={detalle.pedidos?.total ?? 0}      color="#4F46E5" />
-                <StatCard label="Usuarios"   value={detalle.usuarios?.length ?? 0}    color="#0EA5E9" />
-                <StatCard label="Storage"    value={st.total_human ?? '0 B'}          color="#8B5CF6" />
-              </View>
+            return (
+              <Card key={emp.empresa_id} style={{ marginBottom: 0 }}>
 
-              {/* ── Créditos 30d ── */}
-              <View style={[s.statsRow, { marginTop: 0 }]}>
-                <StatCard label="Consumo 30d"  value={`-${cr.consumo_30d ?? 0}`}  color="#EF4444" wide />
-                <StatCard label="Recarga 30d"  value={`+${cr.recarga_30d ?? 0}`}  color="#16A34A" wide />
-                <StatCard label="Coste storage" value={st.coste_mes_eur != null ? `${st.coste_mes_eur.toFixed(3)} €/mes` : '–'} color="#8B5CF6" wide />
-              </View>
+                {/* Fila resumen */}
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                  onPress={() => toggleExpand(emp.empresa_id)}
+                >
+                  <View style={[s.empAvatar, { backgroundColor: isSub ? '#EEF2FF' : '#FEF9C3' }]}>
+                    <Text style={{ fontSize: 16 }}>🏢</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[s.rowPrimary, { fontSize: 14 }]} numberOfLines={1}>{emp.admin_email || emp.empresa_id}</Text>
+                    <View style={{ flexDirection: 'row', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
+                      <Badge
+                        label={emp.billing_model || 'creditos'}
+                        color={isSub ? '#4F46E5' : '#B45309'}
+                        bg={isSub ? '#EEF2FF' : '#FEF9C3'}
+                      />
+                      {emp.billing_discount_pct > 0 && (
+                        <Badge label={`🏷️ -${emp.billing_discount_pct}%`} color="#92400E" bg="#FEF3C7" />
+                      )}
+                    </View>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4F46E5' }}>{emp.num_pedidos} ped.</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: '#F59E0B' }}>{emp.creditos || 0} cred.</Text>
+                    <Text style={{ fontSize: 10, color: '#8B5CF6' }}>{emp.storage_human}</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: '#CBD5E1', marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
 
-              {/* ── Layout 2 columnas ── */}
-              <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                {/* Detalle expandible */}
+                {isOpen && (
+                  <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14 }}>
 
-                {/* Columna izquierda: Usuarios + Actividad pedidos/presupuestos */}
-                <View style={{ flex: 1, minWidth: 260 }}>
-                  <Text style={s.sectionTitle}>Usuarios ({detalle.usuarios?.length ?? 0})</Text>
-                  <View style={s.card}>
-                    {(detalle.usuarios || []).map((u, i) => (
-                      <View key={i} style={s.panelRow}>
-                        <View style={[s.iconBox, { backgroundColor: '#EEF2FF' }]}>
-                          <Text style={{ fontSize: 13 }}>👤</Text>
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={s.rowPrimary} numberOfLines={1}>{u.nombre || u.email}</Text>
-                          {u.nombre ? <Text style={s.rowSecondary} numberOfLines={1}>{u.email}</Text> : null}
-                        </View>
-                        <View style={{ flexDirection: 'row', gap: 4 }}>
-                          <View style={[s.planBadge, s.planCred]}>
-                            <Text style={[s.planBadgeText, { fontSize: 9 }]}>{u.rol}</Text>
+                    {/* Ajuste créditos + descuento de facturación */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                      <Text style={[s.infoLabel, { flex: 1 }]}>Ajuste de créditos (±)</Text>
+                      <TextInput
+                        style={[s.formInput, { width: 80, marginBottom: 0, paddingVertical: 5, textAlign: 'center' }]}
+                        placeholder="±0"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numbers-and-punctuation"
+                        value={ajuste[emp.empresa_id] || ''}
+                        onChangeText={(v) => setAjuste((a) => ({ ...a, [emp.empresa_id]: v }))}
+                      />
+                      <Btn
+                        label="Aplicar"
+                        onPress={() => ajustarCreditos(emp.empresa_id)}
+                        disabled={saving === emp.empresa_id}
+                        loading={saving === emp.empresa_id}
+                        style={{ paddingHorizontal: 14, paddingVertical: 7 }}
+                      />
+                    </View>
+
+                    {/* Descuento de facturación */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap',
+                      backgroundColor: '#FFFBEB', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+                      <Text style={{ fontSize: 13 }}>🏷️</Text>
+                      <Text style={[s.infoLabel, { flex: 1 }]}>
+                        Descuento facturación{emp.billing_discount_pct > 0 ? ` · actual: ${emp.billing_discount_pct}%` : ' · sin descuento'}
+                      </Text>
+                      <TextInput
+                        style={[s.formInput, { width: 70, marginBottom: 0, paddingVertical: 5, textAlign: 'center' }]}
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        value={editDto[emp.empresa_id] ?? String(emp.billing_discount_pct ?? 0)}
+                        onChangeText={(v) => setEditDto((d) => ({ ...d, [emp.empresa_id]: v }))}
+                      />
+                      <Text style={[s.infoLabel, { marginRight: 4 }]}>%</Text>
+                      <Btn
+                        label="Guardar"
+                        onPress={() => guardarDescuento(emp.empresa_id)}
+                        disabled={savingDto === emp.empresa_id}
+                        loading={savingDto === emp.empresa_id}
+                        style={{ paddingHorizontal: 14, paddingVertical: 7, backgroundColor: '#D97706' }}
+                      />
+                    </View>
+
+                    {ajusteMsg[emp.empresa_id] && (
+                      <Text style={{ fontSize: 11, marginBottom: 10, color: ajusteMsg[emp.empresa_id].type === 'ok' ? '#16A34A' : '#DC2626' }}>
+                        {ajusteMsg[emp.empresa_id].text}
+                      </Text>
+                    )}
+
+                    {loadingDet === emp.empresa_id && (
+                      <ActivityIndicator color="#4F46E5" style={{ marginVertical: 16 }} />
+                    )}
+
+                    {det && (
+                      <View style={s.twoCol}>
+
+                        {/* Col izq: KPIs + usuarios + actividad */}
+                        <View style={{ flex: 1, minWidth: 220 }}>
+                          <View style={s.kpiGrid2}>
+                            <MiniKpi label="Créditos"    value={det.creditos?.saldo_actual ?? 0}          color="#F59E0B" />
+                            <MiniKpi label="Pedidos"     value={det.pedidos?.total ?? 0}                  color="#4F46E5" />
+                            <MiniKpi label="Usuarios"    value={det.usuarios?.length ?? 0}                color="#0EA5E9" />
+                            <MiniKpi label="Storage"     value={det.storage?.total_human ?? '0 B'}        color="#8B5CF6" />
+                            <MiniKpi label="Consumo 30d" value={`-${det.creditos?.consumo_30d ?? 0}`}     color="#EF4444" />
+                            <MiniKpi label="Recarga 30d" value={`+${det.creditos?.recarga_30d ?? 0}`}     color="#16A34A" />
                           </View>
-                          {u.activo === false && (
-                            <View style={[s.planBadge, { backgroundColor: '#FEE2E2' }]}>
-                              <Text style={[s.planBadgeText, { fontSize: 9, color: '#DC2626' }]}>inactivo</Text>
-                            </View>
-                          )}
+
+                          <Text style={[s.sectionTitle, { marginTop: 12 }]}>Usuarios ({det.usuarios?.length ?? 0})</Text>
+                          {(det.usuarios || []).map((u, i) => (
+                            <FeedRow
+                              key={i}
+                              icon="👤"
+                              iconBg="#EEF2FF"
+                              primary={u.nombre || u.email}
+                              secondary={u.nombre ? u.email : null}
+                              right={
+                                <View style={{ gap: 3, alignItems: 'flex-end' }}>
+                                  <Badge label={u.rol} color="#475569" bg="#F1F5F9" />
+                                  {u.activo === false && <Badge label="inactivo" color="#DC2626" bg="#FEE2E2" />}
+                                </View>
+                              }
+                            />
+                          ))}
+
+                          <Text style={[s.sectionTitle, { marginTop: 12 }]}>Estado pedidos</Text>
+                          {Object.entries(det.pedidos?.por_estado || {}).map(([est, cnt]) => (
+                            <InfoRow
+                              key={est}
+                              label={est}
+                              value={String(cnt)}
+                              valueColor={ESTADO_COLORS[est] ?? '#64748B'}
+                            />
+                          ))}
+
+                          <Text style={[s.sectionTitle, { marginTop: 12 }]}>Almacenamiento</Text>
+                          <InfoRow label="Total" value={det.storage?.total_human} />
+                          <InfoRow label="Coste/mes" value={det.storage?.coste_mes_eur != null ? `${det.storage.coste_mes_eur.toFixed(4)} €` : '–'} />
+                          {(det.storage?.por_tipo || []).map((t, i) => (
+                            <InfoRow key={i} label={t.tipo || 'otro'} value={`${t.human} · ${t.count} arch.`} />
+                          ))}
                         </View>
+
+                        {/* Col dcha: transacciones */}
+                        <View style={{ flex: 1, minWidth: 220 }}>
+                          <Text style={s.sectionTitle}>Transacciones ({(det.creditos?.ultimas_tx || []).length})</Text>
+                          {(det.creditos?.ultimas_tx || []).length === 0 ? (
+                            <Text style={s.emptyText}>Sin transacciones</Text>
+                          ) : (det.creditos?.ultimas_tx || []).map((tx, i) => (
+                            <FeedRow
+                              key={i}
+                              icon="💳"
+                              iconBg="#FEF9C3"
+                              primary={tx.concepto}
+                              secondary={tx.fecha?.slice(0, 10)}
+                              right={
+                                <Text style={[s.rowPrimary, { color: (tx.cantidad ?? 0) >= 0 ? '#16A34A' : '#EF4444' }]}>
+                                  {(tx.cantidad ?? 0) >= 0 ? '+' : ''}{tx.cantidad}
+                                </Text>
+                              }
+                            />
+                          ))}
+                        </View>
+
                       </View>
-                    ))}
+                    )}
                   </View>
-
-                  <Text style={[s.sectionTitle, { marginTop: 12 }]}>Actividad</Text>
-                  <View style={s.card}>
-                    <View style={s.tblRow}>
-                      <Text style={[s.rowPrimary, { flex: 1 }]}>Pedidos totales</Text>
-                      <Text style={[s.rowPrimary, { color: '#4F46E5' }]}>{detalle.pedidos?.total ?? 0}</Text>
-                    </View>
-                    {Object.entries(detalle.pedidos?.por_estado || {}).map(([est, cnt]) => (
-                      <View key={est} style={s.tblRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: ESTADO_COLORS[est] ?? '#94A3B8' }} />
-                          <Text style={s.rowSecondary}>{est}</Text>
-                        </View>
-                        <Text style={[s.rowPrimary, { color: ESTADO_COLORS[est] ?? '#64748B' }]}>{cnt}</Text>
-                      </View>
-                    ))}
-                    <View style={s.tblRow}>
-                      <Text style={[s.rowPrimary, { flex: 1 }]}>Presupuestos</Text>
-                      <Text style={[s.rowPrimary, { color: '#8B5CF6' }]}>{detalle.presupuestos?.total ?? 0}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingTop: 6 }}>
-                      {Object.entries(detalle.presupuestos?.por_estado || {}).map(([est, cnt]) => (
-                        <View key={est} style={[s.planBadge, { backgroundColor: '#F1F5F9' }]}>
-                          <Text style={[s.planBadgeText, { fontSize: 9, color: '#475569' }]}>{est}: {cnt}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-
-                  <Text style={[s.sectionTitle, { marginTop: 12 }]}>Almacenamiento</Text>
-                  <View style={s.card}>
-                    <InfoRow label="Total" value={st.total_human} />
-                    <InfoRow label="Coste/mes" value={st.coste_mes_eur != null ? `${st.coste_mes_eur.toFixed(4)} €` : '–'} />
-                    {(st.por_tipo || []).map((t, i) => (
-                      <InfoRow key={i} label={t.tipo || 'otro'} value={`${t.human} · ${t.count} arch.`} />
-                    ))}
-                  </View>
-                </View>
-
-                {/* Columna derecha: Transacciones */}
-                <View style={{ flex: 1, minWidth: 260 }}>
-                  <Text style={s.sectionTitle}>Transacciones de créditos ({(cr.ultimas_tx || []).length})</Text>
-                  <View style={s.card}>
-                    {(cr.ultimas_tx || []).length === 0 ? (
-                      <Text style={s.emptyText}>Sin transacciones</Text>
-                    ) : (cr.ultimas_tx || []).map((tx, i) => (
-                      <View key={i} style={s.panelRow}>
-                        <View style={[s.iconBox, { backgroundColor: '#FEF9C3' }]}>
-                          <Text style={{ fontSize: 13 }}>💳</Text>
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={s.rowPrimary}>{tx.concepto}</Text>
-                          <Text style={s.rowSecondary} numberOfLines={1}>
-                            {tx.email ? `${tx.email} · ` : ''}{tx.fecha?.slice(0, 10)}
-                          </Text>
-                          {tx.saldo != null && tx.saldo !== '' ? (
-                            <Text style={s.rowSecondary}>Saldo: {tx.saldo}</Text>
-                          ) : null}
-                        </View>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: (tx.cantidad ?? 0) >= 0 ? '#16A34A' : '#EF4444' }}>
-                          {(tx.cantidad ?? 0) >= 0 ? '+' : ''}{tx.cantidad}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-
-              </View>
-            </>
-          );
-        })()}
+                )}
+              </Card>
+            );
+          })}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Helpers de UI
-// ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, color, wide }) {
-  return (
-    <View style={[s.statCard, wide && { flex: 1 }]}>
-      <Text style={[s.statValue, { color }]}>{value ?? '–'}</Text>
-      <Text style={s.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={s.infoRow}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value ?? '–'}</Text>
-    </View>
-  );
-}
-
-function _humanBytes(b) {
-  if (!b) return '0 B';
-  if (b < 1024) return `${b} B`;
-  if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB`;
-  if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(2)} MB`;
-  return `${(b / 1024 ** 3).toFixed(3)} GB`;
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Pantalla principal SuperAdmin
-// ─────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────
 // Tab: Revendedores
 // ─────────────────────────────────────────────────────────────────
@@ -998,24 +661,16 @@ function TabRevendedores({ currentUser }) {
   const [empresas, setEmpresas]         = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState(null);
-  const [expanded, setExpanded]         = useState(null); // empresa_id del revendedor abierto
-
-  // Formulario nuevo revendedor
-  const [showNuevo, setShowNuevo]           = useState(false);
-  const [nuevoForm, setNuevoForm]           = useState({ email: '', password: '', empresa_nombre: '', discount_pct: '0' });
-  const [saving, setSaving]                 = useState(false);
-  const [msg, setMsg]                       = useState(null);
-
-  // Asignar cliente
-  const [asignando, setAsignando]           = useState(null);  // empresa_id del revendedor destino
-  const [clienteSearch, setClienteSearch]   = useState('');
-  const [asignMsg, setAsignMsg]             = useState(null);
-
-  // Confirm quitar cliente
-  const [confirmQuitar, setConfirmQuitar]   = useState(null); // { revendedorId, clienteEmpresaId }
-
-  // Descuento
-  const [editDescuento, setEditDescuento]   = useState(null); // { id, value }
+  const [expanded, setExpanded]         = useState(null);
+  const [showNuevo, setShowNuevo]       = useState(false);
+  const [nuevoForm, setNuevoForm]       = useState({ email: '', password: '', empresa_nombre: '', discount_pct: '0' });
+  const [saving, setSaving]             = useState(false);
+  const [msg, setMsg]                   = useState(null);
+  const [asignando, setAsignando]       = useState(null);
+  const [clienteSearch, setClienteSearch] = useState('');
+  const [asignMsg, setAsignMsg]         = useState(null);
+  const [confirmQuitar, setConfirmQuitar] = useState(null);
+  const [editDescuento, setEditDescuento] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -1038,13 +693,16 @@ function TabRevendedores({ currentUser }) {
     }
     setSaving(true); setMsg(null);
     try {
-      await apiFetch('/api/superadmin/revendedores', { method: 'POST', body: JSON.stringify({
-        email: nuevoForm.email.trim(),
-        password: nuevoForm.password.trim(),
-        empresa_nombre: nuevoForm.empresa_nombre.trim() || undefined,
-        discount_pct: parseFloat(nuevoForm.discount_pct) || 0,
-      }) });
-      setMsg({ type: 'ok', text: 'Revendedor creado' });
+      await apiFetch('/api/superadmin/revendedores', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: nuevoForm.email.trim(),
+          password: nuevoForm.password.trim(),
+          empresa_nombre: nuevoForm.empresa_nombre.trim() || undefined,
+          discount_pct: parseFloat(nuevoForm.discount_pct) || 0,
+        }),
+      });
+      setMsg({ type: 'ok', text: 'Revendedor creado correctamente' });
       setNuevoForm({ email: '', password: '', empresa_nombre: '', discount_pct: '0' });
       setShowNuevo(false);
       load();
@@ -1082,338 +740,1681 @@ function TabRevendedores({ currentUser }) {
     } catch (e) { setError(e.message); }
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} color="#4F46E5" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
   if (error)   return <Text style={s.errorText}>{error}</Text>;
 
-  // Empresas sin revendedor asignado (para el selector de asignación)
   const resellerClientIds = new Set(revendedores.flatMap((r) => (r.clientes || []).map((c) => c.empresa_id)));
   const resellerIds       = new Set(revendedores.map((r) => r.empresa_id));
-  const empresasLibres    = empresas.filter(
-    (e) => !resellerClientIds.has(e.empresa_id) && !resellerIds.has(e.empresa_id),
-  );
+  const empresasLibres    = empresas.filter((e) => !resellerClientIds.has(e.empresa_id) && !resellerIds.has(e.empresa_id));
   const empresasFiltradas = clienteSearch.trim()
     ? empresasLibres.filter((e) =>
         (e.admin_email || '').toLowerCase().includes(clienteSearch.toLowerCase()) ||
-        (e.empresa_id  || '').toLowerCase().includes(clienteSearch.toLowerCase()),
-      )
+        (e.empresa_id || '').toLowerCase().includes(clienteSearch.toLowerCase()))
     : empresasLibres;
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 10 }}>
+      <View style={{ maxWidth: 1100, width: '100%', alignSelf: 'center' }}>
 
-      {/* Cabecera */}
-      <View style={[s.tblHead, { marginBottom: 12 }]}>
-        <Text style={[s.sectionTitle, { flex: 1, marginBottom: 0, marginTop: 0 }]}>
-          Revendedores ({revendedores.length})
-        </Text>
-        <TouchableOpacity style={s.primaryBtn} onPress={() => { setShowNuevo(!showNuevo); setMsg(null); }}>
-          <Text style={s.primaryBtnText}>{showNuevo ? '✕ Cancelar' : '+ Nuevo revendedor'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Formulario nuevo revendedor */}
-      {showNuevo && (
-        <View style={[s.card, { marginBottom: 16 }]}>
-          <Text style={[s.sectionTitle, { marginTop: 0 }]}>Crear revendedor</Text>
-          {[
-            { key: 'email',          label: 'Email *',          placeholder: 'distribuidor@empresa.com', keyboard: 'email-address' },
-            { key: 'password',       label: 'Contraseña *',     placeholder: 'Mín. 8 caracteres',       secure: true },
-            { key: 'empresa_nombre', label: 'Nombre empresa',   placeholder: 'Ej: Flexo Distribución S.L.' },
-            { key: 'discount_pct',   label: 'Descuento (%)',    placeholder: '0',                       keyboard: 'numeric' },
-          ].map(({ key, label, placeholder, keyboard, secure }) => (
-            <View key={key} style={s.formRow}>
-              <Text style={s.formLabel}>{label}</Text>
-              <TextInput
-                style={s.formInput}
-                value={nuevoForm[key]}
-                onChangeText={(v) => setNuevoForm((f) => ({ ...f, [key]: v }))}
-                placeholder={placeholder}
-                placeholderTextColor="#94A3B8"
-                keyboardType={keyboard || 'default'}
-                secureTextEntry={!!secure}
-                autoCapitalize="none"
-              />
-            </View>
-          ))}
-          {msg && (
-            <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertError]}>
-              <Text style={s.alertText}>{msg.text}</Text>
-            </View>
-          )}
-          <TouchableOpacity style={[s.primaryBtn, saving && { opacity: 0.6 }]} onPress={crearRevendedor} disabled={saving}>
-            {saving ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.primaryBtnText}>Crear revendedor</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Lista de revendedores */}
-      {revendedores.length === 0 ? (
-        <View style={s.card}>
-          <Text style={s.emptyText}>No hay revendedores todavía</Text>
-        </View>
-      ) : revendedores.map((rev) => (
-        <View key={`rev-${rev.empresa_id}`} style={[s.card, { marginBottom: 12 }]}>
-
-          {/* Cabecera revendedor */}
+        {/* Cabecera + botón nuevo */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={[s.sectionTitle, { flex: 1, marginBottom: 0 }]}>Revendedores ({revendedores.length})</Text>
           <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-            onPress={() => setExpanded(expanded === rev.empresa_id ? null : rev.empresa_id)}
+            style={[s.btn, showNuevo && { backgroundColor: '#64748B' }]}
+            onPress={() => { setShowNuevo(!showNuevo); setMsg(null); }}
           >
-            <View style={[s.iconBox, { backgroundColor: '#EEF2FF' }]}>
-              <Text style={{ fontSize: 14 }}>🤝</Text>
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={s.rowPrimary} numberOfLines={1}>{rev.admin_email}</Text>
-              <Text style={s.rowSecondary} numberOfLines={1}>
-                {rev.empresa_nombre || rev.empresa_id} · {rev.clientes?.length ?? 0} cliente{(rev.clientes?.length ?? 0) !== 1 ? 's' : ''}
-              </Text>
-            </View>
-            <View style={{ alignItems: 'flex-end', gap: 3 }}>
-              <View style={[s.planBadge, { backgroundColor: '#DCFCE7' }]}>
-                <Text style={[s.planBadgeText, { color: '#166534' }]}>{rev.discount_pct ?? 0}% dto.</Text>
-              </View>
-              <Text style={[s.rowSecondary, { fontSize: 10 }]}>
-                {rev.creditos ?? 0} cred. · {rev.consumo_total ?? 0} consumido
-              </Text>
-            </View>
-            <Text style={{ fontSize: 16, color: '#94A3B8', marginLeft: 4 }}>
-              {expanded === rev.empresa_id ? '▲' : '▼'}
-            </Text>
+            <Text style={s.btnText}>{showNuevo ? '✕ Cancelar' : '+ Nuevo revendedor'}</Text>
           </TouchableOpacity>
-
-          {expanded === rev.empresa_id && (
-            <View style={{ marginTop: 12 }}>
-
-              {/* Descuento */}
-              <View style={[s.infoRow, { marginBottom: 8 }]}>
-                <Text style={s.infoLabel}>Descuento aplicado</Text>
-                {editDescuento?.id === rev.empresa_id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <TextInput
-                      style={[s.formInput, { width: 60, marginBottom: 0, paddingVertical: 4 }]}
-                      value={editDescuento.value}
-                      onChangeText={(v) => setEditDescuento((d) => ({ ...d, value: v }))}
-                      keyboardType="numeric"
-                    />
-                    <Text style={s.infoLabel}>%</Text>
-                    <TouchableOpacity style={[s.smallBtn, s.smallBtnOk]} onPress={() => guardarDescuento(rev.empresa_id, editDescuento.value)}>
-                      <Text style={s.smallBtnText}>✓ Guardar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[s.smallBtn, s.smallBtnGray]} onPress={() => setEditDescuento(null)}>
-                      <Text style={s.smallBtnText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={s.infoValue}>{rev.discount_pct ?? 0}%</Text>
-                    <TouchableOpacity style={[s.smallBtn, s.smallBtnGray]} onPress={() => setEditDescuento({ id: rev.empresa_id, value: String(rev.discount_pct ?? 0) })}>
-                      <Text style={s.smallBtnText}>✎ Editar</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-
-              {/* Resumen financiero */}
-              <View style={[s.card, { marginTop: 4 }]}>
-                <View style={s.tblRow}>
-                  <Text style={[s.infoLabel, { flex: 1 }]}>Créditos disponibles</Text>
-                  <Text style={[s.infoValue, { color: '#4F46E5' }]}>{rev.creditos ?? 0}</Text>
-                </View>
-                <View style={s.tblRow}>
-                  <Text style={[s.infoLabel, { flex: 1 }]}>Consumo este mes</Text>
-                  <Text style={[s.infoValue, { color: '#EF4444' }]}>{rev.coste_mes_actual_eur ?? 0} €</Text>
-                </View>
-                <View style={s.tblRow}>
-                  <Text style={[s.infoLabel, { flex: 1 }]}>Consumo total acumulado</Text>
-                  <Text style={[s.infoValue, { color: '#F59E0B' }]}>{rev.coste_total_eur ?? 0} €</Text>
-                </View>
-                <View style={[s.tblRow, { borderBottomWidth: 0 }]}>
-                  <Text style={[s.infoLabel, { flex: 1 }]}>Descuento pactado</Text>
-                  <Text style={[s.infoValue, { color: '#16A34A' }]}>{rev.discount_pct ?? 0}%</Text>
-                </View>
-              </View>
-
-              {/* Histórico mensual del revendedor */}
-              {(rev.consumo_mensual || []).length > 0 && (
-                <>
-                  <Text style={[s.sectionTitle, { marginTop: 8 }]}>Consumo mensual</Text>
-                  <View style={s.card}>
-                    <View style={s.tblHead}>
-                      <Text style={[s.tblCol, { flex: 2 }]}>Mes</Text>
-                      <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Créditos</Text>
-                    </View>
-                    {(rev.consumo_mensual || []).map((m, i) => {
-                      const mesActual = new Date().toISOString().slice(0, 7);
-                      return (
-                        <View key={i} style={[s.tblRow, m.mes === mesActual && { backgroundColor: '#FFFBEB' }]}>
-                          <Text style={[s.rowPrimary, { flex: 2 }]}>
-                            {m.mes}{m.mes === mesActual ? ' ← actual' : ''}
-                          </Text>
-                          <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'right' }}>
-                            {m.total}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </>
-              )}
-
-              {/* Clientes del revendedor */}
-              <Text style={[s.sectionTitle, { marginTop: 8 }]}>
-                Empresas cliente ({rev.clientes?.length ?? 0})
-              </Text>
-              {(rev.clientes || []).length === 0 ? (
-                <Text style={[s.rowSecondary, { marginBottom: 8 }]}>Sin clientes asignados</Text>
-              ) : (
-                <>
-                  {(rev.clientes || []).map((c) => (
-                    <View key={`cli-${c.empresa_id}`} style={[s.tblRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={s.rowPrimary} numberOfLines={1}>{c.empresa_nombre || c.nombre || c.admin_email || c.empresa_id}</Text>
-                          <Text style={s.rowSecondary} numberOfLines={1}>{c.admin_email || c.email}</Text>
-                        </View>
-                        {confirmQuitar?.revendedorId === rev.empresa_id && confirmQuitar?.clienteEmpresaId === c.empresa_id ? (
-                          <DeleteConfirmRow
-                            message="¿Quitar cliente del revendedor?"
-                            confirmLabel="Quitar"
-                            onCancel={() => setConfirmQuitar(null)}
-                            onConfirm={() => { setConfirmQuitar(null); quitarCliente(rev.empresa_id, c.empresa_id); }}
-                          />
-                        ) : (
-                          <TouchableOpacity style={[s.smallBtn, s.smallBtnDanger]} onPress={() => setConfirmQuitar({ revendedorId: rev.empresa_id, clienteEmpresaId: c.empresa_id })}>
-                            <Text style={s.smallBtnText}>✕ Quitar</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                        <View style={[s.planBadge, c.reseller_billing_mode === 'cuota_mensual' ? { backgroundColor: '#F0FDF4' } : { backgroundColor: '#EEF2FF' }]}>
-                          <Text style={[s.planBadgeText, { fontSize: 9 }]}>
-                            {c.reseller_billing_mode === 'cuota_mensual' ? '📅 Cuota' : '📊 Por uso'}
-                          </Text>
-                        </View>
-                        {c.bloqueado && (
-                          <View style={[s.planBadge, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-                            <Text style={[s.planBadgeText, { fontSize: 9, color: '#DC2626' }]}>🔒 Bloqueado</Text>
-                          </View>
-                        )}
-                        {c.reseller_billing_mode === 'cuota_mensual' && (
-                          <View style={[s.planBadge, { backgroundColor: '#FEF9C3' }]}>
-                            <Text style={[s.planBadgeText, { fontSize: 9 }]}>{rev.suscripcion_eur ?? 0} €/mes</Text>
-                          </View>
-                        )}
-                        <View style={[s.planBadge, { backgroundColor: '#FFF7ED' }]}>
-                          <Text style={[s.planBadgeText, { fontSize: 9, color: '#B45309' }]}>
-                            Acum: {c.coste_acumulado_eur ?? 0} €
-                          </Text>
-                        </View>
-                        <View style={[s.planBadge, { backgroundColor: '#F1F5F9' }]}>
-                          <Text style={[s.planBadgeText, { fontSize: 9, color: '#64748B' }]}>
-                            Este mes: {c.consumo_mes_actual ?? 0} cr
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </>
-              )}
-
-              {/* Asignar nuevo cliente */}
-              {asignando === rev.empresa_id ? (
-                <View style={{ marginTop: 8 }}>
-                  <TextInput
-                    style={[s.formInput, { marginBottom: 6 }]}
-                    value={clienteSearch}
-                    onChangeText={setClienteSearch}
-                    placeholder="Buscar empresa por email o ID…"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="none"
-                  />
-                  {asignMsg && (
-                    <View style={[s.alertBox, s.alertError, { marginBottom: 6 }]}>
-                      <Text style={s.alertText}>{asignMsg}</Text>
-                    </View>
-                  )}
-                  {empresasFiltradas.slice(0, 8).map((e) => (
-                    <TouchableOpacity
-                      key={`libre-${e.empresa_id}`}
-                      style={[s.panelRow, { backgroundColor: '#F8FAFC', borderRadius: 6, paddingHorizontal: 8 }]}
-                      onPress={() => asignarCliente(rev.empresa_id, e.empresa_id)}
-                    >
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={s.rowPrimary} numberOfLines={1}>{e.admin_email}</Text>
-                        <Text style={s.rowSecondary} numberOfLines={1}>{e.empresa_id}</Text>
-                      </View>
-                      <Text style={[s.smallBtnText, { color: '#4F46E5' }]}>+ Asignar</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity style={[s.refreshBtn, { marginTop: 6 }]} onPress={() => { setAsignando(null); setClienteSearch(''); setAsignMsg(null); }}>
-                    <Text style={s.refreshBtnText}>Cancelar</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={[s.refreshBtn, { marginTop: 8 }]} onPress={() => { setAsignando(rev.empresa_id); setClienteSearch(''); setAsignMsg(null); }}>
-                  <Text style={s.refreshBtnText}>+ Asignar empresa cliente</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
         </View>
-      ))}
+
+        {/* Formulario nuevo */}
+        {showNuevo && (
+          <Card>
+            <Text style={[s.sectionTitle, { marginBottom: 12 }]}>Crear revendedor</Text>
+            <View style={s.twoCol}>
+              <View style={{ flex: 1, minWidth: 200 }}>
+                <FormField label="Email *" placeholder="distribuidor@empresa.com"
+                  value={nuevoForm.email} keyboardType="email-address" autoCapitalize="none"
+                  onChangeText={(v) => setNuevoForm((f) => ({ ...f, email: v }))} />
+                <FormField label="Contraseña *" placeholder="Mín. 8 caracteres"
+                  value={nuevoForm.password} secureTextEntry
+                  onChangeText={(v) => setNuevoForm((f) => ({ ...f, password: v }))} />
+              </View>
+              <View style={{ flex: 1, minWidth: 200 }}>
+                <FormField label="Nombre empresa" placeholder="Ej: Flexo Distribución S.L."
+                  value={nuevoForm.empresa_nombre}
+                  onChangeText={(v) => setNuevoForm((f) => ({ ...f, empresa_nombre: v }))} />
+                <FormField label="Descuento (%)" placeholder="0"
+                  value={nuevoForm.discount_pct} keyboardType="numeric"
+                  onChangeText={(v) => setNuevoForm((f) => ({ ...f, discount_pct: v }))} />
+              </View>
+            </View>
+            {msg && (
+              <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr]}>
+                <Text style={s.alertText}>{msg.text}</Text>
+              </View>
+            )}
+            <Btn label="Crear revendedor" onPress={crearRevendedor} loading={saving} disabled={saving} />
+          </Card>
+        )}
+
+        {/* Lista revendedores */}
+        {revendedores.length === 0 ? (
+          <Card><Text style={s.emptyText}>No hay revendedores todavía</Text></Card>
+        ) : revendedores.map((rev) => (
+          <Card key={`rev-${rev.empresa_id}`}>
+
+            {/* Cabecera revendedor */}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+              onPress={() => setExpanded(expanded === rev.empresa_id ? null : rev.empresa_id)}
+            >
+              <View style={[s.feedIcon, { backgroundColor: '#EEF2FF', width: 36, height: 36, borderRadius: 10 }]}>
+                <Text style={{ fontSize: 16 }}>🤝</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[s.rowPrimary, { fontSize: 14 }]} numberOfLines={1}>{rev.admin_email}</Text>
+                <Text style={s.rowSecondary} numberOfLines={1}>
+                  {rev.empresa_nombre || rev.empresa_id} · {rev.clientes?.length ?? 0} cliente{(rev.clientes?.length ?? 0) !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <Badge label={`${rev.discount_pct ?? 0}% dto.`} color="#166534" bg="#DCFCE7" />
+                <Text style={s.rowSecondary}>{rev.creditos ?? 0} cred. · {rev.consumo_total ?? 0} consumido</Text>
+              </View>
+              <Text style={{ fontSize: 14, color: '#CBD5E1', marginLeft: 6 }}>
+                {expanded === rev.empresa_id ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+
+            {expanded === rev.empresa_id && (
+              <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14 }}>
+                <View style={s.twoCol}>
+
+                  {/* Izquierda: descuento + finanzas + consumo mensual */}
+                  <View style={{ flex: 1, minWidth: 200 }}>
+                    <Text style={s.sectionTitle}>Descuento aplicado</Text>
+                    {editDescuento?.id === rev.empresa_id ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <TextInput
+                          style={[s.formInput, { width: 70, marginBottom: 0, paddingVertical: 5 }]}
+                          value={editDescuento.value}
+                          onChangeText={(v) => setEditDescuento((d) => ({ ...d, value: v }))}
+                          keyboardType="numeric"
+                        />
+                        <Text style={s.infoLabel}>%</Text>
+                        <Btn label="✓ Guardar" onPress={() => guardarDescuento(rev.empresa_id, editDescuento.value)}
+                          style={{ backgroundColor: '#16A34A', paddingHorizontal: 10, paddingVertical: 6 }} />
+                        <TouchableOpacity onPress={() => setEditDescuento(null)}
+                          style={[s.btn, { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 6 }]}>
+                          <Text style={[s.btnText, { color: '#64748B' }]}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <Text style={[s.infoValue, { fontSize: 16 }]}>{rev.discount_pct ?? 0}%</Text>
+                        <TouchableOpacity
+                          onPress={() => setEditDescuento({ id: rev.empresa_id, value: String(rev.discount_pct ?? 0) })}
+                          style={[s.btn, { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 6 }]}>
+                          <Text style={[s.btnText, { color: '#475569' }]}>✎ Editar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    <InfoRow label="Créditos disponibles"    value={String(rev.creditos ?? 0)}           valueColor="#4F46E5" />
+                    <InfoRow label="Consumo este mes"        value={`${rev.coste_mes_actual_eur ?? 0} €`} valueColor="#EF4444" />
+                    <InfoRow label="Consumo total acumulado" value={`${rev.coste_total_eur ?? 0} €`}      valueColor="#F59E0B" />
+
+                    {(rev.consumo_mensual || []).length > 0 && (
+                      <>
+                        <Text style={[s.sectionTitle, { marginTop: 12 }]}>Consumo mensual</Text>
+                        {(rev.consumo_mensual || []).map((m, i) => {
+                          const mesActual = new Date().toISOString().slice(0, 7);
+                          return (
+                            <View key={i} style={[s.infoRow, m.mes === mesActual && { backgroundColor: '#FFFBEB' }]}>
+                              <Text style={s.infoLabel}>{m.mes}{m.mes === mesActual ? ' ← actual' : ''}</Text>
+                              <Text style={[s.infoValue, { color: '#F59E0B' }]}>{m.total}</Text>
+                            </View>
+                          );
+                        })}
+                      </>
+                    )}
+                  </View>
+
+                  {/* Derecha: clientes */}
+                  <View style={{ flex: 1, minWidth: 200 }}>
+                    <Text style={s.sectionTitle}>Empresas cliente ({rev.clientes?.length ?? 0})</Text>
+
+                    {(rev.clientes || []).length === 0 ? (
+                      <Text style={[s.rowSecondary, { marginBottom: 8 }]}>Sin clientes asignados</Text>
+                    ) : (rev.clientes || []).map((c) => (
+                      <View key={`cli-${c.empresa_id}`} style={[s.feedRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={s.rowPrimary} numberOfLines={1}>{c.empresa_nombre || c.nombre || c.admin_email || c.empresa_id}</Text>
+                            <Text style={s.rowSecondary} numberOfLines={1}>{c.admin_email || c.email}</Text>
+                          </View>
+                          {confirmQuitar?.revendedorId === rev.empresa_id && confirmQuitar?.clienteEmpresaId === c.empresa_id ? (
+                            <DeleteConfirmRow
+                              message="¿Quitar cliente del revendedor?"
+                              confirmLabel="Quitar"
+                              onCancel={() => setConfirmQuitar(null)}
+                              onConfirm={() => { setConfirmQuitar(null); quitarCliente(rev.empresa_id, c.empresa_id); }}
+                            />
+                          ) : (
+                            <TouchableOpacity
+                              style={[s.btn, { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4 }]}
+                              onPress={() => setConfirmQuitar({ revendedorId: rev.empresa_id, clienteEmpresaId: c.empresa_id })}
+                            >
+                              <Text style={[s.btnText, { color: '#DC2626', fontSize: 11 }]}>✕ Quitar</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
+                          <Badge
+                            label={c.reseller_billing_mode === 'cuota_mensual' ? '📅 Cuota' : '📊 Por uso'}
+                            color={c.reseller_billing_mode === 'cuota_mensual' ? '#166534' : '#1D4ED8'}
+                            bg={c.reseller_billing_mode === 'cuota_mensual' ? '#F0FDF4' : '#EEF2FF'}
+                          />
+                          {c.bloqueado && <Badge label="🔒 Bloqueado" color="#DC2626" bg="#FEE2E2" />}
+                          {c.reseller_billing_mode === 'cuota_mensual' && (
+                            <Badge label={`${rev.suscripcion_eur ?? 0} €/mes`} color="#B45309" bg="#FEF9C3" />
+                          )}
+                          <Badge label={`Acum: ${c.coste_acumulado_eur ?? 0} €`} color="#B45309" bg="#FFF7ED" />
+                          <Badge label={`Mes: ${c.consumo_mes_actual ?? 0} cr`} color="#64748B" bg="#F1F5F9" />
+                        </View>
+                      </View>
+                    ))}
+
+                    {/* Asignar cliente */}
+                    {asignando === rev.empresa_id ? (
+                      <View style={{ marginTop: 10 }}>
+                        <TextInput
+                          style={[s.formInput, { marginBottom: 6 }]}
+                          value={clienteSearch}
+                          onChangeText={setClienteSearch}
+                          placeholder="Buscar empresa por email o ID…"
+                          placeholderTextColor="#94A3B8"
+                          autoCapitalize="none"
+                        />
+                        {asignMsg && (
+                          <View style={[s.alertBox, s.alertErr, { marginBottom: 6 }]}>
+                            <Text style={s.alertText}>{asignMsg}</Text>
+                          </View>
+                        )}
+                        {empresasFiltradas.slice(0, 8).map((e) => (
+                          <TouchableOpacity
+                            key={`libre-${e.empresa_id}`}
+                            style={[s.feedRow, { backgroundColor: '#F8FAFC', borderRadius: 6, paddingHorizontal: 8 }]}
+                            onPress={() => asignarCliente(rev.empresa_id, e.empresa_id)}
+                          >
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={s.rowPrimary} numberOfLines={1}>{e.admin_email}</Text>
+                              <Text style={s.rowSecondary} numberOfLines={1}>{e.empresa_id}</Text>
+                            </View>
+                            <Text style={{ fontSize: 12, color: '#4F46E5', fontWeight: '700' }}>+ Asignar</Text>
+                          </TouchableOpacity>
+                        ))}
+                        <TouchableOpacity
+                          style={[s.btn, { backgroundColor: '#F1F5F9', marginTop: 6 }]}
+                          onPress={() => { setAsignando(null); setClienteSearch(''); setAsignMsg(null); }}
+                        >
+                          <Text style={[s.btnText, { color: '#475569' }]}>Cancelar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[s.btn, { backgroundColor: '#EEF2FF', marginTop: 10 }]}
+                        onPress={() => { setAsignando(rev.empresa_id); setClienteSearch(''); setAsignMsg(null); }}
+                      >
+                        <Text style={[s.btnText, { color: '#4F46E5' }]}>+ Asignar empresa cliente</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+          </Card>
+        ))}
+      </View>
     </ScrollView>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Tab: Tarifas
+// ─────────────────────────────────────────────────────────────────
+const FEATURES_LIST = [
+  { key: 'repetidora', label: 'Repetidora', icon: '🔁' },
+  { key: 'trapping',   label: 'Trapping',   icon: '🎯' },
+  { key: 'troquel',    label: 'Troquel',     icon: '✂️' },
+  { key: 'report',     label: 'Informe',     icon: '📄' },
+];
+
+function CreditInput({ value, onChange }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <TextInput
+        style={[s.formInput, { width: 72, marginBottom: 0, textAlign: 'center', fontSize: 15, fontWeight: '700' }]}
+        value={value} keyboardType="numeric"
+        placeholderTextColor="#94A3B8"
+        onChangeText={onChange}
+      />
+      <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>cr</Text>
+    </View>
+  );
+}
+
+function TarRow({ label, desc, children, tint }) {
+  return (
+    <View style={[tarStyles.tarRow, tint && { backgroundColor: tint }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={tarStyles.tarRowLabel}>{label}</Text>
+        {desc ? <Text style={tarStyles.tarRowDesc}>{desc}</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function IncludedBadge({ label }) {
+  return (
+    <View style={tarStyles.includedBadge}>
+      <Text style={tarStyles.includedBadgeText}>✓ {label}</Text>
+    </View>
+  );
+}
+
+function TabTarifas({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [msg,     setMsg]     = useState(null);
+  const [base, setBase] = useState({ suscripcion_mensual_eur: '', credito_price_eur: '', storage_cost_eur_per_gb: '' });
+  const [costs, setCosts] = useState({ pedido: '', storage_gb: '', features: '', repetidora: '', trapping: '', troquel: '', report: '' });
+  const [packs, setPacks] = useState([]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch('/api/superadmin/tarifas');
+      setBase({
+        suscripcion_mensual_eur: String(data.suscripcion_mensual_eur ?? ''),
+        credito_price_eur:       String(data.credito_price_eur ?? ''),
+        storage_cost_eur_per_gb: String(data.storage_cost_eur_per_gb ?? ''),
+      });
+      const cc = data.credit_costs || {};
+      setCosts({ pedido: String(cc.pedido ?? ''), storage_gb: String(cc.storage_gb ?? ''),
+                 features: String(cc.features ?? ''), repetidora: String(cc.repetidora ?? ''),
+                 trapping: String(cc.trapping ?? ''), troquel: String(cc.troquel ?? ''), report: String(cc.report ?? '') });
+      setPacks((data.packs || []).map((p) => ({ ...p })));
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setSaving(true); setMsg(null);
+    try {
+      await apiFetch('/api/superadmin/tarifas', {
+        method: 'PUT',
+        body: JSON.stringify({
+          suscripcion_mensual_eur: parseFloat(base.suscripcion_mensual_eur) || 0,
+          credito_price_eur:       parseFloat(base.credito_price_eur) || 0,
+          storage_cost_eur_per_gb: parseFloat(base.storage_cost_eur_per_gb) || 0,
+          packs,
+          credit_costs: Object.fromEntries(Object.entries(costs).map(([k, v]) => [k, parseInt(v) || 0])),
+        }),
+      });
+      setMsg({ type: 'ok', text: '✓ Tarifas guardadas correctamente' });
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setSaving(false);
+  };
+
+  const setC = (k) => (v) => setCosts((c) => ({ ...c, [k]: v }));
+
+  // Mantener storage_gb (créditos) sincronizado con storage_cost_eur_per_gb / credito_price_eur
+  useEffect(() => {
+    const storageEur  = parseFloat(base.storage_cost_eur_per_gb) || 0;
+    const creditoEur  = parseFloat(base.credito_price_eur) || 0;
+    if (storageEur > 0 && creditoEur > 0) {
+      const derived = Math.round((storageEur / creditoEur) * 100) / 100;
+      setCosts((c) => ({ ...c, storage_gb: String(derived) }));
+    }
+  }, [base.storage_cost_eur_per_gb, base.credito_price_eur]);
+  const updatePack = (i, field, raw) =>
+    setPacks((prev) => prev.map((p, idx) => idx !== i ? p : {
+      ...p,
+      [field]: field === 'label' ? raw : (field === 'credits' ? (parseInt(raw) || 0) : (parseFloat(raw) || 0)),
+    }));
+  const addPack    = () => setPacks((prev) => [...prev, { label: '', credits: 0, price_eur: 0 }]);
+  const removePack = (i) => setPacks((prev) => prev.filter((_, idx) => idx !== i));
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+      <View style={{ maxWidth: 980, width: '100%', alignSelf: 'center' }}>
+
+        {msg && (
+          <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr, { marginBottom: 16 }]}>
+            <Text style={s.alertText}>{msg.text}</Text>
+          </View>
+        )}
+
+        {/* ══ DOS COLUMNAS: mensual | créditos ══ */}
+        <View style={s.twoCol}>
+
+          {/* ── Plan Mensual ─────────────────────────── */}
+          <View style={{ flex: 1, minWidth: 280 }}>
+            <View style={tarStyles.planHeader}>
+              <Text style={tarStyles.planIcon}>📅</Text>
+              <View>
+                <Text style={tarStyles.planTitle}>Plan Mensual</Text>
+                <Text style={tarStyles.planSub}>Cuota fija + costes variables</Text>
+              </View>
+            </View>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+
+              {/* Cuota mensual */}
+              <View style={[tarStyles.tarSection, { backgroundColor: '#F0FDF4' }]}>
+                <Text style={tarStyles.tarSectionTitle}>💰 Cuota fija</Text>
+                <TarRow label="Cuota mensual" desc="Facturada automáticamente cada mes">
+                  <View style={tarStyles.inputRow}>
+                    <Text style={tarStyles.prefix}>€</Text>
+                    <TextInput style={[s.formInput, tarStyles.inputWithPrefix, { width: 90 }]}
+                      value={base.suscripcion_mensual_eur} placeholder="29.99"
+                      placeholderTextColor="#94A3B8" keyboardType="decimal-pad"
+                      onChangeText={(v) => setBase((b) => ({ ...b, suscripcion_mensual_eur: v }))} />
+                    <Text style={tarStyles.suffix}>/mes</Text>
+                  </View>
+                </TarRow>
+              </View>
+
+              {/* Almacenamiento — único coste variable en plan mensual */}
+              <View style={tarStyles.tarSection}>
+                <Text style={tarStyles.tarSectionTitle}>📦 Almacenamiento (coste variable)</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Se suma a la cuota mensual. Crece con el espacio ocupado por los archivos PDF de los trabajos.
+                </Text>
+                <TarRow label="Almacenamiento" desc="Acumulativo — mayor uso = mayor coste mensual">
+                  <View style={tarStyles.inputRow}>
+                    <Text style={tarStyles.prefix}>€</Text>
+                    <TextInput style={[s.formInput, tarStyles.inputWithPrefix, { width: 80 }]}
+                      value={base.storage_cost_eur_per_gb} placeholder="0.10"
+                      placeholderTextColor="#94A3B8" keyboardType="decimal-pad"
+                      onChangeText={(v) => setBase((b) => ({ ...b, storage_cost_eur_per_gb: v }))} />
+                    <Text style={tarStyles.suffix}>/GB·mes</Text>
+                  </View>
+                </TarRow>
+              </View>
+
+              {/* Features incluidas */}
+              <View style={[tarStyles.tarSection, { borderBottomWidth: 0 }]}>
+                <Text style={tarStyles.tarSectionTitle}>✅ Incluido en la cuota</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 4 }}>
+                  {FEATURES_LIST.map((f) => (
+                    <IncludedBadge key={f.key} label={`${f.icon} ${f.label}`} />
+                  ))}
+                </View>
+              </View>
+
+            </Card>
+          </View>
+
+          {/* ── Plan Por Créditos ────────────────────── */}
+          <View style={{ flex: 1, minWidth: 280 }}>
+            <View style={[tarStyles.planHeader, { backgroundColor: '#EEF2FF' }]}>
+              <Text style={tarStyles.planIcon}>💳</Text>
+              <View>
+                <Text style={tarStyles.planTitle}>Plan Por Créditos</Text>
+                <Text style={tarStyles.planSub}>Pago por uso — solo lo que consumes</Text>
+              </View>
+            </View>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+
+              {/* Precio crédito */}
+              <View style={[tarStyles.tarSection, { backgroundColor: '#EEF2FF' }]}>
+                <Text style={tarStyles.tarSectionTitle}>💰 Precio del crédito</Text>
+                <TarRow label="Coste por crédito" desc="Precio de referencia para facturación">
+                  <View style={tarStyles.inputRow}>
+                    <Text style={tarStyles.prefix}>€</Text>
+                    <TextInput style={[s.formInput, tarStyles.inputWithPrefix, { width: 90 }]}
+                      value={base.credito_price_eur} placeholder="0.10"
+                      placeholderTextColor="#94A3B8" keyboardType="decimal-pad"
+                      onChangeText={(v) => setBase((b) => ({ ...b, credito_price_eur: v }))} />
+                    <Text style={tarStyles.suffix}>/crédito</Text>
+                  </View>
+                </TarRow>
+              </View>
+
+              {/* Costes variables */}
+              <View style={tarStyles.tarSection}>
+                <Text style={tarStyles.tarSectionTitle}>📊 Costes por uso</Text>
+                <TarRow label="Por pedido" desc="Descontado al crear cada pedido">
+                  <CreditInput value={costs.pedido} onChange={setC('pedido')} />
+                </TarRow>
+                <TarRow label="Almacenamiento" desc="Calculado desde el plan mensual">
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
+                      backgroundColor: '#F1F5F9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+                      borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A' }}>{costs.storage_gb || '—'}</Text>
+                      <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>cr</Text>
+                    </View>
+                    <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                      🔗 {base.storage_cost_eur_per_gb || '?'} € ÷ {base.credito_price_eur || '?'} €/cr
+                    </Text>
+                  </View>
+                </TarRow>
+              </View>
+
+              {/* Features — cuota única */}
+              <View style={[tarStyles.tarSection, { borderBottomWidth: 0 }]}>
+                <Text style={tarStyles.tarSectionTitle}>⚡ Features — cuota única por pedido</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Se cobra una sola vez por pedido si se usa cualquiera de estas acciones, independientemente de cuántas veces se repita.
+                </Text>
+                <TarRow label="Cuota por pedido con features" desc="Repetidora · Trapping · Troquel · Informe" tint="#FFFBEB">
+                  <CreditInput value={costs.features} onChange={setC('features')} />
+                </TarRow>
+              </View>
+
+            </Card>
+          </View>
+
+        </View>
+
+        {/* ── Packs de créditos ── */}
+        <SectionHeader title="Packs de créditos" />
+        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: -8, marginBottom: 10 }}>
+          Paquetes de recarga disponibles para compra (plan por créditos)
+        </Text>
+        <Card style={{ marginBottom: 12 }}>
+          <View style={tarStyles.tableHeader}>
+            <Text style={[tarStyles.thCell, { flex: 3 }]}>Etiqueta</Text>
+            <Text style={[tarStyles.thCell, { flex: 2, textAlign: 'center' }]}>Créditos</Text>
+            <Text style={[tarStyles.thCell, { flex: 2, textAlign: 'center' }]}>Precio €</Text>
+            <Text style={[tarStyles.thCell, { flex: 2, textAlign: 'right' }]}>€/crédito</Text>
+            <View style={{ width: 36 }} />
+          </View>
+          {packs.length === 0 && (
+            <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', paddingVertical: 16 }}>
+              Sin packs — pulsa «＋ Añadir pack»
+            </Text>
+          )}
+          {packs.map((p, i) => {
+            const ratio = p.credits > 0 && p.price_eur > 0 ? (p.price_eur / p.credits).toFixed(4) : '—';
+            return (
+              <View key={i} style={[tarStyles.tableRow, i % 2 === 0 && tarStyles.tableRowAlt]}>
+                <TextInput style={[s.formInput, tarStyles.tdInput, { flex: 3 }]}
+                  value={p.label} placeholder="Ej: Pack Básico" placeholderTextColor="#CBD5E1"
+                  onChangeText={(v) => updatePack(i, 'label', v)} />
+                <TextInput style={[s.formInput, tarStyles.tdInput, { flex: 2, textAlign: 'center' }]}
+                  value={String(p.credits)} keyboardType="numeric" placeholderTextColor="#CBD5E1"
+                  onChangeText={(v) => updatePack(i, 'credits', v)} />
+                <TextInput style={[s.formInput, tarStyles.tdInput, { flex: 2, textAlign: 'center' }]}
+                  value={String(p.price_eur)} keyboardType="decimal-pad" placeholderTextColor="#CBD5E1"
+                  onChangeText={(v) => updatePack(i, 'price_eur', v)} />
+                <Text style={[tarStyles.tdRatio, { flex: 2 }]}>{ratio}</Text>
+                <TouchableOpacity onPress={() => removePack(i)} style={tarStyles.removeBtn}>
+                  <Text style={{ color: '#EF4444', fontSize: 16, lineHeight: 20 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </Card>
+        <TouchableOpacity onPress={addPack} style={tarStyles.addPackBtn}>
+          <Text style={tarStyles.addPackTxt}>＋ Añadir pack</Text>
+        </TouchableOpacity>
+
+        {/* ── Guardar ── */}
+        <View style={{ marginTop: 24, flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <Btn label="Guardar todo" onPress={save} loading={saving} disabled={saving} />
+        </View>
+
+      </View>
+    </ScrollView>
+  );
+}
+
+const tarStyles = StyleSheet.create({
+  tarSection:       { paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderColor: '#E2E8F0' },
+  tarSectionTitle:  { fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  tarRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 6, marginBottom: 2 },
+  tarRowLabel:      { fontSize: 13, color: '#0F172A', fontWeight: '500', flex: 1 },
+  tarRowDesc:       { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+  planHeader:       { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: '#F0FDF4', borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  planIcon:         { fontSize: 22 },
+  planTitle:        { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  planSub:          { fontSize: 11, color: '#64748B', marginTop: 1 },
+  includedBadge:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 4, alignSelf: 'flex-start' },
+  includedBadgeText:{ fontSize: 12, color: '#15803D', fontWeight: '600' },
+  inputRow:        { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  prefix:          { fontSize: 13, color: '#64748B', fontWeight: '600', paddingHorizontal: 8,
+                     backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: '#E2E8F0',
+                     borderRightWidth: 0, borderTopLeftRadius: 8, borderBottomLeftRadius: 8,
+                     paddingVertical: 9, minWidth: 28, textAlign: 'center' },
+  suffix:          { fontSize: 12, color: '#64748B', paddingHorizontal: 8, paddingVertical: 9,
+                     backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: '#E2E8F0',
+                     borderLeftWidth: 0, borderTopRightRadius: 8, borderBottomRightRadius: 8 },
+  inputWithPrefix: { flex: 1, borderRadius: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0,
+                     borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginBottom: 0 },
+  tableHeader:     { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 8,
+                     borderBottomWidth: 1.5, borderColor: '#E2E8F0', marginBottom: 4 },
+  thCell:          { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 },
+  tableRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, borderRadius: 6 },
+  tableRowAlt:     { backgroundColor: '#F8FAFC' },
+  tdInput:         { marginBottom: 0, paddingVertical: 7, fontSize: 13 },
+  tdRatio:         { fontSize: 12, color: '#94A3B8', textAlign: 'right', fontVariant: ['tabular-nums'] },
+  removeBtn:       { width: 36, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
+  addPackBtn:      { borderWidth: 1.5, borderColor: '#C7D2FE', borderStyle: 'dashed', borderRadius: 8,
+                     paddingVertical: 10, alignItems: 'center', backgroundColor: '#EEF2FF' },
+  addPackTxt:      { color: '#4F46E5', fontWeight: '600', fontSize: 14 },
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Promos
+// ─────────────────────────────────────────────────────────────────
+function TabPromos({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [promos, setPromos]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [msg, setMsg]           = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
+  const [form, setForm]         = useState({ credits: '50', prefix: 'PROMO', max_uses: '1', expires_at: '' });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setPromos((await apiFetch('/api/superadmin/promos')).promos || []); }
+    catch (_) {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const create = async () => {
+    if (!form.credits || parseInt(form.credits) <= 0) {
+      setMsg({ type: 'error', text: 'Indica créditos > 0' }); return;
+    }
+    setCreating(true); setMsg(null);
+    try {
+      const payload = {
+        credits:    parseInt(form.credits),
+        prefix:     form.prefix || 'PROMO',
+        max_uses:   parseInt(form.max_uses) || 1,
+        expires_at: form.expires_at || null,
+      };
+      const res = await apiFetch('/api/superadmin/promos', { method: 'POST', body: JSON.stringify(payload) });
+      setMsg({ type: 'ok', text: `Código creado: ${res.promo.code}` });
+      load();
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setCreating(false);
+  };
+
+  const toggle = async (code) => {
+    try { await apiFetch(`/api/superadmin/promos/${code}/toggle`, { method: 'POST' }); load(); }
+    catch (e) { setMsg({ type: 'error', text: e.message }); }
+  };
+
+  const remove = async (code) => {
+    try {
+      await apiFetch(`/api/superadmin/promos/${code}`, { method: 'DELETE' });
+      setConfirmingDelete(null); load();
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+  };
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+      <View style={{ maxWidth: 1100, width: '100%', alignSelf: 'center', gap: 14 }}>
+        <View style={s.twoCol}>
+
+          {/* Formulario creación */}
+          <View style={{ flex: 1, minWidth: 220 }}>
+            <SectionHeader title="Nuevo código promocional" />
+            <Card>
+              <FormField label="Prefijo" placeholder="PROMO"
+                value={form.prefix} onChangeText={(v) => setForm((f) => ({ ...f, prefix: v }))} placeholderTextColor="#94A3B8" />
+              <FormField label="Créditos" placeholder="50"
+                value={form.credits} keyboardType="numeric"
+                onChangeText={(v) => setForm((f) => ({ ...f, credits: v }))} />
+              <FormField label="Usos máximos" placeholder="1"
+                value={form.max_uses} keyboardType="numeric"
+                onChangeText={(v) => setForm((f) => ({ ...f, max_uses: v }))} />
+              {Platform.OS === 'web' && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={s.formLabel}>Caduca (opcional)</Text>
+                  <input type="date"
+                    style={{ height: 38, borderRadius: 8, border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC', padding: '0 10px', fontSize: 13, color: '#0F172A', width: '100%' }}
+                    value={form.expires_at?.slice(0, 10) || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value ? `${e.target.value}T23:59:59Z` : '' }))}
+                  />
+                </View>
+              )}
+              {msg && (
+                <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr, { marginBottom: 8 }]}>
+                  <Text style={s.alertText}>{msg.text}</Text>
+                </View>
+              )}
+              <Btn label="+ Generar código" onPress={create} loading={creating} disabled={creating} />
+            </Card>
+          </View>
+
+          {/* Lista de códigos */}
+          <View style={{ flex: 2, minWidth: 280 }}>
+            <SectionHeader title={`Códigos existentes (${promos.length})`} />
+            {loading ? <ActivityIndicator color="#4F46E5" /> : promos.length === 0 ? (
+              <Text style={s.emptyText}>Sin códigos aún</Text>
+            ) : (
+              <Card>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ minWidth: 480 }}>
+                    <View style={s.tblHead}>
+                      <Text style={[s.tblCol, { flex: 3, minWidth: 130 }]}>Código</Text>
+                      <Text style={[s.tblCol, { width: 54, textAlign: 'center' }]}>Cred</Text>
+                      <Text style={[s.tblCol, { width: 54, textAlign: 'center' }]}>Usos</Text>
+                      <Text style={[s.tblCol, { width: 90, textAlign: 'center' }]}>Caduca</Text>
+                      <Text style={[s.tblCol, { width: 90, textAlign: 'center' }]}>Acciones</Text>
+                    </View>
+                    {promos.map((p) => (
+                      <View key={p.code}>
+                        <View style={s.tblRow}>
+                          <View style={{ flex: 3, minWidth: 0 }}>
+                            <Text style={s.promoCode} numberOfLines={1}>{p.code}</Text>
+                          </View>
+                          <Text style={{ width: 54, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'center' }}>{p.credits}</Text>
+                          <Text style={{ width: 54, fontSize: 12, color: '#64748B', textAlign: 'center' }}>{p.uses}/{p.max_uses}</Text>
+                          <Text style={{ width: 90, fontSize: 11, color: '#94A3B8', textAlign: 'center' }}>
+                            {p.expires_at ? p.expires_at.slice(0, 10) : '∞'}
+                          </Text>
+                          <View style={{ width: 90, flexDirection: 'row', gap: 4, justifyContent: 'center' }}>
+                            <TouchableOpacity
+                              style={[s.smallBtn, p.active ? s.smallBtnOk : s.smallBtnGray]}
+                              onPress={() => toggle(p.code)}
+                            >
+                              <Text style={s.smallBtnText}>{p.active ? '✓' : '✗'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[s.smallBtn, s.smallBtnDanger]}
+                              onPress={() => setConfirmingDelete(p.code)}
+                            >
+                              <Text style={s.smallBtnText}>🗑</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        {confirmingDelete === p.code && (
+                          <View style={s.confirmRow}>
+                            <Text style={s.confirmText}>¿Eliminar el código {p.code}?</Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                              <TouchableOpacity
+                                style={[s.btn, { flex: 1, backgroundColor: '#F1F5F9' }]}
+                                onPress={() => setConfirmingDelete(null)}
+                              >
+                                <Text style={[s.btnText, { color: '#475569' }]}>Cancelar</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[s.btn, { flex: 1, backgroundColor: '#DC2626' }]}
+                                onPress={() => remove(p.code)}
+                              >
+                                <Text style={s.btnText}>Eliminar</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </Card>
+            )}
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Servidor
+// ─────────────────────────────────────────────────────────────────
+function TabServidor({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [status, setStatus]             = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [restarting, setRestarting]     = useState(false);
+  const [confirmingRestart, setConfirmingRestart] = useState(false);
+  const [msg, setMsg]                   = useState(null);
+  const [cuentaForm, setCuentaForm]     = useState({ email: '', password: '', password2: '' });
+  const [savingCuenta, setSavingCuenta] = useState(false);
+  const [msgCuenta, setMsgCuenta]       = useState(null);
+
+  const loadStatus = useCallback(async () => {
+    setLoading(true);
+    try { setStatus(await apiFetch('/api/superadmin/status')); }
+    catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setLoading(false);
+  }, [currentUser?.access_token]);
+
+  useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const handleRestart = async () => {
+    setRestarting(true); setConfirmingRestart(false); setMsg(null);
+    try { await apiFetch('/api/superadmin/restart', { method: 'POST' }); } catch (_) {}
+
+    // Esperar 4s antes de empezar a sondear — el servidor necesita tiempo para cerrar
+    setMsg({ type: 'ok', text: 'Reiniciando… esperando 4 s antes de comprobar' });
+    await new Promise((r) => setTimeout(r, 4000));
+
+    let attempts = 0;
+    const MAX = 20;
+    const INTERVAL = 2500;
+    setMsg({ type: 'ok', text: `Comprobando si el servidor ha vuelto… (0/${MAX})` });
+
+    const poll = setInterval(async () => {
+      attempts++;
+      setMsg({ type: 'ok', text: `Comprobando si el servidor ha vuelto… (${attempts}/${MAX})` });
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+        await fetch(`${API_BASE}/api/superadmin/status`, {
+          headers: { Authorization: `Bearer ${currentUser?.access_token}` },
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        clearInterval(poll);
+        setMsg({ type: 'ok', text: '✓ Servidor online de nuevo' });
+        setRestarting(false);
+        loadStatus();
+      } catch (_) {
+        if (attempts >= MAX) {
+          clearInterval(poll);
+          setMsg({ type: 'error', text: `El servidor no respondió tras ${MAX} intentos. Reinícialo manualmente.` });
+          setRestarting(false);
+        }
+      }
+    }, INTERVAL);
+  };
+
+  const saveCuenta = async () => {
+    if (cuentaForm.password && cuentaForm.password !== cuentaForm.password2) {
+      setMsgCuenta({ type: 'error', text: 'Las contraseñas no coinciden' }); return;
+    }
+    setSavingCuenta(true); setMsgCuenta(null);
+    try {
+      const payload = {};
+      if (cuentaForm.email.trim())    payload.email    = cuentaForm.email.trim();
+      if (cuentaForm.password.trim()) payload.password = cuentaForm.password.trim();
+      await apiFetch('/api/superadmin/cuenta', { method: 'PUT', body: JSON.stringify(payload) });
+      setMsgCuenta({ type: 'ok', text: 'Datos actualizados. Vuelve a iniciar sesión si cambiaste el email.' });
+      setCuentaForm({ email: '', password: '', password2: '' });
+    } catch (e) { setMsgCuenta({ type: 'error', text: e.message }); }
+    setSavingCuenta(false);
+  };
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+      <View style={{ maxWidth: 900, width: '100%', alignSelf: 'center', gap: 14 }}>
+        <View style={s.twoCol}>
+
+          {/* Estado + acciones */}
+          <View style={{ flex: 1, minWidth: 220 }}>
+            <SectionHeader title="Estado del servidor" />
+            {loading ? <ActivityIndicator color="#4F46E5" /> : (
+              <Card>
+                <StatusDot online={!!status} />
+                <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 10 }} />
+                <View style={s.kpiGrid2}>
+                  <MiniKpi label="Uptime"   value={status?.uptime || '–'}                          color="#16A34A" />
+                  <MiniKpi label="Memoria"  value={status?.mem_mb ? `${status.mem_mb} MB` : '–'}  color="#0EA5E9" />
+                </View>
+                <InfoRow label="PID"    value={status?.pid} />
+                <InfoRow label="Python" value={status?.python_version?.split(' ')[0]} />
+              </Card>
+            )}
+
+            {msg && (
+              <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr, { marginTop: 8 }]}>
+                <Text style={s.alertText}>{msg.text}</Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={[s.btn, { backgroundColor: '#EEF2FF', marginTop: 8 }]} onPress={loadStatus}>
+              <Text style={[s.btnText, { color: '#4F46E5' }]}>↻ Actualizar estado</Text>
+            </TouchableOpacity>
+
+            <SectionHeader title="Acciones peligrosas" />
+            {confirmingRestart ? (
+              <Card style={{ borderColor: '#FECACA', borderWidth: 1.5, backgroundColor: '#FEF2F2' }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#B91C1C', marginBottom: 12 }}>
+                  ¿Reiniciar el servidor? La app tardará unos segundos en volver.
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: '#F1F5F9' }]} onPress={() => setConfirmingRestart(false)}>
+                    <Text style={[s.btnText, { color: '#475569' }]}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: '#DC2626' }]} onPress={handleRestart} disabled={restarting}>
+                    {restarting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={s.btnText}>Sí, reiniciar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            ) : (
+              <TouchableOpacity style={[s.btn, { backgroundColor: '#DC2626', marginTop: 0 }]} onPress={() => setConfirmingRestart(true)}>
+                <Text style={s.btnText}>⟳ Reiniciar servidor</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Mi cuenta */}
+          <View style={{ flex: 1, minWidth: 220 }}>
+            <SectionHeader title="Mi cuenta (root)" />
+            <Card>
+              <FormField label="Nuevo email" placeholder="nuevo@email.com"
+                value={cuentaForm.email} keyboardType="email-address" autoCapitalize="none"
+                onChangeText={(v) => setCuentaForm((f) => ({ ...f, email: v }))} />
+              <FormField label="Nueva contraseña" placeholder="mín. 8 caracteres"
+                value={cuentaForm.password} secureTextEntry
+                onChangeText={(v) => setCuentaForm((f) => ({ ...f, password: v }))} />
+              <FormField label="Repetir contraseña" placeholder="repite la contraseña"
+                value={cuentaForm.password2} secureTextEntry
+                onChangeText={(v) => setCuentaForm((f) => ({ ...f, password2: v }))} />
+              {msgCuenta && (
+                <View style={[s.alertBox, msgCuenta.type === 'ok' ? s.alertOk : s.alertErr]}>
+                  <Text style={s.alertText}>{msgCuenta.text}</Text>
+                </View>
+              )}
+              <Btn label="Guardar cambios" onPress={saveCuenta} loading={savingCuenta} disabled={savingCuenta} />
+            </Card>
+          </View>
+
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Financiero (MRR / ARR / ingresos)
+// ─────────────────────────────────────────────────────────────────
+function TabFinanciero({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]       = useState(null);
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError(null);
+    try { setData(await apiFetch('/api/superadmin/revenue')); }
+    catch (e) { setError(e.message); }
+    if (isRefresh) setRefreshing(false); else setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
+  if (error)   return <Text style={s.errorText}>{error}</Text>;
+
+  const mesActual = new Date().toISOString().slice(0, 7);
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 16, gap: 14 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+    >
+      <View style={{ maxWidth: 1100, width: '100%', alignSelf: 'center' }}>
+
+        {/* KPIs principales */}
+        <View style={s.kpiGrid}>
+          <KpiCard icon="📈" label="MRR estimado"    value={`${data.mrr} €`}                  color="#10B981" sub="Mes en curso" />
+          <KpiCard icon="🗓️" label="ARR estimado"    value={`${data.arr} €`}                   color="#4F46E5" sub="MRR × 12" />
+          <KpiCard icon="🔄" label="Ingresos suscr." value={`${data.mrr_suscripcion} €/mes`}   color="#0EA5E9" sub={`${data.num_suscripcion} cuentas`} />
+          <KpiCard icon="💰" label="Ingresos cred."  value={`${data.ingreso_creditos_mes} €`}  color="#F59E0B" sub="Este mes" />
+          <KpiCard icon="💶" label="Precio crédito"  value={`${data.precio_credito_eur} €`}    color="#8B5CF6" />
+          <KpiCard icon="📋" label="Precio suscr."   value={`${data.precio_suscripcion_eur} €/mes`} color="#64748B" />
+        </View>
+
+        {/* Distribución de modelos */}
+        <View style={s.twoCol}>
+          <View style={{ flex: 1, minWidth: 200 }}>
+            <SectionHeader title="Distribución de planes" />
+            <Card>
+              <InfoRow label="Suscripción" value={`${data.num_suscripcion} empresas`} valueColor="#0EA5E9" />
+              <InfoRow label="Créditos"    value={`${data.num_creditos} empresas`}    valueColor="#F59E0B" />
+              <InfoRow label="Revendedor"  value={`${data.num_revendedor} empresas`}  valueColor="#8B5CF6" />
+              <InfoRow label="Total"       value={`${data.num_suscripcion + data.num_creditos + data.num_revendedor} empresas`} />
+            </Card>
+          </View>
+
+          {/* Ingresos por créditos por mes */}
+          <View style={{ flex: 2, minWidth: 280 }}>
+            <SectionHeader title="Ingresos por compras de créditos (últimos 12 meses)" />
+            <Card>
+              <View style={s.tblHead}>
+                <Text style={[s.tblCol, { flex: 2 }]}>Mes</Text>
+                <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Créditos</Text>
+                <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Ingresos</Text>
+              </View>
+              {(data.ingresos_por_mes || []).length === 0 ? (
+                <Text style={s.emptyText}>Sin compras registradas</Text>
+              ) : (data.ingresos_por_mes || []).map((m) => (
+                <View key={m.mes} style={[s.tblRow, m.mes === mesActual && { backgroundColor: '#F0FDF4' }]}>
+                  <Text style={[s.rowPrimary, { flex: 2 }]}>{m.mes}{m.mes === mesActual ? ' ← actual' : ''}</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#F59E0B', fontWeight: '700', textAlign: 'right' }}>{m.creditos}</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#10B981', fontWeight: '700', textAlign: 'right' }}>{m.eur} €</Text>
+                </View>
+              ))}
+            </Card>
+          </View>
+        </View>
+
+        {/* Nuevas suscripciones por mes */}
+        {(data.nuevas_subs_por_mes || []).length > 0 && (
+          <View>
+            <SectionHeader title="Nuevas suscripciones por mes" />
+            <Card>
+              <View style={s.tblHead}>
+                <Text style={[s.tblCol, { flex: 2 }]}>Mes</Text>
+                <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Nuevas</Text>
+              </View>
+              {(data.nuevas_subs_por_mes || []).map((m) => (
+                <View key={m.mes} style={[s.tblRow, m.mes === mesActual && { backgroundColor: '#EEF2FF' }]}>
+                  <Text style={[s.rowPrimary, { flex: 2 }]}>{m.mes}{m.mes === mesActual ? ' ← actual' : ''}</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#4F46E5', fontWeight: '700', textAlign: 'right' }}>{m.nuevas}</Text>
+                </View>
+              ))}
+            </Card>
+          </View>
+        )}
+
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Riesgo de churn
+// ─────────────────────────────────────────────────────────────────
+function TabRiesgo({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]       = useState(null);
+  const [filtro, setFiltro]     = useState('todos');  // todos | alto | medio | bajo
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError(null);
+    try { setData(await apiFetch('/api/superadmin/growth')); }
+    catch (e) { setError(e.message); }
+    if (isRefresh) setRefreshing(false); else setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const RIESGO_COLOR = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' };
+  const RIESGO_BG    = { alto: '#FEE2E2', medio: '#FEF9C3', bajo: '#DCFCE7' };
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
+  if (error)   return <Text style={s.errorText}>{error}</Text>;
+
+  const enRiesgoFiltrado = (data.en_riesgo || []).filter(
+    (e) => filtro === 'todos' || e.nivel_riesgo === filtro
+  );
+  const numAlto  = (data.en_riesgo || []).filter((e) => e.nivel_riesgo === 'alto').length;
+  const numMedio = (data.en_riesgo || []).filter((e) => e.nivel_riesgo === 'medio').length;
+  const numBajo  = (data.en_riesgo || []).filter((e) => e.nivel_riesgo === 'bajo').length;
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 16, gap: 14 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+    >
+      <View style={{ maxWidth: 1100, width: '100%', alignSelf: 'center' }}>
+
+        {/* KPIs */}
+        <View style={s.kpiGrid}>
+          <KpiCard icon="🏢" label="Total empresas"   value={data.total_empresas}           color="#4F46E5" />
+          <KpiCard icon="✅" label="Activas (30d)"    value={data.activas_30d}               color="#10B981" sub={`${data.tasa_actividad_pct}% del total`} />
+          <KpiCard icon="⚡" label="Activas (7d)"     value={data.activas_7d}                color="#0EA5E9" />
+          <KpiCard icon="🔴" label="Riesgo alto"      value={numAlto}                        color="#EF4444" />
+          <KpiCard icon="🟡" label="Riesgo medio"     value={numMedio}                       color="#F59E0B" />
+          <KpiCard icon="🟢" label="Riesgo bajo"      value={numBajo}                        color="#16A34A" />
+        </View>
+
+        {/* Filtros de nivel */}
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {['todos', 'alto', 'medio', 'bajo'].map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[s.btn, filtro === f ? {} : { backgroundColor: '#F1F5F9' }, { paddingHorizontal: 14, paddingVertical: 7 }]}
+              onPress={() => setFiltro(f)}
+            >
+              <Text style={[s.btnText, filtro !== f && { color: '#475569' }]}>
+                {f === 'todos' ? 'Todos' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Lista empresas en riesgo */}
+        <SectionHeader title={`Empresas en riesgo (${enRiesgoFiltrado.length})`} />
+        {enRiesgoFiltrado.length === 0 ? (
+          <Card><Text style={s.emptyText}>No hay empresas en ese nivel de riesgo</Text></Card>
+        ) : (
+          <Card>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ minWidth: 620 }}>
+                <View style={s.tblHead}>
+                  <Text style={[s.tblCol, { flex: 3, minWidth: 160 }]}>Empresa</Text>
+                  <Text style={[s.tblCol, { width: 60, textAlign: 'center' }]}>Riesgo</Text>
+                  <Text style={[s.tblCol, { width: 60, textAlign: 'right' }]}>Cred.</Text>
+                  <Text style={[s.tblCol, { width: 70, textAlign: 'right' }]}>Ped. total</Text>
+                  <Text style={[s.tblCol, { width: 60, textAlign: 'right' }]}>Ped. 30d</Text>
+                  <Text style={[s.tblCol, { width: 110, textAlign: 'right' }]}>Último pedido</Text>
+                </View>
+                {enRiesgoFiltrado.map((emp) => (
+                  <View key={emp.empresa_id} style={s.tblRow}>
+                    <View style={{ flex: 3, minWidth: 0 }}>
+                      <Text style={s.rowPrimary} numberOfLines={1}>{emp.admin_email}</Text>
+                      <Badge
+                        label={emp.billing_model}
+                        color={emp.billing_model === 'suscripcion' ? '#4F46E5' : '#B45309'}
+                        bg={emp.billing_model === 'suscripcion' ? '#EEF2FF' : '#FEF9C3'}
+                      />
+                    </View>
+                    <View style={{ width: 60, alignItems: 'center' }}>
+                      <Badge
+                        label={emp.nivel_riesgo}
+                        color={RIESGO_COLOR[emp.nivel_riesgo]}
+                        bg={RIESGO_BG[emp.nivel_riesgo]}
+                      />
+                    </View>
+                    <Text style={{ width: 60, fontSize: 12, fontWeight: '700', color: '#F59E0B', textAlign: 'right' }}>{emp.creditos}</Text>
+                    <Text style={{ width: 70, fontSize: 12, color: '#64748B', textAlign: 'right' }}>{emp.total_pedidos}</Text>
+                    <Text style={{ width: 60, fontSize: 12, color: emp.pedidos_30d > 0 ? '#10B981' : '#EF4444', fontWeight: '700', textAlign: 'right' }}>{emp.pedidos_30d}</Text>
+                    <Text style={{ width: 110, fontSize: 10, color: '#94A3B8', textAlign: 'right' }} numberOfLines={1}>
+                      {emp.ultimo_pedido ? emp.ultimo_pedido.slice(0, 10) : 'Nunca'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </Card>
+        )}
+
+        {/* Empresas nuevas por mes */}
+        {(data.empresas_por_mes || []).length > 0 && (
+          <View>
+            <SectionHeader title="Nuevas empresas por mes" />
+            <Card>
+              <View style={s.tblHead}>
+                <Text style={[s.tblCol, { flex: 2 }]}>Mes</Text>
+                <Text style={[s.tblCol, { flex: 1, textAlign: 'right' }]}>Nuevas empresas</Text>
+              </View>
+              {(data.empresas_por_mes || []).map((m) => {
+                const mesActual = new Date().toISOString().slice(0, 7);
+                return (
+                  <View key={m.mes} style={[s.tblRow, m.mes === mesActual && { backgroundColor: '#EEF2FF' }]}>
+                    <Text style={[s.rowPrimary, { flex: 2 }]}>{m.mes}{m.mes === mesActual ? ' ← actual' : ''}</Text>
+                    <Text style={{ flex: 1, fontSize: 12, color: '#4F46E5', fontWeight: '700', textAlign: 'right' }}>{m.nuevas}</Text>
+                  </View>
+                );
+              })}
+            </Card>
+          </View>
+        )}
+
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Auditoría
+// ─────────────────────────────────────────────────────────────────
+function TabAuditoria({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [page, setPage]         = useState(1);
+  const [filterAction, setFilterAction] = useState('');
+  const [filterEmail, setFilterEmail]   = useState('');
+
+  const load = useCallback(async (p = 1, action = '', email = '') => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: p, per_page: 50 });
+      if (action) params.append('action', action);
+      if (email)  params.append('email', email);
+      setData(await apiFetch(`/api/superadmin/audit?${params}`));
+      setPage(p);
+    } catch (_) {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(1); }, [load]);
+
+  const ACTION_COLOR = {
+    login: '#10B981', logout: '#64748B', create: '#4F46E5', update: '#F59E0B',
+    delete: '#EF4444', superadmin_notify: '#8B5CF6', superadmin_features_update: '#0EA5E9',
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Filtros */}
+      <View style={{ backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', padding: 12, flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        <TextInput
+          style={[s.formInput, { flex: 1, minWidth: 140, marginBottom: 0 }]}
+          placeholder="Filtrar por email…"
+          placeholderTextColor="#94A3B8"
+          value={filterEmail}
+          onChangeText={(v) => { setFilterEmail(v); load(1, filterAction, v); }}
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={[s.formInput, { flex: 1, minWidth: 140, marginBottom: 0 }]}
+          placeholder="Filtrar por acción…"
+          placeholderTextColor="#94A3B8"
+          value={filterAction}
+          onChangeText={(v) => { setFilterAction(v); load(1, v, filterEmail); }}
+          autoCapitalize="none"
+        />
+        <Btn label="↻" onPress={() => load(1, filterAction, filterEmail)} style={{ paddingHorizontal: 14 }} />
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          {data && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 }}>
+              <Text style={s.sectionTitle}>{data.total} registros · pág. {data.page}/{data.pages}</Text>
+            </View>
+          )}
+
+          {loading && <ActivityIndicator color="#4F46E5" style={{ marginVertical: 20 }} />}
+
+          {data && !loading && (
+            <Card>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ minWidth: 680 }}>
+                  <View style={s.tblHead}>
+                    <Text style={[s.tblCol, { width: 140 }]}>Fecha/Hora</Text>
+                    <Text style={[s.tblCol, { flex: 2, minWidth: 130 }]}>Email</Text>
+                    <Text style={[s.tblCol, { width: 80 }]}>Rol</Text>
+                    <Text style={[s.tblCol, { flex: 2, minWidth: 140 }]}>Acción</Text>
+                    <Text style={[s.tblCol, { width: 100 }]}>IP</Text>
+                  </View>
+                  {data.logs.map((log, i) => (
+                    <View key={i} style={s.tblRow}>
+                      <Text style={{ width: 140, fontSize: 10, color: '#94A3B8' }}>
+                        {log.ts?.slice(0, 16).replace('T', ' ')}
+                      </Text>
+                      <Text style={{ flex: 2, minWidth: 130, fontSize: 12, color: '#0F172A', fontWeight: '500' }} numberOfLines={1}>
+                        {log.email || '–'}
+                      </Text>
+                      <View style={{ width: 80 }}>
+                        <Badge label={log.rol || '?'} color="#475569" bg="#F1F5F9" />
+                      </View>
+                      <View style={{ flex: 2, minWidth: 140 }}>
+                        <Badge
+                          label={log.action}
+                          color={ACTION_COLOR[log.action] || '#475569'}
+                          bg={`${ACTION_COLOR[log.action] || '#475569'}18`}
+                        />
+                      </View>
+                      <Text style={{ width: 100, fontSize: 10, color: '#94A3B8' }} numberOfLines={1}>{log.ip || '–'}</Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </Card>
+          )}
+
+          {/* Paginación */}
+          {data && data.pages > 1 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+              <Btn label="← Anterior" onPress={() => load(page - 1, filterAction, filterEmail)}
+                disabled={page <= 1} style={{ backgroundColor: '#EEF2FF' }}
+                textStyle={{ color: '#4F46E5' }} />
+              <Text style={{ alignSelf: 'center', fontSize: 12, color: '#64748B' }}>
+                {page} / {data.pages}
+              </Text>
+              <Btn label="Siguiente →" onPress={() => load(page + 1, filterAction, filterEmail)}
+                disabled={page >= data.pages} style={{ backgroundColor: '#EEF2FF' }}
+                textStyle={{ color: '#4F46E5' }} />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Comunicación masiva
+// ─────────────────────────────────────────────────────────────────
+function TabComunicacion({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [form, setForm]   = useState({ asunto: '', cuerpo: '', destino: 'todos' });
+  const [sending, setSending] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [msg, setMsg]     = useState(null);
+
+  const sendTest = async () => {
+    if (!form.asunto || !form.cuerpo) { setMsg({ type: 'error', text: 'Asunto y cuerpo son obligatorios' }); return; }
+    setSending(true); setMsg(null); setPreview(null);
+    try {
+      const res = await apiFetch('/api/superadmin/notify', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, test: true }),
+      });
+      setPreview(res);
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setSending(false);
+  };
+
+  const sendReal = async () => {
+    if (!form.asunto || !form.cuerpo) { setMsg({ type: 'error', text: 'Asunto y cuerpo son obligatorios' }); return; }
+    setSending(true); setMsg(null); setPreview(null);
+    try {
+      const res = await apiFetch('/api/superadmin/notify', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, test: false }),
+      });
+      setMsg({ type: 'ok', text: `✅ Enviado a ${res.enviados} de ${res.destinatarios} destinatarios` });
+      if (res.errores?.length > 0) {
+        setMsg((m) => ({ ...m, text: m.text + ` · ${res.errores.length} errores` }));
+      }
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setSending(false);
+  };
+
+  const DESTINOS = [
+    { key: 'todos',        label: 'Todos los admins' },
+    { key: 'suscripcion',  label: 'Solo suscripción' },
+    { key: 'creditos',     label: 'Solo créditos' },
+  ];
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+      <View style={{ maxWidth: 800, width: '100%', alignSelf: 'center', gap: 14 }}>
+        <SectionHeader title="Enviar comunicación por email" />
+
+        <Card>
+          {/* Destinatarios */}
+          <Text style={s.formLabel}>Destinatarios</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+            {DESTINOS.map((d) => (
+              <TouchableOpacity
+                key={d.key}
+                style={[s.btn, form.destino !== d.key && { backgroundColor: '#F1F5F9' }, { paddingHorizontal: 12, paddingVertical: 7 }]}
+                onPress={() => setForm((f) => ({ ...f, destino: d.key }))}
+              >
+                <Text style={[s.btnText, form.destino !== d.key && { color: '#475569' }]}>{d.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <FormField
+            label="Asunto"
+            placeholder="Ej: Novedades de PrintForgePro — Abril 2026"
+            value={form.asunto}
+            onChangeText={(v) => setForm((f) => ({ ...f, asunto: v }))}
+          />
+
+          <Text style={s.formLabel}>Cuerpo del mensaje</Text>
+          <TextInput
+            style={[s.formInput, { height: 160, textAlignVertical: 'top', paddingTop: 10 }]}
+            placeholder="Escribe aquí el cuerpo del email…"
+            placeholderTextColor="#94A3B8"
+            value={form.cuerpo}
+            onChangeText={(v) => setForm((f) => ({ ...f, cuerpo: v }))}
+            multiline
+          />
+
+          {msg && (
+            <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr]}>
+              <Text style={s.alertText}>{msg.text}</Text>
+            </View>
+          )}
+
+          {/* Preview resultado */}
+          {preview && (
+            <View style={[s.alertBox, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE', borderWidth: 1 }]}>
+              <Text style={[s.alertText, { color: '#4F46E5' }]}>
+                Vista previa: {preview.destinatarios} destinatarios
+              </Text>
+              {(preview.preview || []).map((e, i) => (
+                <Text key={i} style={{ fontSize: 11, color: '#6366F1', marginTop: 2 }}>• {e}</Text>
+              ))}
+              {preview.destinatarios > 5 && (
+                <Text style={{ fontSize: 11, color: '#6366F1', marginTop: 2 }}>+{preview.destinatarios - 5} más…</Text>
+              )}
+            </View>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+            <Btn
+              label="👁 Vista previa"
+              onPress={sendTest}
+              loading={sending}
+              style={{ flex: 1, backgroundColor: '#EEF2FF' }}
+              textStyle={{ color: '#4F46E5' }}
+            />
+            <Btn
+              label="📣 Enviar ahora"
+              onPress={sendReal}
+              loading={sending}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </Card>
+
+        <View style={[s.alertBox, { backgroundColor: '#FEF9C3', borderColor: '#FCD34D', borderWidth: 1, marginTop: 0 }]}>
+          <Text style={[s.alertText, { color: '#92400E' }]}>
+            ⚠️ Usa "Vista previa" antes de enviar para confirmar los destinatarios. El envío es inmediato y no se puede deshacer.
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tab: Configuración / Feature Flags
+// ─────────────────────────────────────────────────────────────────
+function TabConfiguracion({ currentUser }) {
+  const apiFetch = makeApiFetch(currentUser?.access_token);
+  const [features, setFeatures] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [msg, setMsg]           = useState(null);
+  const [logs, setLogs]         = useState(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsNivel, setLogsNivel]     = useState('all');
+
+  const loadFeatures = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch('/api/superadmin/features');
+      setFeatures(res.features);
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setLoading(false);
+  }, []);
+
+  const loadLogs = useCallback(async (nivel = 'all') => {
+    setLogsLoading(true);
+    try {
+      const res = await apiFetch(`/api/superadmin/serverlogs?lines=150&nivel=${nivel}`);
+      setLogs(res);
+    } catch (_) {}
+    setLogsLoading(false);
+  }, []);
+
+  useEffect(() => { loadFeatures(); loadLogs('all'); }, [loadFeatures, loadLogs]);
+
+  const saveFeatures = async () => {
+    setSaving(true); setMsg(null);
+    try {
+      const res = await apiFetch('/api/superadmin/features', {
+        method: 'PUT',
+        body: JSON.stringify(features),
+      });
+      setFeatures(res.features);
+      setMsg({ type: 'ok', text: 'Flags actualizados correctamente' });
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    setSaving(false);
+  };
+
+  const FLAG_INFO = {
+    registro_publico:         { label: 'Registro público', desc: 'Permite que nuevas empresas se registren', icon: '🔓' },
+    billing_creditos:         { label: 'Modelo créditos', desc: 'Sistema de créditos disponible', icon: '💰' },
+    billing_suscripcion:      { label: 'Modelo suscripción', desc: 'Suscripción mensual disponible', icon: '🔄' },
+    revendedores_activos:     { label: 'Revendedores', desc: 'Módulo de revendedores activo', icon: '🤝' },
+    modo_mantenimiento:       { label: 'Modo mantenimiento', desc: 'Bloquea login de usuarios no-root', icon: '🔧', danger: true },
+    max_empresas:             { label: 'Máx. empresas', desc: '0 = sin límite', icon: '🏢', isNumber: true },
+    max_usuarios_por_empresa: { label: 'Máx. usuarios/empresa', desc: '0 = sin límite', icon: '👥', isNumber: true },
+  };
+
+  const LOG_COLOR = { error: '#EF4444', warn: '#F59E0B', info: '#94A3B8' };
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#4F46E5" size="large" />;
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
+      <View style={{ maxWidth: 1100, width: '100%', alignSelf: 'center' }}>
+        <View style={s.twoCol}>
+
+          {/* Feature flags */}
+          <View style={{ flex: 1, minWidth: 280 }}>
+            <SectionHeader title="Feature Flags" />
+            <Card>
+              {features && Object.entries(FLAG_INFO).map(([key, info]) => {
+                const val = features[key];
+                const isBool = typeof val === 'boolean';
+                return (
+                  <View key={key} style={[s.infoRow, { paddingVertical: 12, alignItems: 'flex-start', flexDirection: 'column', gap: 6 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ fontSize: 16 }}>{info.icon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.rowPrimary, info.danger && { color: '#DC2626' }]}>{info.label}</Text>
+                          <Text style={s.rowSecondary}>{info.desc}</Text>
+                        </View>
+                      </View>
+                      {isBool ? (
+                        <TouchableOpacity
+                          style={[s.btn, { paddingHorizontal: 14, paddingVertical: 6 },
+                            val ? { backgroundColor: info.danger ? '#DC2626' : '#10B981' } : { backgroundColor: '#E2E8F0' }]}
+                          onPress={() => setFeatures((f) => ({ ...f, [key]: !val }))}
+                        >
+                          <Text style={s.btnText}>{val ? 'ON' : 'OFF'}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TextInput
+                          style={[s.formInput, { width: 80, marginBottom: 0, paddingVertical: 5, textAlign: 'center' }]}
+                          value={String(val ?? 0)}
+                          keyboardType="numeric"
+                          onChangeText={(v) => setFeatures((f) => ({ ...f, [key]: parseInt(v) || 0 }))}
+                        />
+                      )}
+                    </View>
+                    {info.danger && features[key] && (
+                      <View style={[s.alertBox, { backgroundColor: '#FEF2F2', borderColor: '#FECACA', borderWidth: 1, marginTop: 0, marginBottom: 0 }]}>
+                        <Text style={{ fontSize: 11, color: '#B91C1C', fontWeight: '600' }}>
+                          ⚠️ El modo mantenimiento bloquea el acceso a todos los usuarios no-root
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+              {msg && (
+                <View style={[s.alertBox, msg.type === 'ok' ? s.alertOk : s.alertErr, { marginTop: 8 }]}>
+                  <Text style={s.alertText}>{msg.text}</Text>
+                </View>
+              )}
+              <Btn label="Guardar flags" onPress={saveFeatures} loading={saving} disabled={saving} style={{ marginTop: 8 }} />
+            </Card>
+          </View>
+
+          {/* Logs del servidor */}
+          <View style={{ flex: 2, minWidth: 280 }}>
+            <SectionHeader
+              title={`Logs del servidor${logs ? ` · ${logs.size_human}` : ''}`}
+              action={
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {['all', 'error', 'warn', 'info'].map((n) => (
+                    <TouchableOpacity
+                      key={n}
+                      style={[s.btn, logsNivel !== n && { backgroundColor: '#F1F5F9' }, { paddingHorizontal: 10, paddingVertical: 4 }]}
+                      onPress={() => { setLogsNivel(n); loadLogs(n); }}
+                    >
+                      <Text style={[s.btnText, { fontSize: 11 }, logsNivel !== n && { color: '#475569' }]}>{n}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <Btn label="↻" onPress={() => loadLogs(logsNivel)} style={{ paddingHorizontal: 10, paddingVertical: 4 }} />
+                </View>
+              }
+            />
+            <Card style={{ padding: 0 }}>
+              {logsLoading ? (
+                <ActivityIndicator color="#4F46E5" style={{ padding: 20 }} />
+              ) : !logs || !logs.exists ? (
+                <Text style={[s.emptyText, { padding: 16 }]}>No se encontró backend.log</Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 500 }} nestedScrollEnabled>
+                  {(logs.logs || []).map((line, i) => (
+                    <View key={i} style={{
+                      paddingHorizontal: 12, paddingVertical: 4,
+                      backgroundColor: line.nivel === 'error' ? '#FEF2F2' : line.nivel === 'warn' ? '#FFFBEB' : 'transparent',
+                      borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
+                    }}>
+                      <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, color: LOG_COLOR[line.nivel] || '#94A3B8' }}
+                        selectable>
+                        {line.texto}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </Card>
+
+            {/* Exportar CSV */}
+            <SectionHeader title="Exportar datos" />
+            <Card>
+              <Text style={[s.rowSecondary, { marginBottom: 12 }]}>
+                Descarga un CSV con todas las empresas, sus modelos de facturación, créditos, pedidos y almacenamiento.
+              </Text>
+              {Platform.OS === 'web' ? (
+                <TouchableOpacity
+                  style={s.btn}
+                  onPress={() => {
+                    const token = currentUser?.access_token;
+                    fetch(`${API_BASE}/api/superadmin/export/empresas`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    })
+                      .then((r) => r.blob())
+                      .then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = 'empresas_export.csv'; a.click();
+                        URL.revokeObjectURL(url);
+                      });
+                  }}
+                >
+                  <Text style={s.btnText}>⬇ Descargar empresas.csv</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={s.emptyText}>Exportación disponible solo en web</Text>
+              )}
+            </Card>
+          </View>
+
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Pantalla principal SuperAdmin
+// ─────────────────────────────────────────────────────────────────
 export default function SuperAdminScreen({ currentUser }) {
-  const [activeTab, setActiveTab] = useState('monitor');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   if (!currentUser || currentUser.rol !== 'root') {
     return (
       <View style={s.accessDenied}>
-        <Text style={s.accessDeniedText}>🔒 Acceso restringido</Text>
+        <Text style={{ fontSize: 40, marginBottom: 12 }}>🔒</Text>
+        <Text style={s.accessDeniedText}>Acceso restringido</Text>
         <Text style={s.accessDeniedSub}>Solo disponible para el administrador global.</Text>
       </View>
     );
   }
 
-  const renderTab = () => {
+  const renderContent = () => {
     switch (activeTab) {
-      case 'monitor':  return <TabMonitor  currentUser={currentUser} />;
-      case 'servidor': return <TabServidor currentUser={currentUser} />;
-      case 'tarifas':  return <TabTarifas  currentUser={currentUser} />;
+      case 'dashboard':    return <TabDashboard    currentUser={currentUser} />;
+      case 'financiero':   return <TabFinanciero   currentUser={currentUser} />;
+      case 'riesgo':       return <TabRiesgo       currentUser={currentUser} />;
       case 'empresas':     return <TabEmpresas     currentUser={currentUser} />;
       case 'revendedores': return <TabRevendedores currentUser={currentUser} />;
+      case 'tarifas':      return <TabTarifas      currentUser={currentUser} />;
       case 'promos':       return <TabPromos       currentUser={currentUser} />;
-      case 'detalle':  return <TabDetalle  currentUser={currentUser} />;
-      default:         return null;
+      case 'comunicacion': return <TabComunicacion currentUser={currentUser} />;
+      case 'auditoria':    return <TabAuditoria    currentUser={currentUser} />;
+      case 'configuracion':return <TabConfiguracion currentUser={currentUser} />;
+      case 'servidor':     return <TabServidor     currentUser={currentUser} />;
+      default:             return null;
     }
   };
+
+  const isWeb = Platform.OS === 'web';
 
   return (
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>⚡ Panel SuperAdmin</Text>
-        <Text style={s.headerSub}>{currentUser.email}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.headerTitle}>⚡ Panel SuperAdmin</Text>
+          <Text style={s.headerSub}>{currentUser.email}</Text>
+        </View>
+        <View style={[s.statusDotInline, { backgroundColor: '#16A34A' }]} />
       </View>
 
-      {/* Sub-tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={s.tabBarContent}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={[s.tabBtn, activeTab === t.key && s.tabBtnActive]}
-            onPress={() => setActiveTab(t.key)}
-          >
-            <Text style={[s.tabBtnText, activeTab === t.key && s.tabBtnTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={{ flex: 1, flexDirection: isWeb ? 'row' : 'column' }}>
 
-      {/* Content */}
-      <View style={{ flex: 1 }}>
-        {renderTab()}
+        {/* Sidebar (web) */}
+        {isWeb && (
+          <View style={s.sidebar}>
+            {NAV_ITEMS.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[s.sidebarItem, activeTab === item.key && s.sidebarItemActive]}
+                onPress={() => setActiveTab(item.key)}
+              >
+                <Text style={s.sidebarIcon}>{item.icon}</Text>
+                <Text style={[s.sidebarLabel, activeTab === item.key && s.sidebarLabelActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* TabBar (móvil) */}
+        {!isWeb && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.tabBar}
+            contentContainerStyle={s.tabBarContent}
+          >
+            {NAV_ITEMS.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[s.tabBtn, activeTab === item.key && s.tabBtnActive]}
+                onPress={() => setActiveTab(item.key)}
+              >
+                <Text style={{ fontSize: 14 }}>{item.icon}</Text>
+                <Text style={[s.tabBtnText, activeTab === item.key && s.tabBtnTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Contenido */}
+        <View style={{ flex: 1 }}>
+          {renderContent()}
+        </View>
       </View>
     </View>
   );
@@ -1423,91 +2424,112 @@ export default function SuperAdminScreen({ currentUser }) {
 // Styles
 // ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#F8FAFC' },
-  header:         { backgroundColor: '#1E1B4B', paddingHorizontal: 20, paddingVertical: 14 },
-  headerTitle:    { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  headerSub:      { fontSize: 12, color: '#A5B4FC', marginTop: 2 },
+  container:   { flex: 1, backgroundColor: '#F1F5F9' },
 
-  tabBar:         { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', maxHeight: 46 },
-  tabBarContent:  { paddingHorizontal: 12, gap: 4, alignItems: 'center' },
-  tabBtn:         { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6 },
+  header:      { backgroundColor: '#1E1B4B', paddingHorizontal: 20, paddingVertical: 14, flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  headerSub:   { fontSize: 12, color: '#A5B4FC', marginTop: 2 },
+  statusDotInline: { width: 10, height: 10, borderRadius: 5 },
+
+  // Sidebar (web)
+  sidebar:          { width: 190, backgroundColor: '#0F0E2B', paddingTop: 12, paddingHorizontal: 10 },
+  sidebarItem:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: 9, marginBottom: 2 },
+  sidebarItemActive:{ backgroundColor: '#4F46E5' },
+  sidebarIcon:      { fontSize: 16, width: 22, textAlign: 'center' },
+  sidebarLabel:     { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+  sidebarLabelActive: { color: '#FFFFFF' },
+
+  // TabBar (móvil)
+  tabBar:         { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', maxHeight: 52 },
+  tabBarContent:  { paddingHorizontal: 10, gap: 4, alignItems: 'center' },
+  tabBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   tabBtnActive:   { backgroundColor: '#EEF2FF' },
-  tabBtnText:     { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  tabBtnText:     { fontSize: 12, fontWeight: '600', color: '#64748B' },
   tabBtnTextActive: { color: '#4F46E5' },
 
-  sectionTitle:   { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, marginTop: 4 },
-  card:           { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, marginBottom: 12, overflow: 'hidden' },
+  // Layout
+  twoCol:     { flexDirection: 'row', gap: 14, flexWrap: 'wrap' },
 
-  tblHead:        { flexDirection: 'row', alignItems: 'center', paddingBottom: 7, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', marginBottom: 2 },
-  tblCol:         { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4 },
-  tblRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  panelRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  iconBox:        { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  rowPrimary:     { fontSize: 12, fontWeight: '600', color: '#0F172A' },
-  rowSecondary:   { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+  // Cards
+  card:       { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, marginBottom: 10, overflow: 'hidden' },
 
-  statsRow:       { flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
-  statCard:       { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, alignItems: 'center', minWidth: 80 },
-  statValue:      { fontSize: 22, fontWeight: '800' },
-  statLabel:      { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 4 },
+  sectionTitle:  { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.8 },
 
-  miniStat:       { flex: 1, alignItems: 'center' },
-  miniStatValue:  { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  miniStatLabel:  { fontSize: 10, color: '#94A3B8' },
+  // KPI
+  kpiGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  kpiCard:    { flex: 1, minWidth: 150, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderLeftWidth: 3 },
+  kpiIcon:    { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  kpiLabel:   { fontSize: 11, fontWeight: '600', color: '#64748B', flex: 1 },
+  kpiValue:   { fontSize: 24, fontWeight: '800' },
+  kpiSub:     { fontSize: 11, color: '#94A3B8', marginTop: 2 },
 
-  actividadRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', padding: 10, marginBottom: 6 },
-  actividadBadge: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  actividadBadgeText: { fontSize: 10, fontWeight: '700' },
-  actividadRef:    { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  actividadNombre: { fontSize: 13, color: '#475569', flex: 1 },
-  actividadMeta:   { fontSize: 11, color: '#64748B' },
-  actividadFecha:  { fontSize: 11, color: '#94A3B8' },
-  estadoBadge:     { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1 },
-  estadoBadgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  kpiGrid2:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  miniKpi:    { flex: 1, minWidth: 80, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, alignItems: 'center' },
+  miniKpiValue: { fontSize: 16, fontWeight: '800' },
+  miniKpiLabel: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
 
-  infoRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  infoLabel:      { fontSize: 12, color: '#64748B' },
-  infoValue:      { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  // Feed / rows
+  feedRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  feedIcon:   { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  rowPrimary: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  rowSecondary: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
 
-  formRow:        { marginBottom: 12 },
-  formLabel:      { fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 4 },
-  formInput:      { backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: '#0F172A', marginBottom: 4 },
+  tblHead:    { flexDirection: 'row', alignItems: 'center', paddingBottom: 7, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', marginBottom: 2 },
+  tblCol:     { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4 },
+  tblRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
 
-  primaryBtn:     { backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', marginBottom: 4 },
-  primaryBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  refreshBtn:     { backgroundColor: '#EEF2FF', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 8 },
-  refreshBtnText: { color: '#4F46E5', fontWeight: '600', fontSize: 13 },
-  dangerBtn:      { backgroundColor: '#DC2626', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 8 },
-  dangerBtnText:  { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  infoRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  infoLabel:  { fontSize: 12, color: '#64748B' },
+  infoValue:  { fontSize: 12, fontWeight: '600', color: '#0F172A' },
 
-  alertBox:       { borderRadius: 8, padding: 10, marginBottom: 8 },
-  alertOk:        { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0' },
-  alertError:     { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
-  alertText:      { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+  // Empresa avatar
+  empAvatar:  { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
-  empresaId:      { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  planBadge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  planSub:        { backgroundColor: '#EEF2FF' },
-  planCred:       { backgroundColor: '#FEF9C3' },
-  planBadgeText:  { fontSize: 11, fontWeight: '700', color: '#1E1B4B' },
+  // Search
+  searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 16, paddingVertical: 10 },
+  searchInput:   { flex: 1, fontSize: 14, color: '#0F172A' },
 
-  promoCode:      { fontSize: 16, fontWeight: '800', color: '#4F46E5', letterSpacing: 1 },
-  promoMeta:      { fontSize: 12, color: '#64748B' },
+  // Badge
+  badge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+
+  // Buttons
+  btn:       { backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  btnText:   { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+
+  // Status dot
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+
+  // Alerts
+  alertBanner:       { backgroundColor: '#FEF3C7', borderWidth: 1.5, borderColor: '#F59E0B', borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'flex-start' },
+  alertBannerTitle:  { fontSize: 13, fontWeight: '700', color: '#92400E', marginBottom: 4 },
+  alertBannerItem:   { fontSize: 12, color: '#92400E', marginTop: 2 },
+
+  alertBox:  { borderRadius: 8, padding: 10, marginBottom: 8 },
+  alertOk:   { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0' },
+  alertErr:  { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
+  alertText: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+
+  // Forms
+  formLabel:  { fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 4 },
+  formInput:  { backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: '#0F172A', marginBottom: 4 },
+
+  // Promos
+  promoCode:      { fontSize: 13, fontWeight: '800', color: '#4F46E5', letterSpacing: 0.8 },
   smallBtn:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   smallBtnOk:     { backgroundColor: '#DCFCE7' },
   smallBtnGray:   { backgroundColor: '#F1F5F9' },
   smallBtnDanger: { backgroundColor: '#FEE2E2' },
   smallBtnText:   { fontSize: 11, fontWeight: '700', color: '#0F172A' },
 
-  emptyText:      { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 20 },
-  errorText:      { fontSize: 13, color: '#DC2626', textAlign: 'center', marginTop: 20, padding: 16 },
+  confirmRow:  { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8, padding: 12, marginTop: 8 },
+  confirmText: { fontSize: 12, fontWeight: '600', color: '#B91C1C' },
 
-  confirmRow:         { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8, padding: 12, marginTop: 8 },
-  confirmText:        { fontSize: 12, fontWeight: '600', color: '#B91C1C' },
-  confirmBtnCancel:   { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center' },
-  confirmBtnCancelText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  emptyText:   { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 20 },
+  errorText:   { fontSize: 13, color: '#DC2626', textAlign: 'center', marginTop: 20, padding: 16 },
 
-  accessDenied:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  accessDenied:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   accessDeniedText: { fontSize: 22, fontWeight: '800', color: '#1E1B4B', marginBottom: 8 },
   accessDeniedSub:  { fontSize: 14, color: '#64748B', textAlign: 'center' },
 });

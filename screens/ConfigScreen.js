@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 import { usePermission } from './usePermission';
 
 const API_BASE = 'http://localhost:8080';
@@ -92,6 +93,8 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 54,
   },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   headerTopRow: {
     flex: 1,
     flexDirection: 'row',
@@ -632,7 +635,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   usersTableWrap: {
-    maxHeight: 280,
+    flex: 1,
   },
   usersTableHeader: {
     flexDirection: 'row',
@@ -1029,6 +1032,15 @@ export default function ConfigScreen({ route, currentUser }) {
   });
   const [usuarios, setUsuarios] = useState([]);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const section = String(route?.params?.section || 'all');
+  useEffect(() => {
+    if (section === 'usuarios-roles') {
+      AsyncStorage.getItem('help_seen_usuarios').then((v) => { if (!v) setHelpVisible(true); });
+    }
+  }, [section]);
+  const helpHeaderRef = React.useRef(null);
+  const helpTableRef  = React.useRef(null);
   const [busquedaRoles, setBusquedaRoles] = useState('');
   const [paginaUsuarios, setPaginaUsuarios] = useState(1);
   const [activeTabUsRol, setActiveTabUsRol] = useState('usuarios'); // 'usuarios' | 'roles'
@@ -1080,7 +1092,6 @@ export default function ConfigScreen({ route, currentUser }) {
   const [estadoDestinoMigracion, setEstadoDestinoMigracion] = useState(null);
   const [migrandoEstados, setMigrandoEstados] = useState(false);
 
-  const section = String(route?.params?.section || 'all');
   const showUsuariosRoles = section === 'all' || section === 'usuarios-roles';
   const showCreditos = section === 'all' || section === 'creditos';
   
@@ -2425,10 +2436,16 @@ export default function ConfigScreen({ route, currentUser }) {
     );
   };
 
+  const Outer = showUsuariosRoles ? View : ScrollView;
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
+    <Outer style={styles.container}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.title}>{pageTitle}</Text>
+        {showTopUsersPlus && (
+          <TouchableOpacity onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+            <Text style={styles.helpBtnText}>?</Text>
+          </TouchableOpacity>
+        )}
         {showTopUsersPlus && activeTabUsRol === 'usuarios' ? (
           <TextInput
             style={styles.usersSearchInput}
@@ -2456,6 +2473,7 @@ export default function ConfigScreen({ route, currentUser }) {
             <Text style={styles.usersBtnPlusText}>{t('screens.config.newRolBtn')}</Text>
           </TouchableOpacity>
         )}
+
       </View>
 
       {showUsuariosRoles && (
@@ -2474,19 +2492,19 @@ export default function ConfigScreen({ route, currentUser }) {
       </View>
       )}
 
-      <View style={styles.contentWrap}>
+      <View style={[styles.contentWrap, showUsuariosRoles && { flex: 1 }]}>
 
       {showUsuariosRoles && (
       <>
       {/* ── Pestaña Usuarios ────────────────────────────────────────── */}
       {activeTabUsRol === 'usuarios' && (
-      <View>
+      <View style={{ flex: 1 }}>
 
               {usuariosFiltrados.length === 0 ? (
                 <EmptyState variant="inline" title={t('screens.config.noUsuarios')} message={t('screens.config.noUsuariosMsg')} />
               ) : (
                 <>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }} style={{ flex: 1 }} ref={helpTableRef}>
                   <View style={[styles.usersTableWrap, Platform.select({ web: { width: '100%' }, default: { minWidth: 520 } })]}>
                     <View style={styles.usersTableHeader}>
                       <View style={styles.usersColAvatar} />
@@ -2498,7 +2516,6 @@ export default function ConfigScreen({ route, currentUser }) {
                       )}
                       <View style={styles.usersColAcciones}><Text style={styles.usersHeaderText}>{t('screens.config.colAcciones')}</Text></View>
                     </View>
-                    <ScrollView>
                       {usuariosPaginados.map((usuario, idx) => (
                         <View key={usuario.id} style={[styles.usersTableRow, (idx + (paginaUsuarios - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.usersTableRowAlt]}>
                           <View style={styles.usersColAvatar}>
@@ -2543,7 +2560,6 @@ export default function ConfigScreen({ route, currentUser }) {
                           </View>
                         </View>
                       ))}
-                    </ScrollView>
                   </View>
                   </ScrollView>
                   {totalPaginasUsuarios > 1 && (
@@ -3134,6 +3150,16 @@ export default function ConfigScreen({ route, currentUser }) {
       </Modal>
 
       </View>
-    </ScrollView>
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_usuarios', '1'); setHelpVisible(false); }}
+        title={t('help.usuarios.title')}
+        steps={[
+          { icon: t('help.usuarios.s1i'), title: t('help.usuarios.s1t'), desc: t('help.usuarios.s1d'), spotlight: { ref: helpHeaderRef } },
+          { icon: t('help.usuarios.s2i'), title: t('help.usuarios.s2t'), desc: t('help.usuarios.s2d'), spotlight: { ref: helpTableRef } },
+          { icon: t('help.usuarios.s3i'), title: t('help.usuarios.s3t'), desc: t('help.usuarios.s3d'), spotlight: { ref: helpTableRef } },
+        ]}
+      />
+    </Outer>
   );
 }

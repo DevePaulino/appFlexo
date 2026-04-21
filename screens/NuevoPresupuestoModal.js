@@ -94,12 +94,12 @@ const styles = {
     errorText: { color: '#D21820', fontSize: 13, marginTop: -5, marginBottom: 7, fontWeight: '500' },
     selectorRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
     bigBtn: {
-        backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 11,
+        backgroundColor: '#F8FAFC', paddingHorizontal: 22, paddingVertical: 12,
         borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0',
         alignItems: 'center', minWidth: 130
     },
     bigBtnText: {
-        color: '#64748B', fontWeight: '600', fontSize: 13
+        color: '#475569', fontWeight: '600', fontSize: 14
     },
     tintaBtn: (active, tinta) => ({
         paddingHorizontal: 10, paddingVertical: 8,
@@ -122,11 +122,12 @@ const styles = {
     coverageTxt: { color: '#0F172A', fontWeight: '700', fontSize: 15, fontFamily: 'System, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen"' },
     submitContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20, marginBottom: 20 },
     submitBtn: {
-        backgroundColor: 'transparent', paddingHorizontal: 22, paddingVertical: 10,
-        borderRadius: 10, borderColor: '#CBD5E1',
-        alignItems: 'center',
+        backgroundColor: '#4F46E5', paddingHorizontal: 28, paddingVertical: 12,
+        borderRadius: 10, borderWidth: 1.5, borderColor: '#4338CA',
+        alignItems: 'center', minWidth: 160,
+        shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 3,
     },
-    submitText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+    submitText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
     etiquetaHalfCol: { width: 140, minHeight: 170, borderRadius: 14, marginRight: 10, resizeMode: 'contain', alignSelf: 'flex-start' },
     etiquetaBtn: { marginTop: 6, alignSelf: 'flex-start' },
     modalHeader: {
@@ -1406,16 +1407,16 @@ export default function NuevoPresupuestoModal({
                 </ScrollView>
 
                 {/* ── Barra de acciones inferior ── */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}>
                     <TouchableOpacity style={styles.bigBtn} onPress={handleClose}>
                         <Text style={styles.bigBtnText}>{t('forms.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.bigBtn, styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
+                        style={[styles.submitBtn, !puedeCrear && { opacity: 0.45 }]}
                         onPress={() => puedeCrear && handleSubmit()}
                         disabled={!puedeCrear}
                     >
-                        <Text style={[styles.bigBtnText, { color: '#FFFFFF', fontWeight: '700' }]}>{submitLabel}</Text>
+                        <Text style={styles.submitText}>{submitLabel}</Text>
                     </TouchableOpacity>
                 </View>
 

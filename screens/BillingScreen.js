@@ -1,18 +1,21 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Linking,
   Platform,
   ScrollView,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import HelpModal from '../components/HelpModal';
 
 const API = 'http://localhost:8080';
 
@@ -51,6 +54,7 @@ export default function BillingScreen({ navigation, currentUser }) {
   const [status, setStatus] = useState(null);
   const [history, setHistory] = useState([]);
   const [storageInfo, setStorageInfo] = useState(null);
+  const [consumoMes, setConsumoMes] = useState(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(null);
   const [subscribing, setSubscribing] = useState(false);
@@ -58,6 +62,11 @@ export default function BillingScreen({ navigation, currentUser }) {
   const [expandedTx, setExpandedTx] = useState(new Set());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [promoCode, setPromoCode] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpPlanRef    = useRef(null);
+  const helpCreditsRef = useRef(null);
+  const helpStorageRef = useRef(null);
+  const helpHistoryRef = useRef(null);
   const [redeeming, setRedeeming] = useState(false);
   const [redeemMsg, setRedeemMsg] = useState(null); // { type: 'ok'|'error', text }
   const [autoRecarga, setAutoRecarga] = useState(null);
@@ -70,10 +79,11 @@ export default function BillingScreen({ navigation, currentUser }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, hRes, stRes] = await Promise.all([
+      const [sRes, hRes, stRes, cmRes] = await Promise.all([
         fetch(`${API}/api/billing/status`, { headers: authHeader }),
         fetch(`${API}/api/billing/history?limit=30`, { headers: authHeader }),
         fetch(`${API}/api/storage/resumen`, { headers: authHeader }),
+        fetch(`${API}/api/billing/consumo-mes`, { headers: authHeader }),
       ]);
       if (sRes.ok) setStatus(await sRes.json());
       if (hRes.ok) {
@@ -81,6 +91,7 @@ export default function BillingScreen({ navigation, currentUser }) {
         setHistory(hData.transactions || []);
       }
       if (stRes.ok) setStorageInfo(await stRes.json());
+      if (cmRes.ok) setConsumoMes(await cmRes.json());
     } catch (_) {}
     setLoading(false);
   }, []);
@@ -317,6 +328,9 @@ export default function BillingScreen({ navigation, currentUser }) {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>{t('billing.title')}</Text>
+        <Pressable onPress={() => setHelpVisible(true)} style={s.helpBtn}>
+          <Text style={s.helpBtnText}>?</Text>
+        </Pressable>
       </View>
 
       {loading ? (
@@ -330,7 +344,7 @@ export default function BillingScreen({ navigation, currentUser }) {
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
 
             {/* Plan actual */}
-            <View style={[s.section, { flex: 1 }]}>
+            <View style={[s.section, { flex: 1 }]} ref={helpPlanRef}>
               <Text style={s.sectionTitle}>{t('billing.currentPlan')}</Text>
               <View style={s.planRow}>
                 <View style={[s.modeBadge, isSub ? s.modeBadgeSub : s.modeBadgeCredits]}>
@@ -350,11 +364,29 @@ export default function BillingScreen({ navigation, currentUser }) {
                 <>
                   <Text style={s.unlimitedText}>{t('billing.unlimited')}</Text>
                   <Text style={s.planDesc}>{t('billing.subscriptionDesc')}</Text>
-                  <Text style={[s.planPriceLabel, { marginTop: 8 }]}>
-                    {status?.subscription_price_eur
-                      ? `${status.subscription_price_eur.toFixed(2)} € / ${t('billing.perMonth')}`
-                      : t('billing.priceOnRequest')}
-                  </Text>
+                  {status?.billing_discount_pct > 0 ? (
+                    <View style={{ marginTop: 8, gap: 2 }}>
+                      <Text style={[s.planPriceLabel, { textDecorationLine: 'line-through', color: '#94A3B8', fontSize: 13 }]}>
+                        {status.subscription_price_base_eur?.toFixed(2)} € / {t('billing.perMonth')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={[s.planPriceLabel, { color: '#16A34A' }]}>
+                          {status.subscription_price_eur.toFixed(2)} € / {t('billing.perMonth')}
+                        </Text>
+                        <View style={{ backgroundColor: '#DCFCE7', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>
+                            -{status.billing_discount_pct}% dto.
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={[s.planPriceLabel, { marginTop: 8 }]}>
+                      {status?.subscription_price_eur
+                        ? `${status.subscription_price_eur.toFixed(2)} € / ${t('billing.perMonth')}`
+                        : t('billing.priceOnRequest')}
+                    </Text>
+                  )}
                 </>
               )}
             </View>
@@ -393,8 +425,106 @@ export default function BillingScreen({ navigation, currentUser }) {
 
           </View>
 
+          {/* ── Consumo del mes (ambos planes) ─────────────────────────── */}
+          {consumoMes && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>📊 Consumo del mes — {consumoMes.mes}</Text>
+
+              {isSub ? (
+                <>
+                  <View style={s.costRow}>
+                    <View style={s.costInfo}>
+                      <Text style={s.costName}>Cuota mensual fija</Text>
+                      {consumoMes.billing_discount_pct > 0 && (
+                        <Text style={s.costHint}>Descuento -{consumoMes.billing_discount_pct}% aplicado</Text>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
+                      {consumoMes.cuota_fija_eur.toFixed(2)} €
+                    </Text>
+                  </View>
+                  <View style={s.costDivider} />
+                  <View style={s.costRow}>
+                    <View style={s.costInfo}>
+                      <Text style={s.costName}>🗄️ Almacenamiento PDF</Text>
+                      <Text style={s.costHint}>
+                        {consumoMes.storage_gb.toFixed(4)} GB × {consumoMes.storage_cost_eur_per_gb} €/GB · acumulativo
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
+                      {consumoMes.coste_storage_eur.toFixed(4)} €
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* ── Resumen créditos → € ── */}
+                  <View style={s.costRow}>
+                    <View style={s.costInfo}>
+                      <Text style={s.costName}>Créditos consumidos</Text>
+                      <Text style={s.costHint}>
+                        {consumoMes.total_creditos_mes} cr × {consumoMes.credito_price_final_eur ?? consumoMes.credito_price_eur} €/cr
+                        {consumoMes.billing_discount_pct > 0 && ` · 🏷️ -${consumoMes.billing_discount_pct}%`}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
+                      {consumoMes.total_uso_eur.toFixed(2)} €
+                    </Text>
+                  </View>
+
+                  {/* ── Desglose por acción (secundario) ── */}
+                  {(consumoMes.detalle_acciones || []).length > 0 && (
+                    <View style={{ marginLeft: 12, marginTop: 4, marginBottom: 4,
+                      borderLeftWidth: 2, borderLeftColor: C.border, paddingLeft: 10 }}>
+                      {(consumoMes.detalle_acciones || []).map((item, i) => (
+                        <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between',
+                          alignItems: 'center', paddingVertical: 3 }}>
+                          <Text style={{ fontSize: 12, color: C.textSec, flex: 1 }}>
+                            {item.label}
+                            <Text style={{ color: C.textMuted }}> · {item.usos} uso{item.usos !== 1 ? 's' : ''} · {item.creditos} cr</Text>
+                          </Text>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: C.textSec }}>
+                            {item.eur.toFixed(4)} €
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={s.costDivider} />
+
+                  {/* ── Almacenamiento ── */}
+                  <View style={s.costRow}>
+                    <View style={s.costInfo}>
+                      <Text style={s.costName}>🗄️ Almacenamiento PDF</Text>
+                      <Text style={s.costHint}>
+                        {consumoMes.storage_gb.toFixed(4)} GB × {consumoMes.storage_cost_eur_per_gb} €/GB
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
+                      {consumoMes.coste_storage_eur.toFixed(4)} €
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              <View style={s.costDivider} />
+              <View style={[s.costRow, { marginTop: 8 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>Total estimado este mes</Text>
+                  {isSub && (
+                    <Text style={s.costHint}>Pedidos y funciones incluidos en la cuota</Text>
+                  )}
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: C.accent }}>
+                  {consumoMes.total_estimado_eur.toFixed(2)} €
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Cambiar plan ───────────────────────────────────────────── */}
-          <View style={s.section}>
+          <View style={s.section} ref={helpCreditsRef}>
             <Text style={s.sectionTitle}>{t('billing.changePlan')}</Text>
             <View style={s.planToggleRow}>
               <TouchableOpacity
@@ -517,7 +647,7 @@ export default function BillingScreen({ navigation, currentUser }) {
           </View>
 
           {/* ── Auto-recarga ─────────────────────────────────────────── */}
-          {autoRecarga && (
+          {autoRecarga && !isSub && (
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t('billing.autoRechargeTitle')}</Text>
               <View style={s.arRow}>
@@ -581,7 +711,7 @@ export default function BillingScreen({ navigation, currentUser }) {
 
           {/* ── Almacenamiento ────────────────────────────────────────── */}
           {storageInfo && (
-            <View style={s.section}>
+            <View style={s.section} ref={helpStorageRef}>
               <Text style={s.sectionTitle}>{t('billing.storageTitle')}</Text>
               <View style={s.storageRow}>
                 <View style={s.storageStat}>
@@ -611,7 +741,7 @@ export default function BillingScreen({ navigation, currentUser }) {
           )}
 
           {/* ── Historial ─────────────────────────────────────────────── */}
-          <View style={s.section}>
+          <View style={s.section} ref={helpHistoryRef}>
             <TouchableOpacity
               style={s.sectionTitleRow}
               onPress={() => setHistoryOpen((v) => !v)}
@@ -682,6 +812,17 @@ export default function BillingScreen({ navigation, currentUser }) {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_facturacion', '1'); setHelpVisible(false); }}
+        title={t('help.facturacion.title')}
+        steps={[
+          { icon: t('help.facturacion.s1i'), title: t('help.facturacion.s1t'), desc: t('help.facturacion.s1d'), spotlight: { ref: helpPlanRef } },
+          { icon: t('help.facturacion.s2i'), title: t('help.facturacion.s2t'), desc: t('help.facturacion.s2d'), spotlight: { ref: helpCreditsRef } },
+          { icon: t('help.facturacion.s3i'), title: t('help.facturacion.s3t'), desc: t('help.facturacion.s3d'), spotlight: { ref: helpStorageRef } },
+          { icon: t('help.facturacion.s4i'), title: t('help.facturacion.s4t'), desc: t('help.facturacion.s4d'), spotlight: { ref: helpHistoryRef } },
+        ]}
+      />
     </View>
   );
 }
@@ -702,8 +843,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.headerBorder,
     minHeight: 54,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
