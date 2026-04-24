@@ -1074,6 +1074,7 @@
     "seleccionaProveedor": "Sélectionnez un fournisseur",
     "seleccionaSep": "Sélectionnez au moins une séparation",
     "enviarSolicitud": "Envoyer la demande ({{count}} sép.)",
+    "planchaTitle": "Sélectionner la plaque et la référence",
     "cerrar": "Fermer"
   },
   "legal": {

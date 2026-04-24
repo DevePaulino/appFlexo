@@ -1074,6 +1074,7 @@
     "seleccionaProveedor": "Selecione um fornecedor",
     "seleccionaSep": "Selecione pelo menos uma separação",
     "enviarSolicitud": "Enviar pedido ({{count}} sep.)",
+    "planchaTitle": "Selecionar chapa e referência",
     "cerrar": "Fechar"
   },
   "legal": {

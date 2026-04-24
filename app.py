@@ -5869,6 +5869,11 @@ def create_proveedor():
         if not tipo:
             return jsonify({'error': 'El tipo de proveedor es obligatorio'}), 400
         col = get_empresa_collection('proveedores', empresa_id)
+        planchas_raw = data.get('planchas') or []
+        planchas = [
+            {'marca': (p.get('marca') or '').strip(), 'referencia': (p.get('referencia') or '').strip()}
+            for p in planchas_raw if isinstance(p, dict)
+        ]
         doc = {
             'empresa_id': empresa_id,
             'tipo': tipo,
@@ -5877,6 +5882,7 @@ def create_proveedor():
             'telefono': (data.get('telefono') or '').strip(),
             'email': (data.get('email') or '').strip(),
             'notas': (data.get('notas') or '').strip(),
+            'planchas': planchas,
             'fecha_alta': datetime.utcnow().isoformat(),
         }
         result = col.insert_one(doc)
@@ -5898,6 +5904,12 @@ def update_proveedor(proveedor_id):
         for field in ['nombre', 'contacto', 'telefono', 'email', 'notas']:
             if field in data:
                 update[field] = (data[field] or '').strip()
+        if 'planchas' in data:
+            planchas_raw = data.get('planchas') or []
+            update['planchas'] = [
+                {'marca': (p.get('marca') or '').strip(), 'referencia': (p.get('referencia') or '').strip()}
+                for p in planchas_raw if isinstance(p, dict)
+            ]
         if not update:
             return jsonify({'error': 'No hay campos para actualizar'}), 400
         if 'nombre' in update and not update['nombre']:

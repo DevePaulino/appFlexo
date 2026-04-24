@@ -1074,6 +1074,7 @@
     "seleccionaProveedor": "Selecciona un proveedor",
     "seleccionaSep": "Selecciona al menos una separación",
     "enviarSolicitud": "Enviar solicitud ({{count}} sep.)",
+    "planchaTitle": "Selecciona plancha y referencia",
     "cerrar": "Cerrar"
   },
   "legal": {

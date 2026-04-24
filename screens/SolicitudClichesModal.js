@@ -73,6 +73,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
   const [selected, setSelected]         = useState(new Set());
   const [proveedores, setProveedores]   = useState([]);
   const [proveedorId, setProveedorId]   = useState(null);
+  const [planchaIdx, setPlanchaIdx]     = useState(null);
   const [notas, setNotas]               = useState('');
   const [sending, setSending]           = useState(false);
   const [result, setResult]             = useState(null); // { ok, email_sent, url_descarga, error }
@@ -87,6 +88,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
     setResult(null);
     setNotas('');
     setProveedorId(null);
+    setPlanchaIdx(null);
     loadData();
   }, [visible, pedidoId]);
 
@@ -140,6 +142,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
           proveedor_id: provSeleccionado?._id || null,
           proveedor_nombre: provSeleccionado?.nombre || '',
           proveedor_email: provSeleccionado?.email || '',
+          plancha: planchaIdx !== null ? (provSeleccionado?.planchas?.[planchaIdx] || null) : null,
           notas,
         }),
       });
@@ -248,7 +251,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
                         <TouchableOpacity
                           key={prov._id}
                           style={[s.provCard, active && s.provCardActive]}
-                          onPress={() => setProveedorId(prov._id)}
+                          onPress={() => { setProveedorId(prov._id); setPlanchaIdx(null); }}
                           activeOpacity={0.75}
                         >
                           <View style={[s.provRadio, active && s.provRadioActive]}>
@@ -267,6 +270,34 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
                       );
                     })}
                   </View>
+                )}
+
+                {/* ── Planchas del proveedor seleccionado ── */}
+                {!isResellerClient && provSeleccionado && (provSeleccionado.planchas || []).length > 0 && (
+                  <>
+                    <Text style={[s.sectionLabel, { marginTop: 20, marginBottom: 10 }]}>
+                      {t('cliches.planchaTitle')}
+                    </Text>
+                    <View style={s.planchaGrid}>
+                      {(provSeleccionado.planchas || []).map((pl, idx) => {
+                        const active = planchaIdx === idx;
+                        return (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[s.planchaBtn, active && s.planchaBtnActive]}
+                            onPress={() => setPlanchaIdx(active ? null : idx)}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={[s.planchaMarca, active && { color: '#4F46E5' }]}>{pl.marca}</Text>
+                            {pl.referencia ? (
+                              <Text style={[s.planchaRef, active && { color: '#6366F1' }]}>{pl.referencia}</Text>
+                            ) : null}
+                            {active && <View style={s.planchaCheck}><Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>✓</Text></View>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
                 )}
 
                 {/* ── Notas ── */}
@@ -408,6 +439,13 @@ const s = StyleSheet.create({
   resellerInfoIcon:{ fontSize: 24 },
   resellerInfoTitle:{ fontSize: 14, fontWeight: '700', color: '#166534' },
   resellerInfoSub: { fontSize: 12, color: '#16A34A', marginTop: 2 },
+
+  planchaGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  planchaBtn:      { position: 'relative', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', minWidth: 100 },
+  planchaBtnActive:{ backgroundColor: '#EEF2FF', borderColor: '#A5B4FC' },
+  planchaMarca:    { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  planchaRef:      { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  planchaCheck:    { position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: 8, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
 
   notasInput: { backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, fontSize: 14, color: '#0F172A', minHeight: 70 },
 

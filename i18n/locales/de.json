@@ -1074,6 +1074,7 @@
     "seleccionaProveedor": "Anbieter auswählen",
     "seleccionaSep": "Mindestens eine Separation auswählen",
     "enviarSolicitud": "Anfrage senden ({{count}} Sep.)",
+    "planchaTitle": "Platte und Referenz auswählen",
     "cerrar": "Schließen"
   },
   "legal": {

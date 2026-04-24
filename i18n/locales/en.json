@@ -1078,6 +1078,7 @@
     "seleccionaProveedor": "Select a supplier",
     "seleccionaSep": "Select at least one separation",
     "enviarSolicitud": "Send request ({{count}} sep.)",
+    "planchaTitle": "Select plate and reference",
     "cerrar": "Close"
   },
   "legal": {

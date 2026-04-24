@@ -1074,6 +1074,7 @@
     "seleccionaProveedor": "Seleziona un fornitore",
     "seleccionaSep": "Seleziona almeno una separazione",
     "enviarSolicitud": "Invia richiesta ({{count}} sep.)",
+    "planchaTitle": "Seleziona lastra e riferimento",
     "cerrar": "Chiudi"
   },
   "legal": {
