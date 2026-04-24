@@ -341,7 +341,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
                   {sending
                     ? <ActivityIndicator size="small" color="#FFF" />
                     : <Text style={s.sendBtnText}>
-                        {t('cliches.enviarSolicitud')} ({selected.size})
+                        {t('cliches.enviarSolicitud', { count: selected.size })}
                       </Text>
                   }
                 </TouchableOpacity>
