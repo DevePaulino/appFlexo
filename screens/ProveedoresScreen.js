@@ -14,7 +14,7 @@ const TIPOS = [
   { key: 'troqueles', labelKey: 'screens.proveedores.tabTroqueles' },
 ];
 
-const EMPTY_FORM = { nombre: '', contacto: '', email: '', telefono: '', notas: '', planchas: [] };
+const EMPTY_FORM = { nombre: '', contacto: '', email: '', telefono: '', notas: '' };
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F5FD' },
@@ -141,10 +141,10 @@ export default function ProveedoresScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [planchas, setPlanchas] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  // nuevas plancha inline
   const [nuevaMarca, setNuevaMarca] = useState('');
   const [nuevaRef, setNuevaRef] = useState('');
 
@@ -177,6 +177,7 @@ export default function ProveedoresScreen() {
   const abrirNuevo = () => {
     setEditandoId(null);
     setForm(EMPTY_FORM);
+    setPlanchas([]);
     setNuevaMarca(''); setNuevaRef('');
     setSubmitted(false);
     setModalVisible(true);
@@ -190,8 +191,8 @@ export default function ProveedoresScreen() {
       email: prov.email || '',
       telefono: prov.telefono || '',
       notas: prov.notas || '',
-      planchas: Array.isArray(prov.planchas) ? prov.planchas : [],
     });
+    setPlanchas(Array.isArray(prov.planchas) ? prov.planchas : []);
     setNuevaMarca(''); setNuevaRef('');
     setSubmitted(false);
     setModalVisible(true);
@@ -201,6 +202,7 @@ export default function ProveedoresScreen() {
     setModalVisible(false);
     setEditandoId(null);
     setForm(EMPTY_FORM);
+    setPlanchas([]);
     setNuevaMarca(''); setNuevaRef('');
     setSubmitted(false);
   };
@@ -209,12 +211,12 @@ export default function ProveedoresScreen() {
     const marca = nuevaMarca.trim();
     const ref = nuevaRef.trim();
     if (!marca) return;
-    setForm((f) => ({ ...f, planchas: [...(f.planchas || []), { marca, referencia: ref }] }));
+    setPlanchas((prev) => [...prev, { marca, referencia: ref }]);
     setNuevaMarca(''); setNuevaRef('');
   };
 
   const removePlancha = (idx) => {
-    setForm((f) => ({ ...f, planchas: f.planchas.filter((_, i) => i !== idx) }));
+    setPlanchas((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const guardar = async () => {
@@ -222,15 +224,14 @@ export default function ProveedoresScreen() {
     if (!form.nombre.trim()) return;
     setGuardando(true);
     try {
-      // flush pending plancha before saving
-      const planchasPendiente = nuevaMarca.trim()
-        ? [...(form.planchas || []), { marca: nuevaMarca.trim(), referencia: nuevaRef.trim() }]
-        : form.planchas || [];
+      const planchasFinal = nuevaMarca.trim()
+        ? [...planchas, { marca: nuevaMarca.trim(), referencia: nuevaRef.trim() }]
+        : planchas;
       const url = editandoId ? `${API_BASE}/api/proveedores/${editandoId}` : `${API_BASE}/api/proveedores`;
       const method = editandoId ? 'PUT' : 'POST';
       const body = editandoId
-        ? { ...form, planchas: planchasPendiente }
-        : { ...form, planchas: planchasPendiente, tipo: tipoActivo };
+        ? { ...form, planchas: planchasFinal }
+        : { ...form, planchas: planchasFinal, tipo: tipoActivo };
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) { Alert.alert(t('common.error'), data.error || t('common.error')); return; }
@@ -428,10 +429,10 @@ export default function ProveedoresScreen() {
               <View style={s.planchasSec}>
                 <Text style={s.fieldLabel}>{t('screens.proveedores.fieldPlanchas')}</Text>
 
-                {(form.planchas || []).length === 0 && (
+                {planchas.length === 0 && (
                   <Text style={s.planchaEmptyText}>{t('screens.proveedores.planchasVacio')}</Text>
                 )}
-                {(form.planchas || []).map((p, i) => (
+                {planchas.map((p, i) => (
                   <View key={i} style={s.planchaRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.planchaRowText}>{p.marca}</Text>
