@@ -5924,6 +5924,22 @@ def update_proveedor(proveedor_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/proveedores/<proveedor_id>', methods=['GET'])
+def get_proveedor(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores', empresa_id)
+        doc = col.find_one({'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        doc['_id'] = str(doc['_id'])
+        return jsonify({'proveedor': doc}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/proveedores/<proveedor_id>', methods=['DELETE'])
 def delete_proveedor(proveedor_id):
     try:

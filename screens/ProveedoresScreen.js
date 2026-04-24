@@ -183,19 +183,33 @@ export default function ProveedoresScreen() {
     setModalVisible(true);
   };
 
-  const abrirEditar = (prov) => {
+  const abrirEditar = async (prov) => {
     setEditandoId(prov._id);
-    setForm({
-      nombre: prov.nombre || '',
-      contacto: prov.contacto || '',
-      email: prov.email || '',
-      telefono: prov.telefono || '',
-      notas: prov.notas || '',
-    });
-    setPlanchas(Array.isArray(prov.planchas) ? prov.planchas : []);
     setNuevaMarca(''); setNuevaRef('');
     setSubmitted(false);
     setModalVisible(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/proveedores/${prov._id}`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      const p = data.proveedor || prov;
+      setForm({
+        nombre: p.nombre || '',
+        contacto: p.contacto || '',
+        email: p.email || '',
+        telefono: p.telefono || '',
+        notas: p.notas || '',
+      });
+      setPlanchas(Array.isArray(p.planchas) ? p.planchas : []);
+    } catch {
+      setForm({
+        nombre: prov.nombre || '',
+        contacto: prov.contacto || '',
+        email: prov.email || '',
+        telefono: prov.telefono || '',
+        notas: prov.notas || '',
+      });
+      setPlanchas(Array.isArray(prov.planchas) ? prov.planchas : []);
+    }
   };
 
   const cerrarModal = () => {
