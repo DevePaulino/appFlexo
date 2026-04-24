@@ -2847,6 +2847,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                 {confirmingDeleteArchivo === pdfProduccionFile2.id ? (
                                   <DeleteConfirmRow onCancel={() => setConfirmingDeleteArchivo(null)} onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(pdfProduccionFile2.id); }} />
                                 ) : (
+                                  <>
                                   <View style={styles.pdfProduccionFileBtns}>
                                     <TouchableOpacity style={styles.pdfProduccionFileBtn} onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${pdfProduccionFile2.id}`, '_blank'); }}>
                                       <Text style={styles.pdfProduccionFileBtnText}>↓</Text>
@@ -2868,6 +2869,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>{t('cliches.modalTitle')}</Text>
                                     </TouchableOpacity>
                                   )}
+                                  </>
                                 )}
                               </>
                             ) : (
