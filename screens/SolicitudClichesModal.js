@@ -95,7 +95,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
     try {
       const [sepData, provData] = await Promise.all([
         apiFetch(`/api/pedidos/${pedidoId}/separaciones-repetidora`),
-        isResellerClient ? Promise.resolve({ proveedores: [] }) : apiFetch('/api/proveedores-grabados'),
+        isResellerClient ? Promise.resolve({ proveedores: [] }) : apiFetch('/api/proveedores?tipo=cliches'),
       ]);
       setSeparaciones(sepData.separaciones || []);
       setArchivoId(sepData.archivo_id || null);

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './navigationRef';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,7 @@ import { C, paperThemeColors } from './screens/theme';
 import { useTranslation } from 'react-i18next';
 import { initI18n, changeLanguage, LANGUAGES } from './i18n/index';
 import { usePermission } from './screens/usePermission';
+import { setTabNavigate } from './tabNavigationStore';
 
 import TrabajoScreen from './screens/TrabajoScreen';
 import MachinasScreen from './screens/MachinasScreen';
@@ -30,6 +32,7 @@ import ModulosScreen from './screens/ModulosScreen';
 import AuthHomeScreen from './screens/AuthHomeScreen';
 import BillingScreen from './screens/BillingScreen';
 import FormBuilderScreen from './screens/FormBuilderScreen';
+import ProveedoresScreen from './screens/ProveedoresScreen';
 import SuperAdminScreen from './screens/SuperAdminScreen';
 import ResellerScreen from './screens/ResellerScreen';
 import CookieBanner from './components/CookieBanner';
@@ -78,6 +81,7 @@ const buildActivosSubmenu = (t) => [
   { key: 'activos-materiales', label: t('nav.materiales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosMateriales' } },
   { key: 'activos-gestion-materiales', label: t('nav.gestionMateriales'), target: { type: 'stack', tab: 'Activos', route: 'ActivosGestionMateriales' } },
   { key: 'activos-troqueles', label: t('nav.troqueles'), target: { type: 'stack', tab: 'Activos', route: 'ActivosTroqueles' } },
+  { key: 'activos-proveedores', label: t('nav.proveedores'), target: { type: 'stack', tab: 'Activos', route: 'ActivosProveedores' } },
 ];
 
 const linking = {
@@ -96,6 +100,7 @@ const linking = {
               ActivosMateriales: 'activos/materiales',
               ActivosGestionMateriales: 'activos/gestion-materiales',
               ActivosTroqueles: 'activos/troqueles',
+              ActivosProveedores: 'activos/proveedores',
               ActivosUsuariosRoles: 'activos/usuarios-roles',
             },
           },
@@ -807,6 +812,10 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   // Active screen inside the nested stack (e.g. 'ActivosClientes', 'SettingsImpresion')
   const activeNestedRoute = activeRoute?.state?.routes?.[activeRoute.state?.index ?? 0]?.name ?? null;
 
+  React.useEffect(() => {
+    setTabNavigate((tab, params) => navigation.navigate(tab, params));
+  }, [navigation]);
+
   const handleTabPress = (route, isFocused) => {
     const isDropdown = DROPDOWN_TABS.includes(route.name);
     if (isDropdown) {
@@ -988,6 +997,10 @@ function ActivosNavigator({ currentUser }) {
         children={(props) => <TroquelessScreen {...props} currentUser={currentUser} />}
       />
       <ActivosStack.Screen
+        name="ActivosProveedores"
+        children={(props) => <ProveedoresScreen {...props} currentUser={currentUser} />}
+      />
+      <ActivosStack.Screen
         name="ActivosUsuariosRoles"
         initialParams={{ section: 'usuarios-roles' }}
         children={(props) => <ConfigScreen {...props} currentUser={currentUser} />}
@@ -1000,6 +1013,7 @@ function HomeTabs({ initialRouteName, onTabChange, onLogout, currentUser, onAvat
   const { t } = useTranslation();
   return (
     <Tab.Navigator
+      id="HomeTabs"
       tabBar={(props) => <TopTabsWithSettingsSubmenu {...props} onTabChange={onTabChange} onLogout={onLogout} currentUser={currentUser} onAvatarUpdate={onAvatarUpdate} />}
       screenOptions={{
         tabBarStyle: { display: 'none' },
@@ -1848,7 +1862,7 @@ export default function App() {
     <ClientesProvider authUser={authUser}>
     <PedidosProvider>
       {/* ActiveRoleSwitcher removed: left-side control restored in ConfigScreen */}
-      <NavigationContainer linking={linking}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator screenOptions={{ animation: 'none' }}>
           {!authUser ? (
             <Stack.Screen

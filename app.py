@@ -5824,6 +5824,111 @@ def delete_proveedor_grabado(proveedor_id):
 
 
 # ═══════════════════════════════════════════════════════════════
+# PROVEEDORES UNIFICADO (tipo: cliches, troqueles, …)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/proveedores', methods=['OPTIONS'])
+def options_proveedores():
+    return make_response('', 200)
+
+@app.route('/api/proveedores/<proveedor_id>', methods=['OPTIONS'])
+def options_proveedor(proveedor_id):
+    return make_response('', 200)
+
+@app.route('/api/proveedores', methods=['GET'])
+def get_proveedores():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        tipo = request.args.get('tipo', '').strip()
+        col = get_empresa_collection('proveedores', empresa_id)
+        query = {'empresa_id': empresa_id}
+        if tipo:
+            query['tipo'] = tipo
+        docs = list(col.find(query).sort('nombre', 1))
+        for doc in docs:
+            doc['_id'] = str(doc['_id'])
+        return jsonify({'proveedores': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/proveedores', methods=['POST'])
+def create_proveedor():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        tipo = (data.get('tipo') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre es obligatorio'}), 400
+        if not tipo:
+            return jsonify({'error': 'El tipo de proveedor es obligatorio'}), 400
+        col = get_empresa_collection('proveedores', empresa_id)
+        doc = {
+            'empresa_id': empresa_id,
+            'tipo': tipo,
+            'nombre': nombre,
+            'contacto': (data.get('contacto') or '').strip(),
+            'telefono': (data.get('telefono') or '').strip(),
+            'email': (data.get('email') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_alta': datetime.utcnow().isoformat(),
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'proveedor': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/proveedores/<proveedor_id>', methods=['PUT'])
+def update_proveedor(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        col = get_empresa_collection('proveedores', empresa_id)
+        update = {}
+        for field in ['nombre', 'contacto', 'telefono', 'email', 'notas']:
+            if field in data:
+                update[field] = (data[field] or '').strip()
+        if not update:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+        if 'nombre' in update and not update['nombre']:
+            return jsonify({'error': 'El nombre no puede estar vacío'}), 400
+        result = col.update_one(
+            {'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id},
+            {'$set': update}
+        )
+        if result.matched_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/proveedores/<proveedor_id>', methods=['DELETE'])
+def delete_proveedor(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores', empresa_id)
+        result = col.delete_one({'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
 # SOLICITUD DE CLICHÉS
 # ═══════════════════════════════════════════════════════════════
 
