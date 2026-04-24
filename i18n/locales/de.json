@@ -15,7 +15,8 @@
     "pedidosConfig": "Auftragseinstellungen",
     "modulos": "Module",
     "billing": "Abrechnung",
-    "formBuilder": "Formular-Builder"
+    "formBuilder": "Formular-Builder",
+    "ayuda": "Hilfe"
   },
   "user": {
     "changePhoto": "Profilfoto ändern",
@@ -842,7 +843,7 @@
       "cmykNegro": "Schwarz",
       "artesTitle": "Kundendateien",
       "sinArtes": "Keine Kundendateien",
-      "eskoTitle": "Container",
+      "pdf-produccionTitle": "Container",
       "unitarioTitle": "Einzeln",
       "sinUnitario": "Kein Einzel-PDF — laden Sie die erste Version hoch",
       "separacionesTitle": "Farbauszüge",
@@ -910,8 +911,8 @@
       "comparadorPlaceholderNumero": "Auftragsnr.",
       "comparadorPlaceholderCliente": "Kunde",
       "comparadorPlaceholderReferencia": "Referenz",
-      "eskoGenerarBtn": "Generieren",
-      "eskoSubirBtn": "Hochladen",
+      "pdf-produccionGenerarBtn": "Generieren",
+      "pdf-produccionSubirBtn": "Hochladen",
       "historialImpresionesTitle": "Druckverlauf",
       "tabHistoricoImpresiones": "Druckverlauf",
       "sinHistorialImpresiones": "Keine Drucke für diesen Auftrag erfasst",
@@ -1078,7 +1079,7 @@
         },
         {
           "title": "3. Nutzerpflichten",
-          "body": "· Den Dienst gesetzeskonform und gemäß diesen Bedingungen nutzen.\n· Wahrheitsgemäße Angaben bei der Registrierung machen.\n· Zugang nicht an Unbefugte weitergeben.\n· Unbefugte Nutzung des Kontos unverzüglich melden."
+          "body": "· Den Dienst gesetzpdf-produccionnform und gemäß diesen Bedingungen nutzen.\n· Wahrheitsgemäße Angaben bei der Registrierung machen.\n· Zugang nicht an Unbefugte weitergeben.\n· Unbefugte Nutzung des Kontos unverzüglich melden."
         },
         {
           "title": "4. Verbotene Nutzungen",
@@ -1205,7 +1206,21 @@
     "autoRechargePack": "Paket für automatische Aufladung",
     "packLabel": "{{credits}} Credits — {{price}} €",
     "autoRechargeSave": "Konfiguration speichern",
-    "autoRechargeSaved": "Konfiguration gespeichert"
+    "autoRechargeSaved": "Konfiguration gespeichert",
+    "consumoMesTitle": "📊 Monatsverbrauch — {{mes}}",
+    "cuotaMensualFija": "Monatliche Grundgebühr",
+    "descuentoAplicado": "-{{n}}% Rabatt angewendet",
+    "discountBadge": "-{{n}}% Rabatt",
+    "almacenamientoPDF": "PDF-Speicher",
+    "storageAccumHint": "{{gb}} GB × {{rate}} €/GB · kumulativ",
+    "storageDetailHint": "{{gb}} GB × {{rate}} €/GB",
+    "totalEstimadoMes": "Geschätzter Gesamtbetrag diesen Monat",
+    "pedidosEnCuota": "Aufträge und Funktionen im Plan enthalten",
+    "creditosConsumidos": "Verbrauchte Credits",
+    "sinConsumoEsteMes": "Kein Verbrauch diesen Monat erfasst",
+    "creditosConsumedHint": "{{n}} Credits verbraucht",
+    "discountBadgeLabel": "🏷️ -{{n}}% Rabatt angewendet",
+    "discountPriceDetail": "({{base}} € → {{final}} €/Cr)"
   },
   "formBuilder": {
     "title": "Formular-Builder",
@@ -1260,5 +1275,110 @@
     "save": "Speichern",
     "moveToContainer": "In Abschnitt verschieben",
     "tabTroquel": "Stanzformen"
+  },
+  "help": {
+    "closeBtn": "Verstanden",
+    "presupuestos": {
+      "title": "Angebote verwenden",
+      "s1i": "📄",
+      "s1t": "Angebot erstellen",
+      "s1d": "Drücken Sie + Neu, um ein Angebot mit Kundendaten, Referenz und Druckbedingungen zu erstellen.",
+      "s2i": "🔍",
+      "s2t": "Suchen und filtern",
+      "s2d": "Nutzen Sie die Suchleiste, um Angebote nach Kunde oder Referenz zu finden.",
+      "s3i": "📊",
+      "s3t": "Statistiken",
+      "s3d": "KPIs zeigen genehmigte, ausstehende und abgelehnte Angebote in Echtzeit.",
+      "s4i": "✅",
+      "s4t": "Status",
+      "s4d": "Jedes Angebot kann Ausstehend oder Akzeptiert sein. Ändern Sie den Status nach dem Verhandlungsergebnis."
+    },
+    "pedidos": {
+      "title": "Aufträge verwenden",
+      "s1i": "➕",
+      "s1t": "Auftrag erstellen",
+      "s1d": "Drücken Sie + Neu, um einen Auftrag aus einem vorhandenen Angebot zu erstellen.",
+      "s2i": "🗂️",
+      "s2t": "Nach Status filtern",
+      "s2d": "Tabs: 'Laufend' oder 'Abgeschlossen'.",
+      "s3i": "📁",
+      "s3t": "Auftragsdetail",
+      "s3d": "Öffnen Sie einen Auftrag, um Dateien zu verwalten und den Verlauf einzusehen.",
+      "s4i": "🔄",
+      "s4t": "PDF-Vergleich",
+      "s4d": "Vergleichen Sie das PDF dieses Auftrags mit einem früheren."
+    },
+    "produccion": {
+      "title": "Produktion verwenden",
+      "s1i": "🏭",
+      "s1t": "Übersicht nach Maschine",
+      "s1d": "Jede Spalte repräsentiert eine Maschine, sortiert nach Lieferdatum.",
+      "s2i": "🔍",
+      "s2t": "Aufträge suchen",
+      "s2d": "Lokalisieren Sie schnell einen Auftrag in der Produktion.",
+      "s3i": "🎨",
+      "s3t": "Statusfarben",
+      "s3d": "Farben zeigen den Status: ausstehend, in Bearbeitung oder lieferbereit.",
+      "s4i": "🔃",
+      "s4t": "Aufträge priorisieren",
+      "s4d": "Tippen Sie auf eine Maschinenleiste, um nach ihr zu filtern. Mit genau einer ausgewählten Maschine können Sie Zeilen ziehen, um die Produktionspriorität neu zu ordnen."
+    },
+    "clientes": {
+      "title": "Kunden verwenden",
+      "s1i": "👥",
+      "s1t": "Kunden hinzufügen",
+      "s1d": "Drücken Sie + Neuer Kunde für Name, USt-IdNr., E-Mail und Kontaktdaten.",
+      "s2i": "🔍",
+      "s2t": "Suchen",
+      "s2d": "Filtern nach Name, E-Mail oder USt-IdNr.",
+      "s3i": "✏️",
+      "s3t": "Bearbeiten oder löschen",
+      "s3d": "Tippen Sie auf eine Kundenzeile, um die Daten zu bearbeiten. Löschen nur ohne verknüpfte Aufträge möglich."
+    },
+    "maquinas": {
+      "title": "Maschinen verwenden",
+      "s1i": "⚙️",
+      "s1t": "Maschinen konfigurieren",
+      "s1d": "Maschinen mit Parametern hinzufügen: Farben, Breite, Geschwindigkeit und Druckplatte.",
+      "s2i": "📐",
+      "s2t": "Druckbedingungen",
+      "s2d": "Jede Maschine definiert Bedingungen für die automatische Angebotskalkulation.",
+      "s3i": "📋",
+      "s3t": "Produktionswarteschlange",
+      "s3d": "Sehen Sie, wie viele Aufträge jeder Maschine zugewiesen sind."
+    },
+    "usuarios": {
+      "title": "Benutzer und Rollen",
+      "s1i": "👤",
+      "s1t": "Benutzer verwalten",
+      "s1d": "Benutzer mit E-Mail hinzufügen und eine Rolle zuweisen.",
+      "s2i": "🔑",
+      "s2t": "Rollen und Berechtigungen",
+      "s2d": "Benutzerdefinierte Rollen erstellen und einzelne Berechtigungen aktivieren.",
+      "s3i": "⏱",
+      "s3t": "Sitzungszeitlimit",
+      "s3d": "Maximale Inaktivitätszeit vor automatischem Abmelden konfigurieren."
+    },
+    "facturacion": {
+      "title": "Abrechnung verwenden",
+      "s1i": "💳",
+      "s1t": "Aktueller Plan",
+      "s1d": "Aktiven Plan anzeigen: Credits oder Abonnement.",
+      "s2i": "🛒",
+      "s2t": "Credits kaufen",
+      "s2d": "Paket wählen, um das Guthaben aufzuladen.",
+      "s3i": "🔄",
+      "s3t": "Auto-Aufladung",
+      "s3d": "Automatisches Aufladen unter dem konfigurierten Schwellenwert aktivieren.",
+      "s4i": "📜",
+      "s4t": "Verlauf",
+      "s4d": "Transaktionen im Bereich Verlauf einsehen."
+    },
+    "next": "Weiter",
+    "skip": "Überspringen",
+    "ayuda": "Hilfe",
+    "ayudaIntro": "Wählen Sie einen Abschnitt, um die geführte Tour zu starten. Die Tour hebt jede wichtige Komponente hervor.",
+    "ayudaSteps": "Schritte",
+    "ayudaStart": "▶ Tour"
   }
 }

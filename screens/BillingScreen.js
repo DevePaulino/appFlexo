@@ -375,7 +375,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                         </Text>
                         <View style={{ backgroundColor: '#DCFCE7', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 }}>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>
-                            -{status.billing_discount_pct}% dto.
+                            {t('billing.discountBadge', { n: status.billing_discount_pct })}
                           </Text>
                         </View>
                       </View>
@@ -428,15 +428,15 @@ export default function BillingScreen({ navigation, currentUser }) {
           {/* ── Consumo del mes (ambos planes) ─────────────────────────── */}
           {consumoMes && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>📊 Consumo del mes — {consumoMes.mes}</Text>
+              <Text style={s.sectionTitle}>{t('billing.consumoMesTitle', { mes: consumoMes.mes })}</Text>
 
               {isSub ? (
                 <>
                   <View style={s.costRow}>
                     <View style={s.costInfo}>
-                      <Text style={s.costName}>Cuota mensual fija</Text>
+                      <Text style={s.costName}>{t('billing.cuotaMensualFija')}</Text>
                       {consumoMes.billing_discount_pct > 0 && (
-                        <Text style={s.costHint}>Descuento -{consumoMes.billing_discount_pct}% aplicado</Text>
+                        <Text style={s.costHint}>{t('billing.descuentoAplicado', { n: consumoMes.billing_discount_pct })}</Text>
                       )}
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
@@ -446,9 +446,9 @@ export default function BillingScreen({ navigation, currentUser }) {
                   <View style={s.costDivider} />
                   <View style={s.costRow}>
                     <View style={s.costInfo}>
-                      <Text style={s.costName}>🗄️ Almacenamiento PDF</Text>
+                      <Text style={s.costName}>{t('billing.almacenamientoPDF')}</Text>
                       <Text style={s.costHint}>
-                        {consumoMes.storage_gb.toFixed(4)} GB × {consumoMes.storage_cost_eur_per_gb} €/GB · acumulativo
+                        {t('billing.storageAccumHint', { gb: consumoMes.storage_gb.toFixed(4), rate: consumoMes.storage_cost_eur_per_gb })}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
@@ -461,7 +461,7 @@ export default function BillingScreen({ navigation, currentUser }) {
                   {/* ── Resumen créditos → € ── */}
                   <View style={s.costRow}>
                     <View style={s.costInfo}>
-                      <Text style={s.costName}>Créditos consumidos</Text>
+                      <Text style={s.costName}>{t('billing.creditosConsumidos')}</Text>
                       <Text style={s.costHint}>
                         {consumoMes.total_creditos_mes} cr × {consumoMes.credito_price_final_eur ?? consumoMes.credito_price_eur} €/cr
                         {consumoMes.billing_discount_pct > 0 && ` · 🏷️ -${consumoMes.billing_discount_pct}%`}
@@ -496,9 +496,9 @@ export default function BillingScreen({ navigation, currentUser }) {
                   {/* ── Almacenamiento ── */}
                   <View style={s.costRow}>
                     <View style={s.costInfo}>
-                      <Text style={s.costName}>🗄️ Almacenamiento PDF</Text>
+                      <Text style={s.costName}>{t('billing.almacenamientoPDF')}</Text>
                       <Text style={s.costHint}>
-                        {consumoMes.storage_gb.toFixed(4)} GB × {consumoMes.storage_cost_eur_per_gb} €/GB
+                        {t('billing.storageDetailHint', { gb: consumoMes.storage_gb.toFixed(4), rate: consumoMes.storage_cost_eur_per_gb })}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
@@ -511,9 +511,9 @@ export default function BillingScreen({ navigation, currentUser }) {
               <View style={s.costDivider} />
               <View style={[s.costRow, { marginTop: 8 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>Total estimado este mes</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>{t('billing.totalEstimadoMes')}</Text>
                   {isSub && (
-                    <Text style={s.costHint}>Pedidos y funciones incluidos en la cuota</Text>
+                    <Text style={s.costHint}>{t('billing.pedidosEnCuota')}</Text>
                   )}
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: C.accent }}>
