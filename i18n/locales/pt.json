@@ -805,7 +805,19 @@
         "impresion": "Impressão",
         "post-impresion": "Pós-impressão",
         "oficina": "Escritório"
-      }
+      },
+      "grabadosTitle": "Fornecedores de gravados",
+      "provGrabadosTitle": "Fornecedor de gravados",
+      "provGrabadosNuevo": "+ Novo fornecedor",
+      "provGrabadosVacio": "Sem fornecedores de gravados",
+      "provGrabadosEditar": "Editar fornecedor",
+      "provGrabadosNombre": "Nome *",
+      "provGrabadosContacto": "Contacto",
+      "provGrabadosEmail": "Email",
+      "provGrabadosTelefono": "Telefone",
+      "provGrabadosNotas": "Notas",
+      "provGrabadosNombreReq": "O nome é obrigatório",
+      "provGrabadosGuardado": "Fornecedor guardado"
     },
     "pedidoDetalle": {
       "title": "Detalhe do pedido",
@@ -1010,6 +1022,33 @@
       "emailRequired": "E-mail e senha são obrigatórios",
       "guardado": "Guardado"
     }
+  },
+  "cliches": {
+    "modalTitle": "Solicitar gravados",
+    "maquina": "Máquina",
+    "material": "Material",
+    "cargandoSeparaciones": "A carregar separações...",
+    "separacionesTitle": "Separações do PDF",
+    "selAll": "Selecionar tudo",
+    "deselAll": "Desselecionar tudo",
+    "sinSeparaciones": "Nenhuma separação detetada",
+    "sinSeparacionesSub": "O PDF da repetidora não contém informação de separações.",
+    "proveedorTitle": "Fornecedor de gravados",
+    "resellerFabricante": "O revendedor é o fabricante de chapas",
+    "resellerFabricanteSub": "O pedido será enviado diretamente ao revendedor.",
+    "sinProveedores": "Sem fornecedores configurados",
+    "sinProveedoresSub": "Adicione um fornecedor de gravados nas definições.",
+    "sinEmail": "Sem email configurado",
+    "notasTitle": "Notas adicionais",
+    "notasPlaceholder": "Instruções especiais, acabamentos, urgência...",
+    "enviado": "Pedido enviado",
+    "emailEnviado": "Email enviado ao fornecedor",
+    "emailNoEnviado": "Pedido registado (email não enviado)",
+    "verEnlaceDescarga": "Ver ligação de download",
+    "seleccionaProveedor": "Selecione um fornecedor",
+    "seleccionaSep": "Selecione pelo menos uma separação",
+    "enviarSolicitud": "Enviar pedido ({{count}} sep.)",
+    "cerrar": "Fechar"
   },
   "legal": {
     "consentPre": "Ao criar uma conta, aceita os",

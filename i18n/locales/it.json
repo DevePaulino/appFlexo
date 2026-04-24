@@ -805,7 +805,19 @@
         "impresion": "Stampa",
         "post-impresion": "Post-stampa",
         "oficina": "Ufficio"
-      }
+      },
+      "grabadosTitle": "Fornitori di cliché",
+      "provGrabadosTitle": "Fornitore di cliché",
+      "provGrabadosNuevo": "+ Nuovo fornitore",
+      "provGrabadosVacio": "Nessun fornitore di cliché",
+      "provGrabadosEditar": "Modifica fornitore",
+      "provGrabadosNombre": "Nome *",
+      "provGrabadosContacto": "Contatto",
+      "provGrabadosEmail": "Email",
+      "provGrabadosTelefono": "Telefono",
+      "provGrabadosNotas": "Note",
+      "provGrabadosNombreReq": "Il nome è obbligatorio",
+      "provGrabadosGuardado": "Fornitore salvato"
     },
     "pedidoDetalle": {
       "title": "Dettaglio ordine",
@@ -1010,6 +1022,33 @@
       "emailRequired": "E-mail e password sono obbligatori",
       "guardado": "Salvato"
     }
+  },
+  "cliches": {
+    "modalTitle": "Richiedi cliché",
+    "maquina": "Macchina",
+    "material": "Materiale",
+    "cargandoSeparaciones": "Caricamento separazioni...",
+    "separacionesTitle": "Separazioni del PDF",
+    "selAll": "Seleziona tutto",
+    "deselAll": "Deseleziona tutto",
+    "sinSeparaciones": "Nessuna separazione rilevata",
+    "sinSeparacionesSub": "Il PDF della ripetitrice non contiene informazioni sulle separazioni.",
+    "proveedorTitle": "Fornitore di cliché",
+    "resellerFabricante": "Il rivenditore è il produttore di lastre",
+    "resellerFabricanteSub": "La richiesta verrà inviata direttamente al rivenditore.",
+    "sinProveedores": "Nessun fornitore configurato",
+    "sinProveedoresSub": "Aggiungi un fornitore di cliché nelle impostazioni.",
+    "sinEmail": "Nessuna email configurata",
+    "notasTitle": "Note aggiuntive",
+    "notasPlaceholder": "Istruzioni speciali, finiture, urgenza...",
+    "enviado": "Richiesta inviata",
+    "emailEnviado": "Email inviata al fornitore",
+    "emailNoEnviado": "Richiesta registrata (email non inviata)",
+    "verEnlaceDescarga": "Visualizza link di download",
+    "seleccionaProveedor": "Seleziona un fornitore",
+    "seleccionaSep": "Seleziona almeno una separazione",
+    "enviarSolicitud": "Invia richiesta ({{count}} sep.)",
+    "cerrar": "Chiudi"
   },
   "legal": {
     "consentPre": "Creando un account accetti i",

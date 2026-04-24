@@ -805,7 +805,19 @@
         "impresion": "Impression",
         "post-impresion": "Post-impression",
         "oficina": "Bureau"
-      }
+      },
+      "grabadosTitle": "Fournisseurs de clichés",
+      "provGrabadosTitle": "Fournisseur de clichés",
+      "provGrabadosNuevo": "+ Nouveau fournisseur",
+      "provGrabadosVacio": "Aucun fournisseur de clichés",
+      "provGrabadosEditar": "Modifier le fournisseur",
+      "provGrabadosNombre": "Nom *",
+      "provGrabadosContacto": "Contact",
+      "provGrabadosEmail": "Email",
+      "provGrabadosTelefono": "Téléphone",
+      "provGrabadosNotas": "Notes",
+      "provGrabadosNombreReq": "Le nom est obligatoire",
+      "provGrabadosGuardado": "Fournisseur enregistré"
     },
     "pedidoDetalle": {
       "title": "Détail de la commande",
@@ -1010,6 +1022,33 @@
       "emailRequired": "L'e-mail et le mot de passe sont obligatoires",
       "guardado": "Enregistré"
     }
+  },
+  "cliches": {
+    "modalTitle": "Demander des clichés",
+    "maquina": "Machine",
+    "material": "Matériau",
+    "cargandoSeparaciones": "Chargement des séparations...",
+    "separacionesTitle": "Séparations du PDF",
+    "selAll": "Tout sélectionner",
+    "deselAll": "Tout désélectionner",
+    "sinSeparaciones": "Aucune séparation détectée",
+    "sinSeparacionesSub": "Le PDF de la répétidora ne contient pas d'informations de séparation.",
+    "proveedorTitle": "Fournisseur de clichés",
+    "resellerFabricante": "Le revendeur est le fabricant de plaques",
+    "resellerFabricanteSub": "La demande sera envoyée directement au revendeur.",
+    "sinProveedores": "Aucun fournisseur configuré",
+    "sinProveedoresSub": "Ajoutez un fournisseur de clichés dans les paramètres.",
+    "sinEmail": "Aucun e-mail configuré",
+    "notasTitle": "Notes supplémentaires",
+    "notasPlaceholder": "Instructions spéciales, finitions, urgence...",
+    "enviado": "Demande envoyée",
+    "emailEnviado": "E-mail envoyé au fournisseur",
+    "emailNoEnviado": "Demande enregistrée (e-mail non envoyé)",
+    "verEnlaceDescarga": "Voir le lien de téléchargement",
+    "seleccionaProveedor": "Sélectionnez un fournisseur",
+    "seleccionaSep": "Sélectionnez au moins une séparation",
+    "enviarSolicitud": "Envoyer la demande ({{count}} sép.)",
+    "cerrar": "Fermer"
   },
   "legal": {
     "consentPre": "En créant un compte, vous acceptez les",

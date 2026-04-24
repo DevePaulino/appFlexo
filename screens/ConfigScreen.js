@@ -1092,6 +1092,15 @@ export default function ConfigScreen({ route, currentUser }) {
   const [estadoDestinoMigracion, setEstadoDestinoMigracion] = useState(null);
   const [migrandoEstados, setMigrandoEstados] = useState(false);
 
+  // Proveedores de grabados
+  const isResellerClient = Boolean(currentUser?.reseller_id);
+  const [provGrabados, setProvGrabados] = useState([]);
+  const [provGrabadosLoading, setProvGrabadosLoading] = useState(false);
+  const [provGrabadosForm, setProvGrabadosForm] = useState(null); // null | { _id?, nombre, contacto, telefono, email, notas }
+  const [provGrabadosSaving, setProvGrabadosSaving] = useState(false);
+  const [provGrabadosMsg, setProvGrabadosMsg] = useState(null);
+  const [confirmDeleteProv, setConfirmDeleteProv] = useState(null);
+
   const showUsuariosRoles = section === 'all' || section === 'usuarios-roles';
   const showCreditos = section === 'all' || section === 'creditos';
   
@@ -1233,6 +1242,48 @@ export default function ConfigScreen({ route, currentUser }) {
 
   const cargarEstadoRules = recargarSettings;
 
+  const cargarProvGrabados = async () => {
+    if (isResellerClient) return;
+    setProvGrabadosLoading(true);
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/api/proveedores-grabados`, { headers });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setProvGrabados(data.proveedores || []);
+    } catch (e) {}
+    setProvGrabadosLoading(false);
+  };
+
+  const guardarProvGrabado = async () => {
+    if (!provGrabadosForm) return;
+    const nombre = (provGrabadosForm.nombre || '').trim();
+    if (!nombre) { setProvGrabadosMsg({ type: 'error', text: t('screens.config.provGrabadosNombreReq') }); return; }
+    setProvGrabadosSaving(true); setProvGrabadosMsg(null);
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+      const isEdit = Boolean(provGrabadosForm._id);
+      const url = isEdit ? `${API_BASE}/api/proveedores-grabados/${provGrabadosForm._id}` : `${API_BASE}/api/proveedores-grabados`;
+      const res = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers, body: JSON.stringify(provGrabadosForm) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Error');
+      setProvGrabadosMsg({ type: 'ok', text: t('screens.config.provGrabadosGuardado') });
+      setTimeout(() => { setProvGrabadosForm(null); setProvGrabadosMsg(null); cargarProvGrabados(); }, 800);
+    } catch (e) { setProvGrabadosMsg({ type: 'error', text: e.message }); }
+    setProvGrabadosSaving(false);
+  };
+
+  const eliminarProvGrabado = async (id) => {
+    try {
+      const token = global.__MIAPP_ACCESS_TOKEN;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await fetch(`${API_BASE}/api/proveedores-grabados/${id}`, { method: 'DELETE', headers });
+      setConfirmDeleteProv(null);
+      cargarProvGrabados();
+    } catch (e) {}
+  };
+
   const actualizarModoCreacion = async (modo) => {
     try {
       setGuardandoModoCreacion(true);
@@ -1304,6 +1355,7 @@ export default function ConfigScreen({ route, currentUser }) {
     cargarUsuarios();
     cargarSessionTimeout();
     cargarBillingConfig();
+    cargarProvGrabados();
   };
 
   useEffect(() => {
@@ -3033,6 +3085,130 @@ export default function ConfigScreen({ route, currentUser }) {
       )}
 
       
+
+      {/* ── Proveedores de grabados (solo clientes NO revendedor) ── */}
+      {!isResellerClient && (showImpresion || section === 'all') && (
+      <View style={styles.blockContainer}>
+        {showBlockTitles && <Text style={styles.groupTitle}>{t('screens.config.grabadosTitle')}</Text>}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { flex: 1 }]}>{t('screens.config.provGrabadosTitle')}</Text>
+            {!provGrabadosForm && (
+              <TouchableOpacity
+                style={{ backgroundColor: '#4F46E5', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 }}
+                onPress={() => setProvGrabadosForm({ nombre: '', contacto: '', telefono: '', email: '', notas: '' })}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 13 }}>+ {t('screens.config.provGrabadosNuevo')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Lista de proveedores */}
+          {provGrabadosLoading ? (
+            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 12 }} />
+          ) : provGrabados.length === 0 && !provGrabadosForm ? (
+            <Text style={styles.muted}>{t('screens.config.provGrabadosVacio')}</Text>
+          ) : (
+            provGrabados.map((prov) => (
+              <View key={prov._id} style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, marginBottom: 8, backgroundColor: '#F8FAFC' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>{prov.nombre}</Text>
+                    {prov.contacto ? <Text style={styles.muted}>{prov.contacto}</Text> : null}
+                    {prov.email ? <Text style={[styles.muted, { color: '#4F46E5' }]}>{prov.email}</Text> : null}
+                    {prov.telefono ? <Text style={styles.muted}>📞 {prov.telefono}</Text> : null}
+                    {prov.notas ? <Text style={[styles.muted, { marginTop: 4 }]}>{prov.notas}</Text> : null}
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#EEF2FF', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                      onPress={() => setProvGrabadosForm({ ...prov })}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#4F46E5' }}>✎</Text>
+                    </TouchableOpacity>
+                    {confirmDeleteProv === prov._id ? (
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#DC2626', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                          onPress={() => eliminarProvGrabado(prov._id)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFF' }}>✓ {t('common.confirm')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#F1F5F9', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                          onPress={() => setConfirmDeleteProv(null)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                        onPress={() => setConfirmDeleteProv(prov._id)}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#DC2626' }}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+
+          {/* Formulario nuevo / edición */}
+          {provGrabadosForm && (
+            <View style={{ borderWidth: 1.5, borderColor: '#C7D2FE', borderRadius: 12, padding: 14, backgroundColor: '#EEF2FF', marginTop: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginBottom: 12 }}>
+                {provGrabadosForm._id ? t('screens.config.provGrabadosEditar') : t('screens.config.provGrabadosNuevo')}
+              </Text>
+              {[
+                { key: 'nombre',   label: t('screens.config.provGrabadosNombre'),   req: true },
+                { key: 'contacto', label: t('screens.config.provGrabadosContacto')},
+                { key: 'email',    label: t('screens.config.provGrabadosEmail'),     kb: 'email-address' },
+                { key: 'telefono', label: t('screens.config.provGrabadosTelefono'), kb: 'phone-pad' },
+                { key: 'notas',    label: t('screens.config.provGrabadosNotas'),    multi: true },
+              ].map(({ key, label, req, kb, multi }) => (
+                <View key={key} style={{ marginBottom: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#4338CA', marginBottom: 3 }}>
+                    {label}{req ? ' *' : ''}
+                  </Text>
+                  <TextInput
+                    style={{ backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#C7D2FE', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#0F172A', ...(multi ? { minHeight: 60, textAlignVertical: 'top' } : {}) }}
+                    value={provGrabadosForm[key] || ''}
+                    onChangeText={(v) => setProvGrabadosForm((f) => ({ ...f, [key]: v }))}
+                    keyboardType={kb || 'default'}
+                    autoCapitalize={kb === 'email-address' ? 'none' : 'sentences'}
+                    multiline={multi}
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+              ))}
+              {provGrabadosMsg && (
+                <View style={{ borderRadius: 8, padding: 8, marginBottom: 8, backgroundColor: provGrabadosMsg.type === 'ok' ? '#F0FDF4' : '#FEF2F2', borderWidth: 1, borderColor: provGrabadosMsg.type === 'ok' ? '#BBF7D0' : '#FECACA' }}>
+                  <Text style={{ fontSize: 13, color: provGrabadosMsg.type === 'ok' ? '#166534' : '#DC2626', fontWeight: '600' }}>{provGrabadosMsg.text}</Text>
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 10, alignItems: 'center', opacity: provGrabadosSaving ? 0.6 : 1 }}
+                  onPress={guardarProvGrabado} disabled={provGrabadosSaving}
+                >
+                  {provGrabadosSaving
+                    ? <ActivityIndicator size="small" color="#FFF" />
+                    : <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>{t('common.save')}</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: '#F1F5F9', borderRadius: 8, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
+                  onPress={() => { setProvGrabadosForm(null); setProvGrabadosMsg(null); }}
+                >
+                  <Text style={{ fontWeight: '700', fontSize: 14, color: '#64748B' }}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+      )}
 
       {showImpresion && (
       <View style={styles.blockContainer}>

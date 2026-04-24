@@ -809,7 +809,19 @@
         "impresion": "Press",
         "post-impresion": "Post-press",
         "oficina": "Office"
-      }
+      },
+      "grabadosTitle": "Plate suppliers",
+      "provGrabadosTitle": "Plate supplier",
+      "provGrabadosNuevo": "+ New supplier",
+      "provGrabadosVacio": "No plate suppliers",
+      "provGrabadosEditar": "Edit supplier",
+      "provGrabadosNombre": "Name *",
+      "provGrabadosContacto": "Contact",
+      "provGrabadosEmail": "Email",
+      "provGrabadosTelefono": "Phone",
+      "provGrabadosNotas": "Notes",
+      "provGrabadosNombreReq": "Name is required",
+      "provGrabadosGuardado": "Supplier saved"
     },
     "pedidoDetalle": {
       "title": "Order Details",
@@ -1014,6 +1026,33 @@
       "emailRequired": "Email and password are required",
       "guardado": "Saved"
     }
+  },
+  "cliches": {
+    "modalTitle": "Request plates",
+    "maquina": "Machine",
+    "material": "Material",
+    "cargandoSeparaciones": "Loading separations...",
+    "separacionesTitle": "PDF separations",
+    "selAll": "Select all",
+    "deselAll": "Deselect all",
+    "sinSeparaciones": "No separations detected",
+    "sinSeparacionesSub": "The repetidora PDF does not contain separation information.",
+    "proveedorTitle": "Plate supplier",
+    "resellerFabricante": "The reseller is the plate manufacturer",
+    "resellerFabricanteSub": "The request will be sent directly to the reseller.",
+    "sinProveedores": "No suppliers configured",
+    "sinProveedoresSub": "Add a plate supplier in Settings.",
+    "sinEmail": "No email configured",
+    "notasTitle": "Additional notes",
+    "notasPlaceholder": "Special instructions, finishes, urgency...",
+    "enviado": "Request sent",
+    "emailEnviado": "Email sent to supplier",
+    "emailNoEnviado": "Request recorded (email not sent)",
+    "verEnlaceDescarga": "View download link",
+    "seleccionaProveedor": "Select a supplier",
+    "seleccionaSep": "Select at least one separation",
+    "enviarSolicitud": "Send request ({{count}} sep.)",
+    "cerrar": "Close"
   },
   "legal": {
     "consentPre": "By creating an account you agree to the",

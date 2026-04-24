@@ -805,7 +805,19 @@
         "impresion": "Druck",
         "post-impresion": "Weiterverarbeitung",
         "oficina": "Büro"
-      }
+      },
+      "grabadosTitle": "Klischeeanbieter",
+      "provGrabadosTitle": "Klischeeanbieter",
+      "provGrabadosNuevo": "+ Neuer Anbieter",
+      "provGrabadosVacio": "Keine Klischeeanbieter",
+      "provGrabadosEditar": "Anbieter bearbeiten",
+      "provGrabadosNombre": "Name *",
+      "provGrabadosContacto": "Kontakt",
+      "provGrabadosEmail": "E-Mail",
+      "provGrabadosTelefono": "Telefon",
+      "provGrabadosNotas": "Notizen",
+      "provGrabadosNombreReq": "Name ist erforderlich",
+      "provGrabadosGuardado": "Anbieter gespeichert"
     },
     "pedidoDetalle": {
       "title": "Auftragsdetails",
@@ -1010,6 +1022,33 @@
       "emailRequired": "E-Mail und Passwort sind erforderlich",
       "guardado": "Gespeichert"
     }
+  },
+  "cliches": {
+    "modalTitle": "Klischees anfordern",
+    "maquina": "Maschine",
+    "material": "Material",
+    "cargandoSeparaciones": "Separationen werden geladen...",
+    "separacionesTitle": "PDF-Separationen",
+    "selAll": "Alle auswählen",
+    "deselAll": "Alle abwählen",
+    "sinSeparaciones": "Keine Separationen erkannt",
+    "sinSeparacionesSub": "Das Repetidora-PDF enthält keine Separationsinformationen.",
+    "proveedorTitle": "Klischeeanbieter",
+    "resellerFabricante": "Der Wiederverkäufer ist der Plattenhersteller",
+    "resellerFabricanteSub": "Die Anfrage wird direkt an den Wiederverkäufer gesendet.",
+    "sinProveedores": "Keine Anbieter konfiguriert",
+    "sinProveedoresSub": "Fügen Sie einen Klischeeanbieter in den Einstellungen hinzu.",
+    "sinEmail": "Keine E-Mail konfiguriert",
+    "notasTitle": "Zusätzliche Hinweise",
+    "notasPlaceholder": "Besondere Anweisungen, Veredelungen, Dringlichkeit...",
+    "enviado": "Anfrage gesendet",
+    "emailEnviado": "E-Mail an Anbieter gesendet",
+    "emailNoEnviado": "Anfrage registriert (E-Mail nicht gesendet)",
+    "verEnlaceDescarga": "Download-Link anzeigen",
+    "seleccionaProveedor": "Anbieter auswählen",
+    "seleccionaSep": "Mindestens eine Separation auswählen",
+    "enviarSolicitud": "Anfrage senden ({{count}} Sep.)",
+    "cerrar": "Schließen"
   },
   "legal": {
     "consentPre": "Mit der Erstellung eines Kontos stimmen Sie den",

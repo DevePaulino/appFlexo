@@ -20,6 +20,7 @@ import { useModulos } from '../ModulosContext';
 import NuevoPedidoModal from './NuevoPedidoModal';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { CanalesGrid, deltaColor } from '../components/CondicionesView';
+import SolicitudClichesModal from './SolicitudClichesModal';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -1230,8 +1231,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // ── Contenedores Esko ───────────────────────────────────────────────────
-  eskoActionsRow: {
+  // ── Contenedores PDF-Produccion ───────────────────────────────────────────────────
+  pdfProduccionActionsRow: {
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
@@ -1239,7 +1240,7 @@ const styles = StyleSheet.create({
     alignContent: 'stretch',
     alignItems: 'stretch',
   },
-  eskoToolCol: {
+  pdfProduccionToolCol: {
     flexBasis: '46%',
     flexGrow: 1,
     minWidth: 90,
@@ -1249,7 +1250,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  eskoCardHeader: {
+  pdfProduccionCardHeader: {
     paddingHorizontal: 10,
     paddingVertical: 8,
     backgroundColor: '#F8FAFC',
@@ -1257,14 +1258,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8F0',
     alignItems: 'center',
   },
-  eskoCardLabel: {
+  pdfProduccionCardLabel: {
     fontSize: 10,
     fontWeight: '800',
     color: '#64748B',
     letterSpacing: 0.7,
     textTransform: 'uppercase',
   },
-  eskoOutputBox: {
+  pdfProduccionOutputBox: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -1273,11 +1274,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  eskoOutputBoxFilled: {
+  pdfProduccionOutputBoxFilled: {
     backgroundColor: '#F8FAFC',
     alignItems: 'flex-start',
   },
-  eskoGenerateBtn: {
+  pdfProduccionGenerateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1286,41 +1287,41 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
-  eskoGenerateBtnText: {
+  pdfProduccionGenerateBtnText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  eskoFileName: {
+  pdfProduccionFileName: {
     fontSize: 10,
     fontWeight: '600',
     color: '#0F172A',
     marginBottom: 1,
   },
-  eskoFileMeta: {
+  pdfProduccionFileMeta: {
     fontSize: 9,
     color: '#94A3B8',
     marginBottom: 5,
   },
-  eskoFileBtns: {
+  pdfProduccionFileBtns: {
     flexDirection: 'row',
     gap: 4,
     width: '100%',
   },
-  eskoFileBtn: {
+  pdfProduccionFileBtn: {
     flex: 1,
     paddingVertical: 4,
     borderRadius: 5,
     backgroundColor: '#16A34A',
     alignItems: 'center',
   },
-  eskoFileBtnText: {
+  pdfProduccionFileBtnText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
   },
-  eskoUploadBtn: {
+  pdfProduccionUploadBtn: {
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -1329,7 +1330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eskoUploadBtnText: {
+  pdfProduccionUploadBtnText: {
     fontSize: 10,
     color: '#64748B',
     fontWeight: '600',
@@ -1572,12 +1573,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [expandedHistorico, setExpandedHistorico] = useState(new Set([0]));
 
   // Archivos
-  const [archivos, setArchivos] = useState({ artes: [], unitario: [], esko: {} });
+  const [archivos, setArchivos] = useState({ artes: [], unitario: [], pdfProduccion: {} });
   const [archivosLoading, setArchivosLoading] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [uploadingArtes, setUploadingArtes] = useState(false);
   const [uploadingUnitario, setUploadingUnitario] = useState(false);
-  const [uploadingEsko, setUploadingEsko] = useState({});   // { report: bool, repetidora: bool, … }
+  const [uploadingPdfProduccion, setUploadingPdfProduccion] = useState({});
   const [pdfMeta, setPdfMeta] = useState(null);
   const [pdfMetaLoading, setPdfMetaLoading] = useState(false);
   const [pdfLightboxUrl, setPdfLightboxUrl] = useState(null);
@@ -1586,9 +1587,10 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [confirmingCancelarPedido, setConfirmingCancelarPedido] = useState(false);
   const [approvingArchivoId, setApprovingArchivoId] = useState(null);
   const [confirmingRevocarId, setConfirmingRevocarId] = useState(null);
+  const [solicitudClichesVisible, setSolicitudClichesVisible] = useState(false);
   const fileInputArtesRef      = useRef(null);
   const fileInputUnitarioRef   = useRef(null);
-  const fileInputEskoRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
+  const fileInputPdfProduccionRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
 
   // PDF Comparador
   const [comparadorAllPedidos, setComparadorAllPedidos] = useState(null);
@@ -1739,7 +1741,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
 
   useEffect(() => {
     if (!visible) {
-      setArchivos({ artes: [], unitario: [], esko: {} });
+      setArchivos({ artes: [], unitario: [], pdfProduccion: {} });
       setSelectedVersion(null);
       setActiveTab('archivos');
       setPdfLightboxUrl(null);
@@ -1931,13 +1933,13 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       const unitario = lista
         .filter((a) => a.tipo === 'unitario')
         .sort((a, b) => (a.version || 0) - (b.version || 0));
-      const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
-      const esko = {};
-      ESKO_TIPOS.forEach((tipo) => {
+      const PDF_PRODUCCION_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
+      const pdfProduccionData = {};
+      PDF_PRODUCCION_TIPOS.forEach((tipo) => {
         const found = lista.filter((a) => a.tipo === tipo);
-        esko[tipo] = found.length > 0 ? found[found.length - 1] : null;
+        pdfProduccionData[tipo] = found.length > 0 ? found[found.length - 1] : null;
       });
-      setArchivos({ artes, unitario, esko });
+      setArchivos({ artes, unitario, pdfProduccion: pdfProduccionData });
       if (unitario.length > 0) {
         const latestVersion = unitario[unitario.length - 1].version;
         setSelectedVersion((prev) => {
@@ -2001,9 +2003,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     }
   };
 
-  const handleUploadEsko = async (tipo, file) => {
+  const handleUploadPdfProduccion = async (tipo, file) => {
     if (!file) return;
-    setUploadingEsko((prev) => ({ ...prev, [tipo]: true }));
+    setUploadingPdfProduccion((prev) => ({ ...prev, [tipo]: true }));
     try {
       const formData = new FormData();
       formData.append('tipo', tipo);
@@ -2015,7 +2017,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        console.error('[uploadEsko] error body:', JSON.stringify(data));
+        console.error('[uploadPDF-Produccion] error body:', JSON.stringify(data));
         Alert.alert(t('screens.pedidoDetalle.errSubir'), data.error || t('common.error'));
         return;
       }
@@ -2023,8 +2025,8 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
     } catch (err) {
       Alert.alert(t('common.error'), err.message);
     } finally {
-      setUploadingEsko((prev) => ({ ...prev, [tipo]: false }));
-      const ref = fileInputEskoRefs.current[tipo];
+      setUploadingPdfProduccion((prev) => ({ ...prev, [tipo]: false }));
+      const ref = fileInputPdfProduccionRefs.current[tipo];
       if (ref) ref.value = '';
     }
   };
@@ -2532,7 +2534,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                       const allFiles = [
                         ...archivos.artes,
                         ...archivos.unitario,
-                        ...Object.values(archivos.esko).filter(Boolean),
+                        ...Object.values(archivos.pdfProduccion).filter(Boolean),
                       ];
                       const totalBytes = allFiles.reduce((s, f) => s + (f.tamanio || 0), 0);
                       if (totalBytes === 0) return null;
@@ -2574,7 +2576,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
               {/* ═══════════════════ TAB: ARCHIVOS ═══════════════════ */}
               {activeTab === 'archivos' && (
                 <>
-                {/* ── Grid 2x2: Unitario | Esko / Artes | Comparador ── */}
+                {/* ── Grid 2x2: Unitario | PDF-Produccion / Artes | Comparador ── */}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginRight: -10 }}>
                 <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
@@ -2802,37 +2804,37 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>{/* fin unitario sectionCard */}
                 </View>{/* fin col unitario */}
 
-                {/* ── Contenedores Esko ── */}
+                {/* ── Contenedores PDF-Produccion ── */}
                 <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 <View style={styles.sectionCard}>
                   <View style={styles.fileSectionHeader}>
-                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.eskoTitle')}</Text>
+                    <Text style={styles.filesSectionLabel}>{t('screens.pedidoDetalle.pdf-produccionTitle')}</Text>
                   </View>
-                  <View style={styles.eskoActionsRow}>
+                  <View style={styles.pdfProduccionActionsRow}>
                     {['Report', 'Repetidora', 'Trapping', 'Troquel'].map((title) => {
                       const accion2 = mapToolToAccion(title);
                       const tipoKey2 = accion2;
                       const isLoading2 = chargingAction === accion2;
-                      const isUploading2 = !!uploadingEsko[tipoKey2];
-                      const eskoFile2 = archivos.esko[tipoKey2] || null;
+                      const isUploading2 = !!uploadingPdfProduccion[tipoKey2];
+                      const pdfProduccionFile2 = archivos.pdfProduccion[tipoKey2] || null;
                       return (
-                        <View key={title} style={styles.eskoToolCol}>
-                          <View style={styles.eskoCardHeader}>
-                            <Text style={styles.eskoCardLabel}>{title}</Text>
+                        <View key={title} style={styles.pdfProduccionToolCol}>
+                          <View style={styles.pdfProduccionCardHeader}>
+                            <Text style={styles.pdfProduccionCardLabel}>{title}</Text>
                           </View>
-                          <View style={[styles.eskoOutputBox, eskoFile2 && styles.eskoOutputBoxFilled]}>
+                          <View style={[styles.pdfProduccionOutputBox, pdfProduccionFile2 && styles.pdfProduccionOutputBoxFilled]}>
                             {isUploading2 ? (
                               <ActivityIndicator size="small" color="#475569" />
-                            ) : eskoFile2 ? (
+                            ) : pdfProduccionFile2 ? (
                               <>
-                                {eskoFile2.nombre_original?.toLowerCase().endsWith('.pdf') && (() => {
+                                {pdfProduccionFile2.nombre_original?.toLowerCase().endsWith('.pdf') && (() => {
                                   const tok2 = global.__MIAPP_ACCESS_TOKEN ? `?token=${encodeURIComponent(global.__MIAPP_ACCESS_TOKEN)}` : '';
-                                  const thumbUrl2 = `${API_BASE}/api/archivos/${eskoFile2.id}/thumbnail${tok2}`;
+                                  const thumbUrl2 = `${API_BASE}/api/archivos/${pdfProduccionFile2.id}/thumbnail${tok2}`;
                                   return (
                                     <View style={{ height: 80, width: '100%', marginBottom: 6, borderRadius: 4, overflow: 'hidden', position: 'relative', backgroundColor: '#F8FAFC' }}>
                                       <Image source={{ uri: thumbUrl2 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
-                                      <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => openViewOnlyLightbox(eskoFile2.id)} activeOpacity={0.85} disabled={cmpViewOnlyLoading !== null} />
-                                      {cmpViewOnlyLoading === eskoFile2.id && (
+                                      <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => openViewOnlyLightbox(pdfProduccionFile2.id)} activeOpacity={0.85} disabled={cmpViewOnlyLoading !== null} />
+                                      {cmpViewOnlyLoading === pdfProduccionFile2.id && (
                                         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center' }}>
                                           <ActivityIndicator size="small" color="#FFFFFF" />
                                         </View>
@@ -2840,41 +2842,49 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                     </View>
                                   );
                                 })()}
-                                <Text style={styles.eskoFileName} numberOfLines={1}>{eskoFile2.nombre_original}</Text>
-                                <Text style={styles.eskoFileMeta}>{formatearTamanio(eskoFile2.tamanio)}</Text>
-                                {confirmingDeleteArchivo === eskoFile2.id ? (
-                                  <DeleteConfirmRow onCancel={() => setConfirmingDeleteArchivo(null)} onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(eskoFile2.id); }} />
+                                <Text style={styles.pdfProduccionFileName} numberOfLines={1}>{pdfProduccionFile2.nombre_original}</Text>
+                                <Text style={styles.pdfProduccionFileMeta}>{formatearTamanio(pdfProduccionFile2.tamanio)}</Text>
+                                {confirmingDeleteArchivo === pdfProduccionFile2.id ? (
+                                  <DeleteConfirmRow onCancel={() => setConfirmingDeleteArchivo(null)} onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(pdfProduccionFile2.id); }} />
                                 ) : (
-                                  <View style={styles.eskoFileBtns}>
-                                    <TouchableOpacity style={styles.eskoFileBtn} onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${eskoFile2.id}`, '_blank'); }}>
-                                      <Text style={styles.eskoFileBtnText}>↓</Text>
+                                  <View style={styles.pdfProduccionFileBtns}>
+                                    <TouchableOpacity style={styles.pdfProduccionFileBtn} onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${pdfProduccionFile2.id}`, '_blank'); }}>
+                                      <Text style={styles.pdfProduccionFileBtnText}>↓</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.eskoFileBtn, { backgroundColor: '#64748B' }]} onPress={() => fileInputEskoRefs.current[tipoKey2] && fileInputEskoRefs.current[tipoKey2].click()}>
-                                      <Text style={styles.eskoFileBtnText}>↑</Text>
+                                    <TouchableOpacity style={[styles.pdfProduccionFileBtn, { backgroundColor: '#64748B' }]} onPress={() => fileInputPdfProduccionRefs.current[tipoKey2] && fileInputPdfProduccionRefs.current[tipoKey2].click()}>
+                                      <Text style={styles.pdfProduccionFileBtnText}>↑</Text>
                                     </TouchableOpacity>
                                     {canDelete && (
-                                      <TouchableOpacity style={[styles.eskoFileBtn, { backgroundColor: '#DC2626' }]} onPress={() => setConfirmingDeleteArchivo(eskoFile2.id)}>
-                                        <Text style={styles.eskoFileBtnText}>✕</Text>
+                                      <TouchableOpacity style={[styles.pdfProduccionFileBtn, { backgroundColor: '#DC2626' }]} onPress={() => setConfirmingDeleteArchivo(pdfProduccionFile2.id)}>
+                                        <Text style={styles.pdfProduccionFileBtnText}>✕</Text>
                                       </TouchableOpacity>
                                     )}
                                   </View>
+                                  {tipoKey2 === 'repetidora' && (
+                                    <TouchableOpacity
+                                      style={{ marginTop: 6, backgroundColor: '#4F46E5', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center' }}
+                                      onPress={() => setSolicitudClichesVisible(true)}
+                                    >
+                                      <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>{t('cliches.modalTitle')}</Text>
+                                    </TouchableOpacity>
+                                  )}
                                 )}
                               </>
                             ) : (
                               <>
-                                <TouchableOpacity style={[styles.eskoGenerateBtn, isLoading2 && { opacity: 0.6 }]} onPress={() => handleDescargarTool(title)} disabled={!!isLoading2}>
-                                  <Text style={styles.eskoGenerateBtnText}>{isLoading2 ? '…' : `⬇ ${t('screens.pedidoDetalle.eskoGenerarBtn')}`}</Text>
+                                <TouchableOpacity style={[styles.pdfProduccionGenerateBtn, isLoading2 && { opacity: 0.6 }]} onPress={() => handleDescargarTool(title)} disabled={!!isLoading2}>
+                                  <Text style={styles.pdfProduccionGenerateBtnText}>{isLoading2 ? '…' : `⬇ ${t('screens.pedidoDetalle.pdf-produccionGenerarBtn')}`}</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => fileInputEskoRefs.current[tipoKey2] && fileInputEskoRefs.current[tipoKey2].click()} style={styles.eskoUploadBtn}>
-                                  <Text style={styles.eskoUploadBtnText}>↑ {t('screens.pedidoDetalle.eskoSubirBtn')}</Text>
+                                <TouchableOpacity onPress={() => fileInputPdfProduccionRefs.current[tipoKey2] && fileInputPdfProduccionRefs.current[tipoKey2].click()} style={styles.pdfProduccionUploadBtn}>
+                                  <Text style={styles.pdfProduccionUploadBtnText}>↑ {t('screens.pedidoDetalle.pdf-produccionSubirBtn')}</Text>
                                 </TouchableOpacity>
                               </>
                             )}
                           </View>
                           {Platform.OS === 'web' && (
                             <input type="file" accept=".pdf" style={{ display: 'none' }}
-                              ref={(el) => { fileInputEskoRefs.current[tipoKey2] = el; }}
-                              onChange={(e) => { if (e.target.files[0]) handleUploadEsko(tipoKey2, e.target.files[0]); }}
+                              ref={(el) => { fileInputPdfProduccionRefs.current[tipoKey2] = el; }}
+                              onChange={(e) => { if (e.target.files[0]) handleUploadPdfProduccion(tipoKey2, e.target.files[0]); }}
                             />
                           )}
                         </View>
@@ -2882,7 +2892,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     })}
                   </View>
                 </View>
-                </View>{/* fin col esko */}
+                </View>{/* fin col pdf-produccion */}
 
                 {/* ── Artes Finales del Cliente ── */}
                 <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
@@ -2966,16 +2976,16 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 {/* ── Comparador de PDF ── */}
                 <View style={{ flexBasis: Platform.OS === 'web' ? '50%' : '100%', paddingRight: 10, marginBottom: 10 }}>
                 {(() => {
-                  const ESKO_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
-                  const ESKO_LABELS = { report: 'Report', repetidora: 'Repetidora', trapping: 'Trapping', troquel: 'Troquel' };
+                  const PDF_PRODUCCION_TIPOS = ['report', 'repetidora', 'trapping', 'troquel'];
+                  const PDF_PRODUCCION_LABELS = { report: 'Report', repetidora: 'Repetidora', trapping: 'Trapping', troquel: 'Troquel' };
                   const srcOptions = [
                     ...archivos.unitario.map((u) => ({ id: u.id, label: `Unitario v${u.version}` })),
-                    ...ESKO_TIPOS.filter((t) => archivos.esko[t]).map((t) => ({ id: archivos.esko[t].id, label: ESKO_LABELS[t] })),
+                    ...PDF_PRODUCCION_TIPOS.filter((t) => archivos.pdfProduccion[t]).map((t) => ({ id: archivos.pdfProduccion[t].id, label: PDF_PRODUCCION_LABELS[t] })),
                   ];
                   const targetOptions = [
                     ...comparadorTargetFiles.filter((f) => f.tipo === 'unitario').map((u) => ({ id: u.id, label: `Unitario v${u.version}` })),
-                    ...ESKO_TIPOS.filter((t) => comparadorTargetFiles.some((f) => f.tipo === t)).map((t) => ({
-                      id: comparadorTargetFiles.find((f) => f.tipo === t).id, label: ESKO_LABELS[t],
+                    ...PDF_PRODUCCION_TIPOS.filter((t) => comparadorTargetFiles.some((f) => f.tipo === t)).map((t) => ({
+                      id: comparadorTargetFiles.find((f) => f.tipo === t).id, label: PDF_PRODUCCION_LABELS[t],
                     })),
                   ];
                   const filtered = getFilteredComparadorPedidos();
@@ -3915,6 +3925,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       initialValues={editInitialValues}
       currentUser={currentUser}
       puedeCrear={canEdit}
+    />
+    <SolicitudClichesModal
+      visible={solicitudClichesVisible}
+      onClose={() => setSolicitudClichesVisible(false)}
+      pedido={pedido}
+      currentUser={currentUser}
     />
     </>
   );

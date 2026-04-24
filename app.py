@@ -5723,6 +5723,420 @@ def delete_proveedor_material(proveedor_id):
 
 
 # ═══════════════════════════════════════════════════════════════
+# PROVEEDORES DE GRABADOS (planchas / clichés)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/proveedores-grabados', methods=['OPTIONS'])
+def options_proveedores_grabados():
+    return make_response('', 200)
+
+@app.route('/api/proveedores-grabados/<proveedor_id>', methods=['OPTIONS'])
+def options_proveedor_grabado(proveedor_id):
+    return make_response('', 200)
+
+
+@app.route('/api/proveedores-grabados', methods=['GET'])
+def get_proveedores_grabados():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_grabados', empresa_id)
+        docs = list(col.find({'empresa_id': empresa_id}).sort('nombre', 1))
+        for doc in docs:
+            doc['_id'] = str(doc['_id'])
+        return jsonify({'proveedores': docs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/proveedores-grabados', methods=['POST'])
+def create_proveedor_grabado():
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        nombre = (data.get('nombre') or '').strip()
+        if not nombre:
+            return jsonify({'error': 'El nombre del proveedor es obligatorio'}), 400
+        col = get_empresa_collection('proveedores_grabados', empresa_id)
+        doc = {
+            'empresa_id': empresa_id,
+            'nombre': nombre,
+            'contacto': (data.get('contacto') or '').strip(),
+            'telefono': (data.get('telefono') or '').strip(),
+            'email': (data.get('email') or '').strip(),
+            'notas': (data.get('notas') or '').strip(),
+            'fecha_alta': datetime.utcnow().isoformat(),
+        }
+        result = col.insert_one(doc)
+        doc['_id'] = str(result.inserted_id)
+        return jsonify({'proveedor': doc}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/proveedores-grabados/<proveedor_id>', methods=['PUT'])
+def update_proveedor_grabado(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        data = request.get_json() or {}
+        col = get_empresa_collection('proveedores_grabados', empresa_id)
+        update = {}
+        for field in ['nombre', 'contacto', 'telefono', 'email', 'notas']:
+            if field in data:
+                update[field] = (data[field] or '').strip()
+        if not update:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+        if 'nombre' in update and not update['nombre']:
+            return jsonify({'error': 'El nombre no puede estar vacío'}), 400
+        result = col.update_one(
+            {'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id},
+            {'$set': update}
+        )
+        if result.matched_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/proveedores-grabados/<proveedor_id>', methods=['DELETE'])
+def delete_proveedor_grabado(proveedor_id):
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col = get_empresa_collection('proveedores_grabados', empresa_id)
+        result = col.delete_one({'_id': ObjectId(proveedor_id), 'empresa_id': empresa_id})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
+# SOLICITUD DE CLICHÉS
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/pedidos/<pedido_id>/separaciones-repetidora', methods=['GET', 'OPTIONS'])
+def get_separaciones_repetidora(pedido_id):
+    """Devuelve las separaciones del PDF de repetidora asociado al pedido."""
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+    try:
+        request_user, auth_error = require_request_user()
+        if auth_error:
+            return auth_error
+        empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+        col_arch = get_empresa_collection('pedido_archivos', empresa_id)
+        rep = col_arch.find_one(
+            {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+            sort=[('fecha_subida', -1)]
+        )
+        if not rep:
+            return jsonify({'separaciones': [], 'archivo_id': None}), 200
+        full_path = os.path.join(UPLOAD_BASE_DIR, rep['ruta_relativa'])
+        separaciones = _extraer_separaciones_pdf(full_path) if os.path.isfile(full_path) else []
+        return jsonify({'separaciones': separaciones, 'archivo_id': str(rep['_id'])}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _generar_token_descarga(archivo_id, empresa_id, dias=7):
+    """Genera un token de descarga temporal para un archivo. Devuelve el token string."""
+    import secrets
+    token = secrets.token_urlsafe(32)
+    col = get_empresa_collection('download_tokens', None)
+    col.insert_one({
+        'token': token,
+        'archivo_id': str(archivo_id),
+        'empresa_id': empresa_id,
+        'expires_at': (datetime.utcnow() + timedelta(days=dias)).isoformat(),
+        'created_at': datetime.utcnow().isoformat(),
+    })
+    return token
+
+
+@app.route('/api/descargar/<token>', methods=['GET'])
+def descargar_con_token(token):
+    """Descarga un archivo usando un token temporal (sin autenticación, para links de email)."""
+    try:
+        col = get_empresa_collection('download_tokens', None)
+        tok_doc = col.find_one({'token': token})
+        if not tok_doc:
+            return jsonify({'error': 'Enlace inválido o expirado'}), 404
+        from datetime import datetime as _dt
+        if _dt.utcnow().isoformat() > tok_doc['expires_at']:
+            col.delete_one({'token': token})
+            return jsonify({'error': 'El enlace de descarga ha expirado'}), 410
+        empresa_id = tok_doc['empresa_id']
+        archivo_id = tok_doc['archivo_id']
+        col_arch = get_empresa_collection('pedido_archivos', empresa_id)
+        try:
+            oid = ObjectId(archivo_id)
+        except Exception:
+            return jsonify({'error': 'ID de archivo inválido'}), 400
+        doc = col_arch.find_one({'_id': oid, 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Archivo no encontrado'}), 404
+        full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+        return send_file(
+            full_path,
+            mimetype=doc.get('mime_type') or 'application/pdf',
+            as_attachment=True,
+            download_name=doc.get('nombre_original') or doc['nombre_archivo'],
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _html_solicitud_cliches(empresa_nombre, pedido_ref, maquina, material,
+                             separaciones, notas, url_descarga, proveedor_nombre):
+    """Genera el HTML de la plantilla de email para solicitud de clichés."""
+    seps_html = ''
+    for sep in separaciones:
+        color = sep.get('color', '#CCCCCC')
+        nombre = sep.get('nombre', '?')
+        tipo = sep.get('tipo', '')
+        lpi = f" · {sep['lpi']} lpi" if sep.get('lpi') else ''
+        angulo = f" · {sep['angulo']}°" if sep.get('angulo') else ''
+        tipo_badge = f'<span style="font-size:10px;background:#F1F5F9;padding:2px 6px;border-radius:4px;color:#64748B;margin-left:6px">{tipo}{lpi}{angulo}</span>' if tipo else ''
+        seps_html += f'''
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle">
+            <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:{color};
+                         border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:8px"></span>
+            <strong style="color:#0F172A">{nombre}</strong>{tipo_badge}
+          </td>
+        </tr>'''
+
+    notas_section = ''
+    if notas:
+        notas_section = f'''
+        <tr><td colspan="1" style="padding:16px 24px 0">
+          <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px">Notas</p>
+          <p style="margin:0;font-size:14px;color:#475569;white-space:pre-wrap">{notas}</p>
+        </td></tr>'''
+
+    return f'''<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #E2E8F0;max-width:600px">
+
+  <!-- Header -->
+  <tr><td style="background:#1E1B4B;padding:28px 32px">
+    <p style="margin:0;font-size:22px;font-weight:800;color:#FFFFFF">🖨️ Solicitud de Clichés</p>
+    <p style="margin:6px 0 0;font-size:13px;color:#A5B4FC">{empresa_nombre}</p>
+  </td></tr>
+
+  <!-- Info -->
+  <tr><td style="padding:24px 32px 0">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding-bottom:12px;width:50%;vertical-align:top">
+          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Pedido / Referencia</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#0F172A">{pedido_ref}</p>
+        </td>
+        <td style="padding-bottom:12px;width:50%;vertical-align:top">
+          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Proveedor</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#4F46E5">{proveedor_nombre}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-bottom:12px;vertical-align:top">
+          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Máquina</p>
+          <p style="margin:0;font-size:14px;color:#334155">{maquina or '—'}</p>
+        </td>
+        <td style="padding-bottom:12px;vertical-align:top">
+          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Material</p>
+          <p style="margin:0;font-size:14px;color:#334155">{material or '—'}</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Separaciones -->
+  <tr><td style="padding:0 32px">
+    <p style="margin:16px 0 10px;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px">
+      Separaciones solicitadas ({len(separaciones)})
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">
+      {seps_html}
+    </table>
+  </td></tr>
+
+  {notas_section}
+
+  <!-- Botón descarga -->
+  <tr><td style="padding:28px 32px">
+    <p style="margin:0 0 12px;font-size:12px;color:#64748B">
+      El siguiente enlace le da acceso al PDF de repetidora de este pedido.<br>
+      <strong>El enlace expira en 7 días.</strong>
+    </p>
+    <a href="{url_descarga}"
+       style="display:inline-block;background:#4F46E5;color:#FFFFFF;text-decoration:none;
+              font-size:15px;font-weight:700;padding:14px 28px;border-radius:10px">
+      ⬇ Descargar PDF Repetidora
+    </a>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:18px 32px">
+    <p style="margin:0;font-size:12px;color:#94A3B8">
+      Enviado desde PrintForge Pro · Este mensaje es automático, no responda a este email.
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>'''
+
+
+@app.route('/api/pedidos/<pedido_id>/solicitud-cliches', methods=['GET', 'POST', 'OPTIONS'])
+def solicitud_cliches(pedido_id):
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+
+    request_user, auth_error = require_request_user()
+    if auth_error:
+        return auth_error
+    empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+
+    if request.method == 'GET':
+        try:
+            col = get_empresa_collection('solicitudes_cliches', empresa_id)
+            docs = list(col.find({'pedido_id': pedido_id, 'empresa_id': empresa_id}).sort('fecha', -1))
+            for d in docs:
+                d['_id'] = str(d['_id'])
+            return jsonify({'solicitudes': docs}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    # POST: crear solicitud y enviar email
+    try:
+        data = request.get_json() or {}
+        separaciones = data.get('separaciones') or []       # lista de dicts {nombre, tipo, color,...}
+        proveedor_id = (data.get('proveedor_id') or '').strip()  # None si es revendedor
+        proveedor_email = (data.get('proveedor_email') or '').strip()
+        proveedor_nombre = (data.get('proveedor_nombre') or '').strip()
+        notas = (data.get('notas') or '').strip()
+
+        if not separaciones:
+            return jsonify({'error': 'Selecciona al menos una separación'}), 400
+        if not proveedor_email:
+            return jsonify({'error': 'El proveedor no tiene email configurado'}), 400
+
+        # Obtener datos del pedido (maquina, material, referencia)
+        col_pedidos = get_empresa_collection('pedidos', empresa_id)
+        pedido = None
+        try:
+            pedido = col_pedidos.find_one({'_id': ObjectId(pedido_id), 'empresa_id': empresa_id})
+        except Exception:
+            pedido = col_pedidos.find_one({'pedido_id': pedido_id, 'empresa_id': empresa_id})
+        if not pedido:
+            return jsonify({'error': 'Pedido no encontrado'}), 404
+
+        dp = pedido.get('datos_presupuesto') or {}
+        maquina = str(dp.get('maquina') or pedido.get('maquina') or '').strip() or '—'
+        material = str(dp.get('material') or '').strip() or '—'
+        referencia = str(pedido.get('referencia') or pedido.get('numero_pedido') or pedido_id)
+        empresa_nombre = str(request_user.get('empresa_nombre') or request_user.get('nombre') or 'PrintForge Pro')
+
+        # Buscar el archivo repetidora para generar token
+        col_arch = get_empresa_collection('pedido_archivos', empresa_id)
+        rep = col_arch.find_one(
+            {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+            sort=[('fecha_subida', -1)]
+        )
+        url_descarga = '#'
+        if rep:
+            token = _generar_token_descarga(str(rep['_id']), empresa_id, dias=7)
+            app_base = os.environ.get('APP_BASE_URL', 'http://localhost:8080')
+            url_descarga = f'{app_base}/api/descargar/{token}'
+
+        # Guardar solicitud
+        col_sol = get_empresa_collection('solicitudes_cliches', empresa_id)
+        doc_sol = {
+            'pedido_id': pedido_id,
+            'empresa_id': empresa_id,
+            'separaciones': separaciones,
+            'proveedor_id': proveedor_id or None,
+            'proveedor_nombre': proveedor_nombre,
+            'proveedor_email': proveedor_email,
+            'maquina': maquina,
+            'material': material,
+            'notas': notas,
+            'fecha': datetime.utcnow().isoformat(),
+            'estado': 'enviada',
+        }
+        col_sol.insert_one(doc_sol)
+
+        # Enviar email
+        html_body = _html_solicitud_cliches(
+            empresa_nombre=empresa_nombre,
+            pedido_ref=referencia,
+            maquina=maquina,
+            material=material,
+            separaciones=separaciones,
+            notas=notas,
+            url_descarga=url_descarga,
+            proveedor_nombre=proveedor_nombre,
+        )
+
+        msg = EmailMessage()
+        msg['Subject'] = f'Solicitud de clichés — Pedido {referencia} · {empresa_nombre}'
+        msg['From'] = SMTP_FROM or SMTP_USER
+        msg['To'] = proveedor_email
+        msg.set_content(f'Solicitud de clichés para el pedido {referencia}. Abra este email en un cliente que soporte HTML.')
+        msg.add_alternative(html_body, subtype='html')
+
+        email_sent = False
+        email_error = None
+        if SMTP_HOST:
+            try:
+                if SMTP_USE_SSL:
+                    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                        if SMTP_USER:
+                            server.login(SMTP_USER, SMTP_PASSWORD)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                        if SMTP_USE_TLS:
+                            server.starttls()
+                        if SMTP_USER:
+                            server.login(SMTP_USER, SMTP_PASSWORD)
+                        server.send_message(msg)
+                email_sent = True
+            except Exception as e:
+                email_error = str(e)
+
+        return jsonify({
+            'ok': True,
+            'email_sent': email_sent,
+            'email_error': email_error,
+            'url_descarga': url_descarga,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
 # TROQUELES
 # ═══════════════════════════════════════════════════════════════
 

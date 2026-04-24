@@ -805,7 +805,19 @@
         "impresion": "Impresión",
         "post-impresion": "Post-impresión",
         "oficina": "Oficina"
-      }
+      },
+      "grabadosTitle": "Proveedores de grabados",
+      "provGrabadosTitle": "Proveedor de grabados",
+      "provGrabadosNuevo": "+ Nuevo proveedor",
+      "provGrabadosVacio": "Sin proveedores de grabados",
+      "provGrabadosEditar": "Editar proveedor",
+      "provGrabadosNombre": "Nombre *",
+      "provGrabadosContacto": "Contacto",
+      "provGrabadosEmail": "Email",
+      "provGrabadosTelefono": "Teléfono",
+      "provGrabadosNotas": "Notas",
+      "provGrabadosNombreReq": "El nombre es obligatorio",
+      "provGrabadosGuardado": "Proveedor guardado"
     },
     "pedidoDetalle": {
       "title": "Detalle del Pedido",
@@ -1010,6 +1022,33 @@
       "emailRequired": "Email y contraseña son obligatorios",
       "guardado": "Guardado"
     }
+  },
+  "cliches": {
+    "modalTitle": "Solicitar clichés",
+    "maquina": "Máquina",
+    "material": "Material",
+    "cargandoSeparaciones": "Cargando separaciones...",
+    "separacionesTitle": "Separaciones del PDF",
+    "selAll": "Seleccionar todo",
+    "deselAll": "Deseleccionar todo",
+    "sinSeparaciones": "Sin separaciones detectadas",
+    "sinSeparacionesSub": "El PDF de la repetidora no contiene información de separaciones.",
+    "proveedorTitle": "Proveedor de grabados",
+    "resellerFabricante": "El revendedor es el fabricante de planchas",
+    "resellerFabricanteSub": "La solicitud se enviará directamente al revendedor.",
+    "sinProveedores": "Sin proveedores configurados",
+    "sinProveedoresSub": "Añade un proveedor de grabados en Configuración.",
+    "sinEmail": "Sin email configurado",
+    "notasTitle": "Notas adicionales",
+    "notasPlaceholder": "Instrucciones especiales, acabados, urgencia...",
+    "enviado": "Solicitud enviada",
+    "emailEnviado": "Email enviado al proveedor",
+    "emailNoEnviado": "Solicitud registrada (email no enviado)",
+    "verEnlaceDescarga": "Ver enlace de descarga",
+    "seleccionaProveedor": "Selecciona un proveedor",
+    "seleccionaSep": "Selecciona al menos una separación",
+    "enviarSolicitud": "Enviar solicitud ({{count}} sep.)",
+    "cerrar": "Cerrar"
   },
   "legal": {
     "consentPre": "Al crear una cuenta aceptas los",
