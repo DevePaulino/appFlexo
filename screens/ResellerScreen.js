@@ -46,6 +46,7 @@ export default function ResellerScreen({ currentUser, onLogout }) {
 
   const [confirmBloquear, setConfirmBloquear] = useState(null);
   const [toggling, setToggling] = useState(null);
+  const [togglingRepetidora, setTogglingRepetidora] = useState(null);
 
   const [autoRecarga, setAutoRecarga] = useState(null);
   const [buyingPack, setBuyingPack] = useState(null);
@@ -100,6 +101,18 @@ export default function ResellerScreen({ currentUser, onLogout }) {
     } catch (e) { setError(e.message); }
     setToggling(null);
     setConfirmBloquear(null);
+  };
+
+  const toggleDescargaRepetidora = async (empresaId, estaActualmenteBloqueado) => {
+    setTogglingRepetidora(empresaId);
+    try {
+      await api(`/api/revendedor/clientes/${empresaId}/bloquear-descarga-repetidora`, {
+        method: 'PUT',
+        body: JSON.stringify({ bloqueado: !estaActualmenteBloqueado }),
+      });
+      load();
+    } catch (e) { setError(e.message); }
+    setTogglingRepetidora(null);
   };
 
   const load = useCallback(async (isRefresh = false) => {
@@ -321,6 +334,11 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                       <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>{t('screens.reseller.bloqueado')}</Text>
                     </View>
                   )}
+                  {c.bloquear_descarga_repetidora && (
+                    <View style={{ backgroundColor: '#FEF3C7', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: '#FDE68A' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#B45309' }}>{t('screens.reseller.descargaRepetidoraBloqueada')}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -428,6 +446,22 @@ export default function ResellerScreen({ currentUser, onLogout }) {
                     <Text style={s.editFactBtnText}>{t('screens.reseller.cambiarModo')}</Text>
                   </TouchableOpacity>
                 )}
+
+                {/* Descarga PDF repetidora */}
+                <TouchableOpacity
+                  style={[s.editFactBtn, { marginTop: 8 }, c.bloquear_descarga_repetidora && { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
+                  onPress={() => toggleDescargaRepetidora(c.empresa_id, c.bloquear_descarga_repetidora)}
+                  disabled={togglingRepetidora === c.empresa_id}
+                >
+                  {togglingRepetidora === c.empresa_id
+                    ? <ActivityIndicator size="small" color="#64748B" />
+                    : <Text style={[s.editFactBtnText, c.bloquear_descarga_repetidora && { color: '#B45309' }]}>
+                        {c.bloquear_descarga_repetidora
+                          ? t('screens.reseller.permitirDescargaRepetidora')
+                          : t('screens.reseller.bloquearDescargaRepetidora')}
+                      </Text>
+                  }
+                </TouchableOpacity>
 
                 {/* Consumo mensual */}
                 <Text style={s.txSectionLabel}>{t('screens.reseller.consumoPorMes')}</Text>

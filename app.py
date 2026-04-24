@@ -8959,6 +8959,11 @@ def descargar_archivo(archivo_id):
         doc = col.find_one({'_id': oid, 'empresa_id': empresa_id})
         if not doc:
             return jsonify({'error': 'Archivo no encontrado'}), 404
+        if doc.get('tipo') == 'repetidora':
+            col_u = get_empresa_collection('usuarios', None)
+            user_doc = col_u.find_one({'empresa_id': empresa_id, 'rol': 'administrador'})
+            if user_doc and user_doc.get('bloquear_descarga_repetidora'):
+                return jsonify({'error': 'La descarga del PDF de repetidora está bloqueada por su revendedor'}), 403
         full_path = os.path.join(UPLOAD_BASE_DIR, doc['ruta_relativa'])
         if not os.path.isfile(full_path):
             return jsonify({'error': 'Archivo no encontrado en disco'}), 404
@@ -9992,6 +9997,7 @@ def _reseller_data(reseller_eid):
             'reseller_billing_mode': billing_mode,
             'meses_activos': meses_activos,
             'bloqueado': bool(c.get('bloqueado_por_revendedor')),
+            'bloquear_descarga_repetidora': bool(c.get('bloquear_descarga_repetidora')),
         })
     # Calcular costes en euros usando tarifas del root + descuento del revendedor
     cfg = _get_superadmin_config()
@@ -10235,6 +10241,28 @@ def revendedor_desbloquear_cliente(empresa_id):
             return jsonify({'error': 'Cliente no encontrado o no pertenece a este revendedor'}), 404
         col.update_many({'empresa_id': norm_cliente}, {'$unset': {'bloqueado_por_revendedor': ''}})
         return jsonify({'ok': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/revendedor/clientes/<empresa_id>/bloquear-descarga-repetidora', methods=['PUT'])
+def revendedor_toggle_descarga_repetidora(empresa_id):
+    """El revendedor activa o desactiva la descarga del PDF de repetidora para un cliente suyo."""
+    try:
+        user, err = _require_revendedor()
+        if err: return err
+        data = request.get_json() or {}
+        bloqueado = bool(data.get('bloqueado', False))
+        col = get_empresa_collection('usuarios', None)
+        norm_reseller = normalize_empresa_id(user.get('empresa_id'))
+        norm_cliente = normalize_empresa_id(empresa_id)
+        if not col.find_one({'empresa_id': norm_cliente, 'reseller_id': norm_reseller}):
+            return jsonify({'error': 'Cliente no encontrado o no pertenece a este revendedor'}), 404
+        if bloqueado:
+            col.update_many({'empresa_id': norm_cliente}, {'$set': {'bloquear_descarga_repetidora': True}})
+        else:
+            col.update_many({'empresa_id': norm_cliente}, {'$unset': {'bloquear_descarga_repetidora': ''}})
+        return jsonify({'ok': True, 'bloqueado': bloqueado}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
