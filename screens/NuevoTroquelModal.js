@@ -29,9 +29,10 @@ export default function NuevoTroquelModal({
   puedeCrear = true,
 }) {
   const { t } = useTranslation();
-  const [baseLayoutData, setBaseLayoutData] = useState({});
-  const [camposCustom, setCamposCustom]     = useState([]);
-  const [camposExtra, setCamposExtra]       = useState({});
+  const [baseLayoutData, setBaseLayoutData]         = useState({});
+  const [camposCustom, setCamposCustom]             = useState([]);
+  const [contenedoresFormulario, setContenedores]   = useState([]);
+  const [camposExtra, setCamposExtra]               = useState({});
   const [refTroquel, setRefTroquel]           = useState('');
   const [tipoTroquel, setTipoTroquel]         = useState('regular');
   const [forma, setForma]                     = useState('Rectangular');
@@ -81,13 +82,21 @@ export default function NuevoTroquelModal({
     const token = global.__MIAPP_ACCESS_TOKEN;
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    Promise.all([
-      fetch('http://localhost:8080/api/campos-base-layout?form=troquel', { headers }).then(r => r.json()),
-      fetch('http://localhost:8080/api/campos-formulario?form=troquel', { headers }).then(r => r.json()),
-    ]).then(([dLayout, dCampos]) => {
-      setBaseLayoutData(dLayout.layout || {});
-      setCamposCustom(dCampos.campos || []);
-    }).catch(() => {});
+
+    fetch('http://localhost:8080/api/campos-base-layout?form=troquel', { headers })
+      .then(r => r.json())
+      .then(d => setBaseLayoutData(d.layout || {}))
+      .catch(() => {});
+
+    fetch('http://localhost:8080/api/campos-formulario?form=troquel', { headers })
+      .then(r => r.json())
+      .then(d => setCamposCustom(d.campos || []))
+      .catch(() => {});
+
+    fetch('http://localhost:8080/api/contenedores-formulario?form=troquel', { headers })
+      .then(r => r.json())
+      .then(d => setContenedores(d.contenedores || []))
+      .catch(() => {});
   }, [visible]);
 
   const layoutRows = (renderMap) => {
@@ -305,14 +314,28 @@ export default function NuevoTroquelModal({
               ),
             })}
 
-            {camposCustom.length > 0 && (
-              <CamposDinamicos
-                showAll
-                campos={camposCustom}
-                valores={camposExtra}
-                onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))}
-              />
-            )}
+            {[...contenedoresFormulario]
+              .sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99))
+              .map(cont => {
+                const filtered = camposCustom.filter(c => c.contenedor_id === cont.contenedor_id);
+                if (filtered.length === 0) return null;
+                return (
+                  <View key={cont.contenedor_id} style={{ marginTop: 4 }}>
+                    {cont.tipo === 'custom' && (
+                      <Text style={[styles.label, { fontSize: 14, color: '#1E1B4B', marginBottom: 6 }]}>
+                        {cont.nombre}
+                      </Text>
+                    )}
+                    <CamposDinamicos
+                      contenedorId={cont.contenedor_id}
+                      campos={camposCustom}
+                      valores={camposExtra}
+                      onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))}
+                    />
+                  </View>
+                );
+              })
+            }
           </ScrollView>
 
           {!puedeCrear && (
