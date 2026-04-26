@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Fragment } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet, Platform, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import CamposDinamicos from '../components/CamposDinamicos';
 
@@ -99,11 +99,55 @@ export default function NuevoTroquelModal({
       .catch(() => {});
   }, [visible]);
 
-  const layoutRows = (renderMap) => {
-    const withLayout = TROQUEL_BASE_DEF.map(c => {
-      const ov = baseLayoutData[c.campo_id];
-      return { ...c, col: ov?.col ?? c.col, fila: ov?.fila ?? c.fila, ancho: ov?.ancho ?? c.ancho };
-    });
+  // Renderiza un campo custom inline (mismo aspecto que los campos base)
+  const renderCustomCampo = (campo) => {
+    const id = campo.campo_id || campo.id;
+    const valor = camposExtra[id] ?? '';
+    const update = (v) => setCamposExtra(prev => ({ ...prev, [id]: v }));
+    let input;
+    switch (campo.tipo) {
+      case 'numero':
+        input = <TextInput style={styles.input} value={String(valor)} onChangeText={update} keyboardType="decimal-pad" placeholder="0" placeholderTextColor="#94A3B8" />;
+        break;
+      case 'textarea':
+        input = <TextInput style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]} value={String(valor)} onChangeText={update} multiline placeholder={campo.etiqueta} placeholderTextColor="#94A3B8" />;
+        break;
+      case 'checkbox':
+        input = <Switch value={!!valor} onValueChange={update} trackColor={{ true: '#4F46E5' }} />;
+        break;
+      case 'select':
+        input = Platform.OS === 'web'
+          ? <select style={{ width: '100%', height: 38, borderRadius: 8, border: '1.5px solid #CBD5E1', backgroundColor: '#F1F5F9', padding: '0 10px', fontSize: 14, color: '#0F172A', marginBottom: 10 }} value={String(valor)} onChange={e => update(e.target.value)}>
+              <option value="">Seleccionar…</option>
+              {(campo.opciones || []).map((op, i) => <option key={i} value={op}>{op}</option>)}
+            </select>
+          : <TextInput style={styles.input} value={String(valor)} onChangeText={update} placeholder={campo.etiqueta} placeholderTextColor="#94A3B8" />;
+        break;
+      case 'fecha':
+        input = Platform.OS === 'web'
+          ? <input type="date" style={{ width: '100%', height: 38, borderRadius: 8, border: '1.5px solid #CBD5E1', backgroundColor: '#F1F5F9', padding: '0 10px', fontSize: 14, color: '#0F172A', marginBottom: 10 }} value={String(valor)} onChange={e => update(e.target.value)} />
+          : <TextInput style={styles.input} value={String(valor)} onChangeText={update} placeholder="dd/mm/aaaa" placeholderTextColor="#94A3B8" />;
+        break;
+      default:
+        input = <TextInput style={styles.input} value={String(valor)} onChangeText={update} placeholder={campo.etiqueta} placeholderTextColor="#94A3B8" />;
+    }
+    return <View><Text style={styles.label}>{campo.etiqueta}</Text>{input}</View>;
+  };
+
+  // extraItems: campos custom que van en el mismo grid que los campos base
+  const layoutRows = (renderMap, extraItems = []) => {
+    const withLayout = [
+      ...TROQUEL_BASE_DEF.map(c => {
+        const ov = baseLayoutData[c.campo_id];
+        return { ...c, col: ov?.col ?? c.col, fila: ov?.fila ?? c.fila, ancho: ov?.ancho ?? c.ancho };
+      }),
+      ...extraItems.map(c => ({
+        campo_id: c.campo_id || c.id,
+        col: c.col ?? 0,
+        fila: c.fila ?? 0,
+        ancho: c.ancho ?? 6,
+      })),
+    ];
     withLayout.sort((a, b) => (a.fila * 100 + a.col) - (b.fila * 100 + b.col));
     const groups = {};
     withLayout.forEach(c => { (groups[c.fila] = groups[c.fila] || []).push(c); });
@@ -221,8 +265,16 @@ export default function NuevoTroquelModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {layoutRows({
-              '__base_tq_numero': (
+            {(() => {
+              const troquelCont = contenedoresFormulario.find(c => c.tipo === 'troquel');
+              const inGridCampos = troquelCont
+                ? camposCustom.filter(c => c.contenedor_id === troquelCont.contenedor_id)
+                : [];
+              const customMap = Object.fromEntries(
+                inGridCampos.map(c => [c.campo_id || c.id, renderCustomCampo(c)])
+              );
+              return layoutRows({
+                '__base_tq_numero': (
                 <View>
                   <Text style={styles.label}>Número / Referencia *</Text>
                   <TextInput style={styles.input} value={refTroquel} onChangeText={setRefTroquel} placeholder="Ej. TR-001" placeholderTextColor="#94A3B8" autoFocus />
@@ -312,20 +364,21 @@ export default function NuevoTroquelModal({
                   <TextInput style={styles.input} value={distanciaSesgado} onChangeText={setDistanciaSesgado} placeholder="Ej. 0" placeholderTextColor="#94A3B8" keyboardType="decimal-pad" />
                 </View>
               ),
-            })}
+                ...customMap,
+              }, inGridCampos);
+            })()}
 
             {[...contenedoresFormulario]
               .sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99))
+              .filter(cont => cont.tipo === 'custom')
               .map(cont => {
                 const filtered = camposCustom.filter(c => c.contenedor_id === cont.contenedor_id);
                 if (filtered.length === 0) return null;
                 return (
-                  <View key={cont.contenedor_id} style={{ marginTop: 4 }}>
-                    {cont.tipo === 'custom' && (
-                      <Text style={[styles.label, { fontSize: 14, color: '#1E1B4B', marginBottom: 6 }]}>
-                        {cont.nombre}
-                      </Text>
-                    )}
+                  <View key={cont.contenedor_id} style={{ marginTop: 8 }}>
+                    <Text style={[styles.label, { fontSize: 14, color: '#1E1B4B', marginBottom: 6 }]}>
+                      {cont.nombre}
+                    </Text>
                     <CamposDinamicos
                       contenedorId={cont.contenedor_id}
                       campos={camposCustom}
