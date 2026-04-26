@@ -6,6 +6,7 @@ import {
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import EmptyState from '../components/EmptyState';
 import { useTranslation } from 'react-i18next';
+import { formatPhone, isValidEmail } from '../utils/phoneFormat';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -236,6 +237,7 @@ export default function ProveedoresScreen() {
   const guardar = async () => {
     setSubmitted(true);
     if (!form.nombre.trim()) return;
+    if (form.email.trim() && !isValidEmail(form.email)) return;
     setGuardando(true);
     try {
       const planchasFinal = nuevaMarca.trim()
@@ -269,6 +271,7 @@ export default function ProveedoresScreen() {
   };
 
   const nombreError = submitted && !form.nombre.trim();
+  const emailError  = submitted && form.email.trim() !== '' && !isValidEmail(form.email);
 
   return (
     <View style={s.container}>
@@ -410,7 +413,7 @@ export default function ProveedoresScreen() {
 
               <Text style={s.fieldLabel}>{t('screens.proveedores.fieldEmail')}</Text>
               <TextInput
-                style={s.fieldInput}
+                style={[s.fieldInput, emailError && s.fieldInputError]}
                 value={form.email}
                 onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
                 placeholder={t('screens.proveedores.placeholderEmail')}
@@ -418,12 +421,13 @@ export default function ProveedoresScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
+              {emailError && <Text style={s.errorText}>{t('forms.errorEmail')}</Text>}
 
               <Text style={s.fieldLabel}>{t('screens.proveedores.fieldTelefono')}</Text>
               <TextInput
                 style={s.fieldInput}
                 value={form.telefono}
-                onChangeText={(v) => setForm((f) => ({ ...f, telefono: v }))}
+                onChangeText={(v) => setForm((f) => ({ ...f, telefono: formatPhone(v) }))}
                 placeholder={t('screens.proveedores.placeholderTelefono')}
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"

@@ -854,6 +854,7 @@
       "title": "Detalle del Pedido",
       "tabDatos": "Información",
       "tabArchivos": "Archivos",
+      "tabCliches": "Clichés",
       "secPedido": "Pedido",
       "secCliente": "Cliente / Contacto",
       "secPresupuesto": "Presupuesto / Producto",
@@ -1070,6 +1071,7 @@
     "sinProveedores": "Sin proveedores configurados",
     "sinProveedoresSub": "Añade un proveedor de grabados en Configuración.",
     "sinEmail": "Sin email configurado",
+    "fechaEntregaTitle": "Fecha de entrega solicitada",
     "notasTitle": "Notas adicionales",
     "notasPlaceholder": "Instrucciones especiales, acabados, urgencia...",
     "enviado": "Solicitud enviada",
@@ -1078,6 +1080,7 @@
     "verEnlaceDescarga": "Ver enlace de descarga",
     "seleccionaProveedor": "Selecciona un proveedor",
     "seleccionaSep": "Selecciona al menos una separación",
+    "seleccionaPlancha": "Asigna un tipo de plancha a cada separación seleccionada",
     "enviarSolicitud": "Enviar solicitud ({{count}} sep.)",
     "planchaTitle": "Selecciona plancha y referencia",
     "cerrar": "Cerrar"

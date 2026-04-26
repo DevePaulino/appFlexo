@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { changeLanguage, LANGUAGES } from '../i18n/index';
+import { isValidEmail } from '../utils/phoneFormat';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -661,6 +662,9 @@ function NuevoClienteModal({ visible, onClose, onCreated, api }) {
   const submit = async () => {
     if (!form.email.trim() || !form.password.trim()) {
       setMsg({ type: 'error', text: t('screens.reseller.emailRequired') }); return;
+    }
+    if (!isValidEmail(form.email.trim())) {
+      setMsg({ type: 'error', text: t('forms.errorEmail') }); return;
     }
     setSaving(true); setMsg(null);
     try {

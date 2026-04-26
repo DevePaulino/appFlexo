@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { R, S } from './theme';
 import LegalModal from '../components/LegalModal';
+import { isValidEmail } from '../utils/phoneFormat';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -602,6 +603,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     setError('');
     setMfaDevCode('');
     if (!email.trim()) { setError(t('auth.errorEmail')); return; }
+    if (!isValidEmail(email.trim())) { setError(t('forms.errorEmail')); return; }
     if (!password.trim()) { setError(t('auth.errorPassword')); return; }
     setLoading(true);
     try {
@@ -667,6 +669,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     if (!cifNorm) { setError(t('auth.errorCif')); return; }
     if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
     if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
+    if (!isValidEmail(email.trim())) { setError(t('forms.errorEmail')); return; }
     const pwdErr = validatePassword(password);
     if (pwdErr) { setError(pwdErr); return; }
     // RGPD Art. 7 — consentimiento explícito obligatorio antes de registrar
@@ -706,6 +709,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const handleForgotPassword = async () => {
     setError('');
     if (!resetEmail.trim()) { setError(t('auth.errorEmail')); return; }
+    if (!isValidEmail(resetEmail.trim())) { setError(t('forms.errorEmail')); return; }
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {

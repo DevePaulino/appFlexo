@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPresupuestoModal from './NuevoPresupuestoModal';
@@ -45,6 +47,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
   },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   btnPlus: {
     backgroundColor: '#4F46E5',
     flexDirection: 'row',
@@ -388,6 +392,11 @@ export default function PresupuestoScreen({ currentUser }) {
   const [filtrados, setFiltrados] = useState([]);
   const [paginaPresupuestos, setPaginaPresupuestos] = useState(1);
   const [busqueda, setBusqueda] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpHeaderRef = useRef(null);
+  const helpSearchRef = useRef(null);
+  const helpFilterRef = useRef(null);
+  const helpTableRef  = useRef(null);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
   const [hoverNuevo, setHoverNuevo] = useState(false);
   const hoverNuevoTimerRef = useRef(null);
@@ -888,9 +897,13 @@ export default function PresupuestoScreen({ currentUser }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.headerTitle}>{t('nav.presupuestos')}</Text>
+        <Pressable onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>?</Text>
+        </Pressable>
         <TextInput
+          ref={helpSearchRef}
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
           value={busqueda}
@@ -906,7 +919,7 @@ export default function PresupuestoScreen({ currentUser }) {
         </Pressable>
       </View>
 
-      <View style={styles.chartsContainer}>
+      <View style={styles.chartsContainer} ref={helpFilterRef}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kpiScrollContent}>
           <TouchableOpacity
             style={[
@@ -966,7 +979,7 @@ export default function PresupuestoScreen({ currentUser }) {
       </View>
 
       {filtrados.length === 0 ? (
-        <View style={styles.tableContainer}>
+        <View style={styles.tableContainer} ref={helpTableRef}>
           <EmptyState
             title={busqueda ? t('common.noResults') : t('screens.presupuesto.noPresupuestos')}
             message={busqueda ? t('common.noResultsMsg') : t('screens.presupuesto.noItems')}
@@ -975,7 +988,7 @@ export default function PresupuestoScreen({ currentUser }) {
           />
         </View>
       ) : (
-        <ScrollView style={styles.tableContainer}>
+        <ScrollView style={styles.tableContainer} ref={helpTableRef}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 560 } })}>
           <View style={styles.tableHeader}>
@@ -1240,6 +1253,17 @@ export default function PresupuestoScreen({ currentUser }) {
         puedeCrear={puedeCrear}
       />
       <Toast message={toast.message} type={toast.type} onHide={hideToast} />
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_presupuestos', '1'); setHelpVisible(false); }}
+        title={t('help.presupuestos.title')}
+        steps={[
+          { icon: t('help.presupuestos.s1i'), title: t('help.presupuestos.s1t'), desc: t('help.presupuestos.s1d'), spotlight: { ref: helpHeaderRef } },
+          { icon: t('help.presupuestos.s2i'), title: t('help.presupuestos.s2t'), desc: t('help.presupuestos.s2d'), spotlight: { ref: helpSearchRef } },
+          { icon: t('help.presupuestos.s3i'), title: t('help.presupuestos.s3t'), desc: t('help.presupuestos.s3d'), spotlight: { ref: helpFilterRef } },
+          { icon: t('help.presupuestos.s4i'), title: t('help.presupuestos.s4t'), desc: t('help.presupuestos.s4d'), spotlight: { ref: helpTableRef } },
+        ]}
+      />
     </View>
   );
 }

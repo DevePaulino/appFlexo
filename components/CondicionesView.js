@@ -24,9 +24,9 @@ export function deltaColor(v, type = 'lab') {
     return '#DC2626';
   }
   if (type === 'deltaE') {
-    // ΔE: ≤2 imperceptible, ≤4 aceptable, >4 problemático (ISO 12647)
-    if (v <= 2) return '#16A34A';
-    if (v <= 4) return '#D97706';
+    // ΔE*00 umbrales X-Rite eXact / ISO 12647-2: ≤2.0 pass, ≤3.5 marginal, >3.5 fail
+    if (v <= 2.0) return '#16A34A';
+    if (v <= 3.5) return '#D97706';
     return '#DC2626';
   }
   // L*, a*, b*: ±1 excelente, ±2 aceptable, >2 fuera de rango
@@ -197,7 +197,10 @@ export function DeltasPanel({ deltas, canalesInfo }) {
   const activeMeds = activeCanalName ? (mediciones[activeCanalName] || {}) : {};
   const activeColor = canalesInfo?.[activeCanalName]?.color || '#94A3B8';
 
+  // Usa delta_E*00 calculado en backend cuando existe;
+  // retrocede a ΔE*ab (CIE76) para datos históricos sin CIEDE2000.
   const calcDE = (meds) => {
+    if (meds.delta_E != null) return meds.delta_E;
     const { L, a, b } = meds;
     return (L != null && a != null && b != null)
       ? Math.round(Math.sqrt(L ** 2 + a ** 2 + b ** 2) * 100) / 100
@@ -237,7 +240,7 @@ export function DeltasPanel({ deltas, canalesInfo }) {
               const isActive = canal === activeCanalName;
               const cDE = calcDE(mediciones[canal] || {});
               const cDEColor = cDE != null ? deltaColor(cDE, 'deltaE') : '#94A3B8';
-              const deBg = cDE != null ? (cDE <= 2 ? '#DCFCE7' : cDE <= 4 ? '#FEF9C3' : '#FEE2E2') : null;
+              const deBg = cDE != null ? (cDE <= 2.0 ? '#DCFCE7' : cDE <= 3.5 ? '#FEF9C3' : '#FEE2E2') : null;
               return (
                 <TouchableOpacity
                   key={canal}

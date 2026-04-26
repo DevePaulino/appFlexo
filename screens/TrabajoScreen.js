@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import NuevoPedidoModal from './NuevoPedidoModal';
@@ -90,6 +92,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
   },
 
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   // ─── "+ Nuevo" button — solid indigo, right side ──────────────────────────
   btnPlusWrap: { position: 'relative' },
   btnPlus: {
@@ -333,6 +337,10 @@ export default function TrabajoScreen({ currentUser }) {
   const [filtrados, setFiltrados] = useState([]);
   const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [busqueda, setBusqueda] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpHeaderRef = useRef(null);
+  const helpFilterRef = useRef(null);
+  const helpTableRef  = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingInitialValues, setEditingInitialValues] = useState(null);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
@@ -848,8 +856,11 @@ export default function TrabajoScreen({ currentUser }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.headerTitle}>{t('nav.pedidos')}</Text>
+        <Pressable onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>?</Text>
+        </Pressable>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -868,7 +879,7 @@ export default function TrabajoScreen({ currentUser }) {
         )}
       </View>
 
-      <View style={styles.subTabBar}>
+      <View style={styles.subTabBar} ref={helpFilterRef}>
         <Pressable style={styles.subTabBtn} onPress={() => setSubTab('activos')}>
           <Text style={[styles.subTabLabel, subTab === 'activos' && styles.subTabLabelActive]}>
             {t('screens.trabajos.subTabActivos')}{countActivos > 0 ? `  ${countActivos}` : ''}
@@ -957,7 +968,7 @@ export default function TrabajoScreen({ currentUser }) {
       </View>}
 
       {filtrados.length === 0 ? (
-        <View style={styles.tableContainer}>
+        <View style={styles.tableContainer} ref={helpTableRef}>
           <EmptyState
             title={busqueda ? t('common.noResults') : t('screens.trabajos.noPedidos')}
             message={busqueda ? t('common.noResultsMsg') : t('screens.trabajos.noPedidosMsg')}
@@ -966,7 +977,7 @@ export default function TrabajoScreen({ currentUser }) {
           />
         </View>
       ) : (
-        <ScrollView style={styles.tableContainer}>
+        <ScrollView style={styles.tableContainer} ref={helpTableRef}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 620 } })}>
           <View style={styles.tableHeader}>
@@ -1212,6 +1223,17 @@ export default function TrabajoScreen({ currentUser }) {
       />
 
       <Toast message={toast.message} type={toast.type} onHide={hideToast} />
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_pedidos', '1'); setHelpVisible(false); }}
+        title={t('help.pedidos.title')}
+        steps={[
+          { icon: t('help.pedidos.s1i'), title: t('help.pedidos.s1t'), desc: t('help.pedidos.s1d'), spotlight: { ref: helpHeaderRef } },
+          { icon: t('help.pedidos.s2i'), title: t('help.pedidos.s2t'), desc: t('help.pedidos.s2d'), spotlight: { ref: helpFilterRef } },
+          { icon: t('help.pedidos.s3i'), title: t('help.pedidos.s3t'), desc: t('help.pedidos.s3d'), spotlight: { ref: helpTableRef } },
+          { icon: t('help.pedidos.s4i'), title: t('help.pedidos.s4t'), desc: t('help.pedidos.s4d'), spotlight: { ref: helpTableRef } },
+        ]}
+      />
     </View>
   );
 }

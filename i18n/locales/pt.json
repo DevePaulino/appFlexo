@@ -854,6 +854,7 @@
       "title": "Detalhe do pedido",
       "tabDatos": "Informação",
       "tabArchivos": "Ficheiros",
+      "tabCliches": "Clichês",
       "secPedido": "Pedido",
       "secCliente": "Cliente / Contacto",
       "secPresupuesto": "Orçamento / Produto",
@@ -1070,6 +1071,7 @@
     "sinProveedores": "Sem fornecedores configurados",
     "sinProveedoresSub": "Adicione um fornecedor de gravados nas definições.",
     "sinEmail": "Sem email configurado",
+    "fechaEntregaTitle": "Data de entrega solicitada",
     "notasTitle": "Notas adicionais",
     "notasPlaceholder": "Instruções especiais, acabamentos, urgência...",
     "enviado": "Pedido enviado",
@@ -1078,6 +1080,7 @@
     "verEnlaceDescarga": "Ver ligação de download",
     "seleccionaProveedor": "Selecione um fornecedor",
     "seleccionaSep": "Selecione pelo menos uma separação",
+    "seleccionaPlancha": "Atribua um tipo de chapa a cada separação selecionada",
     "enviarSolicitud": "Enviar pedido ({{count}} sep.)",
     "planchaTitle": "Selecionar chapa e referência",
     "cerrar": "Fechar"

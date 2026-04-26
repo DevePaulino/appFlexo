@@ -6035,106 +6035,192 @@ def descargar_con_token(token):
 
 
 def _html_solicitud_cliches(empresa_nombre, pedido_ref, maquina, material,
-                             separaciones, notas, url_descarga, proveedor_nombre):
+                             separaciones, notas, url_descarga, proveedor_nombre,
+                             fecha_entrega=None):
     """Genera el HTML de la plantilla de email para solicitud de clichés."""
-    seps_html = ''
-    for sep in separaciones:
-        color = sep.get('color', '#CCCCCC')
-        nombre = sep.get('nombre', '?')
-        tipo = sep.get('tipo', '')
-        lpi = f" · {sep['lpi']} lpi" if sep.get('lpi') else ''
-        angulo = f" · {sep['angulo']}°" if sep.get('angulo') else ''
-        tipo_badge = f'<span style="font-size:10px;background:#F1F5F9;padding:2px 6px;border-radius:4px;color:#64748B;margin-left:6px">{tipo}{lpi}{angulo}</span>' if tipo else ''
-        seps_html += f'''
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle">
-            <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:{color};
-                         border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:8px"></span>
-            <strong style="color:#0F172A">{nombre}</strong>{tipo_badge}
-          </td>
-        </tr>'''
 
-    notas_section = ''
+    seps_rows = ''
+    for i, sep in enumerate(separaciones):
+        color    = sep.get('color', '#888888')
+        nombre   = sep.get('nombre', '?')
+        lpi      = f"{sep['lpi']} lpi" if sep.get('lpi') else ''
+        angulo   = f"{sep['angulo']}°" if sep.get('angulo') else ''
+        specs    = ' · '.join(filter(None, [lpi, angulo]))
+        pl       = sep.get('plancha') or {}
+        pl_marca = (pl.get('marca') or '').strip()
+        pl_ref   = (pl.get('referencia') or '').strip()
+        pl_str   = pl_marca + (f' / {pl_ref}' if pl_ref else '') if pl_marca else ''
+        bg_row   = '#FAFAFA' if i % 2 == 1 else '#FFFFFF'
+        plancha_cell = (
+            f'<td style="padding:13px 16px;vertical-align:middle;white-space:nowrap;'
+            f'font-size:11px;font-family:\'Courier New\',Courier,monospace;'
+            f'color:#4F46E5;letter-spacing:.3px">{pl_str}</td>'
+        ) if pl_str else '<td style="padding:13px 16px;font-size:11px;color:#D1D5DB;font-family:\'Courier New\',Courier,monospace">—</td>'
+        specs_cell = (
+            f'<td style="padding:13px 20px 13px 0;vertical-align:middle;text-align:right;white-space:nowrap;'
+            f'font-size:10px;color:#9CA3AF;letter-spacing:.2px">{specs}</td>'
+        ) if specs else '<td style="width:20px"></td>'
+        seps_rows += f'''
+      <tr style="background:{bg_row}">
+        <td style="width:4px;padding:0;background:{color};font-size:0;line-height:0">&nbsp;</td>
+        <td style="padding:13px 0 13px 16px;vertical-align:middle;width:20px">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:2px;
+                       background:{color};border:1px solid rgba(0,0,0,.14);vertical-align:middle"></span>
+        </td>
+        <td style="padding:13px 8px 13px 10px;vertical-align:middle">
+          <span style="font-size:13px;font-weight:600;color:#111827">{nombre}</span>
+        </td>
+        {plancha_cell}
+        {specs_cell}
+      </tr>'''
+
+    notas_block = ''
     if notas:
-        notas_section = f'''
-        <tr><td colspan="1" style="padding:16px 24px 0">
-          <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px">Notas</p>
-          <p style="margin:0;font-size:14px;color:#475569;white-space:pre-wrap">{notas}</p>
-        </td></tr>'''
+        notas_block = f'''
+  <tr><td style="padding:0">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td style="padding:16px 28px;background:#FFFBEB;border-top:1px solid #FDE68A;
+                     border-left:3px solid #F59E0B">
+        <p style="margin:0 0 5px;font-size:9px;font-weight:700;letter-spacing:1.2px;
+                  color:#92400E;text-transform:uppercase">Notas</p>
+        <p style="margin:0;font-size:13px;color:#78350F;line-height:1.65;white-space:pre-wrap">{notas}</p>
+      </td></tr>
+    </table>
+  </td></tr>'''
+
+    deadline_col = ''
+    if fecha_entrega:
+        deadline_col = f'''
+          <td style="padding:18px 24px;border-left:1px solid #E5E7EB;vertical-align:top">
+            <p style="margin:0 0 4px;font-size:9px;font-weight:700;letter-spacing:1px;
+                      color:#DC2626;text-transform:uppercase">Entrega</p>
+            <p style="margin:0;font-size:14px;font-weight:700;color:#DC2626;
+                      font-family:'Courier New',Courier,monospace">{fecha_entrega}</p>
+          </td>'''
+
+    n_sep = len(separaciones)
 
     return f'''<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:32px 16px">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#F1F5F9;
+             font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+             -webkit-font-smoothing:antialiased">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:36px 16px 52px">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #E2E8F0;max-width:600px">
 
-  <!-- Header -->
-  <tr><td style="background:#1E1B4B;padding:28px 32px">
-    <p style="margin:0;font-size:22px;font-weight:800;color:#FFFFFF">🖨️ Solicitud de Clichés</p>
-    <p style="margin:6px 0 0;font-size:13px;color:#A5B4FC">{empresa_nombre}</p>
-  </td></tr>
+  <table width="600" cellpadding="0" cellspacing="0"
+         style="max-width:600px;background:#FFFFFF;
+                border:1px solid #E2E8F0;
+                box-shadow:0 1px 4px rgba(0,0,0,.06)">
 
-  <!-- Info -->
-  <tr><td style="padding:24px 32px 0">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding-bottom:12px;width:50%;vertical-align:top">
-          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Pedido / Referencia</p>
-          <p style="margin:0;font-size:15px;font-weight:700;color:#0F172A">{pedido_ref}</p>
-        </td>
-        <td style="padding-bottom:12px;width:50%;vertical-align:top">
-          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Proveedor</p>
-          <p style="margin:0;font-size:15px;font-weight:700;color:#4F46E5">{proveedor_nombre}</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding-bottom:12px;vertical-align:top">
-          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Máquina</p>
-          <p style="margin:0;font-size:14px;color:#334155">{maquina or '—'}</p>
-        </td>
-        <td style="padding-bottom:12px;vertical-align:top">
-          <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px">Material</p>
-          <p style="margin:0;font-size:14px;color:#334155">{material or '—'}</p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
+    <!-- ══ FRANJA SUPERIOR DE ACENTO ══ -->
+    <tr><td style="background:#4F46E5;height:5px;font-size:0;line-height:0;padding:0">&nbsp;</td></tr>
 
-  <!-- Separaciones -->
-  <tr><td style="padding:0 32px">
-    <p style="margin:16px 0 10px;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px">
-      Separaciones solicitadas ({len(separaciones)})
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">
-      {seps_html}
-    </table>
-  </td></tr>
+    <!-- ══ CABECERA (blanca) ══ -->
+    <tr><td style="background:#FFFFFF;padding:0">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:28px 32px 24px;vertical-align:bottom">
+            <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:1.8px;
+                      color:#4F46E5;text-transform:uppercase">
+              PrintForge Pro &nbsp;·&nbsp; {empresa_nombre}
+            </p>
+            <p style="margin:0;font-size:26px;font-weight:800;color:#0F172A;
+                      letter-spacing:-.4px;line-height:1.1">
+              Solicitud de Clichés
+            </p>
+          </td>
+          <td style="padding:28px 32px 24px;text-align:right;vertical-align:bottom;white-space:nowrap">
+            <p style="margin:0 0 4px;font-size:9px;font-weight:600;letter-spacing:1.5px;
+                      color:#94A3B8;text-transform:uppercase">Referencia</p>
+            <p style="margin:0;font-size:17px;font-weight:700;color:#1E293B;
+                      font-family:'Courier New',Courier,monospace;letter-spacing:.5px">{pedido_ref}</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
 
-  {notas_section}
+    <!-- ══ FICHA TÉCNICA ══ -->
+    <tr><td style="border-top:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;padding:0;background:#F8FAFC">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:16px 24px;border-right:1px solid #E2E8F0;vertical-align:top">
+            <p style="margin:0 0 4px;font-size:9px;font-weight:700;letter-spacing:1px;
+                      color:#94A3B8;text-transform:uppercase">Proveedor</p>
+            <p style="margin:0;font-size:14px;font-weight:700;color:#0F172A;line-height:1.3">{proveedor_nombre or '—'}</p>
+          </td>
+          <td style="padding:16px 24px;border-right:1px solid #E2E8F0;vertical-align:top">
+            <p style="margin:0 0 4px;font-size:9px;font-weight:700;letter-spacing:1px;
+                      color:#94A3B8;text-transform:uppercase">Máquina</p>
+            <p style="margin:0;font-size:13px;font-weight:600;color:#334155">{maquina or '—'}</p>
+          </td>
+          <td style="padding:16px 24px;{'border-right:1px solid #E2E8F0;' if fecha_entrega else ''}vertical-align:top">
+            <p style="margin:0 0 4px;font-size:9px;font-weight:700;letter-spacing:1px;
+                      color:#94A3B8;text-transform:uppercase">Material</p>
+            <p style="margin:0;font-size:13px;font-weight:600;color:#334155">{material or '—'}</p>
+          </td>
+          {deadline_col}
+        </tr>
+      </table>
+    </td></tr>
 
-  <!-- Botón descarga -->
-  <tr><td style="padding:28px 32px">
-    <p style="margin:0 0 12px;font-size:12px;color:#64748B">
-      El siguiente enlace le da acceso al PDF de repetidora de este pedido.<br>
-      <strong>El enlace expira en 7 días.</strong>
-    </p>
-    <a href="{url_descarga}"
-       style="display:inline-block;background:#4F46E5;color:#FFFFFF;text-decoration:none;
-              font-size:15px;font-weight:700;padding:14px 28px;border-radius:10px">
-      ⬇ Descargar PDF Repetidora
-    </a>
-  </td></tr>
+    <!-- ══ CABECERA SEPARACIONES ══ -->
+    <tr><td style="padding:10px 20px 10px 24px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <span style="font-size:9px;font-weight:700;letter-spacing:1.4px;
+                         color:#64748B;text-transform:uppercase">Separaciones solicitadas</span>
+          </td>
+          <td style="text-align:right">
+            <span style="display:inline-block;background:#EEF2FF;color:#4F46E5;
+                         font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px">{n_sep}</span>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
 
-  <!-- Footer -->
-  <tr><td style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:18px 32px">
-    <p style="margin:0;font-size:12px;color:#94A3B8">
-      Enviado desde PrintForge Pro · Este mensaje es automático, no responda a este email.
-    </p>
-  </td></tr>
+    <!-- ══ LISTA DE SEPARACIONES ══ -->
+    <tr><td style="padding:0;border-top:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        {seps_rows}
+      </table>
+    </td></tr>
 
-</table>
+    {notas_block}
+
+    <!-- ══ DESCARGA ══ -->
+    <tr><td style="padding:28px 32px">
+      <p style="margin:0 0 20px;font-size:12px;color:#64748B;line-height:1.7">
+        Encuentra los detalles completos en el PDF adjunto.<br>
+        El enlace de descarga caduca en <strong style="color:#0F172A">7 días</strong>.
+      </p>
+      <table cellpadding="0" cellspacing="0">
+        <tr><td style="border-radius:6px;overflow:hidden">
+          <a href="{url_descarga}"
+             style="display:inline-block;background:#4F46E5;color:#FFFFFF;text-decoration:none;
+                    font-size:13px;font-weight:700;letter-spacing:.8px;
+                    text-transform:uppercase;padding:14px 32px;border-radius:6px">
+            Descargar PDF Repetidora &rarr;
+          </a>
+        </td></tr>
+      </table>
+    </td></tr>
+
+    <!-- ══ PIE ══ -->
+    <tr><td style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:14px 32px">
+      <p style="margin:0;font-size:10px;color:#94A3B8;letter-spacing:.2px">
+        PrintForge Pro &nbsp;·&nbsp; Mensaje generado automáticamente. No responda a este correo.
+      </p>
+    </td></tr>
+
+  </table>
+
 </td></tr>
 </table>
 </body>
@@ -6169,6 +6255,8 @@ def solicitud_cliches(pedido_id):
         proveedor_email = (data.get('proveedor_email') or '').strip()
         proveedor_nombre = (data.get('proveedor_nombre') or '').strip()
         notas = (data.get('notas') or '').strip()
+        fecha_entrega = (data.get('fecha_entrega') or '').strip()
+        plancha = data.get('plancha') or None   # {marca, referencia}
 
         if not separaciones:
             return jsonify({'error': 'Selecciona al menos una separación'}), 400
@@ -6215,6 +6303,8 @@ def solicitud_cliches(pedido_id):
             'maquina': maquina,
             'material': material,
             'notas': notas,
+            'fecha_entrega': fecha_entrega or None,
+            'plancha': plancha,
             'fecha': datetime.utcnow().isoformat(),
             'estado': 'enviada',
         }
@@ -6228,6 +6318,7 @@ def solicitud_cliches(pedido_id):
             material=material,
             separaciones=separaciones,
             notas=notas,
+            fecha_entrega=fecha_entrega,
             url_descarga=url_descarga,
             proveedor_nombre=proveedor_nombre,
         )
@@ -6265,6 +6356,94 @@ def solicitud_cliches(pedido_id):
             'email_error': email_error,
             'url_descarga': url_descarga,
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/solicitud-cliches/preview', methods=['POST', 'OPTIONS'])
+def solicitud_cliches_preview(pedido_id):
+    """Genera HTML del email sin guardar ni enviar (para vista previa)."""
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+    request_user, auth_error = require_request_user()
+    if auth_error:
+        return auth_error
+    empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+    try:
+        data = request.get_json() or {}
+        separaciones     = data.get('separaciones') or []
+        proveedor_nombre = (data.get('proveedor_nombre') or '').strip()
+        notas            = (data.get('notas') or '').strip()
+        fecha_entrega    = (data.get('fecha_entrega') or '').strip()
+
+        col_pedidos = get_empresa_collection('pedidos', empresa_id)
+        pedido = None
+        try:
+            pedido = col_pedidos.find_one({'_id': ObjectId(pedido_id), 'empresa_id': empresa_id})
+        except Exception:
+            pedido = col_pedidos.find_one({'pedido_id': pedido_id, 'empresa_id': empresa_id})
+
+        dp             = (pedido or {}).get('datos_presupuesto') or {}
+        maquina        = str(dp.get('maquina') or (pedido or {}).get('maquina') or '').strip() or '—'
+        material       = str(dp.get('material') or '').strip() or '—'
+        referencia     = str((pedido or {}).get('referencia') or (pedido or {}).get('numero_pedido') or pedido_id)
+        empresa_nombre = str(request_user.get('empresa_nombre') or 'PrintForge Pro')
+
+        col_arch = get_empresa_collection('pedido_archivos', empresa_id)
+        rep = col_arch.find_one(
+            {'pedido_id': pedido_id, 'empresa_id': empresa_id, 'tipo': 'repetidora'},
+            sort=[('fecha_subida', -1)]
+        )
+        url_descarga = '#'
+        if rep:
+            token = _generar_token_descarga(str(rep['_id']), empresa_id, dias=7)
+            app_base = os.environ.get('APP_BASE_URL', 'http://localhost:8080')
+            url_descarga = f'{app_base}/api/descargar/{token}'
+
+        html = _html_solicitud_cliches(
+            empresa_nombre=empresa_nombre, pedido_ref=referencia,
+            maquina=maquina, material=material, separaciones=separaciones,
+            notas=notas, fecha_entrega=fecha_entrega,
+            url_descarga=url_descarga, proveedor_nombre=proveedor_nombre,
+        )
+        return jsonify({'html': html}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pedidos/<pedido_id>/solicitud-cliches/<sol_id>/email', methods=['GET', 'OPTIONS'])
+def solicitud_cliches_email(pedido_id, sol_id):
+    """Regenera el HTML del email de una solicitud histórica."""
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+    request_user, auth_error = require_request_user()
+    if auth_error:
+        return auth_error
+    empresa_id = normalize_empresa_id(request_user.get('empresa_id'))
+    try:
+        col = get_empresa_collection('solicitudes_cliches', empresa_id)
+        doc = col.find_one({'_id': ObjectId(sol_id), 'empresa_id': empresa_id})
+        if not doc:
+            return jsonify({'error': 'Solicitud no encontrada'}), 404
+
+        empresa_nombre = str(request_user.get('empresa_nombre') or 'PrintForge Pro')
+        col_pedidos = get_empresa_collection('pedidos', empresa_id)
+        pedido = None
+        try:
+            pedido = col_pedidos.find_one({'_id': ObjectId(pedido_id), 'empresa_id': empresa_id})
+        except Exception:
+            pedido = col_pedidos.find_one({'pedido_id': pedido_id, 'empresa_id': empresa_id})
+        referencia = str((pedido or {}).get('referencia') or (pedido or {}).get('numero_pedido') or pedido_id)
+
+        html = _html_solicitud_cliches(
+            empresa_nombre=empresa_nombre, pedido_ref=referencia,
+            maquina=doc.get('maquina', '—'), material=doc.get('material', '—'),
+            separaciones=doc.get('separaciones') or [],
+            notas=doc.get('notas') or '',
+            fecha_entrega=doc.get('fecha_entrega') or '',
+            url_descarga='#', proveedor_nombre=doc.get('proveedor_nombre', ''),
+        )
+        return jsonify({'html': html}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -8663,6 +8842,15 @@ def marcar_pedido_impreso(pedido_id):
                             canal_delta[key] = round(float(vv2) - float(rv2), 4)
                         except Exception:
                             pass
+                # CIEDE2000 cuando hay Lab completo en referencia y medido
+                try:
+                    if all(k in meds_ref and k in meds_val for k in ('L', 'a', 'b')):
+                        canal_delta['delta_E'] = _delta_e_00(
+                            float(meds_ref['L']), float(meds_ref['a']), float(meds_ref['b']),
+                            float(meds_val['L']),  float(meds_val['a']),  float(meds_val['b']),
+                        )
+                except Exception:
+                    pass
                 if canal_delta:
                     meds_delta[canal] = canal_delta
             if meds_delta:
@@ -9398,11 +9586,21 @@ def comparar_pdf():
             img_a = Image.frombytes('RGB', [pix_a.width, pix_a.height], pix_a.samples)
             img_b = Image.frombytes('RGB', [pix_b.width, pix_b.height], pix_b.samples)
 
+            # Cada PDF se renderiza a su propio tamaño físico (mismo DPI).
+            # Para el diff se aplica padding blanco al menor; nunca se estira ninguno.
             if img_a.size != img_b.size:
-                img_b = img_b.resize(img_a.size, Image.LANCZOS)
+                w_max = max(img_a.width,  img_b.width)
+                h_max = max(img_a.height, img_b.height)
+                def _pad_white(im, w, h):
+                    out = Image.new('RGB', (w, h), (255, 255, 255))
+                    out.paste(im, (0, 0))
+                    return out
+                arr_a = np.array(_pad_white(img_a, w_max, h_max), dtype=np.int32)
+                arr_b = np.array(_pad_white(img_b, w_max, h_max), dtype=np.int32)
+            else:
+                arr_a = np.array(img_a, dtype=np.int32)
+                arr_b = np.array(img_b, dtype=np.int32)
 
-            arr_a = np.array(img_a, dtype=np.int32)
-            arr_b = np.array(img_b, dtype=np.int32)
             diff  = np.abs(arr_a - arr_b).astype(np.uint8)
 
             # Máscara de píxeles distintos (umbral 8 para ignorar ruido de compresión)
@@ -9411,15 +9609,16 @@ def comparar_pdf():
             total_pixels   = arr_a.shape[0] * arr_a.shape[1]
             similarity      = round((1 - changed_pixels / total_pixels) * 100, 1)
 
-            # Composición: página A en escala de grises + diferencias en rojo vivo
-            gray = np.array(img_a.convert('L'))
-            composite = np.stack([gray, gray, gray], axis=-1).copy()
-            composite[has_diff] = [230, 30, 30]  # rojo para cambios
+            # Composición: usa arr_a (padded si procede) como base gris + diffs en rojo
+            gray_arr = (0.299 * arr_a[:,:,0] + 0.587 * arr_a[:,:,1] + 0.114 * arr_a[:,:,2]).astype(np.uint8)
+            composite = np.stack([gray_arr, gray_arr, gray_arr], axis=-1).copy()
+            composite[has_diff] = [230, 30, 30]
 
             buf_diff = io.BytesIO()
             Image.fromarray(composite.astype(np.uint8)).save(buf_diff, format='JPEG', quality=85)
             b64_diff = base64.b64encode(buf_diff.getvalue()).decode('utf-8')
 
+            # img_a / img_b se guardan a su tamaño natural, sin modificar
             buf_a = io.BytesIO()
             img_a.save(buf_a, format='JPEG', quality=95)
             b64_a = base64.b64encode(buf_a.getvalue()).decode('utf-8')
@@ -9442,10 +9641,17 @@ def comparar_pdf():
                     arr_ca = gs_a[name]
                     arr_cb = gs_b[name]
                     if arr_ca.shape != arr_cb.shape:
-                        arr_cb = np.array(
-                            Image.fromarray(arr_cb.astype(np.uint8)).resize(
-                                (arr_ca.shape[1], arr_ca.shape[0]), Image.LANCZOS),
-                            dtype=np.int32)
+                        # Padding blanco al canal menor; ninguno se estira
+                        h_mx = max(arr_ca.shape[0], arr_cb.shape[0])
+                        w_mx = max(arr_ca.shape[1], arr_cb.shape[1])
+                        if arr_ca.shape != (h_mx, w_mx):
+                            pad = np.full((h_mx, w_mx), 255, dtype=np.int32)
+                            pad[:arr_ca.shape[0], :arr_ca.shape[1]] = arr_ca
+                            arr_ca = pad
+                        if arr_cb.shape != (h_mx, w_mx):
+                            pad = np.full((h_mx, w_mx), 255, dtype=np.int32)
+                            pad[:arr_cb.shape[0], :arr_cb.shape[1]] = arr_cb
+                            arr_cb = pad
                     diff_ch = np.abs(arr_ca - arr_cb)
                     changed_ch = int((diff_ch > 8).sum())
                     total_ch = arr_ca.size
@@ -9781,14 +9987,90 @@ def _color_para_separacion(nombre, tint_fn_raw=None):
     return None
 
 
+def _delta_e_00(L1, a1, b1, L2, a2, b2):
+    """CIEDE2000 — diferencia de color, kL=kC=kH=1 (ISO 12647, artes gráficas).
+    Misma fórmula que usa X-Rite eXact / eXact Advanced."""
+    import math
+    _25_7 = 6103515625.0  # 25 ** 7
+
+    C1ab = math.sqrt(a1 * a1 + b1 * b1)
+    C2ab = math.sqrt(a2 * a2 + b2 * b2)
+    Cab_avg7 = ((C1ab + C2ab) / 2.0) ** 7
+    G = 0.5 * (1.0 - math.sqrt(Cab_avg7 / (Cab_avg7 + _25_7)))
+
+    a1p = a1 * (1.0 + G);  a2p = a2 * (1.0 + G)
+    C1p = math.sqrt(a1p * a1p + b1 * b1)
+    C2p = math.sqrt(a2p * a2p + b2 * b2)
+    h1p = math.degrees(math.atan2(b1, a1p)) % 360.0
+    h2p = math.degrees(math.atan2(b2, a2p)) % 360.0
+
+    dLp = L2 - L1
+    dCp = C2p - C1p
+    if C1p * C2p < 1e-10:
+        dhp = 0.0
+    elif abs(h2p - h1p) <= 180.0:
+        dhp = h2p - h1p
+    elif h2p - h1p > 180.0:
+        dhp = h2p - h1p - 360.0
+    else:
+        dhp = h2p - h1p + 360.0
+    dHp = 2.0 * math.sqrt(C1p * C2p) * math.sin(math.radians(dhp / 2.0))
+
+    Lp_avg = (L1 + L2) / 2.0
+    Cp_avg = (C1p + C2p) / 2.0
+    if C1p * C2p < 1e-10:
+        hp_avg = h1p + h2p
+    elif abs(h1p - h2p) <= 180.0:
+        hp_avg = (h1p + h2p) / 2.0
+    elif (h1p + h2p) < 360.0:
+        hp_avg = (h1p + h2p + 360.0) / 2.0
+    else:
+        hp_avg = (h1p + h2p - 360.0) / 2.0
+
+    T = (1.0
+         - 0.17 * math.cos(math.radians(hp_avg - 30.0))
+         + 0.24 * math.cos(math.radians(2.0 * hp_avg))
+         + 0.32 * math.cos(math.radians(3.0 * hp_avg + 6.0))
+         - 0.20 * math.cos(math.radians(4.0 * hp_avg - 63.0)))
+    SL = 1.0 + 0.015 * (Lp_avg - 50.0) ** 2 / math.sqrt(20.0 + (Lp_avg - 50.0) ** 2)
+    SC = 1.0 + 0.045 * Cp_avg
+    SH = 1.0 + 0.015 * Cp_avg * T
+
+    Cp_avg7 = Cp_avg ** 7
+    RC = 2.0 * math.sqrt(Cp_avg7 / (Cp_avg7 + _25_7))
+    RT = -math.sin(math.radians(60.0 * math.exp(-((hp_avg - 275.0) / 25.0) ** 2))) * RC
+
+    dE = math.sqrt(
+        (dLp / SL) ** 2 +
+        (dCp / SC) ** 2 +
+        (dHp / SH) ** 2 +
+        RT * (dCp / SC) * (dHp / SH)
+    )
+    return round(dE, 2)
+
+
 def _coleccion_to_tipo(coleccion):
     """Clasifica una separación según la colección PDF-Produccion."""
-    c = str(coleccion).lower()
-    if c == 'process':
+    c = str(coleccion).lower().strip()
+    if c in ('process', 'proceso', 'prozess', 'processus', 'processo'):
         return 'proceso'
-    if 'pantone' in c or 'hks' in c or 'toyo' in c or 'dic' in c:
+    if 'pantone' in c or 'hks' in c or 'toyo' in c or 'dic ' in c:
         return 'spot'
-    return 'especial'          # designer, cutter, varnish, etc.
+    return 'especial'
+
+
+# Nombres CMYK multilingüe: si una sep llega como 'especial' pero su nombre
+# coincide con uno de estos, se corrige a 'proceso' en post-procesado.
+_CMYK_PROCESS_NAMES = {
+    'cyan', 'magenta', 'yellow', 'black', 'key', 'blk', 'c', 'm', 'y', 'k',
+    'cian', 'amarillo', 'negro',          # es
+    'ciano', 'amarelo', 'preto',          # pt
+    'schwarz', 'gelb', 'zyan',            # de
+    'noir', 'jaune',                      # fr
+    'nero', 'giallo',                     # it
+    'process cyan', 'process magenta', 'process yellow', 'process black',
+    'cmyk cyan', 'cmyk magenta', 'cmyk yellow', 'cmyk black',
+}
 
 
 def _ht_type1_values(ht):
@@ -9936,6 +10218,12 @@ def _extraer_separaciones_pdf(ruta):
 
     except Exception:
         pass
+
+    # Post-corrección: nombres CMYK conocidos mal clasificados como 'especial'
+    for sep in separaciones:
+        if sep.get('tipo') == 'especial' and sep.get('nombre', '').lower().strip() in _CMYK_PROCESS_NAMES:
+            sep['tipo'] = 'proceso'
+
     return separaciones
 
 

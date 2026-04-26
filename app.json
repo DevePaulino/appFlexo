@@ -18,7 +18,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "bundleIdentifier": "com.anonymous.printforge-pro"
     },
     "web": {
       "favicon": "./assets/favicon.png"

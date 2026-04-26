@@ -4,6 +4,7 @@ import {
   ActivityIndicator, StyleSheet, Platform, RefreshControl,
 } from 'react-native';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
+import { isValidEmail } from '../utils/phoneFormat';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -690,6 +691,9 @@ function TabRevendedores({ currentUser }) {
   const crearRevendedor = async () => {
     if (!nuevoForm.email.trim() || !nuevoForm.password.trim()) {
       setMsg({ type: 'error', text: 'Email y contraseña son obligatorios' }); return;
+    }
+    if (!isValidEmail(nuevoForm.email.trim())) {
+      setMsg({ type: 'error', text: 'El email no tiene un formato válido' }); return;
     }
     setSaving(true); setMsg(null);
     try {
@@ -1540,6 +1544,9 @@ function TabServidor({ currentUser }) {
   const saveCuenta = async () => {
     if (cuentaForm.password && cuentaForm.password !== cuentaForm.password2) {
       setMsgCuenta({ type: 'error', text: 'Las contraseñas no coinciden' }); return;
+    }
+    if (cuentaForm.email.trim() && !isValidEmail(cuentaForm.email.trim())) {
+      setMsgCuenta({ type: 'error', text: 'El email no tiene un formato válido' }); return;
     }
     setSavingCuenta(true); setMsgCuenta(null);
     try {

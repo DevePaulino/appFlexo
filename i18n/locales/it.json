@@ -854,6 +854,7 @@
       "title": "Dettaglio ordine",
       "tabDatos": "Informazioni",
       "tabArchivos": "File",
+      "tabCliches": "Cliché",
       "secPedido": "Ordine",
       "secCliente": "Cliente / Contatto",
       "secPresupuesto": "Preventivo / Prodotto",
@@ -1070,6 +1071,7 @@
     "sinProveedores": "Nessun fornitore configurato",
     "sinProveedoresSub": "Aggiungi un fornitore di cliché nelle impostazioni.",
     "sinEmail": "Nessuna email configurata",
+    "fechaEntregaTitle": "Data di consegna richiesta",
     "notasTitle": "Note aggiuntive",
     "notasPlaceholder": "Istruzioni speciali, finiture, urgenza...",
     "enviado": "Richiesta inviata",
@@ -1078,6 +1080,7 @@
     "verEnlaceDescarga": "Visualizza link di download",
     "seleccionaProveedor": "Seleziona un fornitore",
     "seleccionaSep": "Seleziona almeno una separazione",
+    "seleccionaPlancha": "Assegna un tipo di lastra a ogni separazione selezionata",
     "enviarSolicitud": "Invia richiesta ({{count}} sep.)",
     "planchaTitle": "Seleziona lastra e riferimento",
     "cerrar": "Chiudi"

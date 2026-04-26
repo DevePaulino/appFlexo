@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 import { usePermission } from './usePermission';
 import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
@@ -62,6 +64,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   btnPlusWrap: {
     position: 'relative',
   },
@@ -296,6 +300,11 @@ export default function ClientesScreen({ currentUser }) {
   const [filtrados, setFiltrados] = useState([]);
   const [paginaClientes, setPaginaClientes] = useState(1);
   const [busqueda, setBusqueda] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpHeaderRef = useRef(null);
+  const helpSearchRef = useRef(null);
+  const helpBtnRef    = useRef(null);
+  const helpTableRef  = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [clienteEditandoId, setClienteEditandoId] = useState(null);
@@ -484,16 +493,20 @@ export default function ClientesScreen({ currentUser }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.headerTitle}>{t('nav.clientes')}</Text>
+        <Pressable onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>?</Text>
+        </Pressable>
         <TextInput
+          ref={helpSearchRef}
           style={styles.searchInput}
           placeholder={t('common.search')}
           value={busqueda}
           onChangeText={setBusqueda}
           placeholderTextColor="#94A3B8"
         />
-        <View style={styles.btnPlusWrap}>
+        <View style={styles.btnPlusWrap} ref={helpBtnRef}>
           <Pressable
             style={[styles.btnPlus, !puedeCrear && styles.btnPlusDisabled]}
             onPress={() => puedeCrear && setModalVisible(true)}
@@ -512,7 +525,7 @@ export default function ClientesScreen({ currentUser }) {
       </View>
 
       {filtrados.length === 0 ? (
-        <View style={styles.tableContainer}>
+        <View style={styles.tableContainer} ref={helpTableRef}>
           <EmptyState
             title={busqueda ? t('common.noResults') : t('nav.clientes')}
             message={busqueda ? t('screens.clientes.noResultsMsg') : t('screens.clientes.noItems')}
@@ -521,7 +534,7 @@ export default function ClientesScreen({ currentUser }) {
           />
         </View>
       ) : (
-        <ScrollView style={styles.tableContainer}>
+        <ScrollView style={styles.tableContainer} ref={helpTableRef}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 560 } })}>
           <View style={styles.tableHeader}>
@@ -670,6 +683,16 @@ export default function ClientesScreen({ currentUser }) {
           </View>
         </View>
       </Modal>
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_clientes', '1'); setHelpVisible(false); }}
+        title={t('help.clientes.title')}
+        steps={[
+          { icon: t('help.clientes.s1i'), title: t('help.clientes.s1t'), desc: t('help.clientes.s1d'), spotlight: { ref: helpBtnRef } },
+          { icon: t('help.clientes.s2i'), title: t('help.clientes.s2t'), desc: t('help.clientes.s2d'), spotlight: { ref: helpSearchRef } },
+          { icon: t('help.clientes.s3i'), title: t('help.clientes.s3t'), desc: t('help.clientes.s3d'), spotlight: { ref: helpTableRef } },
+        ]}
+      />
     </View>
   );
 }

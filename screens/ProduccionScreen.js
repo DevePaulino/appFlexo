@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 const useNativeDriverTransform = Platform.OS !== 'web';
 import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
@@ -28,6 +30,8 @@ const styles = StyleSheet.create({
     minHeight: 54,
   },
   headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -713,6 +717,11 @@ export default function ProduccionScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busquedaProduccion, setBusquedaProduccion] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpHeaderRef  = useRef(null);
+  const helpSearchRef  = useRef(null);
+  const helpChartsRef  = useRef(null);
+  const helpBoardRef   = useRef(null);
   const [maquinasFiltroIds, setMaquinasFiltroIds] = useState([]);
   const [detalleVisible, setDetalleVisible] = useState(false);
   const [detallePedidoId, setDetallePedidoId] = useState(null);
@@ -1100,9 +1109,13 @@ export default function ProduccionScreen() {
   return (
     <>
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.headerTitle}>{t('nav.produccion')}</Text>
+        <TouchableOpacity onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>?</Text>
+        </TouchableOpacity>
         <TextInput
+          ref={helpSearchRef}
           style={styles.searchInput}
           placeholder={t('screens.produccion.buscarPlaceholder')}
           value={busquedaProduccion}
@@ -1118,7 +1131,7 @@ export default function ProduccionScreen() {
           const maxCarga = Math.max(...cargas.map((c) => c.cantidad), 1);
           const hayFiltroActivo = maquinasFiltroIds.length > 0;
           return (
-            <View style={styles.chartsTopBar}>
+            <View style={styles.chartsTopBar} ref={helpChartsRef}>
               <View style={styles.chartsTopHeader}>
                 <Text style={styles.chartsTitle}>{t('screens.produccion.cargaTitulo')}</Text>
                 <View style={styles.chartsDivider} />
@@ -1158,6 +1171,7 @@ export default function ProduccionScreen() {
         <ScrollView style={styles.content}>
 
         {/* Production Board - Trabajos en Producción */}
+        <View ref={helpBoardRef}>
         <ProductionBoard
           maquinas={maquinas}
           trabajosPorMaquina={trabajosPorMaquina}
@@ -1169,6 +1183,7 @@ export default function ProduccionScreen() {
           onRequestPage={handleRequestPage}
           onOpenDetalle={(id) => { setDetallePedidoId(id); setDetalleVisible(true); }}
         />
+        </View>
 
         {/* Trabajos Impresos */}
         <View style={styles.impresosSection}>
@@ -1269,6 +1284,17 @@ export default function ProduccionScreen() {
       onEdit={() => fetchData({ silent: true })}
       onCancelled={() => fetchData({ silent: true })}
     />
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_produccion', '1'); setHelpVisible(false); }}
+        title={t('help.produccion.title')}
+        steps={[
+          { icon: t('help.produccion.s1i'), title: t('help.produccion.s1t'), desc: t('help.produccion.s1d'), spotlight: { ref: helpBoardRef } },
+          { icon: t('help.produccion.s2i'), title: t('help.produccion.s2t'), desc: t('help.produccion.s2d'), spotlight: { ref: helpSearchRef } },
+          { icon: t('help.produccion.s3i'), title: t('help.produccion.s3t'), desc: t('help.produccion.s3d'), spotlight: { ref: helpBoardRef } },
+          { icon: t('help.produccion.s4i'), title: t('help.produccion.s4t'), desc: t('help.produccion.s4d'), spotlight: { ref: helpChartsRef } },
+        ]}
+      />
     </>
   );
 }

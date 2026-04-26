@@ -539,6 +539,28 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  // ── Historial clichés ────────────────────────────────────────────────────
+  clicheCard:         { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12, overflow: 'hidden' },
+  clicheCardHeader:   { flexDirection: 'row', alignItems: 'flex-start', padding: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  clicheCardFecha:    { fontSize: 11, color: '#94A3B8', marginBottom: 3 },
+  clicheCardProveedor:{ fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  clicheCardEmail:    { fontSize: 11, color: '#64748B', marginTop: 2 },
+  clicheEstadoBadge:  { backgroundColor: '#D1FAE5', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  clicheEstadoText:   { fontSize: 10, fontWeight: '700', color: '#065F46', textTransform: 'uppercase', letterSpacing: 0.5 },
+  clicheSepRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  clicheSepChip:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  clicheSepDot:       { width: 12, height: 12, borderRadius: 6 },
+  clicheSepName:      { fontSize: 11, fontWeight: '600', color: '#334155' },
+  clicheMetaRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 0, padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  clicheMetaItem:     { minWidth: '33%', marginBottom: 4, paddingRight: 8 },
+  clicheMetaLabel:    { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5 },
+  clicheMetaValue:    { fontSize: 13, fontWeight: '600', color: '#0F172A', marginTop: 2 },
+  clicheNotas:        { padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  clicheNotasLabel:   { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  clicheNotasText:    { fontSize: 13, color: '#334155' },
+  clicheVerEmailBtn:  { margin: 12, padding: 10, backgroundColor: '#EEF2FF', borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#C7D2FE' },
+  clicheVerEmailBtnText: { fontSize: 13, fontWeight: '700', color: '#4F46E5' },
+
   // ── PDF preview ─────────────────────────────────────────────────────────
   previewRow: {
     flexDirection: 'row',
@@ -1256,7 +1278,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   pdfProduccionCardLabel: {
     fontSize: 10,
@@ -1320,6 +1344,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  pdfProduccionFileBtnCliches: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pdfProduccionFileBtnClichesText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   pdfProduccionUploadBtn: {
     paddingVertical: 4,
@@ -1571,6 +1609,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [condicionesLoading, setCondicionesLoading] = useState(false);
   const [historicoSearch, setHistoricoSearch] = useState('');
   const [expandedHistorico, setExpandedHistorico] = useState(new Set([0]));
+
+  // Historial de clichés
+  const [solicitudesCliches, setSolicitudesCliches] = useState([]);
+  const [loadingCliches, setLoadingCliches] = useState(false);
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState(null);
+  const [emailPreviewLoading, setEmailPreviewLoading] = useState(false);
 
   // Archivos
   const [archivos, setArchivos] = useState({ artes: [], unitario: [], pdfProduccion: {} });
@@ -2230,6 +2274,25 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={activeTab === 'cliches' ? styles.tabBtnActive : styles.tabBtn}
+              onPress={() => {
+                setActiveTab('cliches');
+                if (solicitudesCliches.length === 0 && !loadingCliches) {
+                  const pid = pedido?._id || pedido?.pedido_id;
+                  if (!pid) return;
+                  setLoadingCliches(true);
+                  apiFetch(currentUser?.access_token)(`/api/pedidos/${pid}/solicitud-cliches`)
+                    .then((d) => setSolicitudesCliches(d.solicitudes || []))
+                    .catch(() => {})
+                    .finally(() => setLoadingCliches(false));
+                }
+              }}
+            >
+              <Text style={activeTab === 'cliches' ? styles.tabTextActive : styles.tabText}>
+                {t('screens.pedidoDetalle.tabCliches')}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={{ flex: 1, overflow: 'hidden' }}>
@@ -2821,6 +2884,11 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <View key={title} style={styles.pdfProduccionToolCol}>
                           <View style={styles.pdfProduccionCardHeader}>
                             <Text style={styles.pdfProduccionCardLabel}>{title}</Text>
+                            {tipoKey2 === 'repetidora' && (
+                              <TouchableOpacity style={styles.pdfProduccionFileBtnCliches} onPress={() => setSolicitudClichesVisible(true)}>
+                                <Text style={styles.pdfProduccionFileBtnClichesText}>✦ {t('cliches.modalTitle')}</Text>
+                              </TouchableOpacity>
+                            )}
                           </View>
                           <View style={[styles.pdfProduccionOutputBox, pdfProduccionFile2 && styles.pdfProduccionOutputBoxFilled]}>
                             {isUploading2 ? (
@@ -2847,7 +2915,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                 {confirmingDeleteArchivo === pdfProduccionFile2.id ? (
                                   <DeleteConfirmRow onCancel={() => setConfirmingDeleteArchivo(null)} onConfirm={() => { setConfirmingDeleteArchivo(null); ejecutarEliminarArchivo(pdfProduccionFile2.id); }} />
                                 ) : (
-                                  <>
                                   <View style={styles.pdfProduccionFileBtns}>
                                     <TouchableOpacity style={styles.pdfProduccionFileBtn} onPress={() => { if (typeof window !== 'undefined') window.open(`${API_BASE}/api/archivos/${pdfProduccionFile2.id}`, '_blank'); }}>
                                       <Text style={styles.pdfProduccionFileBtnText}>↓</Text>
@@ -2861,15 +2928,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                                       </TouchableOpacity>
                                     )}
                                   </View>
-                                  {tipoKey2 === 'repetidora' && (
-                                    <TouchableOpacity
-                                      style={{ marginTop: 6, backgroundColor: '#4F46E5', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center' }}
-                                      onPress={() => setSolicitudClichesVisible(true)}
-                                    >
-                                      <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>{t('cliches.modalTitle')}</Text>
-                                    </TouchableOpacity>
-                                  )}
-                                  </>
                                 )}
                               </>
                             ) : (
@@ -3175,6 +3233,100 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                 </View>{/* fin grid 2x2 */}
 
                 </>
+              )}
+
+              {/* ═══════════════════ TAB: HISTORIAL CLICHÉS ═════════���═════════ */}
+              {activeTab === 'cliches' && (
+                <View style={{ padding: 14 }}>
+                  {loadingCliches ? (
+                    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                      <ActivityIndicator size="large" color="#4F46E5" />
+                    </View>
+                  ) : solicitudesCliches.length === 0 ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>Sin solicitudes registradas</Text>
+                      <Text style={{ fontSize: 13, color: '#CBD5E1', marginTop: 4 }}>Las solicitudes de clichés de este pedido aparecerán aquí</Text>
+                    </View>
+                  ) : (
+                    solicitudesCliches.map((sol) => {
+                      const fecha = sol.fecha ? new Date(sol.fecha).toLocaleString() : '—';
+                      return (
+                        <View key={sol._id} style={styles.clicheCard}>
+                          {/* Cabecera */}
+                          <View style={styles.clicheCardHeader}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.clicheCardFecha}>{fecha}</Text>
+                              <Text style={styles.clicheCardProveedor}>{sol.proveedor_nombre || '—'}</Text>
+                              {sol.proveedor_email ? <Text style={styles.clicheCardEmail}>{sol.proveedor_email}</Text> : null}
+                            </View>
+                            <View style={styles.clicheEstadoBadge}>
+                              <Text style={styles.clicheEstadoText}>{sol.estado || 'enviada'}</Text>
+                            </View>
+                          </View>
+
+                          {/* Separaciones */}
+                          <View style={styles.clicheSepRow}>
+                            {(sol.separaciones || []).map((sep, i) => (
+                              <View key={i} style={styles.clicheSepChip}>
+                                <View style={[styles.clicheSepDot, { backgroundColor: sep.color || '#CBD5E1' }]} />
+                                <Text style={styles.clicheSepName}>{sep.nombre}</Text>
+                              </View>
+                            ))}
+                          </View>
+
+                          {/* Detalles adicionales */}
+                          <View style={styles.clicheMetaRow}>
+                            {sol.plancha ? (
+                              <View style={styles.clicheMetaItem}>
+                                <Text style={styles.clicheMetaLabel}>Plancha</Text>
+                                <Text style={styles.clicheMetaValue}>{sol.plancha.marca}{sol.plancha.referencia ? ` · ${sol.plancha.referencia}` : ''}</Text>
+                              </View>
+                            ) : null}
+                            {sol.fecha_entrega ? (
+                              <View style={styles.clicheMetaItem}>
+                                <Text style={styles.clicheMetaLabel}>Entrega solicitada</Text>
+                                <Text style={[styles.clicheMetaValue, { color: '#DC2626' }]}>{sol.fecha_entrega}</Text>
+                              </View>
+                            ) : null}
+                            {sol.maquina && sol.maquina !== '—' ? (
+                              <View style={styles.clicheMetaItem}>
+                                <Text style={styles.clicheMetaLabel}>Máquina</Text>
+                                <Text style={styles.clicheMetaValue}>{sol.maquina}</Text>
+                              </View>
+                            ) : null}
+                          </View>
+
+                          {sol.notas ? (
+                            <View style={styles.clicheNotas}>
+                              <Text style={styles.clicheNotasLabel}>Notas</Text>
+                              <Text style={styles.clicheNotasText}>{sol.notas}</Text>
+                            </View>
+                          ) : null}
+
+                          {/* Botón ver email */}
+                          {Platform.OS === 'web' && (
+                            <TouchableOpacity
+                              style={styles.clicheVerEmailBtn}
+                              disabled={emailPreviewLoading}
+                              onPress={() => {
+                                const pid = pedido?._id || pedido?.pedido_id;
+                                setEmailPreviewLoading(true);
+                                apiFetch(currentUser?.access_token)(`/api/pedidos/${pid}/solicitud-cliches/${sol._id}/email`)
+                                  .then((d) => setEmailPreviewHtml(d.html || ''))
+                                  .catch(() => setEmailPreviewHtml('<p style="color:red">Error al cargar la vista previa</p>'))
+                                  .finally(() => setEmailPreviewLoading(false));
+                              }}
+                            >
+                              {emailPreviewLoading
+                                ? <ActivityIndicator size="small" color="#4F46E5" />
+                                : <Text style={styles.clicheVerEmailBtnText}>✉ Ver email enviado</Text>}
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
               )}
 
               </ScrollView>
@@ -3899,6 +4051,28 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
           </Modal>
         );
       })()}
+
+      {/* ── Modal: vista previa email clichés ── */}
+      {emailPreviewHtml !== null && Platform.OS === 'web' && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setEmailPreviewHtml(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, width: '100%', maxWidth: 660, maxHeight: '88%', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>✉ Vista previa del email</Text>
+                <TouchableOpacity onPress={() => setEmailPreviewHtml(null)} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 14, color: '#64748B', fontWeight: '700' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <iframe
+                srcDoc={emailPreviewHtml}
+                style={{ width: '100%', height: 520, border: 'none', backgroundColor: '#F8FAFC' }}
+                title="Vista previa email clichés"
+                sandbox="allow-same-origin"
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* ── Lightbox PDF ── */}
       {pdfLightboxUrl && (

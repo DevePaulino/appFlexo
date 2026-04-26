@@ -1,6 +1,7 @@
 import React, { useEffect, useState, Fragment } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import CamposDinamicos from '../components/CamposDinamicos';
 
 const TROQUEL_BASE_DEF = [
   { campo_id: '__base_tq_numero',        col: 0, fila: 0, ancho: 4 },
@@ -29,6 +30,8 @@ export default function NuevoTroquelModal({
 }) {
   const { t } = useTranslation();
   const [baseLayoutData, setBaseLayoutData] = useState({});
+  const [camposCustom, setCamposCustom]     = useState([]);
+  const [camposExtra, setCamposExtra]       = useState({});
   const [refTroquel, setRefTroquel]           = useState('');
   const [tipoTroquel, setTipoTroquel]         = useState('regular');
   const [forma, setForma]                     = useState('Rectangular');
@@ -55,6 +58,7 @@ export default function NuevoTroquelModal({
         setValorZ(initialTroquel.valorZ || '');
         setDistanciaSesgado(initialTroquel.distanciaSesgado || '');
         setSentidoImpresion(initialTroquel.sentido_impresion || 'vertical');
+        setCamposExtra(initialTroquel.campos_extra || {});
       } else {
         setRefTroquel(defaultNumero || '');
         setTipoTroquel('regular');
@@ -67,6 +71,7 @@ export default function NuevoTroquelModal({
         setValorZ('');
         setDistanciaSesgado('');
         setSentidoImpresion('vertical');
+        setCamposExtra({});
       }
     }
   }, [visible, defaultNumero, initialTroquel, modoEdicion]);
@@ -76,10 +81,13 @@ export default function NuevoTroquelModal({
     const token = global.__MIAPP_ACCESS_TOKEN;
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    fetch('http://localhost:8080/api/campos-base-layout?form=troquel', { headers })
-      .then(r => r.json())
-      .then(d => setBaseLayoutData(d.layout || {}))
-      .catch(() => {});
+    Promise.all([
+      fetch('http://localhost:8080/api/campos-base-layout?form=troquel', { headers }).then(r => r.json()),
+      fetch('http://localhost:8080/api/campos-formulario?form=troquel', { headers }).then(r => r.json()),
+    ]).then(([dLayout, dCampos]) => {
+      setBaseLayoutData(dLayout.layout || {});
+      setCamposCustom(dCampos.campos || []);
+    }).catch(() => {});
   }, [visible]);
 
   const layoutRows = (renderMap) => {
@@ -134,6 +142,7 @@ export default function NuevoTroquelModal({
     setValorZ('');
     setDistanciaSesgado('');
     setSentidoImpresion('vertical');
+    setCamposExtra({});
     onClose();
   };
 
@@ -172,6 +181,7 @@ export default function NuevoTroquelModal({
       valorZ,
       distanciaSesgado,
       sentido_impresion: sentidoImpresion,
+      campos_extra: camposExtra,
     });
     resetAndClose();
   };
@@ -294,6 +304,15 @@ export default function NuevoTroquelModal({
                 </View>
               ),
             })}
+
+            {camposCustom.length > 0 && (
+              <CamposDinamicos
+                seccion="troquel"
+                campos={camposCustom}
+                valores={camposExtra}
+                onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))}
+              />
+            )}
           </ScrollView>
 
           {!puedeCrear && (

@@ -858,6 +858,7 @@
       "title": "Order Details",
       "tabDatos": "Information",
       "tabArchivos": "Files",
+      "tabCliches": "Plates",
       "secPedido": "Order",
       "secCliente": "Client / Contact",
       "secPresupuesto": "Quote / Product",
@@ -1074,6 +1075,7 @@
     "sinProveedores": "No suppliers configured",
     "sinProveedoresSub": "Add a plate supplier in Settings.",
     "sinEmail": "No email configured",
+    "fechaEntregaTitle": "Requested delivery date",
     "notasTitle": "Additional notes",
     "notasPlaceholder": "Special instructions, finishes, urgency...",
     "enviado": "Request sent",
@@ -1082,6 +1084,7 @@
     "verEnlaceDescarga": "View download link",
     "seleccionaProveedor": "Select a supplier",
     "seleccionaSep": "Select at least one separation",
+    "seleccionaPlancha": "Assign a plate type to each selected separation",
     "enviarSolicitud": "Send request ({{count}} sep.)",
     "planchaTitle": "Select plate and reference",
     "cerrar": "Close"

@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { formatPhone, isValidEmail } from '../utils/phoneFormat';
 import { useTranslation } from 'react-i18next';
 import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
@@ -540,6 +541,7 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
   const saveProveedor = async () => {
     const nombre = provForm.nombre.trim();
     if (!nombre) return alert(t('screens.materiales.errProveedorRequired'));
+    if (provForm.email.trim() && !isValidEmail(provForm.email)) return alert(t('forms.errorEmail'));
     try {
       let resp;
       if (provModal.editing) {
@@ -915,7 +917,7 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
                 <TextInput
                   style={styles.fieldInput}
                   value={provForm.telefono}
-                  onChangeText={v => setProvForm(p => ({ ...p, telefono: v }))}
+                  onChangeText={v => setProvForm(p => ({ ...p, telefono: formatPhone(v) }))}
                   placeholder="+34 600 000 000"
                   placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
@@ -924,13 +926,17 @@ export default function CatalogoMaterialesScreen({ currentUser }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>{t('screens.materiales.emailLabel')}</Text>
                 <TextInput
-                  style={styles.fieldInput}
+                  style={[styles.fieldInput, provForm.email.trim() && !isValidEmail(provForm.email) && { borderColor: '#D21820' }]}
                   value={provForm.email}
                   onChangeText={v => setProvForm(p => ({ ...p, email: v }))}
                   placeholder="comercial@proveedor.com"
                   placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
+                  autoCapitalize="none"
                 />
+                {provForm.email.trim() !== '' && !isValidEmail(provForm.email) && (
+                  <Text style={{ color: '#D21820', fontSize: 11, marginTop: 2 }}>{t('forms.errorEmail')}</Text>
+                )}
               </View>
             </View>
 

@@ -854,6 +854,7 @@
       "title": "Auftragsdetails",
       "tabDatos": "Information",
       "tabArchivos": "Dateien",
+      "tabCliches": "Klischees",
       "secPedido": "Auftrag",
       "secCliente": "Kunde / Kontakt",
       "secPresupuesto": "Angebot / Produkt",
@@ -1070,6 +1071,7 @@
     "sinProveedores": "Keine Anbieter konfiguriert",
     "sinProveedoresSub": "Fügen Sie einen Klischeeanbieter in den Einstellungen hinzu.",
     "sinEmail": "Keine E-Mail konfiguriert",
+    "fechaEntregaTitle": "Gewünschtes Lieferdatum",
     "notasTitle": "Zusätzliche Hinweise",
     "notasPlaceholder": "Besondere Anweisungen, Veredelungen, Dringlichkeit...",
     "enviado": "Anfrage gesendet",
@@ -1078,6 +1080,7 @@
     "verEnlaceDescarga": "Download-Link anzeigen",
     "seleccionaProveedor": "Anbieter auswählen",
     "seleccionaSep": "Mindestens eine Separation auswählen",
+    "seleccionaPlancha": "Jedem ausgewählten Auszug einen Plattentyp zuweisen",
     "enviarSolicitud": "Anfrage senden ({{count}} Sep.)",
     "planchaTitle": "Platte und Referenz auswählen",
     "cerrar": "Schließen"

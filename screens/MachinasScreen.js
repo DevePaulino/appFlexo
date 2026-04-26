@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HelpModal from '../components/HelpModal';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
@@ -43,6 +45,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
   },
+  helpBtn: { padding: 4 },
+  helpBtnText: { fontSize: 14, color: '#94A3B8' },
   btnPlusWrap: {
     position: 'relative',
   },
@@ -253,6 +257,9 @@ export default function MachinasScreen({ currentUser }) {
   const [filtrados, setFiltrados] = useState([]);
   const [paginaMaquinas, setPaginaMaquinas] = useState(1);
   const [busqueda, setBusqueda] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpHeaderRef = useRef(null);
+  const helpTableRef  = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [maquinaEditandoId, setMaquinaEditandoId] = useState(null);
@@ -368,8 +375,11 @@ export default function MachinasScreen({ currentUser }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} ref={helpHeaderRef}>
         <Text style={styles.headerTitle}>{t('nav.maquinas')}</Text>
+        <Pressable onPress={() => setHelpVisible(true)} style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>?</Text>
+        </Pressable>
         <TextInput
           style={styles.searchInput}
           placeholder={t('common.searchAny')}
@@ -398,7 +408,7 @@ export default function MachinasScreen({ currentUser }) {
       </View>
 
       {filtrados.length === 0 ? (
-          <View style={styles.tableContainer}>
+          <View style={styles.tableContainer} ref={helpTableRef}>
             <EmptyState
               title={busqueda ? t('common.noResults') : t('screens.maquinas.noMaquinas')}
               message={busqueda ? t('common.noResultsMsg') : t('screens.maquinas.noItems')}
@@ -407,7 +417,7 @@ export default function MachinasScreen({ currentUser }) {
             />
           </View>
         ) : (
-          <ScrollView style={styles.tableContainer}>
+          <ScrollView style={styles.tableContainer} ref={helpTableRef}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 640 } })}>
             {/* ── Cabecera ── */}
@@ -586,6 +596,16 @@ export default function MachinasScreen({ currentUser }) {
         maquina={maquinaDetalle}
         onSave={handleGuardarDetalle}
         puedeEditar={puedeCrear}
+      />
+      <HelpModal
+        visible={helpVisible}
+        onClose={() => { AsyncStorage.setItem('help_seen_maquinas', '1'); setHelpVisible(false); }}
+        title={t('help.maquinas.title')}
+        steps={[
+          { icon: t('help.maquinas.s1i'), title: t('help.maquinas.s1t'), desc: t('help.maquinas.s1d'), spotlight: { ref: helpHeaderRef } },
+          { icon: t('help.maquinas.s2i'), title: t('help.maquinas.s2t'), desc: t('help.maquinas.s2d'), spotlight: { ref: helpTableRef } },
+          { icon: t('help.maquinas.s3i'), title: t('help.maquinas.s3t'), desc: t('help.maquinas.s3d'), spotlight: { ref: helpTableRef } },
+        ]}
       />
     </View>
   );
