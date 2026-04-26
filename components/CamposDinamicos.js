@@ -23,11 +23,12 @@ try {
  * Acepta contenedorId (nuevo) o seccion (legado).
  * Prioriza contenedor_id si está presente en el campo; si no, cae al seccion legacy.
  */
-export default function CamposDinamicos({ seccion, contenedorId, campos = [], valores = {}, onChange, submitted = false }) {
+export default function CamposDinamicos({ seccion, contenedorId, showAll = false, campos = [], valores = {}, onChange, submitted = false }) {
   const { t } = useTranslation();
   const camposSeccion = campos
     .filter(c => {
       if (c.activo === false) return false;
+      if (showAll) return true;
       if (contenedorId) {
         // Nuevo sistema: filtrar por contenedor_id
         if (c.contenedor_id) return c.contenedor_id === contenedorId;

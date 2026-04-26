@@ -307,7 +307,7 @@ export default function NuevoTroquelModal({
 
             {camposCustom.length > 0 && (
               <CamposDinamicos
-                seccion="troquel"
+                showAll
                 campos={camposCustom}
                 valores={camposExtra}
                 onChange={(id, val) => setCamposExtra(prev => ({ ...prev, [id]: val }))}
