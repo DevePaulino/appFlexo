@@ -7,6 +7,8 @@ import EmptyState from '../components/EmptyState';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useTranslation } from 'react-i18next';
 import { useClientes } from '../ClientesContext';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 
 const styles = StyleSheet.create({
   container: {
@@ -282,8 +284,19 @@ const styles = StyleSheet.create({
   },
 });
 
+const CLIENTES_COL_DEFS = (t) => [
+  { key: 'nombre',      label: t('forms.fieldCliente'),             flex: 0.18 },
+  { key: 'razonSocial', label: t('forms.razonSocial'),              flex: 0.18 },
+  { key: 'cif',         label: t('forms.cif'),                      flex: 0.12 },
+  { key: 'contacto',    label: t('screens.clientes.colContacto'),   flex: 0.20 },
+  { key: 'email',       label: t('forms.email'),                    flex: 0.20 },
+  { key: 'acciones',    label: t('common.actions'),                 flex: 0.12, locked: true },
+];
+
 export default function ClientesScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('clientes', CLIENTES_COL_DEFS(t), currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const { clientes: rawClientes, recargarClientes } = useClientes();
   const clientes = useMemo(() => (rawClientes || [])
@@ -537,55 +550,43 @@ export default function ClientesScreen({ currentUser }) {
         <ScrollView style={styles.tableContainer} ref={helpTableRef}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 560 } })}>
-          <View style={styles.tableHeader}>
-            <View style={[styles.tableCell, styles.colNombre]}>
-              <Text style={styles.headerText}>{t('forms.fieldCliente')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colRazonSocial]}>
-              <Text style={styles.headerText}>{t('forms.razonSocial')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colCif]}>
-              <Text style={styles.headerText}>{t('forms.cif')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colContacto]}>
-              <Text style={styles.headerText}>{t('screens.clientes.colContacto')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colEmail]}>
-              <Text style={styles.headerText}>{t('forms.email')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>{t('common.actions')}</Text>
-            </View>
+          <View style={[styles.tableHeader, { position: 'relative' }]}>
+            {visibleCols.map(col => (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                <Text style={styles.headerText}>{col.label}</Text>
+              </View>
+            ))}
+            <ColumnSelector
+              orderedCols={orderedCols} hiddenKeys={hiddenKeys}
+              onToggle={toggleColumn} onReorder={reorderColumns} onReset={resetColumns}
+            />
           </View>
           {clientesPaginados.map((cliente, idx) => (
             <TouchableOpacity key={cliente.id} style={[styles.tableRow, (idx + (paginaClientes - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]} onPress={() => abrirDetalleEdicion(cliente)} activeOpacity={0.75}>
-              <View style={[styles.tableCell, styles.colNombre]}>
-                <Text style={styles.cellText} numberOfLines={1}>{cliente.nombre || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colRazonSocial]}>
-                <Text style={styles.cellText} numberOfLines={1}>{cliente.razonSocial || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colCif]}>
-                <Text style={styles.cellText} numberOfLines={1}>{cliente.cif || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colContacto]}>
-                <Text style={styles.cellText} numberOfLines={1}>{cliente.contacto || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colEmail]}>
-                <Text style={styles.cellText} numberOfLines={1}>{cliente.email || '-'}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colAcciones]}>
-                {confirmingDeleteCliente === cliente.id ? (
-                  <DeleteConfirmRow
-                    onCancel={() => setConfirmingDeleteCliente(null)}
-                    onConfirm={() => { setConfirmingDeleteCliente(null); ejecutarEliminacionCliente(cliente); }}
-                  />
-                ) : (
-                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteCliente(cliente.id); }}>
-                    <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              {visibleCols.map(col => {
+                const f = col.adjustedFlex;
+                switch (col.key) {
+                  case 'nombre':      return <View key={col.key} style={[styles.tableCell, { flex: f }]}><Text style={styles.cellText} numberOfLines={1}>{cliente.nombre || '-'}</Text></View>;
+                  case 'razonSocial': return <View key={col.key} style={[styles.tableCell, { flex: f }]}><Text style={styles.cellText} numberOfLines={1}>{cliente.razonSocial || '-'}</Text></View>;
+                  case 'cif':         return <View key={col.key} style={[styles.tableCell, { flex: f }]}><Text style={styles.cellText} numberOfLines={1}>{cliente.cif || '-'}</Text></View>;
+                  case 'contacto':    return <View key={col.key} style={[styles.tableCell, { flex: f }]}><Text style={styles.cellText} numberOfLines={1}>{cliente.contacto || '-'}</Text></View>;
+                  case 'email':       return <View key={col.key} style={[styles.tableCell, { flex: f }]}><Text style={styles.cellText} numberOfLines={1}>{cliente.email || '-'}</Text></View>;
+                  case 'acciones':    return (
+                    <View key={col.key} style={[styles.tableCell, { flex: f }]}>
+                      {confirmingDeleteCliente === cliente.id ? (
+                        <DeleteConfirmRow onCancel={() => setConfirmingDeleteCliente(null)} onConfirm={() => { setConfirmingDeleteCliente(null); ejecutarEliminacionCliente(cliente); }} />
+                      ) : (
+                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteCliente(cliente.id); }}>
+                          <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                  default: return null;
+                }
+              })}
+              {/* spacer para alinear con el botón ⊞ del header */}
+              <View style={{ width: 30 }} />
             </TouchableOpacity>
           ))}
           {totalPaginasClientes > 1 && (

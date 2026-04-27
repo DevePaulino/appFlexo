@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 import HelpModal from '../components/HelpModal';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -296,8 +298,20 @@ const styles = StyleSheet.create({
   modalCloseText: { color: '#374151', fontSize: 13, fontWeight: '700' },
 });
 
+const TRABAJOS_COL_DEFS = (t) => [
+  { key: 'numero',     label: t('screens.trabajos.colNumeroPedido'), flex: 0.12 },
+  { key: 'nombre',     label: t('screens.trabajos.colNombre'),       flex: 0.19 },
+  { key: 'cliente',    label: t('screens.trabajos.colCliente'),      flex: 0.19 },
+  { key: 'referencia', label: t('screens.trabajos.colReferencia'),   flex: 0.12 },
+  { key: 'fase',       label: t('screens.trabajos.colFase'),         flex: 0.14 },
+  { key: 'estado',     label: t('screens.trabajos.colEstado'),       flex: 0.14 },
+  { key: 'acciones',   label: t('screens.trabajos.colAcciones'),     flex: 0.12, locked: true },
+];
+
 export default function TrabajoScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('trabajos', TRABAJOS_COL_DEFS(t), currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const ESTADO_FINALIZADO_COLOR = '#1F9D55';
 
@@ -981,27 +995,18 @@ export default function TrabajoScreen({ currentUser }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 620 } })}>
           <View style={styles.tableHeader}>
-            <View style={[styles.tableCell, styles.colNumeroPedido]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colNumeroPedido')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colNombre]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colNombre')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colCliente]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colCliente')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colReferencia]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colReferencia')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colFase]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colFase')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colEstado]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colEstado')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colAcciones]}>
-              <Text style={styles.headerText}>{t('screens.trabajos.colAcciones')}</Text>
-            </View>
+            {visibleCols.map(col => (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                <Text style={styles.headerText}>{col.label}</Text>
+              </View>
+            ))}
+            <ColumnSelector
+              orderedCols={orderedCols}
+              hiddenKeys={hiddenKeys}
+              onToggle={toggleColumn}
+              onReorder={reorderColumns}
+              onReset={resetColumns}
+            />
           </View>
           {pedidosPaginados.map((trabajo, idx) => {
             const estadoTrabajoActual = normalizarEstadoValue(trabajo.estado || '');
@@ -1025,94 +1030,122 @@ export default function TrabajoScreen({ currentUser }) {
                   hovered && { backgroundColor: '#F5F7FF' },
                 ]}
               >
-                <View style={[styles.tableCell, styles.colNumeroPedido]}>
-                  {trabajo.numero_pedido ? (
-                    <View style={styles.numeroPedidoPill}>
-                      <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
-                    </View>
-                  ) : (
-                    <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
-                  )}
-                </View>
-                <View style={[styles.tableCell, styles.colNombre]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colCliente]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colReferencia]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{trabajo.referencia}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colFase]}>
-                  <View style={styles.estadosDotsRow}>
-                    {estadosTimeline.map((estadoItem) => {
-                      const estadoTrabajo = normalizarEstadoValue(trabajo.estado || '');
-                      const estadoBloqueado = (estadoRules.ocultar_timeline || []).includes(estadoTrabajo);
-                      const activo = !estadoBloqueado && estadoItem.value === estadoTrabajo;
+                {visibleCols.map(col => {
+                  switch (col.key) {
+                    case 'numero':
                       return (
-                        <View
-                          key={`${trabajo.id}-${estadoItem.value}`}
-                          title={estadoItem.label}
-                          style={[
-                            styles.estadoDot,
-                            { backgroundColor: estadoBloqueado ? '#BDBDBD' : getEstadoDotColor(estadoItem.value) },
-                            activo && styles.estadoDotActivo,
-                          ]}
-                        />
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                          {trabajo.numero_pedido ? (
+                            <View style={styles.numeroPedidoPill}>
+                              <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
+                            </View>
+                          ) : (
+                            <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
+                          )}
+                        </View>
                       );
-                    })}
-                  </View>
-                </View>
-                <View style={[styles.tableCell, styles.colEstado]}>
-                  {(() => {
-                    const [badgeStyle, badgeTextStyle] = getStatusColor(trabajo.estado);
-                    return (
-                      <View style={badgeStyle}>
-                        <Text style={badgeTextStyle} numberOfLines={1}>{getStatusLabel(trabajo.estado)}</Text>
-                      </View>
-                    );
-                  })()}
-                </View>
-                <View style={[styles.tableCell, styles.colAcciones]}>
-                  {showNavBtns && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.navBtn, isAtFirst && styles.navBtnDisabled]}
-                        disabled={isAtFirst}
-                        onPress={() => handleNavigateEstado(trabajo, -1)}
-                      >
-                        <Text style={styles.navBtnText}>‹</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.navBtn, isAtLast && styles.navBtnDisabled]}
-                        disabled={isAtLast}
-                        onPress={() => handleNavigateEstado(trabajo, 1)}
-                      >
-                        <Text style={styles.navBtnText}>›</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  {canCancelar && esCancelado && (
-                    isConfirmingReactivar ? (
-                      <View style={styles.cancelConfirmRow}>
-                        <Text style={styles.cancelConfirmText}>{t('screens.trabajos.reactivarConfirm')}</Text>
-                        <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setReactivarConfirmId(null)}>
-                          <Text style={styles.cancelConfirmNoText}>{t('common.cancel')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.reactivarConfirmYes} onPress={() => handleReactivarPedido(trabajo)}>
-                          <Text style={styles.cancelConfirmYesText}>{t('screens.trabajos.reactivarSi')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.reactivarBtn}
-                        onPress={() => setReactivarConfirmId(trabajo.pedido_id || trabajo.id || trabajo._id)}
-                      >
-                        <Text style={styles.reactivarBtnText}>{t('screens.trabajos.reactivarBtn')}</Text>
-                      </TouchableOpacity>
-                    )
-                  )}
-                </View>
+                    case 'nombre':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
+                        </View>
+                      );
+                    case 'cliente':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente && (trabajo.cliente.nombre || '-'))}</Text>
+                        </View>
+                      );
+                    case 'referencia':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{trabajo.referencia}</Text>
+                        </View>
+                      );
+                    case 'fase':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                          <View style={styles.estadosDotsRow}>
+                            {estadosTimeline.map((estadoItem) => {
+                              const estadoTrabajo = normalizarEstadoValue(trabajo.estado || '');
+                              const estadoBloqueado = (estadoRules.ocultar_timeline || []).includes(estadoTrabajo);
+                              const activo = !estadoBloqueado && estadoItem.value === estadoTrabajo;
+                              return (
+                                <View
+                                  key={`${trabajo.id}-${estadoItem.value}`}
+                                  title={estadoItem.label}
+                                  style={[
+                                    styles.estadoDot,
+                                    { backgroundColor: estadoBloqueado ? '#BDBDBD' : getEstadoDotColor(estadoItem.value) },
+                                    activo && styles.estadoDotActivo,
+                                  ]}
+                                />
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    case 'estado':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                          {(() => {
+                            const [badgeStyle, badgeTextStyle] = getStatusColor(trabajo.estado);
+                            return (
+                              <View style={badgeStyle}>
+                                <Text style={badgeTextStyle} numberOfLines={1}>{getStatusLabel(trabajo.estado)}</Text>
+                              </View>
+                            );
+                          })()}
+                        </View>
+                      );
+                    case 'acciones':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }]}>
+                          {showNavBtns && (
+                            <>
+                              <TouchableOpacity
+                                style={[styles.navBtn, isAtFirst && styles.navBtnDisabled]}
+                                disabled={isAtFirst}
+                                onPress={() => handleNavigateEstado(trabajo, -1)}
+                              >
+                                <Text style={styles.navBtnText}>‹</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.navBtn, isAtLast && styles.navBtnDisabled]}
+                                disabled={isAtLast}
+                                onPress={() => handleNavigateEstado(trabajo, 1)}
+                              >
+                                <Text style={styles.navBtnText}>›</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
+                          {canCancelar && esCancelado && (
+                            isConfirmingReactivar ? (
+                              <View style={styles.cancelConfirmRow}>
+                                <Text style={styles.cancelConfirmText}>{t('screens.trabajos.reactivarConfirm')}</Text>
+                                <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setReactivarConfirmId(null)}>
+                                  <Text style={styles.cancelConfirmNoText}>{t('common.cancel')}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.reactivarConfirmYes} onPress={() => handleReactivarPedido(trabajo)}>
+                                  <Text style={styles.cancelConfirmYesText}>{t('screens.trabajos.reactivarSi')}</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.reactivarBtn}
+                                onPress={() => setReactivarConfirmId(trabajo.pedido_id || trabajo.id || trabajo._id)}
+                              >
+                                <Text style={styles.reactivarBtnText}>{t('screens.trabajos.reactivarBtn')}</Text>
+                              </TouchableOpacity>
+                            )
+                          )}
+                        </View>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+                <View style={{ width: 30 }} />
               </Pressable>
             );
           })}

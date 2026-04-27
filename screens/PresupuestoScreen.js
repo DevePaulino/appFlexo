@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 import HelpModal from '../components/HelpModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -383,8 +385,18 @@ const styles = StyleSheet.create({
   },
 });
 
+const PRESUPUESTOS_COL_DEFS = (t) => [
+  { key: 'numero',     label: t('screens.presupuesto.colNumero'),     flex: 0.17 },
+  { key: 'cliente',    label: t('screens.presupuesto.colCliente'),    flex: 0.24 },
+  { key: 'referencia', label: t('screens.presupuesto.colReferencia'), flex: 0.28 },
+  { key: 'fecha',      label: t('screens.presupuesto.colFecha'),      flex: 0.13 },
+  { key: 'estado',     label: t('screens.presupuesto.colEstado'),     flex: 0.18 },
+];
+
 export default function PresupuestoScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('presupuestos', PRESUPUESTOS_COL_DEFS(t), currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
@@ -992,21 +1004,18 @@ export default function PresupuestoScreen({ currentUser }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 560 } })}>
           <View style={styles.tableHeader}>
-            <View style={[styles.tableCell, styles.colNumero]}>
-              <Text style={styles.headerText}>{t('screens.presupuesto.colNumero')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colCliente]}>
-              <Text style={styles.headerText}>{t('screens.presupuesto.colCliente')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colReferencia]}>
-              <Text style={styles.headerText}>{t('screens.presupuesto.colReferencia')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colFecha]}>
-              <Text style={styles.headerText}>{t('screens.presupuesto.colFecha')}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colEstado]}>
-              <Text style={styles.headerText}>{t('screens.presupuesto.colEstado')}</Text>
-            </View>
+            {visibleCols.map(col => (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                <Text style={styles.headerText}>{col.label}</Text>
+              </View>
+            ))}
+            <ColumnSelector
+              orderedCols={orderedCols}
+              hiddenKeys={hiddenKeys}
+              onToggle={toggleColumn}
+              onReorder={reorderColumns}
+              onReset={resetColumns}
+            />
           </View>
           {presupuestosPaginados.map((presupuesto) => {
             const borderColor = presupuesto.aprobado ? '#16A34A' : '#F59E0B';
@@ -1020,45 +1029,67 @@ export default function PresupuestoScreen({ currentUser }) {
                   hovered && { backgroundColor: '#F5F7FF' },
                 ]}
               >
-                <View style={[styles.tableCell, styles.colNumero]}>
-                  {presupuesto.numero_presupuesto ? (
-                    <View style={styles.numeroPresupuestoPill}>
-                      <Text style={styles.numeroPresupuestoPillText} numberOfLines={1}>{presupuesto.numero_presupuesto}</Text>
-                    </View>
-                  ) : <Text style={[styles.cellText, { color: '#999' }]}>-</Text>}
-                </View>
-                <View style={[styles.tableCell, styles.colCliente]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{typeof presupuesto.cliente === 'string' ? presupuesto.cliente : (presupuesto.cliente && (presupuesto.cliente.nombre || '-'))}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colReferencia]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{presupuesto.referencia || presupuesto.nombre || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colFecha]}>
-                  <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(presupuesto.fecha_presupuesto)}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colEstado]}>
-                  <View style={styles.estadoContainer}>
-                    <Text
-                      style={[
-                        styles.estadoText,
-                        presupuesto.aprobado ? styles.estadoAceptado : styles.estadoPendiente,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
-                    </Text>
-                    {presupuesto.aprobado && presupuesto.fecha_aprobacion ? (
-                      <Text style={styles.fechaAprobacionText} numberOfLines={1}>
-                        {formatearFechaHora(presupuesto.fecha_aprobacion)}
-                      </Text>
-                    ) : null}
-                    {!presupuesto.aprobado ? (
-                      <TouchableOpacity style={styles.actionBtn} onPress={(e) => { e.stopPropagation?.(); handleAceptarPresupuesto(presupuesto); }}>
-                        <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                </View>
+                {visibleCols.map(col => {
+                  switch (col.key) {
+                    case 'numero':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          {presupuesto.numero_presupuesto ? (
+                            <View style={styles.numeroPresupuestoPill}>
+                              <Text style={styles.numeroPresupuestoPillText} numberOfLines={1}>{presupuesto.numero_presupuesto}</Text>
+                            </View>
+                          ) : <Text style={[styles.cellText, { color: '#999' }]}>-</Text>}
+                        </View>
+                      );
+                    case 'cliente':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{typeof presupuesto.cliente === 'string' ? presupuesto.cliente : (presupuesto.cliente && (presupuesto.cliente.nombre || '-'))}</Text>
+                        </View>
+                      );
+                    case 'referencia':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{presupuesto.referencia || presupuesto.nombre || '-'}</Text>
+                        </View>
+                      );
+                    case 'fecha':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(presupuesto.fecha_presupuesto)}</Text>
+                        </View>
+                      );
+                    case 'estado':
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <View style={styles.estadoContainer}>
+                            <Text
+                              style={[
+                                styles.estadoText,
+                                presupuesto.aprobado ? styles.estadoAceptado : styles.estadoPendiente,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {presupuesto.aprobado ? t('screens.presupuesto.estadoAprobado') : t('screens.presupuesto.estadoPendiente')}
+                            </Text>
+                            {presupuesto.aprobado && presupuesto.fecha_aprobacion ? (
+                              <Text style={styles.fechaAprobacionText} numberOfLines={1}>
+                                {formatearFechaHora(presupuesto.fecha_aprobacion)}
+                              </Text>
+                            ) : null}
+                            {!presupuesto.aprobado ? (
+                              <TouchableOpacity style={styles.actionBtn} onPress={(e) => { e.stopPropagation?.(); handleAceptarPresupuesto(presupuesto); }}>
+                                <Text style={styles.actionBtnText}>{t('screens.presupuesto.aceptar')}</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        </View>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+                <View style={{ width: 30 }} />
               </Pressable>
             );
           })}

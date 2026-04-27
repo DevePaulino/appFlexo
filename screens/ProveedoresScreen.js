@@ -3,6 +3,8 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   TextInput, Modal, Alert, Platform, ActivityIndicator,
 } from 'react-native';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import EmptyState from '../components/EmptyState';
 import { useTranslation } from 'react-i18next';
@@ -133,8 +135,19 @@ function getAuthHeaders() {
              : { 'Content-Type': 'application/json' };
 }
 
+const PROVEEDORES_COL_DEFS = (t) => [
+  { key: 'nombre',    label: t('screens.proveedores.colNombre'),    flex: 0.22 },
+  { key: 'contacto',  label: t('screens.proveedores.colContacto'),  flex: 0.18 },
+  { key: 'email',     label: t('screens.proveedores.colEmail'),     flex: 0.22 },
+  { key: 'telefono',  label: t('screens.proveedores.colTelefono'),  flex: 0.14 },
+  { key: 'planchas',  label: t('screens.proveedores.colPlanchas'),  flex: 0.10 },
+  { key: 'acciones',  label: t('common.actions'),                   flex: 0.14, locked: true },
+];
+
 export default function ProveedoresScreen() {
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('proveedores', PROVEEDORES_COL_DEFS(t), null);
   const [tipoActivo, setTipoActivo] = useState(TIPOS[0].key);
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -321,24 +334,18 @@ export default function ProveedoresScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 640 } })}>
               <View style={s.tableHeader}>
-                <View style={[s.cell, s.colNombre]}>
-                  <Text style={s.headerText}>{t('screens.proveedores.colNombre')}</Text>
-                </View>
-                <View style={[s.cell, s.colContacto]}>
-                  <Text style={s.headerText}>{t('screens.proveedores.colContacto')}</Text>
-                </View>
-                <View style={[s.cell, s.colEmail]}>
-                  <Text style={s.headerText}>{t('screens.proveedores.colEmail')}</Text>
-                </View>
-                <View style={[s.cell, s.colTelefono]}>
-                  <Text style={s.headerText}>{t('screens.proveedores.colTelefono')}</Text>
-                </View>
-                <View style={[s.cell, s.colPlanchas]}>
-                  <Text style={s.headerText}>{t('screens.proveedores.colPlanchas')}</Text>
-                </View>
-                <View style={[s.cell, s.colAcciones]}>
-                  <Text style={s.headerText}>{t('common.actions')}</Text>
-                </View>
+                {visibleCols.map(col => (
+                  <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                    <Text style={s.headerText}>{col.label}</Text>
+                  </View>
+                ))}
+                <ColumnSelector
+                  orderedCols={orderedCols}
+                  hiddenKeys={hiddenKeys}
+                  onToggle={toggleColumn}
+                  onReorder={reorderColumns}
+                  onReset={resetColumns}
+                />
               </View>
               {filtrados.map((prov, idx) => (
                 <TouchableOpacity
@@ -347,36 +354,61 @@ export default function ProveedoresScreen() {
                   onPress={() => abrirEditar(prov)}
                   activeOpacity={0.75}
                 >
-                  <View style={[s.cell, s.colNombre]}>
-                    <Text style={s.cellText} numberOfLines={1}>{prov.nombre || '-'}</Text>
-                  </View>
-                  <View style={[s.cell, s.colContacto]}>
-                    <Text style={s.cellText} numberOfLines={1}>{prov.contacto || '-'}</Text>
-                  </View>
-                  <View style={[s.cell, s.colEmail]}>
-                    <Text style={s.cellText} numberOfLines={1}>{prov.email || '-'}</Text>
-                  </View>
-                  <View style={[s.cell, s.colTelefono]}>
-                    <Text style={s.cellText} numberOfLines={1}>{prov.telefono || '-'}</Text>
-                  </View>
-                  <View style={[s.cell, s.colPlanchas]}>
-                    <Text style={s.cellText}>{(prov.planchas || []).length}</Text>
-                  </View>
-                  <View style={[s.cell, s.colAcciones]}>
-                    {confirmDelete === prov._id ? (
-                      <DeleteConfirmRow
-                        onCancel={() => setConfirmDelete(null)}
-                        onConfirm={() => { setConfirmDelete(null); eliminar(prov._id); }}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[s.actionBtn, s.deleteBtn]}
-                        onPress={(e) => { e.stopPropagation?.(); setConfirmDelete(prov._id); }}
-                      >
-                        <Text style={[s.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  {visibleCols.map(col => {
+                    switch (col.key) {
+                      case 'nombre':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText} numberOfLines={1}>{prov.nombre || '-'}</Text>
+                          </View>
+                        );
+                      case 'contacto':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText} numberOfLines={1}>{prov.contacto || '-'}</Text>
+                          </View>
+                        );
+                      case 'email':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText} numberOfLines={1}>{prov.email || '-'}</Text>
+                          </View>
+                        );
+                      case 'telefono':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText} numberOfLines={1}>{prov.telefono || '-'}</Text>
+                          </View>
+                        );
+                      case 'planchas':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText}>{(prov.planchas || []).length}</Text>
+                          </View>
+                        );
+                      case 'acciones':
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
+                            {confirmDelete === prov._id ? (
+                              <DeleteConfirmRow
+                                onCancel={() => setConfirmDelete(null)}
+                                onConfirm={() => { setConfirmDelete(null); eliminar(prov._id); }}
+                              />
+                            ) : (
+                              <TouchableOpacity
+                                style={[s.actionBtn, s.deleteBtn]}
+                                onPress={(e) => { e.stopPropagation?.(); setConfirmDelete(prov._id); }}
+                              >
+                                <Text style={[s.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+                  <View style={{ width: 30 }} />
                 </TouchableOpacity>
               ))}
             </View>

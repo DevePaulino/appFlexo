@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import TroquelImportModal from './TroquelImportModal';
 import { usePermission } from './usePermission';
@@ -457,9 +459,24 @@ const styles = StyleSheet.create({
   },
 });
 
+const TROQUELES_COL_DEFS = (t) => [
+  { key: 'numero',     label: t('screens.troqueles.colNumero'),     flex: 0.13 },
+  { key: 'tipo',       label: t('screens.troqueles.colTipo'),       flex: 0.12 },
+  { key: 'ancho',      label: t('screens.troqueles.colAncho'),      flex: 0.10 },
+  { key: 'alto',       label: t('screens.troqueles.colAlto'),       flex: 0.10 },
+  { key: 'motivos',    label: t('screens.troqueles.colMotivos'),    flex: 0.09 },
+  { key: 'separacion', label: t('screens.troqueles.colSeparacion'), flex: 0.11 },
+  { key: 'valorZ',     label: t('screens.troqueles.colValorZ'),     flex: 0.09 },
+  { key: 'sesgado',    label: t('screens.troqueles.colSesgado'),    flex: 0.11 },
+  { key: 'estado',     label: t('screens.troqueles.colEstado'),     flex: 0.11 },
+  { key: 'acciones',   label: t('common.actions'),                  flex: 0.10, locked: true },
+];
+
 export default function TroquelessScreen({ currentUser, navigation }) {
   const ITEMS_PER_PAGE = 100;
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('troqueles', TROQUELES_COL_DEFS(t), currentUser?.id);
   const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
   const [paginaTroqueles, setPaginaTroqueles] = useState(1);
@@ -932,80 +949,99 @@ export default function TroquelessScreen({ currentUser, navigation }) {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
               <View style={[styles.tableContent, Platform.select({ web: { width: '100%' }, default: { minWidth: 820 } })]}>
                 <View style={styles.tableHeader}>
-                <View style={[styles.tableCell, styles.colNumero]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colNumero')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colTipo]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colTipo')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colAncho]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colAncho')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colAlto]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colAlto')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colMotivos]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colMotivos')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colSeparacion]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colSeparacion')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colValorZ]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colValorZ')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colSesgado]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colSesgado')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colEstado]}>
-                  <Text style={styles.headerText}>{t('screens.troqueles.colEstado')}</Text>
-                </View>
-                <View style={[styles.tableCell, styles.colAcciones]}>
-                  <Text style={styles.headerText}>{t('common.actions')}</Text>
-                </View>
+                  {visibleCols.map(col => (
+                    <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                      <Text style={styles.headerText}>{col.label}</Text>
+                    </View>
+                  ))}
+                  <ColumnSelector
+                    orderedCols={orderedCols}
+                    hiddenKeys={hiddenKeys}
+                    onToggle={toggleColumn}
+                    onReorder={reorderColumns}
+                    onReset={resetColumns}
+                  />
                 </View>
                 {troquelesPaginados.map((troquele, idx) => (
                   <TouchableOpacity key={troquele.id} style={[styles.tableRow, (idx + (paginaTroqueles - 1) * ITEMS_PER_PAGE) % 2 === 1 && styles.rowAlternate]} onPress={() => puedeEditarTroqueles ? abrirEdicionTroquel(troquele) : abrirDetalle(troquele)} activeOpacity={0.75}>
-                  <View style={[styles.tableCell, styles.colNumero]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.numero}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colTipo]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.tipo.charAt(0).toUpperCase() + troquele.tipo.slice(1)}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colAncho]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.anchoMotivo || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colAlto]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.altoMotivo || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colMotivos]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.motivosAncho || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colSeparacion]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.separacionAncho || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colValorZ]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.valorZ || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colSesgado]}>
-                    <Text style={styles.cellText} numberOfLines={1}>{troquele.distanciaSesgado || '-'}</Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colEstado]}>
-                    <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#16A34A' : '#D97706' }]}>
-                      {troquele.estado}
-                    </Text>
-                  </View>
-                  <View style={[styles.tableCell, styles.colAcciones]}>
-                    {confirmingDeleteTroquel === (troquele._id || troquele.id) ? (
-                      <DeleteConfirmRow
-                        onCancel={() => setConfirmingDeleteTroquel(null)}
-                        onConfirm={() => { setConfirmingDeleteTroquel(null); ejecutarEliminarTroquel(troquele); }}
-                      />
-                    ) : (
-                      <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteTroquel(troquele._id || troquele.id); }}>
-                        <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  {visibleCols.map(col => {
+                    switch (col.key) {
+                      case 'numero':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.numero}</Text>
+                          </View>
+                        );
+                      case 'tipo':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.tipo.charAt(0).toUpperCase() + troquele.tipo.slice(1)}</Text>
+                          </View>
+                        );
+                      case 'ancho':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.anchoMotivo || '-'}</Text>
+                          </View>
+                        );
+                      case 'alto':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.altoMotivo || '-'}</Text>
+                          </View>
+                        );
+                      case 'motivos':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.motivosAncho || '-'}</Text>
+                          </View>
+                        );
+                      case 'separacion':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.separacionAncho || '-'}</Text>
+                          </View>
+                        );
+                      case 'valorZ':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.valorZ || '-'}</Text>
+                          </View>
+                        );
+                      case 'sesgado':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>{troquele.distanciaSesgado || '-'}</Text>
+                          </View>
+                        );
+                      case 'estado':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={[styles.statusBadge, { backgroundColor: troquele.estado === 'Disponible' ? '#16A34A' : '#D97706' }]}>
+                              {troquele.estado}
+                            </Text>
+                          </View>
+                        );
+                      case 'acciones':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
+                            {confirmingDeleteTroquel === (troquele._id || troquele.id) ? (
+                              <DeleteConfirmRow
+                                onCancel={() => setConfirmingDeleteTroquel(null)}
+                                onConfirm={() => { setConfirmingDeleteTroquel(null); ejecutarEliminarTroquel(troquele); }}
+                              />
+                            ) : (
+                              <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={(e) => { e.stopPropagation?.(); setConfirmingDeleteTroquel(troquele._id || troquele.id); }}>
+                                <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+                  <View style={{ width: 30 }} />
                   </TouchableOpacity>
                 ))}
                 {totalPaginasTroqueles > 1 && (

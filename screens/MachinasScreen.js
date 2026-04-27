@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from '../components/ColumnSelector';
 import HelpModal from '../components/HelpModal';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -248,10 +250,24 @@ const styles = StyleSheet.create({
   },
 });
 
+const MAQUINAS_COL_DEFS = (t) => [
+  { key: 'nombre',   label: t('screens.maquinas.colMaquina'),   flex: 0.22 },
+  { key: 'colores',  label: t('screens.maquinas.colColores'),   flex: 0.06 },
+  { key: 'anchos',   label: t('screens.maquinas.colMatImp'),    flex: 0.14 },
+  { key: 'rep',      label: t('screens.maquinas.colRepeticion'),flex: 0.13 },
+  { key: 'plancha',  label: t('screens.maquinas.colPlancha'),   flex: 0.08 },
+  { key: 'veloc',    label: t('screens.maquinas.colVelocidad'), flex: 0.14 },
+  { key: 'cola',     label: t('screens.maquinas.colCola'),      flex: 0.05 },
+  { key: 'estado',   label: t('screens.maquinas.colEstado'),    flex: 0.08 },
+  { key: 'acciones', label: '',                                  flex: 0.10, locked: true },
+];
+
 export default function MachinasScreen({ currentUser }) {
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('maquinas', MAQUINAS_COL_DEFS(t), currentUser?.id);
 
   const { maquinas, recargarMaquinas } = useMaquinas();
   const [filtrados, setFiltrados] = useState([]);
@@ -422,31 +438,18 @@ export default function MachinasScreen({ currentUser }) {
             <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 640 } })}>
             {/* ── Cabecera ── */}
             <View style={styles.tableHeader}>
-              <View style={[styles.tableCell, styles.colNombre]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colMaquina')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colColores]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colColores')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colAnchos]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colMatImp')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colRep]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colRepeticion')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colPlancha]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colPlancha')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colVeloc]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colVelocidad')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colCola]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colCola')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colEstado]}>
-                <Text style={styles.headerText}>{t('screens.maquinas.colEstado')}</Text>
-              </View>
-              <View style={[styles.tableCell, styles.colAcciones]} />
+              {visibleCols.map(col => (
+                <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                  <Text style={styles.headerText}>{col.label}</Text>
+                </View>
+              ))}
+              <ColumnSelector
+                orderedCols={orderedCols}
+                hiddenKeys={hiddenKeys}
+                onToggle={toggleColumn}
+                onReorder={reorderColumns}
+                onReset={resetColumns}
+              />
             </View>
 
             {/* ── Filas ── */}
@@ -460,89 +463,106 @@ export default function MachinasScreen({ currentUser }) {
                   onPress={() => abrirDetalleEdicion(maquina)}
                   activeOpacity={0.75}
                 >
-                  {/* Nombre + año */}
-                  <View style={[styles.tableCell, styles.colNombre]}>
-                    <Text style={styles.cellName} numberOfLines={1}>{maquina.nombre}</Text>
-                    {maquina.anio_fabricacion ? (
-                      <Text style={styles.cellMeta}>{maquina.anio_fabricacion}</Text>
-                    ) : null}
-                  </View>
-
-                  {/* Colores */}
-                  <View style={[styles.tableCell, styles.colColores]}>
-                    <Text style={styles.cellVal}>{fmt(maquina.numero_colores)}</Text>
-                  </View>
-
-                  {/* Anchos Mat / Imp */}
-                  <View style={[styles.tableCell, styles.colAnchos]}>
-                    <Text style={styles.cellVal} numberOfLines={1}>
-                      {fmt(maquina.ancho_max_material_mm)} mm
-                    </Text>
-                    <Text style={styles.cellValMuted} numberOfLines={1}>
-                      {fmt(maquina.ancho_max_impresion_mm)} mm imp
-                    </Text>
-                  </View>
-
-                  {/* Repetición */}
-                  <View style={[styles.tableCell, styles.colRep]}>
-                    <Text style={styles.cellVal} numberOfLines={1}>
-                      {fmt(maquina.repeticion_min_mm)}–{fmt(maquina.repeticion_max_mm)} mm
-                    </Text>
-                  </View>
-
-                  {/* Plancha */}
-                  <View style={[styles.tableCell, styles.colPlancha]}>
-                    <Text style={styles.cellVal}>{fmt(maquina.espesor_planchas_mm)} mm</Text>
-                  </View>
-
-                  {/* Velocidad máq / imp */}
-                  <View style={[styles.tableCell, styles.colVeloc]}>
-                    <Text style={styles.cellVal} numberOfLines={1}>
-                      {fmt(maquina.velocidad_max_maquina_mmin)} m/min
-                    </Text>
-                    <Text style={styles.cellValMuted} numberOfLines={1}>
-                      {fmt(maquina.velocidad_max_impresion_mmin)} imp
-                    </Text>
-                  </View>
-
-                  {/* Cola */}
-                  <View style={[styles.tableCell, styles.colCola]}>
-                    <TouchableOpacity
-                      disabled={!maquina.trabajos_en_cola}
-                      onPress={() =>
-                        maquina.trabajos_en_cola > 0 &&
-                        navigation.navigate('Producción', { maquinaId: maquina.id })
-                      }
-                    >
-                      <Text style={[styles.colaText, maquina.trabajos_en_cola > 0 && styles.colaLink]}>
-                        {fmt(maquina.trabajos_en_cola || 0)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Estado */}
-                  <View style={[styles.tableCell, styles.colEstado]}>
-                    <View style={[styles.estadoBadge, { backgroundColor: esActiva ? '#F0FDF4' : '#FFFBEB' }]}>
-                      <Text style={[styles.estadoBadgeText, { color: esActiva ? '#16A34A' : '#D97706' }]}>
-                        {estado}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Acciones */}
-                  <View style={[styles.tableCell, styles.colAcciones]}>
-                    <TouchableOpacity
-                      style={[
-                        styles.actionBtn,
-                        styles.deleteBtn,
-                        maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled,
-                      ]}
-                      disabled={maquina.trabajos_en_cola > 0}
-                      onPress={(e) => { e.stopPropagation?.(); handleEliminarMaquina(maquina); }}
-                    >
-                      <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {visibleCols.map(col => {
+                    switch (col.key) {
+                      case 'nombre':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellName} numberOfLines={1}>{maquina.nombre}</Text>
+                            {maquina.anio_fabricacion ? (
+                              <Text style={styles.cellMeta}>{maquina.anio_fabricacion}</Text>
+                            ) : null}
+                          </View>
+                        );
+                      case 'colores':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellVal}>{fmt(maquina.numero_colores)}</Text>
+                          </View>
+                        );
+                      case 'anchos':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellVal} numberOfLines={1}>
+                              {fmt(maquina.ancho_max_material_mm)} mm
+                            </Text>
+                            <Text style={styles.cellValMuted} numberOfLines={1}>
+                              {fmt(maquina.ancho_max_impresion_mm)} mm imp
+                            </Text>
+                          </View>
+                        );
+                      case 'rep':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellVal} numberOfLines={1}>
+                              {fmt(maquina.repeticion_min_mm)}–{fmt(maquina.repeticion_max_mm)} mm
+                            </Text>
+                          </View>
+                        );
+                      case 'plancha':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellVal}>{fmt(maquina.espesor_planchas_mm)} mm</Text>
+                          </View>
+                        );
+                      case 'veloc':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellVal} numberOfLines={1}>
+                              {fmt(maquina.velocidad_max_maquina_mmin)} m/min
+                            </Text>
+                            <Text style={styles.cellValMuted} numberOfLines={1}>
+                              {fmt(maquina.velocidad_max_impresion_mmin)} imp
+                            </Text>
+                          </View>
+                        );
+                      case 'cola':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <TouchableOpacity
+                              disabled={!maquina.trabajos_en_cola}
+                              onPress={() =>
+                                maquina.trabajos_en_cola > 0 &&
+                                navigation.navigate('Producción', { maquinaId: maquina.id })
+                              }
+                            >
+                              <Text style={[styles.colaText, maquina.trabajos_en_cola > 0 && styles.colaLink]}>
+                                {fmt(maquina.trabajos_en_cola || 0)}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      case 'estado':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <View style={[styles.estadoBadge, { backgroundColor: esActiva ? '#F0FDF4' : '#FFFBEB' }]}>
+                              <Text style={[styles.estadoBadgeText, { color: esActiva ? '#16A34A' : '#D97706' }]}>
+                                {estado}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      case 'acciones':
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <TouchableOpacity
+                              style={[
+                                styles.actionBtn,
+                                styles.deleteBtn,
+                                maquina.trabajos_en_cola > 0 && styles.actionBtnDisabled,
+                              ]}
+                              disabled={maquina.trabajos_en_cola > 0}
+                              onPress={(e) => { e.stopPropagation?.(); handleEliminarMaquina(maquina); }}
+                            >
+                              <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>{t('common.delete')}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+                  <View style={{ width: 30 }} />
                 </TouchableOpacity>
               );
             })}
