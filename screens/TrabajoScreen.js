@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGridColumns } from '../hooks/useGridColumns';
+import { useCamposFormulario } from '../hooks/useCamposFormulario';
 import ColumnSelector from '../components/ColumnSelector';
 import HelpModal from '../components/HelpModal';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   modalCloseText: { color: '#374151', fontSize: 13, fontWeight: '700' },
 });
 
-const TRABAJOS_COL_DEFS = (t) => [
+const TRABAJOS_BASE_COLS = (t) => [
   { key: 'numero',     label: t('screens.trabajos.colNumeroPedido'), flex: 0.12 },
   { key: 'nombre',     label: t('screens.trabajos.colNombre'),       flex: 0.19 },
   { key: 'cliente',    label: t('screens.trabajos.colCliente'),      flex: 0.19 },
@@ -310,8 +311,19 @@ const TRABAJOS_COL_DEFS = (t) => [
 
 export default function TrabajoScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { colDefs: camposDefs } = useCamposFormulario('pedido', currentUser);
+  const colDefs = useMemo(
+    () => {
+      const base = TRABAJOS_BASE_COLS(t);
+      const accionesIdx = base.findIndex(c => c.key === 'acciones');
+      const antes = base.slice(0, accionesIdx);
+      const despues = base.slice(accionesIdx);
+      return [...antes, ...camposDefs, ...despues];
+    },
+    [t, camposDefs],
+  );
   const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
-    useGridColumns('trabajos', TRABAJOS_COL_DEFS(t), currentUser?.id);
+    useGridColumns('trabajos', colDefs, currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const ESTADO_FINALIZADO_COLOR = '#1F9D55';
 
@@ -1141,8 +1153,19 @@ export default function TrabajoScreen({ currentUser }) {
                           )}
                         </View>
                       );
-                    default:
-                      return null;
+                    default: {
+                      const dj = typeof trabajo.datos_json === 'string'
+                        ? (() => { try { return JSON.parse(trabajo.datos_json); } catch { return {}; } })()
+                        : (trabajo.datos_json || {});
+                      const val = dj[col.key];
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>
+                            {val !== undefined && val !== null && val !== '' ? String(val) : '-'}
+                          </Text>
+                        </View>
+                      );
+                    }
                   }
                 })}
                 <View style={{ width: 30 }} />

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGridColumns } from '../hooks/useGridColumns';
+import { useCamposFormulario } from '../hooks/useCamposFormulario';
 import ColumnSelector from '../components/ColumnSelector';
 import HelpModal from '../components/HelpModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const PRESUPUESTOS_COL_DEFS = (t) => [
+const PRESUPUESTOS_BASE_COLS = (t) => [
   { key: 'numero',     label: t('screens.presupuesto.colNumero'),     flex: 0.17 },
   { key: 'cliente',    label: t('screens.presupuesto.colCliente'),    flex: 0.24 },
   { key: 'referencia', label: t('screens.presupuesto.colReferencia'), flex: 0.28 },
@@ -398,8 +399,13 @@ const PRESUPUESTOS_COL_DEFS = (t) => [
 
 export default function PresupuestoScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { colDefs: camposDefs } = useCamposFormulario('presupuesto', currentUser);
+  const colDefs = useMemo(
+    () => [...PRESUPUESTOS_BASE_COLS(t), ...camposDefs],
+    [t, camposDefs],
+  );
   const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
-    useGridColumns('presupuestos', PRESUPUESTOS_COL_DEFS(t), currentUser?.id);
+    useGridColumns('presupuestos', colDefs, currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const navigation = useNavigation();
   const [presupuestos, setPresupuestos] = useState([]);
@@ -1088,8 +1094,19 @@ export default function PresupuestoScreen({ currentUser }) {
                           </View>
                         </View>
                       );
-                    default:
-                      return null;
+                    default: {
+                      const dj = typeof presupuesto.datos_json === 'string'
+                        ? (() => { try { return JSON.parse(presupuesto.datos_json); } catch { return {}; } })()
+                        : (presupuesto.datos_json || {});
+                      const val = dj[col.key];
+                      return (
+                        <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                          <Text style={styles.cellText} numberOfLines={1}>
+                            {val !== undefined && val !== null && val !== '' ? String(val) : '-'}
+                          </Text>
+                        </View>
+                      );
+                    }
                   }
                 })}
                 <View style={{ width: 30 }} />

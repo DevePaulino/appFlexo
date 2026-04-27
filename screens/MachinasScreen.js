@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   estadoBadgeText: {
     fontSize: 10,

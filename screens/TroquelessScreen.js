@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Modal, Alert, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useGridColumns } from '../hooks/useGridColumns';
+import { useCamposFormulario } from '../hooks/useCamposFormulario';
 import ColumnSelector from '../components/ColumnSelector';
 import NuevoTroquelModal from './NuevoTroquelModal';
 import TroquelImportModal from './TroquelImportModal';
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const TROQUELES_COL_DEFS = (t) => [
+const TROQUELES_BASE_COLS = (t) => [
   { key: 'numero',     label: t('screens.troqueles.colNumero'),     flex: 0.13 },
   { key: 'tipo',       label: t('screens.troqueles.colTipo'),       flex: 0.12 },
   { key: 'ancho',      label: t('screens.troqueles.colAncho'),      flex: 0.10 },
@@ -474,8 +475,14 @@ const TROQUELES_COL_DEFS = (t) => [
 export default function TroquelessScreen({ currentUser, navigation }) {
   const ITEMS_PER_PAGE = 100;
   const { t } = useTranslation();
+  const { colDefs: camposDefs } = useCamposFormulario('troquel', currentUser);
+  const colDefs = useMemo(() => {
+    const base = TROQUELES_BASE_COLS(t);
+    const accionesIdx = base.findIndex(c => c.key === 'acciones');
+    return [...base.slice(0, accionesIdx), ...camposDefs, ...base.slice(accionesIdx)];
+  }, [t, camposDefs]);
   const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
-    useGridColumns('troqueles', TROQUELES_COL_DEFS(t), currentUser?.id);
+    useGridColumns('troqueles', colDefs, currentUser?.id);
   const [troqueles, setTroqueles] = useState([]);
   const [filtrados, setFiltrados] = useState(troqueles);
   const [paginaTroqueles, setPaginaTroqueles] = useState(1);
@@ -1036,8 +1043,19 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                             )}
                           </View>
                         );
-                      default:
-                        return null;
+                      default: {
+                        const dj = typeof troquele.datos_json === 'string'
+                          ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
+                          : (troquele.datos_json || {});
+                        const val = dj[col.key];
+                        return (
+                          <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                            <Text style={styles.cellText} numberOfLines={1}>
+                              {val !== undefined && val !== null && val !== '' ? String(val) : '-'}
+                            </Text>
+                          </View>
+                        );
+                      }
                     }
                   })}
                   <View style={{ width: 30 }} />

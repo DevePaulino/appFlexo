@@ -6472,7 +6472,7 @@ def get_troqueles():
             '_id': 1, 'numero': 1, 'tipo': 1, 'forma': 1, 'estado': 1,
             'anchoMotivo': 1, 'altoMotivo': 1, 'motivosAncho': 1,
             'separacionAncho': 1, 'valorZ': 1, 'distanciaSesgado': 1,
-            'sentido_impresion': 1, 'created_at': 1
+            'sentido_impresion': 1, 'created_at': 1, 'datos_json': 1,
         }))
         for d in docs:
             d['_id'] = str(d['_id'])
