@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView, Switch, Platform, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from './usePermission';
+import { invalidateCamposCache } from '../hooks/useCamposFormulario';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -316,6 +317,7 @@ export default function FormBuilderScreen() {
           method: 'PUT', headers, body: JSON.stringify({ layout: baseLayoutArr }),
         }),
       ]);
+      invalidateCamposCache(formTipo);
       setLayoutDirty(false);
     } catch (e) {
       console.error('FormBuilder error:', e.message);
@@ -428,6 +430,7 @@ export default function FormBuilderScreen() {
           method: 'POST', headers: authHeaders(), body: JSON.stringify(form),
         });
       }
+      invalidateCamposCache(formTipo);
       setModalCampoVisible(false);
       await cargarTodo();
     } catch (e) {
@@ -442,6 +445,7 @@ export default function FormBuilderScreen() {
     await fetch(`http://localhost:8080/api/campos-formulario/${id}${fq}`, {
       method: 'DELETE', headers: authHeaders(),
     });
+    invalidateCamposCache(formTipo);
     setConfirmingDeleteCampo(null);
     cargarTodo();
   };

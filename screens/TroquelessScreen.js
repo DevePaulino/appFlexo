@@ -1044,10 +1044,16 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                           </View>
                         );
                       default: {
-                        const dj = typeof troquele.datos_json === 'string'
-                          ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
-                          : (troquele.datos_json || {});
-                        const val = dj[col.key];
+                        let val;
+                        if (col.fieldKey) {
+                          const raw = troquele[col.fieldKey];
+                          val = raw !== undefined && raw !== null ? (typeof raw === 'object' ? (raw.nombre || raw.label || JSON.stringify(raw)) : raw) : undefined;
+                        } else {
+                          const dj = typeof troquele.datos_json === 'string'
+                            ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
+                            : (troquele.datos_json || {});
+                          val = dj[col.key];
+                        }
                         return (
                           <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
                             <Text style={styles.cellText} numberOfLines={1}>

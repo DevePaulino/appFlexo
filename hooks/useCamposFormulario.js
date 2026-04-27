@@ -1,41 +1,58 @@
 import { useState, useEffect } from 'react';
+import { CAMPOS_BASE_PEDIDO, CAMPOS_BASE_PRESUPUESTO, CAMPOS_BASE_TROQUEL } from '../utils/camposBase';
 
-// Cache en memoria por empresa+formType para evitar requests repetidas
-const _cache = {};
+// ── Cache en memoria por empresa+formType ────────────────────────────────────
+const _customCache = {};
+
+// Campos base por tipo de formulario (excluyendo los ya cubiertos por cols hardcodeadas)
+const BASE_COLS_BY_FORM = {
+  pedido:      CAMPOS_BASE_PEDIDO.filter(c => !c.excludeInGrid),
+  presupuesto: CAMPOS_BASE_PRESUPUESTO.filter(c => !c.excludeInGrid),
+  troquel:     CAMPOS_BASE_TROQUEL.filter(c => !c.excludeInGrid),
+};
+
+function buildAuthHeaders() {
+  const token = (typeof global !== 'undefined' && global.__MIAPP_ACCESS_TOKEN) || null;
+  const h = { 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = `Bearer ${token}`;
+  return h;
+}
 
 /**
- * Obtiene los campos personalizados del constructor de formularios para un tipo de entidad.
- * Retorna un array de defs de columna compatibles con useGridColumns.
+ * Devuelve columnas dinámicas para un grid:
+ *   • campos BASE del formulario (fecha, material, maquina, etc.) que no están
+ *     ya cubiertos por columnas hardcodeadas
+ *   • campos PERSONALIZADOS añadidos con el constructor de formularios
+ *
+ * Cada entrada tiene: { key, label, flex, fieldKey? (base) | custom (true) }
  *
  * @param {'pedido'|'presupuesto'|'troquel'} formType
- * @param {object|null} currentUser  - { empresa_id, id, role }
+ * @param {object|null} currentUser
  */
 export function useCamposFormulario(formType, currentUser) {
-  const cacheKey = `${currentUser?.empresa_id ?? 'none'}:${formType}`;
-  const [colDefs, setColDefs] = useState(() => _cache[cacheKey] || []);
-  const [loading, setLoading] = useState(!_cache[cacheKey]);
+  const empresaId = currentUser?.empresa_id ?? null;
+  const cacheKey  = `${empresaId ?? 'none'}:${formType}`;
+
+  // Columnas base (síncronas, sin fetch)
+  const baseCols = BASE_COLS_BY_FORM[formType] || [];
+
+  const [customCols, setCustomCols] = useState(() => _customCache[cacheKey] || []);
+  const [loading,    setLoading]    = useState(!_customCache[cacheKey]);
 
   useEffect(() => {
-    if (!formType || !currentUser?.empresa_id) {
+    if (!formType) { setLoading(false); return; }
+
+    if (_customCache[cacheKey]) {
+      setCustomCols(_customCache[cacheKey]);
       setLoading(false);
       return;
     }
 
-    if (_cache[cacheKey]) {
-      setColDefs(_cache[cacheKey]);
-      setLoading(false);
-      return;
-    }
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Empresa-Id': currentUser.empresa_id,
-      'X-User-Id': currentUser.id || 'admin',
-      'X-Role': currentUser.role || 'administrador',
-    };
-
-    fetch(`http://localhost:8080/api/campos-formulario?form=${formType}`, { headers })
-      .then(r => r.json())
+    setLoading(true);
+    fetch(`http://localhost:8080/api/campos-formulario?form=${formType}`, {
+      headers: buildAuthHeaders(),
+    })
+      .then(r => r.ok ? r.json() : { campos: [] })
       .then(data => {
         const defs = (data.campos || [])
           .filter(c => c.activo !== false)
@@ -45,18 +62,34 @@ export function useCamposFormulario(formType, currentUser) {
             flex:   0.14,
             custom: true,
           }));
-        _cache[cacheKey] = defs;
-        setColDefs(defs);
+        _customCache[cacheKey] = defs;
+        setCustomCols(defs);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [cacheKey, formType, currentUser?.empresa_id]);
+  }, [cacheKey, formType]);
+
+  // Combinar: base primero, luego custom
+  const colDefs = [
+    ...baseCols.map(c => ({ key: c.campo_id, label: c.etiqueta, flex: c.flex, fieldKey: c.fieldKey })),
+    ...customCols,
+  ];
 
   return { colDefs, loading };
 }
 
-/** Limpia la caché (útil tras guardar cambios en el constructor) */
+/**
+ * Invalida la caché de campos personalizados para forzar re-fetch en el próximo acceso.
+ * Llamar desde FormBuilderScreen tras guardar/eliminar un campo.
+ * Si no se pasa empresaId, invalida todas las entradas del formType.
+ */
 export function invalidateCamposCache(formType, empresaId) {
-  const key = `${empresaId ?? 'none'}:${formType}`;
-  delete _cache[key];
+  if (empresaId) {
+    delete _customCache[`${empresaId}:${formType}`];
+  } else {
+    // Invalida todas las entradas que coincidan con el formType
+    Object.keys(_customCache).forEach(k => {
+      if (k.endsWith(`:${formType}`)) delete _customCache[k];
+    });
+  }
 }

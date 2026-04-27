@@ -1095,10 +1095,18 @@ export default function PresupuestoScreen({ currentUser }) {
                         </View>
                       );
                     default: {
-                      const dj = typeof presupuesto.datos_json === 'string'
-                        ? (() => { try { return JSON.parse(presupuesto.datos_json); } catch { return {}; } })()
-                        : (presupuesto.datos_json || {});
-                      const val = dj[col.key];
+                      let val;
+                      if (col.fieldKey) {
+                        // Campo base: leer del registro directamente
+                        const raw = presupuesto[col.fieldKey];
+                        val = raw !== undefined && raw !== null ? (typeof raw === 'object' ? (raw.nombre || raw.label || JSON.stringify(raw)) : raw) : undefined;
+                      } else {
+                        // Campo personalizado: leer de datos_json
+                        const dj = typeof presupuesto.datos_json === 'string'
+                          ? (() => { try { return JSON.parse(presupuesto.datos_json); } catch { return {}; } })()
+                          : (presupuesto.datos_json || {});
+                        val = dj[col.key];
+                      }
                       return (
                         <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
                           <Text style={styles.cellText} numberOfLines={1}>

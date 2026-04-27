@@ -1154,10 +1154,16 @@ export default function TrabajoScreen({ currentUser }) {
                         </View>
                       );
                     default: {
-                      const dj = typeof trabajo.datos_json === 'string'
-                        ? (() => { try { return JSON.parse(trabajo.datos_json); } catch { return {}; } })()
-                        : (trabajo.datos_json || {});
-                      const val = dj[col.key];
+                      let val;
+                      if (col.fieldKey) {
+                        const raw = trabajo[col.fieldKey];
+                        val = raw !== undefined && raw !== null ? (typeof raw === 'object' ? (raw.nombre || raw.label || JSON.stringify(raw)) : raw) : undefined;
+                      } else {
+                        const dj = typeof trabajo.datos_json === 'string'
+                          ? (() => { try { return JSON.parse(trabajo.datos_json); } catch { return {}; } })()
+                          : (trabajo.datos_json || {});
+                        val = dj[col.key];
+                      }
                       return (
                         <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
                           <Text style={styles.cellText} numberOfLines={1}>
