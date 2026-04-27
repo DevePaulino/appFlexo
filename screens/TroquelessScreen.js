@@ -271,7 +271,6 @@ const styles = StyleSheet.create({
   tableCell: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingRight: 6,
   },
   headerText: {
     fontSize: 11,

@@ -182,17 +182,20 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#4F46E5',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   cellText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#0F172A',
+    textAlign: 'center',
   },
   colNumero: {
     flex: 0.17,
