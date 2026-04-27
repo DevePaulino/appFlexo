@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, ActivityIn
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
+import { useGridColumns } from '../hooks/useGridColumns';
+import ColumnSelector from './ColumnSelector';
 import TrabajoRow from './TrabajoRow';
 import EmptyState from './EmptyState';
 import { useModulos } from '../ModulosContext';
@@ -10,8 +12,23 @@ import { useSettings } from '../SettingsContext';
 import RegistroCondicionesModal from './RegistroCondicionesModal';
 import CondicionesPanel from './CondicionesPanel';
 
+const PRODUCCION_COL_DEFS = (t) => [
+  { key: 'pos',          label: '#',                                        flex: 0.06, locked: true },
+  { key: 'numPedido',    label: t('screens.produccion.colNumPedido'),       flex: 0.10 },
+  { key: 'nombre',       label: t('screens.produccion.colPedido'),          flex: 0.18 },
+  { key: 'cliente',      label: t('screens.produccion.colCliente'),         flex: 0.12 },
+  { key: 'estado',       label: t('screens.produccion.colEstado'),          flex: 0.14 },
+  { key: 'fechaPedido',  label: t('screens.produccion.colFechaPedido'),     flex: 0.09 },
+  { key: 'fechaEntrega', label: t('screens.produccion.colFechaEntrega'),    flex: 0.09 },
+  { key: 'dias',         label: t('screens.produccion.colDias'),            flex: 0.06 },
+  { key: 'maquina',      label: t('screens.produccion.colMaquina'),         flex: 0.13 },
+  { key: 'impreso',      label: t('screens.produccion.colConsumo'),         flex: 0.15 },
+];
+
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage, onOpenDetalle }) {
   const { t } = useTranslation();
+  const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
+    useGridColumns('produccion', PRODUCCION_COL_DEFS(t), null);
   const [maquinaActual, setMaquinaActual] = useState(0);
   const [trabajos, setTrabajos] = useState([]);
   const [paginaActual, setPaginaActual] = useState(0);
@@ -477,6 +494,7 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         onOpenDetalle={onOpenDetalle}
         isFinalizado={estadosFinalizadosSlugs.has(slugifyEstado(item.estado))}
         impresionRegistrada={!!item.impresion_registrada}
+        visibleCols={visibleCols}
         styles={styles}
       />
     ));
@@ -500,36 +518,18 @@ export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefres
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={Platform.select({ web: { width: '100%' }, default: { minWidth: 780 } })}>
         <View style={styles.tableHeader}>
-          <View style={[styles.tableCell, styles.colPos]}>
-            <Text style={styles.headerText}>#</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colNumPedido]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colNumPedido')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colNombre]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colPedido')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colCliente]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colCliente')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colEstado]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colEstado')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colFechaPedido]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colFechaPedido')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colFechaEntrega]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colFechaEntrega')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colDias]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colDias')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colMaquina]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colMaquina')}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colImpreso]}>
-            <Text style={styles.headerText}>{t('screens.produccion.colConsumo')}</Text>
-          </View>
+          {visibleCols.map(col => (
+            <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+              <Text style={styles.headerText}>{col.label}</Text>
+            </View>
+          ))}
+          <ColumnSelector
+            orderedCols={orderedCols}
+            hiddenKeys={hiddenKeys}
+            onToggle={toggleColumn}
+            onReorder={reorderColumns}
+            onReset={resetColumns}
+          />
         </View>
 
         {/* Rows */}

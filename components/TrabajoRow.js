@@ -21,6 +21,7 @@ function TrabajoRow({
   onOpenDetalle,
   isFinalizado,
   impresionRegistrada,
+  visibleCols,
   styles,
 }) {
   const canonicalId = String(trabajo.trabajo_id || trabajo.id || '');
@@ -50,110 +51,150 @@ function TrabajoRow({
 
   return (
     <View ref={rnRef} style={rowStyle} {...attributes}>
-      <View style={[styles.tableCell, styles.colPos]} {...(canReorder ? listeners : {})}>
-        <Text style={[styles.dragHandle, !canReorder && styles.dragHandleDisabled]}>
-          {canReorder ? '⠿' : '—'}
-        </Text>
-      </View>
-      <View style={[styles.tableCell, styles.colNumPedido]}>
-        {trabajo.numero_pedido ? (
-          <TouchableOpacity
-            onPress={() => onOpenDetalle && onOpenDetalle(trabajo.trabajo_id || trabajo.id)}
-            disabled={!onOpenDetalle}
-            activeOpacity={onOpenDetalle ? 0.6 : 1}
-          >
-            <View style={styles.numeroPedidoPill}>
-              <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
-        )}
-      </View>
-      <View style={[styles.tableCell, styles.colNombre]}>
-        <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.colCliente]}>
-        <Text style={styles.cellText} numberOfLines={1}>
-          {typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente?.nombre || '-')}
-        </Text>
-      </View>
-      <View style={[styles.tableCell, styles.colEstado]}>
-        <View style={[styles.statusBadge, statusStyle]}>
-          <Text style={[styles.statusText, statusTextStyle]} numberOfLines={1}>
-            {getStatusLabel(trabajo.estado)}
-          </Text>
-        </View>
-      </View>
-      <View style={[styles.tableCell, styles.colFechaPedido]}>
-        <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_pedido)}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.colFechaEntrega]}>
-        <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_entrega)}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.colDias]}>
-        <View style={entregaSemaforo.container}>
-          <Text style={entregaSemaforo.text} numberOfLines={1}>{entregaSemaforo.label}</Text>
-        </View>
-      </View>
-      <View style={[styles.tableCell, styles.colMaquina]}>
-        {isFinalizado ? (
-          <Text style={[styles.cellText, { color: '#94A3B8', fontSize: 11 }]} numberOfLines={1}>
-            {maquinas.find((m) => String(m.id) === String(maquinaFilaId))?.nombre || '—'}
-          </Text>
-        ) : (
-          <View style={[styles.maquinaPickerWrap, cambiandoMaquina === canonicalId && styles.maquinaPickerWrapDisabled]}>
-            <Picker
-              selectedValue={maquinaFilaId}
-              onValueChange={(nuevaMaquina) => {
-                if (String(nuevaMaquina) !== String(maquinaFilaId)) {
-                  handleCambiarMaquina(canonicalId, nuevaMaquina);
-                }
-              }}
-              enabled={cambiandoMaquina !== canonicalId}
-              style={styles.maquinaPicker}
-            >
-              {maquinas.map((maq) => (
-                <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
-              ))}
-            </Picker>
-          </View>
-        )}
-      </View>
-      <View style={[styles.tableCell, styles.colImpreso]}>
-        {isFinalizado ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
-            </View>
-            {onVerCondiciones && (
-              <TouchableOpacity
-                onPress={() => onVerCondiciones(trabajo)}
-                style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
+      {(visibleCols || []).map(col => {
+        switch (col.key) {
+          case 'pos':
+            return (
+              <View
+                key={col.key}
+                style={[styles.tableCell, { flex: col.adjustedFlex }]}
+                {...(canReorder ? listeners : {})}
               >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <TouchableOpacity
-              onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
-              style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
-            </TouchableOpacity>
-            {onVerCondiciones && (
-              <TouchableOpacity
-                onPress={() => onVerCondiciones(trabajo)}
-                style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
-              >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
+                <Text style={[styles.dragHandle, !canReorder && styles.dragHandleDisabled]}>
+                  {canReorder ? '⠿' : '—'}
+                </Text>
+              </View>
+            );
+          case 'numPedido':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                {trabajo.numero_pedido ? (
+                  <TouchableOpacity
+                    onPress={() => onOpenDetalle && onOpenDetalle(trabajo.trabajo_id || trabajo.id)}
+                    disabled={!onOpenDetalle}
+                    activeOpacity={onOpenDetalle ? 0.6 : 1}
+                  >
+                    <View style={styles.numeroPedidoPill}>
+                      <Text style={styles.numeroPedidoPillText} numberOfLines={1}>{trabajo.numero_pedido}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.cellText, { color: '#999' }]}>-</Text>
+                )}
+              </View>
+            );
+          case 'nombre':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+                <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
+              </View>
+            );
+          case 'cliente':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                <Text style={styles.cellText} numberOfLines={1}>
+                  {typeof trabajo.cliente === 'string' ? trabajo.cliente : (trabajo.cliente?.nombre || '-')}
+                </Text>
+              </View>
+            );
+          case 'estado':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                <View style={[styles.statusBadge, statusStyle]}>
+                  <Text style={[styles.statusText, statusTextStyle]} numberOfLines={1}>
+                    {getStatusLabel(trabajo.estado)}
+                  </Text>
+                </View>
+              </View>
+            );
+          case 'fechaPedido':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_pedido)}</Text>
+              </View>
+            );
+          case 'fechaEntrega':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                <Text style={styles.cellText} numberOfLines={1}>{formatearFecha(trabajo.fecha_entrega)}</Text>
+              </View>
+            );
+          case 'dias':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                <View style={entregaSemaforo.container}>
+                  <Text style={entregaSemaforo.text} numberOfLines={1}>{entregaSemaforo.label}</Text>
+                </View>
+              </View>
+            );
+          case 'maquina':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                {isFinalizado ? (
+                  <Text style={[styles.cellText, { color: '#94A3B8', fontSize: 11 }]} numberOfLines={1}>
+                    {maquinas.find((m) => String(m.id) === String(maquinaFilaId))?.nombre || '—'}
+                  </Text>
+                ) : (
+                  <View style={[styles.maquinaPickerWrap, cambiandoMaquina === canonicalId && styles.maquinaPickerWrapDisabled]}>
+                    <Picker
+                      selectedValue={maquinaFilaId}
+                      onValueChange={(nuevaMaquina) => {
+                        if (String(nuevaMaquina) !== String(maquinaFilaId)) {
+                          handleCambiarMaquina(canonicalId, nuevaMaquina);
+                        }
+                      }}
+                      enabled={cambiandoMaquina !== canonicalId}
+                      style={styles.maquinaPicker}
+                    >
+                      {maquinas.map((maq) => (
+                        <Picker.Item key={String(maq.id)} label={maq.nombre} value={maq.id} />
+                      ))}
+                    </Picker>
+                  </View>
+                )}
+              </View>
+            );
+          case 'impreso':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                {isFinalizado ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
+                    </View>
+                    {onVerCondiciones && (
+                      <TouchableOpacity
+                        onPress={() => onVerCondiciones(trabajo)}
+                        style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <TouchableOpacity
+                      onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
+                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
+                    </TouchableOpacity>
+                    {onVerCondiciones && (
+                      <TouchableOpacity
+                        onPress={() => onVerCondiciones(trabajo)}
+                        style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          default:
+            return null;
+        }
+      })}
     </View>
   );
 }
@@ -162,7 +203,10 @@ export default React.memo(TrabajoRow, (a, b) => {
   try {
     const aid = a.trabajo.trabajo_id || a.trabajo.id;
     const bid = b.trabajo.trabajo_id || b.trabajo.id;
+    const sameVisibleCols = (a.visibleCols || []).map(c => c.key).join(',') ===
+                            (b.visibleCols || []).map(c => c.key).join(',');
     return (
+      sameVisibleCols &&
       aid === bid &&
       a.trabajo.estado === b.trabajo.estado &&
       a.trabajo.impresion_registrada === b.trabajo.impresion_registrada &&
