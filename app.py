@@ -295,11 +295,8 @@ PROTECTED_ESTADOS_PEDIDO_KEYS = {
 # Estados que solo se alcanzan por vía dedicada (no con las flechas de avance/retroceso)
 PROTECTED_TRANSITION_ESTADOS = {'cancelado'}
 
-# Ensure minimum users exist at startup (call after helpers are defined)
-try:
-    ensure_default_users()
-except Exception:
-    pass
+# ensure_default_users() is called at the end of init_db() so that
+# hash_password is already defined when it runs.
 
 
 def ensure_role_permission_defaults():
@@ -1419,6 +1416,8 @@ def init_db():
                 })
     except Exception as e:
         print(f'Error migrando materiales legacy en init_db: {e}')
+
+    ensure_default_users()
 
 
 def _migrar_materiales_legacy(empresa_id):
