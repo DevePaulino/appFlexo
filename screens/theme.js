@@ -1,5 +1,5 @@
 /**
- * PressMate Pro — Design Tokens
+ * PrintForge Pro — Design Tokens
  *
  * Importar en cada pantalla:
  *   import { C, R, S } from './theme';

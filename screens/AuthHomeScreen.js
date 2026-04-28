@@ -1073,7 +1073,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             {/* Pie del formulario */}
             <View style={s.legalDivider} />
             <View style={s.legalFooter}>
-              <Text style={s.legalFooterText}>© {new Date().getFullYear()} PressMate Pro</Text>
+              <Text style={s.legalFooterText}>© {new Date().getFullYear()} PrintForge Pro</Text>
               <Text style={s.legalFooterText}>·</Text>
               <Text
                 style={[s.legalFooterText, { color: P.fAccent, textDecorationLine: 'underline' }]}

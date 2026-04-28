@@ -1128,8 +1128,8 @@
     "terms": "Termos de Utilização",
     "privacy": "Política de Privacidade",
     "legalNotice": "Aviso Legal",
-    "gdprNote": "Os seus dados serão tratados de acordo com o Regulamento (UE) 2016/679 (RGPD) para a gestão do serviço. Responsável: PressMate Pro.",
-    "dataController": "Responsável pelo tratamento: PressMate Pro · RGPD (UE) 2016/679",
+    "gdprNote": "Os seus dados serão tratados de acordo com o Regulamento (UE) 2016/679 (RGPD) para a gestão do serviço. Responsável: PrintForge Pro.",
+    "dataController": "Responsável pelo tratamento: PrintForge Pro · RGPD (UE) 2016/679",
     "acceptTermsPre": "Li e aceito os",
     "acceptPrivacyPre": "Li e aceito a",
     "errorConsent": "Deve aceitar os Termos de Utilização e a Política de Privacidade para continuar.",
@@ -1147,7 +1147,7 @@
       "sections": [
         {
           "title": "1. Responsável pelo Tratamento",
-          "body": "PressMate Pro (doravante, «o Responsável»).\nE-mail: [EMAIL_CONTACTO]\nMorada: [MORADA_EMPRESA]\nEPD: [EMAIL_EPD] (se aplicável)\n\nConforme ao RGPD (UE) 2016/679 e à Lei n.º 58/2019 (execução do RGPD em Portugal)."
+          "body": "PrintForge Pro (doravante, «o Responsável»).\nE-mail: [EMAIL_CONTACTO]\nMorada: [MORADA_EMPRESA]\nEPD: [EMAIL_EPD] (se aplicável)\n\nConforme ao RGPD (UE) 2016/679 e à Lei n.º 58/2019 (execução do RGPD em Portugal)."
         },
         {
           "title": "2. Dados Tratados e Finalidades",
@@ -1189,7 +1189,7 @@
       "sections": [
         {
           "title": "1. Descrição do Serviço",
-          "body": "PressMate Pro é uma plataforma de gestão para empresas do setor gráfico: encomendas, orçamentos, produção, materiais, máquinas e equipas."
+          "body": "PrintForge Pro é uma plataforma de gestão para empresas do setor gráfico: encomendas, orçamentos, produção, materiais, máquinas e equipas."
         },
         {
           "title": "2. Acesso e Registo",
@@ -1205,7 +1205,7 @@
         },
         {
           "title": "5. Propriedade Intelectual",
-          "body": "PressMate Pro, o seu design, código e marca são propriedade do Responsável. Os dados do utilizador são da sua exclusiva propriedade."
+          "body": "PrintForge Pro, o seu design, código e marca são propriedade do Responsável. Os dados do utilizador são da sua exclusiva propriedade."
         },
         {
           "title": "6. Limitação de Responsabilidade",
@@ -1243,7 +1243,7 @@
         },
         {
           "title": "Objeto",
-          "body": "O presente aviso rege o acesso e a utilização da aplicação PressMate Pro."
+          "body": "O presente aviso rege o acesso e a utilização da aplicação PrintForge Pro."
         },
         {
           "title": "Propriedade Intelectual",
@@ -1500,7 +1500,7 @@
     "ayudaStart": "▶ Tour",
     "ayudaDesactivada": "A ajuda interativa está desativada.",
     "aiTitle": "Assistente IA",
-    "aiIntro": "Faça qualquer pergunta sobre o uso de PressMate Pro. O assistente responderá apenas sobre a aplicação.",
+    "aiIntro": "Faça qualquer pergunta sobre o uso de PrintForge Pro. O assistente responderá apenas sobre a aplicação.",
     "aiPlaceholder": "Escreva a sua pergunta...",
     "aiSend": "Enviar",
     "aiThinking": "A pensar...",

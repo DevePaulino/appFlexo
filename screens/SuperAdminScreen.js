@@ -2069,7 +2069,7 @@ function TabComunicacion({ currentUser }) {
 
           <FormField
             label="Asunto"
-            placeholder="Ej: Novedades de PressMate Pro — Abril 2026"
+            placeholder="Ej: Novedades de PrintForge Pro — Abril 2026"
             value={form.asunto}
             onChangeText={(v) => setForm((f) => ({ ...f, asunto: v }))}
           />
