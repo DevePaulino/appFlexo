@@ -1008,8 +1008,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               <View style={s.logoMarkSlash} />
             </View>
             <Text style={s.logoName}>
-              <Text style={s.logoNamePress}>Press</Text>
-              <Text style={s.logoNameMate}>Mate</Text>
+              <Text style={s.logoNamePress}>Print</Text>
+              <Text style={s.logoNameMate}>Forge</Text>
               <Text style={s.logoSuffix}> Pro</Text>
             </Text>
           </View>

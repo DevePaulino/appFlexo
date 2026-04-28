@@ -6216,7 +6216,7 @@ def _html_solicitud_cliches(empresa_nombre, pedido_ref, maquina, material,
              style="display:inline-block;background:#4F46E5;color:#FFFFFF;text-decoration:none;
                     font-size:13px;font-weight:700;letter-spacing:.8px;
                     text-transform:uppercase;padding:14px 32px;border-radius:6px">
-            Descargar PDF Repetidora &rarr;
+            Descargar PDF de Clichés &rarr;
           </a>
         </td></tr>
       </table>
