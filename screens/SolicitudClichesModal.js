@@ -393,7 +393,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
                   >
                     {previewLoading
                       ? <ActivityIndicator size="small" color="#4F46E5" />
-                      : <Text style={s.previewBtnText}>✉ Vista previa</Text>}
+                      : <Text style={s.previewBtnText}>Vista previa</Text>}
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -426,7 +426,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#FFF', borderRadius: 14, width: '100%', maxWidth: 860, maxHeight: '92%', overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>✉ Vista previa del email</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>Vista previa del email</Text>
               <TouchableOpacity onPress={() => setPreviewHtml(null)} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 14, color: '#64748B', fontWeight: '700' }}>✕</Text>
               </TouchableOpacity>
