@@ -1360,6 +1360,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.4,
   },
+  pdfProduccionActionBtns: {
+    marginTop: 6,
+    gap: 5,
+  },
+  pdfProduccionActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#4F46E5',
+  },
+  pdfProduccionActionBtnOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#4F46E5',
+  },
+  pdfProduccionActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  pdfProduccionActionBtnTextOutline: {
+    color: '#4F46E5',
+  },
   pdfProduccionUploadBtn: {
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -2886,11 +2914,6 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <View key={title} style={styles.pdfProduccionToolCol}>
                           <View style={styles.pdfProduccionCardHeader}>
                             <Text style={styles.pdfProduccionCardLabel}>{title}</Text>
-                            {tipoKey2 === 'repetidora' && (pedido?.datos_presupuesto?.tipo_impresion || pedido?.tipo_impresion) !== 'adhesivos' && (
-                              <TouchableOpacity style={styles.pdfProduccionFileBtnCliches} onPress={() => setSolicitudRepetidoraVisible(true)}>
-                                <Text style={styles.pdfProduccionFileBtnClichesText}>✦ {t('repetidora.modalTitle')}</Text>
-                              </TouchableOpacity>
-                            )}
                           </View>
                           <View style={[styles.pdfProduccionOutputBox, pdfProduccionFile2 && styles.pdfProduccionOutputBoxFilled]}>
                             {isUploading2 ? (
@@ -2952,6 +2975,23 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         </View>
                       );
                     })}
+                  </View>
+                  {/* ── Botones de acción bajo los 4 contenedores ── */}
+                  <View style={styles.pdfProduccionActionBtns}>
+                    <TouchableOpacity
+                      style={styles.pdfProduccionActionBtn}
+                      onPress={() => setSolicitudClichesVisible(true)}
+                    >
+                      <Text style={styles.pdfProduccionActionBtnText}>✦ {t('cliches.modalTitle')}</Text>
+                    </TouchableOpacity>
+                    {(pedido?.datos_presupuesto?.tipo_impresion || pedido?.tipo_impresion) !== 'adhesivos' && (
+                      <TouchableOpacity
+                        style={[styles.pdfProduccionActionBtn, styles.pdfProduccionActionBtnOutline]}
+                        onPress={() => setSolicitudRepetidoraVisible(true)}
+                      >
+                        <Text style={[styles.pdfProduccionActionBtnText, styles.pdfProduccionActionBtnTextOutline]}>✦ {t('repetidora.modalTitle')}</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
                 </View>{/* fin col pdf-produccion */}

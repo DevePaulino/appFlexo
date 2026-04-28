@@ -89,7 +89,7 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 20 }}>
+          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
             {/* Referencia del pedido */}
             {pedido?.referencia && (
               <View style={styles.refRow}>
@@ -98,21 +98,19 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
               </View>
             )}
 
-            {/* Badge: ya configurado */}
+            {/* Banners */}
             {yaConfigurado && !saved && (
               <View style={styles.infoBanner}>
                 <Text style={styles.infoBannerText}>{t('repetidora.yaConfigurado')}</Text>
               </View>
             )}
-
-            {/* Éxito guardado */}
             {saved && (
               <View style={styles.successBanner}>
                 <Text style={styles.successBannerText}>{t('repetidora.guardadoOk')}</Text>
               </View>
             )}
 
-            {/* Campos */}
+            {/* Campos principales */}
             <View style={styles.row}>
               <View style={styles.col}>
                 <Text style={styles.label}>{t('forms.repCalles')}</Text>
@@ -148,17 +146,20 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
               </View>
             </View>
 
-            <View style={[styles.row, { alignItems: 'center' }]}>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>{t('forms.repSesgado')}</Text>
-                <Switch
-                  value={sesgado}
-                  onValueChange={handleSesgadoToggle}
-                  trackColor={{ false: '#CBD5E1', true: '#4F46E5' }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-              {sesgado && (
+            {/* Sesgado — fila completa */}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>{t('forms.repSesgado')}</Text>
+              <Switch
+                value={sesgado}
+                onValueChange={handleSesgadoToggle}
+                trackColor={{ false: '#CBD5E1', true: '#4F46E5' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            {/* Desplazamiento — fila completa cuando sesgado activo */}
+            {sesgado && (
+              <View style={[styles.row, { marginTop: 12 }]}>
                 <View style={styles.col}>
                   <Text style={styles.label}>{t('forms.repDesp')}</Text>
                   <TextInput
@@ -169,8 +170,11 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
                     style={styles.input}
                   />
                 </View>
-              )}
-            </View>
+                {/* Columnas vacías para mantener simetría con la fila superior */}
+                <View style={styles.col} />
+                <View style={styles.col} />
+              </View>
+            )}
 
             {error && <Text style={styles.errorText}>{error}</Text>}
           </ScrollView>
@@ -203,77 +207,87 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15,23,42,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 620,
     maxHeight: '90%',
+    ...(Platform.OS === 'web' ? { minHeight: 420 } : {}),
     overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    shadowOpacity: 0.20,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
   },
   header: {
     backgroundColor: '#1E1B4B',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 28,
+    paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   closeBtn: {
-    padding: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeBtnText: {
     color: '#C7D2FE',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   body: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 28,
+    paddingTop: 24,
+  },
+  bodyContent: {
+    paddingBottom: 28,
   },
   refRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 18,
     backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   refLabel: {
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   refValue: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#0F172A',
     fontWeight: '700',
   },
   infoBanner: {
     backgroundColor: '#EEF2FF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 14,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#C7D2FE',
   },
@@ -284,10 +298,10 @@ const styles = StyleSheet.create({
   },
   successBanner: {
     backgroundColor: '#DCFCE7',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 14,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#BBF7D0',
   },
@@ -298,8 +312,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+    gap: 14,
+    marginBottom: 16,
   },
   col: {
     flex: 1,
@@ -307,35 +321,35 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   input: {
-    fontSize: 14,
-    borderWidth: 1,
+    fontSize: 15,
+    borderWidth: 1.5,
     borderColor: '#CBD5E1',
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 10,
     color: '#0F172A',
   },
   switchRow: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 0,
   },
   switchLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
   },
@@ -343,21 +357,22 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 13,
     fontWeight: '500',
-    marginBottom: 10,
+    marginTop: 8,
+    marginBottom: 4,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
   },
   cancelBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
@@ -369,12 +384,12 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   saveBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: '#4F46E5',
     alignItems: 'center',
-    minWidth: 100,
+    minWidth: 120,
   },
   saveBtnText: {
     fontSize: 14,
