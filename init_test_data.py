@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 pedidos_col = db['pedidos']
 trabajos_col = db['trabajos']
 clientes_col = db['clientes']

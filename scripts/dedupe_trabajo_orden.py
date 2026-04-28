@@ -80,7 +80,7 @@ def create_unique_index(db):
 def main():
     import argparse
     p = argparse.ArgumentParser(description='Dedupe trabajo_orden and create unique index (safe).')
-    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'printforgepro'))
+    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'pressmateapp'))
     p.add_argument('--apply', action='store_true', help='Apply changes (otherwise dry-run)')
     p.add_argument('--limit', type=int, default=10000, help='Max duplicate groups to process')
     args = p.parse_args()

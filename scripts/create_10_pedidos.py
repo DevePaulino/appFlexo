@@ -5,7 +5,7 @@ import random
 import json
 
 client = MongoClient('mongodb://localhost:27017')
-db = client['printforgepro']
+db = client['pressmateapp']
 col = db['pedidos']
 
 # Opcional: no duplicar si ya existen muchos pedidos

@@ -7,7 +7,7 @@ from bson import ObjectId
 import sys
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 
 print("=== RESTAURAR MÁQUINAS FALTANTES ===\n")
 

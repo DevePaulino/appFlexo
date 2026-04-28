@@ -2069,7 +2069,7 @@ function TabComunicacion({ currentUser }) {
 
           <FormField
             label="Asunto"
-            placeholder="Ej: Novedades de PrintForgePro — Abril 2026"
+            placeholder="Ej: Novedades de PressMate Pro — Abril 2026"
             value={form.asunto}
             onChangeText={(v) => setForm((f) => ({ ...f, asunto: v }))}
           />
@@ -2186,6 +2186,8 @@ function TabConfiguracion({ currentUser }) {
     modo_mantenimiento:       { label: 'Modo mantenimiento', desc: 'Bloquea login de usuarios no-root', icon: '🔧', danger: true },
     max_empresas:             { label: 'Máx. empresas', desc: '0 = sin límite', icon: '🏢', isNumber: true },
     max_usuarios_por_empresa: { label: 'Máx. usuarios/empresa', desc: '0 = sin límite', icon: '👥', isNumber: true },
+    ayuda_ia:                 { label: 'Asistente IA', desc: 'Habilita el asistente IA (requiere ANTHROPIC_API_KEY en el servidor)', icon: '🤖' },
+    ai_help_max_preguntas:    { label: 'Máx. preguntas IA/hora', desc: '0 = sin límite', icon: '💬', isNumber: true },
   };
 
   const LOG_COLOR = { error: '#EF4444', warn: '#F59E0B', info: '#94A3B8' };

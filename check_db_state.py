@@ -6,7 +6,7 @@ import json
 
 # Conectar a MongoDB sin cargar app.py
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro_empresa_1']
+db = client['pressmateapp_empresa_1']
 
 # Verificar colecciones
 print("=== COLECCIONES DISPONIBLES ===")

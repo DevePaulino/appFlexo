@@ -8,7 +8,7 @@ def main():
     import argparse
     p = argparse.ArgumentParser(description='Detect duplicates in trabajo_orden for a machine')
     p.add_argument('--machine', '-m', required=True, help='Machine name (exact or partial)')
-    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'printforgepro'))
+    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'pressmateapp'))
     args = p.parse_args()
 
     client = MongoClient(os.environ.get('MONGO_URI', 'mongodb://localhost:27017/'))

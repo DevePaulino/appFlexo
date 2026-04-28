@@ -8,6 +8,8 @@ const MODULOS_DEFAULT = {
   produccion_trigger_estado: '',
   presupuestos: true,
   condiciones_impresion: false,
+  troqueles: true,
+  ayuda_ia: false,  // solo lectura — lo controla SuperAdmin vía feature flag global
 };
 
 export const ModulosContext = createContext({ modulos: MODULOS_DEFAULT, setModulo: () => {} });

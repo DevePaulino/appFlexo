@@ -98,6 +98,21 @@
     "backToLogin": "Zurück zur Anmeldung",
     "errorResetRequest": "Code konnte nicht gesendet werden. Bitte erneut versuchen.",
     "errorResetCode": "Ungültiger oder abgelaufener Code",
+    "inviteTitle": "Konto aktivieren",
+    "inviteSubtitle": "Wählen Sie ein Passwort, um Ihren Zugang zu aktivieren.",
+    "inviteSubtitleNamed": "Hallo {{nombre}}, wählen Sie ein Passwort für {{email}}.",
+    "inviteBtn": "Konto aktivieren",
+    "inviteBtnLoading": "Aktivierung...",
+    "confirmPasswordLabel": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort wiederholen",
+    "errorPasswordMatch": "Die Passwörter stimmen nicht überein",
+    "modulosRoles": "Rollen und Berechtigungen",
+    "benefit1Bold": "Von der Kalkulation bis zur Lieferung,",
+    "benefit1Rest": "vollständige Auftragsverwaltung ohne den Überblick zu verlieren.",
+    "benefit2Bold": "Produktion, Termine und Ressourcen",
+    "benefit2Rest": "in Echtzeit von jedem Gerät aus sichtbar.",
+    "benefit3Bold": "Multi-Benutzer, Multi-Unternehmen.",
+    "benefit3Rest": "Wachsen Sie ohne Grenzen mit integrierten Rollen, Berechtigungen und Abrechnung.",
     "brandEyebrow": "Management für Druckstudios",
     "brandTaglinePre": "Gebaut für kreative Köpfe.",
     "brandTaglineAccent": "Gemacht zum Produzieren.",
@@ -147,6 +162,15 @@
     "troquel": "Stanzwerkzeug",
     "sinTroquel": "Kein Stanzwerkzeug",
     "nuevoTroquel": "+ Neues Stanzwerkzeug",
+    "tipoImpresion": "Drucktyp",
+    "adhesivos": "Haftmaterialien",
+    "bandaAncha": "Breitbahn",
+    "repetidora": "Repetiererparameter",
+    "repCalles": "Spuren",
+    "repMotivos": "Motive in Entwicklung",
+    "repTamano": "Gesamtgröße",
+    "repSesgado": "Schräg",
+    "repDesp": "Schrägversatz",
     "material": "Material",
     "acabado": "Veredelung",
     "tirada": "Gesamtauflage",
@@ -704,6 +728,12 @@
       "moduloProduccionTrigger": "Status, der die Maschinenauswahl auslöst:",
       "moduloProduccionTriggerRequired": "Auslöserstatus erforderlich",
       "moduloProduccionTriggerRequiredHint": "Sie müssen einen Auslöserstatus unter Einstellungen › Auftragseinstellungen festlegen, bevor Sie das Produktionsmodul aktivieren.",
+      "moduloAyudaInteractiva": "Geführte Touren",
+      "moduloAyudaInteractivaHint": "Aktiviert geführte Hilfestouren im Hilfe-Bildschirm.",
+      "moduloAyudaIa": "KI-Assistent",
+      "moduloAyudaIaHint": "Aktiviert den KI-Assistenten zur Beantwortung von Fragen zur Anwendung.",
+      "moduloTroqueles": "Stanzwerkzeuge",
+      "moduloTroquelessHint": "Aktiviert den Stanzwerkzeugbereich und dessen Verwendung in Aufträgen.",
       "triggerHintPre": "Der als",
       "triggerHintLabel": "Produktion",
       "triggerHintPost": "markierte Status sendet den Auftrag automatisch in die Produktion (unter Verwendung der zugewiesenen Maschine), wenn er auf diesen Status vorrückt.",
@@ -1055,6 +1085,11 @@
       "guardado": "Gespeichert"
     }
   },
+  "repetidora": {
+    "modalTitle": "Repetiererparameter",
+    "yaConfigurado": "Parameter bereits gespeichert. Sie können sie ändern.",
+    "guardadoOk": "Parameter erfolgreich gespeichert."
+  },
   "cliches": {
     "modalTitle": "Klischees anfordern",
     "maquina": "Maschine",
@@ -1092,8 +1127,8 @@
     "terms": "Nutzungsbedingungen",
     "privacy": "Datenschutzerklärung",
     "legalNotice": "Impressum",
-    "gdprNote": "Ihre Daten werden gemäß der Verordnung (EU) 2016/679 (DSGVO) zur Dienstverwaltung verarbeitet. Verantwortlicher: PrintForgePro.",
-    "dataController": "Verantwortlicher: PrintForgePro · DSGVO (EU) 2016/679",
+    "gdprNote": "Ihre Daten werden gemäß der Verordnung (EU) 2016/679 (DSGVO) zur Dienstverwaltung verarbeitet. Verantwortlicher: PressMate Pro.",
+    "dataController": "Verantwortlicher: PressMate Pro · DSGVO (EU) 2016/679",
     "acceptTermsPre": "Ich habe die gelesen und akzeptiere die",
     "acceptPrivacyPre": "Ich habe die gelesen und akzeptiere die",
     "errorConsent": "Sie müssen die Nutzungsbedingungen und die Datenschutzerklärung akzeptieren, um fortzufahren.",
@@ -1111,7 +1146,7 @@
       "sections": [
         {
           "title": "1. Verantwortlicher",
-          "body": "PrintForgePro (nachfolgend «der Verantwortliche»).\nKontakt-E-Mail: [KONTAKT_EMAIL]\nAnschrift: [UNTERNEHMENSADRESSE]\nDSB: [DSB_EMAIL] (falls bestellt)\n\nEntspricht DSGVO (EU) 2016/679, BDSG und TTDSG."
+          "body": "PressMate Pro (nachfolgend «der Verantwortliche»).\nKontakt-E-Mail: [KONTAKT_EMAIL]\nAnschrift: [UNTERNEHMENSADRESSE]\nDSB: [DSB_EMAIL] (falls bestellt)\n\nEntspricht DSGVO (EU) 2016/679, BDSG und TTDSG."
         },
         {
           "title": "2. Verarbeitete Daten und Zwecke",
@@ -1153,7 +1188,7 @@
       "sections": [
         {
           "title": "1. Beschreibung des Dienstes",
-          "body": "PrintForgePro ist eine Verwaltungsplattform für Unternehmen im Druck- und Grafikbereich: Aufträge, Angebote, Produktion, Materialien, Maschinen und Teams."
+          "body": "PressMate Pro ist eine Verwaltungsplattform für Unternehmen im Druck- und Grafikbereich: Aufträge, Angebote, Produktion, Materialien, Maschinen und Teams."
         },
         {
           "title": "2. Zugang und Registrierung",
@@ -1169,7 +1204,7 @@
         },
         {
           "title": "5. Geistiges Eigentum",
-          "body": "PrintForgePro, sein Design, Code und die Marke sind Eigentum des Verantwortlichen. Nutzerdaten bleiben ausschließliches Eigentum des Nutzers."
+          "body": "PressMate Pro, sein Design, Code und die Marke sind Eigentum des Verantwortlichen. Nutzerdaten bleiben ausschließliches Eigentum des Nutzers."
         },
         {
           "title": "6. Haftungsbeschränkung",
@@ -1461,6 +1496,18 @@
     "ayuda": "Hilfe",
     "ayudaIntro": "Wählen Sie einen Abschnitt, um die geführte Tour zu starten. Die Tour hebt jede wichtige Komponente hervor.",
     "ayudaSteps": "Schritte",
-    "ayudaStart": "▶ Tour"
+    "ayudaStart": "▶ Tour",
+    "ayudaDesactivada": "Die interaktive Hilfe ist deaktiviert.",
+    "aiTitle": "KI-Assistent",
+    "aiIntro": "Stellen Sie beliebige Fragen zur Nutzung von PressMate Pro. Der Assistent beantwortet ausschließlich Fragen zur Anwendung.",
+    "aiPlaceholder": "Frage eingeben...",
+    "aiSend": "Senden",
+    "aiThinking": "Denke nach...",
+    "aiError": "Antwort konnte nicht abgerufen werden. Bitte erneut versuchen.",
+    "aiDesactivado": "Nicht verfügbar",
+    "aiNoDisponible": "Der KI-Assistent ist vorübergehend deaktiviert. Wenden Sie sich für weitere Informationen an Ihren Administrator.",
+    "aiNoDisponibleShort": "Assistent nicht verfügbar",
+    "aiLimitReached": "Sie haben das stündliche Anfragelimit erreicht. Versuchen Sie es später erneut.",
+    "aiLimitReachedShort": "Anfragelimit erreicht"
   }
 }

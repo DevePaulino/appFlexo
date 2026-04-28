@@ -9,6 +9,7 @@ import CamposDinamicos from '../components/CamposDinamicos';
 import { useSettings } from '../SettingsContext';
 import { useMaquinas } from '../MaquinasContext';
 import { useClientes } from '../ClientesContext';
+import { useModulos } from '../ModulosContext';
 
 const TINTAS_BASE_CMYK = [
     { label: 'C', color: '#00AEEF', isCMYK: true },
@@ -473,6 +474,8 @@ export default function NuevoPresupuestoModal({
 }) {
     const isReadOnly = !!readOnly;
     const { t } = useTranslation();
+    const { modulos } = useModulos();
+    const defaultTipoImpresion = modulos.troqueles !== false ? 'adhesivos' : 'banda_ancha';
     const getNowDateStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -501,6 +504,7 @@ export default function NuevoPresupuestoModal({
     const [detalleTintaEspecial, setDetalleTintaEspecial] = useState([]);
     const [imagenCobertura, setImagenCobertura] = useState(null);
     const [etiquetaUri, setEtiquetaUri] = useState(null);
+    const [tipoImpresion, setTipoImpresion] = useState(defaultTipoImpresion);
     const [troquelEstadoSel, setTroquelEstadoSel] = useState('');
     const [troquelFormaSel, setTroquelFormaSel] = useState('');
     const [troquelCoste, setTroquelCoste] = useState('');
@@ -562,6 +566,7 @@ export default function NuevoPresupuestoModal({
             setPantones(savedPantones);
             setSelectedTintas(filteredTintas);
             setDetalleTintaEspecial(initialValues.datos_presupuesto?.detalleTintaEspecial || initialValues.detalleTintaEspecial || []);
+            setTipoImpresion(initialValues.datos_presupuesto?.tipo_impresion || initialValues.tipo_impresion || defaultTipoImpresion);
             setTroquelEstadoSel(initialValues.datos_presupuesto?.troquelEstadoSel || initialValues.troquelEstadoSel || '');
             setTroquelFormaSel(initialValues.datos_presupuesto?.troquelFormaSel || initialValues.troquelFormaSel || '');
             setTroquelCoste(initialValues.datos_presupuesto?.troquelCoste || initialValues.troquelCoste || '');
@@ -943,10 +948,11 @@ export default function NuevoPresupuestoModal({
                 detalleTintaEspecial: Array.isArray(detalleTintaEspecial) ? [...detalleTintaEspecial] : (detalleTintaEspecial || []),
                 coberturaResult: coberturaResult ? JSON.parse(JSON.stringify(coberturaResult)) : null,
                 pantones: Array.isArray(pantones) ? pantones.map(p => ({ ...p })) : [],
+                tipo_impresion: tipoImpresion,
                 troquelEstadoSel,
                 troquelFormaSel,
                 troquelCoste,
-                troquelId: troquelSel?._id || troquelSel?.id || null,
+                troquelId: tipoImpresion === 'adhesivos' ? (troquelSel?._id || troquelSel?.id || null) : null,
                 observaciones
             };
             if (pedidoId) presupuesto.pedido_id = pedidoId;
@@ -1003,6 +1009,7 @@ export default function NuevoPresupuestoModal({
         setPantoneInput('');
         setImagenCobertura(null);
         setEtiquetaUri(null);
+        setTipoImpresion(defaultTipoImpresion);
         setTroquelEstadoSel('');
         setTroquelFormaSel('');
         setTroquelCoste('');
@@ -1244,7 +1251,28 @@ export default function NuevoPresupuestoModal({
                                     <TextInput value={tirada} onChangeText={(v) => { if (isReadOnly) return; setTirada(v); }} keyboardType="numeric" placeholder={t('forms.tiradaPlaceholder')} placeholderTextColor="#94A3B8" style={styles.input(tirada, true, true, submitted)} editable={!isReadOnly} />
                                 </View>
                             );
-                            const campoTroquel = (
+                            const campoTipoImpresion = (
+                                <View style={{ marginBottom: 14 }}>
+                                    <Text style={styles.label}>{t('forms.tipoImpresion')}</Text>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        <TouchableOpacity
+                                            disabled={isReadOnly}
+                                            onPress={() => { if (!isReadOnly) setTipoImpresion('adhesivos'); }}
+                                            style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: tipoImpresion === 'adhesivos' ? '#1E1B4B' : '#EEF2F8', alignItems: 'center', borderWidth: 1.5, borderColor: tipoImpresion === 'adhesivos' ? '#1E1B4B' : '#E2E8F0' }}
+                                        >
+                                            <Text style={{ color: tipoImpresion === 'adhesivos' ? '#fff' : '#475569', fontWeight: '700', fontSize: 13 }}>{t('forms.adhesivos')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            disabled={isReadOnly}
+                                            onPress={() => { if (!isReadOnly) setTipoImpresion('banda_ancha'); }}
+                                            style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: tipoImpresion === 'banda_ancha' ? '#1E1B4B' : '#EEF2F8', alignItems: 'center', borderWidth: 1.5, borderColor: tipoImpresion === 'banda_ancha' ? '#1E1B4B' : '#E2E8F0' }}
+                                        >
+                                            <Text style={{ color: tipoImpresion === 'banda_ancha' ? '#fff' : '#475569', fontWeight: '700', fontSize: 13 }}>{t('forms.bandaAncha')}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            );
+                            const campoTroquel = tipoImpresion === 'adhesivos' ? (
                                 <View>
                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                         <Text style={styles.label}>{t('forms.troquel')}</Text>
@@ -1273,7 +1301,7 @@ export default function NuevoPresupuestoModal({
                                         </View>
                                     )}
                                 </View>
-                            );
+                            ) : null;
                             const renderMap = {
                                 '__base_maquina':  campoMaquina,
                                 '__base_material': campoMaterial,
@@ -1285,6 +1313,7 @@ export default function NuevoPresupuestoModal({
                                 <>
                                     <View style={styles.section}>
                                         <Text style={styles.sectionTitle}>{cont?.nombre || t('forms.sectionProducto')}</Text>
+                                        {campoTipoImpresion}
                                         {layoutRows([
                                             { campo_id: '__base_maquina',  col: 0, fila: 0, ancho: 6 },
                                             { campo_id: '__base_material', col: 6, fila: 0, ancho: 6 },

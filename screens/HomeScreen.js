@@ -52,7 +52,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Bienvenido a PrintForge Pro</Text>
+        <Text style={styles.title}>Bienvenido a PressMate Pro</Text>
 
         <TouchableOpacity
           style={styles.btn}

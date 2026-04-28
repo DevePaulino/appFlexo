@@ -16,7 +16,7 @@ except Exception:
 from pymongo import MongoClient
 
 MONGO_URI = 'mongodb://localhost:27017/'
-DB_NAME = 'printforgepro'
+DB_NAME = 'pressmateapp'
 BACKEND = 'http://127.0.0.1:8080'
 EMPRESA_ID = 1
 MAQUINA_ID = 'stress-test-machine'

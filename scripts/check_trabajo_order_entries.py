@@ -4,7 +4,7 @@ from bson.objectid import ObjectId
 import sys
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 col = db['trabajo_orden']
 
 ids = ['69a0ac41ef06cbca81320ed5', '69a3394b649d8eaa4e2460d3']

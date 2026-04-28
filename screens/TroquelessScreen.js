@@ -285,6 +285,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     textAlign: 'center',
+    width: '100%',
   },
   colNumero:    { flex: 0.13 },
   colTipo:      { flex: 0.12 },
@@ -1045,14 +1046,31 @@ export default function TroquelessScreen({ currentUser, navigation }) {
                         );
                       default: {
                         let val;
-                        if (col.fieldKey) {
-                          const raw = troquele[col.fieldKey];
-                          val = raw !== undefined && raw !== null ? (typeof raw === 'object' ? (raw.nombre || raw.label || JSON.stringify(raw)) : raw) : undefined;
+                        const raw = col.fieldKey
+                          ? (() => {
+                              const top = troquele[col.fieldKey];
+                              if (top !== undefined && top !== null) return top;
+                              const dj = typeof troquele.datos_json === 'string'
+                                ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
+                                : (troquele.datos_json || {});
+                              return dj[col.fieldKey];
+                            })()
+                          : (() => {
+                              const dj = typeof troquele.datos_json === 'string'
+                                ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
+                                : (troquele.datos_json || {});
+                              return dj[col.key];
+                            })();
+                        if (raw === undefined || raw === null) {
+                          val = undefined;
+                        } else if (Array.isArray(raw)) {
+                          val = raw.map(item => item && typeof item === 'object' ? (item.nombre || item.label || String(item)) : String(item)).join(', ') || undefined;
+                        } else if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                          try { val = new Date(raw).toLocaleDateString(); } catch { val = raw; }
+                        } else if (typeof raw === 'object') {
+                          val = raw.nombre || raw.label || JSON.stringify(raw);
                         } else {
-                          const dj = typeof troquele.datos_json === 'string'
-                            ? (() => { try { return JSON.parse(troquele.datos_json); } catch { return {}; } })()
-                            : (troquele.datos_json || {});
-                          val = dj[col.key];
+                          val = raw;
                         }
                         return (
                           <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>

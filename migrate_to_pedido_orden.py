@@ -2,7 +2,7 @@
 from pymongo import MongoClient
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 
 # First, drop the pedido_orden collection to avoid duplicate _id errors
 db['pedido_orden'].drop()

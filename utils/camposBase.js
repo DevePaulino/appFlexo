@@ -21,19 +21,45 @@ export const CAMPOS_BASE_PEDIDO = [
   { campo_id: '__base_material',       etiqueta: 'Material',         fieldKey: 'material',       flex: 0.13 },
   { campo_id: '__base_acabado',        etiqueta: 'Acabado',          fieldKey: 'acabado',        flex: 0.12 },
   { campo_id: '__base_tirada',         etiqueta: 'Tirada total',     fieldKey: 'tirada',         flex: 0.11 },
-  { campo_id: '__base_troquel',        etiqueta: 'Troquel',          fieldKey: 'troquel',        flex: 0.11 },
+  { campo_id: '__base_troquel',        etiqueta: 'Troquel',          fieldKey: 'troquelId',            flex: 0.11, excludeInGrid: true },
   // Impresión
-  { campo_id: '__base_tintas',         etiqueta: 'Tintas',           fieldKey: 'tintas',         flex: 0.10 },
-  { campo_id: '__base_tinta_especial', etiqueta: 'Tinta especial',   fieldKey: 'tinta_especial', flex: 0.13 },
+  { campo_id: '__base_tintas',         etiqueta: 'Tintas',           fieldKey: 'selectedTintas',       flex: 0.10 },
+  { campo_id: '__base_tinta_especial', etiqueta: 'Tinta especial',   fieldKey: 'detalleTintaEspecial', flex: 0.13 },
   { campo_id: '__base_observ',         etiqueta: 'Observaciones',    fieldKey: 'observaciones',  flex: 0.15 },
 ];
 
-// Campos base de presupuesto (misma lista que pedido, solo cambia fieldKey de fecha)
+// Campos base de presupuesto — excluye fecha porque PresupuestoScreen ya la tiene hardcodeada
 export const CAMPOS_BASE_PRESUPUESTO = CAMPOS_BASE_PEDIDO.map(c =>
   c.campo_id === '__base_fecha'
-    ? { ...c, etiqueta: 'Fecha presupuesto', fieldKey: 'fecha_presupuesto' }
+    ? { ...c, etiqueta: 'Fecha presupuesto', excludeInGrid: true }
     : c
 );
+
+// Campos base de máquina
+export const CAMPOS_BASE_MAQUINA = [
+  { campo_id: '__base_maq_nombre',     etiqueta: 'Nombre',              fieldKey: 'nombre',                    flex: 0.18, excludeInGrid: true },
+  { campo_id: '__base_maq_anio',       etiqueta: 'Año fabricación',     fieldKey: 'anio_fabricacion',          flex: 0.10 },
+  { campo_id: '__base_maq_tipo',       etiqueta: 'Tipo máquina',        fieldKey: 'tipo_maquina',              flex: 0.14 },
+  { campo_id: '__base_maq_colores',    etiqueta: 'Colores',             fieldKey: 'numero_colores',            flex: 0.06, excludeInGrid: true },
+  { campo_id: '__base_maq_estado',     etiqueta: 'Estado',              fieldKey: 'estado',                    flex: 0.08, excludeInGrid: true },
+  { campo_id: '__base_maq_ancho_mat',  etiqueta: 'Ancho mat. (mm)',     fieldKey: 'ancho_max_material_mm',     flex: 0.10, excludeInGrid: true },
+  { campo_id: '__base_maq_ancho_imp',  etiqueta: 'Ancho imp. (mm)',     fieldKey: 'ancho_max_impresion_mm',    flex: 0.10, excludeInGrid: true },
+  { campo_id: '__base_maq_rep_min',    etiqueta: 'Rep. mín. (mm)',      fieldKey: 'repeticion_min_mm',         flex: 0.09, excludeInGrid: true },
+  { campo_id: '__base_maq_rep_max',    etiqueta: 'Rep. máx. (mm)',      fieldKey: 'repeticion_max_mm',         flex: 0.09, excludeInGrid: true },
+  { campo_id: '__base_maq_veloc',      etiqueta: 'Veloc. máx. (m/min)', fieldKey: 'velocidad_max_maquina_mmin',flex: 0.11, excludeInGrid: true },
+  { campo_id: '__base_maq_veloc_imp',  etiqueta: 'Veloc. imp. (m/min)', fieldKey: 'velocidad_max_impresion_mmin',flex:0.11, excludeInGrid: true },
+  { campo_id: '__base_maq_espesor',    etiqueta: 'Espesor plancha',     fieldKey: 'espesor_planchas_mm',       flex: 0.08, excludeInGrid: true },
+  { campo_id: '__base_maq_secado',     etiqueta: 'Sistemas secado',     fieldKey: 'sistemas_secado',           flex: 0.14 },
+];
+
+// Campos base de proveedor
+export const CAMPOS_BASE_PROVEEDOR = [
+  { campo_id: '__base_prov_nombre',   etiqueta: 'Nombre',    fieldKey: 'nombre',   flex: 0.22, excludeInGrid: true },
+  { campo_id: '__base_prov_contacto', etiqueta: 'Contacto',  fieldKey: 'contacto', flex: 0.18, excludeInGrid: true },
+  { campo_id: '__base_prov_email',    etiqueta: 'Email',     fieldKey: 'email',    flex: 0.22, excludeInGrid: true },
+  { campo_id: '__base_prov_telefono', etiqueta: 'Teléfono',  fieldKey: 'telefono', flex: 0.14, excludeInGrid: true },
+  { campo_id: '__base_prov_notas',    etiqueta: 'Notas',     fieldKey: 'notas',    flex: 0.20 },
+];
 
 // Campos base de troquel — corresponden a columnas ya hardcodeadas en TroquelessScreen
 export const CAMPOS_BASE_TROQUEL = [

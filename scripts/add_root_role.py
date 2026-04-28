@@ -3,7 +3,7 @@ from pymongo import MongoClient, UpdateOne
 import json
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 col = db['config_opciones']
 
 filter_doc = {'categoria': 'roles', 'valor': 'root'}

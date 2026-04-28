@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
-DB_NAME = os.environ.get('DB_NAME', 'printforgepro')
+DB_NAME = os.environ.get('DB_NAME', 'pressmateapp')
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]
 

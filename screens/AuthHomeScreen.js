@@ -96,15 +96,6 @@ const P = {
   fTextMuted:  'rgba(15,23,42,0.38)',
 };
 
-// ─── Módulos de la app ────────────────────────────────────────────────────────
-const MODULES = [
-  { key: 'Pedidos' },
-  { key: 'Presupuestos' },
-  { key: 'Producción' },
-  { key: 'Materiales' },
-  { key: 'Máquinas' },
-  { key: 'Roles y permisos' },
-];
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
@@ -160,10 +151,10 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.2,
   },
-  logoNamePrint: {
+  logoNamePress: {
     color: '#FFFFFF',
   },
-  logoNameForge: {
+  logoNameMate: {
     color: P.accent,   // índigo-400
   },
   logoSuffix: {
@@ -201,48 +192,34 @@ const s = StyleSheet.create({
     maxWidth: 380,
   },
 
-  // Módulos
-  modulesLabel: {
-    fontSize: 10,
+  // Beneficios
+  benefitList: {
+    gap: 16,
+    marginTop: 8,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  benefitBar: {
+    width: 3,
+    height: 36,
+    borderRadius: 2,
+    backgroundColor: P.accent,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+    lineHeight: 22,
+    fontWeight: '400',
+  },
+  benefitHighlight: {
+    color: '#FFFFFF',
     fontWeight: '700',
-    color: P.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 14,
-  },
-  modulesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 20,
-  },
-  moduleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: R.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  moduleChipIcon: {
-    fontSize: 12,
-  },
-  moduleChipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.50)',
-  },
-  modulesCaption: {
-    fontSize: 11,
-    color: P.textMuted,
-    lineHeight: 17,
-  },
-  modulesCaptionAccent: {
-    color: P.accent,   // índigo-400
-    fontWeight: '600',
   },
 
   // ── Separador vertical ───────────────────────────────────────────────────
@@ -345,41 +322,6 @@ const s = StyleSheet.create({
   inputFocused: {
     borderColor: P.fBorderFocus,
     backgroundColor: P.fAccentDim,
-  },
-
-  // ── Billing ──────────────────────────────────────────────────────────────
-  billingRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-  },
-  billingBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: R.md,
-    borderWidth: 1,
-    borderColor: P.fBorder,
-    backgroundColor: P.fSurfaceAlt,
-    alignItems: 'center',
-  },
-  billingBtnActive: {
-    borderColor: P.fAccentBorder,
-    backgroundColor: P.fAccentDim,
-  },
-  billingBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: P.fTextSec,
-  },
-  billingBtnTextActive: {
-    color: P.fAccent,
-    fontWeight: '700',
-  },
-  billingDesc: {
-    fontSize: 11,
-    color: P.fTextMuted,
-    marginTop: 6,
-    lineHeight: 16,
   },
 
   // ── Error ────────────────────────────────────────────────────────────────
@@ -547,7 +489,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const { t } = useTranslation();
   const [authMode, setAuthMode] = useState('login');
   const [legalModal, setLegalModal] = useState({ visible: false, tab: 'pp' });
-  const [billingModel, setBillingModel] = useState('creditos');
+
   const [nombre, setNombre] = useState('');
   const [nombreEmpresa, setNombreEmpresa] = useState('');
   const [cif, setCif] = useState('');
@@ -665,9 +607,9 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
     setError('');
     if (!nombre.trim()) { setError(t('auth.errorName')); return; }
     if (!nombreEmpresa.trim()) { setError(t('auth.errorCompany')); return; }
-    const cifNorm = String(cif || '').trim().replace(/[\s-]/g, '').toUpperCase();
-    if (!cifNorm) { setError(t('auth.errorCif')); return; }
-    if (!/^[A-Z]\d{7}[A-Z0-9]$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
+    const cifNorm = String(cif || '').trim().replace(/[\s\-\.]/g, '').toUpperCase();
+    if (!cifNorm || cifNorm.length < 5) { setError(t('auth.errorCif')); return; }
+    if (!/^[A-Z0-9]{5,25}$/.test(cifNorm)) { setError(t('auth.errorCifInvalid')); return; }
     if (!email.trim()) { setError(t('auth.errorEmailRequired')); return; }
     if (!isValidEmail(email.trim())) { setError(t('forms.errorEmail')); return; }
     const pwdErr = validatePassword(password);
@@ -685,8 +627,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           cif: cifNorm,
           email: email.trim().toLowerCase(),
           password,
-          billing_model: billingModel,
-          payment_method: 'paypal',
           gdpr_consent_accepted: true,  // RGPD Art. 7 — registrado en servidor
         }),
       });
@@ -879,68 +819,72 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   );
 
   // ── Activate invite view ───────────────────────────────────────────────────
+  const handleAcceptInvite = async () => {
+    setError('');
+    const pwdErr = validatePassword(invitePassword);
+    if (pwdErr) { setError(pwdErr); return; }
+    if (invitePassword !== invitePassword2) { setError(t('auth.errorPasswordMatch')); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/accept-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: inviteToken, password: invitePassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || t('auth.errorLogin')); return; }
+      onAuthSuccess?.({
+        usuario: data.usuario,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        access_expires_at: data.access_expires_at,
+      });
+    } catch {
+      setError(t('auth.errorLogin'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const InviteView = () => (
     <>
-      <Text style={s.formTitle}>Activa tu cuenta</Text>
+      <Text style={s.formTitle}>{t('auth.inviteTitle')}</Text>
       <Text style={s.formSub}>
         {inviteInfo
-          ? `Hola ${inviteInfo.nombre}, elige una contraseña para ${inviteInfo.email}`
-          : 'Elige una contraseña para activar tu cuenta'}
+          ? t('auth.inviteSubtitleNamed', { nombre: inviteInfo.nombre, email: inviteInfo.email })
+          : t('auth.inviteSubtitle')}
       </Text>
-      <Text style={s.label}>CONTRASEÑA</Text>
+      <Text style={s.label}>{t('auth.passwordLabel')}</Text>
       <TextInput
         style={inp('invPwd')}
         value={invitePassword}
         onChangeText={setInvitePassword}
-        placeholder="Mínimo 8 caracteres"
+        placeholder={t('auth.passwordPlaceholder')}
         placeholderTextColor={P.fTextMuted}
         secureTextEntry
         onFocus={() => setFocusedField('invPwd')}
         onBlur={() => setFocusedField('')}
       />
       <PasswordStrengthBar pwd={invitePassword} />
-      <Text style={s.label}>CONFIRMAR CONTRASEÑA</Text>
+      <Text style={s.label}>{t('auth.confirmPasswordLabel')}</Text>
       <TextInput
         style={inp('invPwd2')}
         value={invitePassword2}
         onChangeText={setInvitePassword2}
-        placeholder="Repite la contraseña"
+        placeholder={t('auth.confirmPasswordPlaceholder')}
         placeholderTextColor={P.fTextMuted}
         secureTextEntry
         onFocus={() => setFocusedField('invPwd2')}
         onBlur={() => setFocusedField('')}
+        onSubmitEditing={handleAcceptInvite}
       />
       {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
       <TouchableOpacity
         style={[s.submitBtn, loading && { opacity: 0.7 }]}
         disabled={loading}
-        onPress={async () => {
-          setError('');
-          if (invitePassword.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
-          if (invitePassword !== invitePassword2) { setError('Las contraseñas no coinciden'); return; }
-          setLoading(true);
-          try {
-            const res = await fetch(`${API_BASE}/api/auth/accept-invite`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: inviteToken, password: invitePassword }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) { setError(data.error || 'Error al activar la cuenta'); return; }
-            onAuthSuccess?.({
-              usuario: data.usuario,
-              access_token: data.access_token,
-              refresh_token: data.refresh_token,
-              access_expires_at: data.access_expires_at,
-            });
-          } catch (e) {
-            setError('Error de conexión');
-          } finally {
-            setLoading(false);
-          }
-        }}
+        onPress={handleAcceptInvite}
       >
-        <Text style={s.submitBtnText}>{loading ? 'Activando…' : 'Activar cuenta'}</Text>
+        <Text style={s.submitBtnText}>{loading ? t('auth.inviteBtnLoading') : t('auth.inviteBtn')}</Text>
       </TouchableOpacity>
     </>
   );
@@ -996,8 +940,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
       <TextInput style={inp('nombre')} value={nombre} onChangeText={setNombre} placeholder={t('auth.namePlaceholder')} placeholderTextColor={P.fTextMuted} onFocus={() => setFocusedField('nombre')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.companyLabel')}</Text>
       <TextInput style={inp('empresa')} value={nombreEmpresa} onChangeText={setNombreEmpresa} placeholder={t('auth.companyPlaceholder')} placeholderTextColor={P.fTextMuted} onFocus={() => setFocusedField('empresa')} onBlur={() => setFocusedField('')} />
-      <Text style={s.label}>{t('auth.cifLabel')}</Text>
-      <TextInput style={inp('cif')} value={cif} onChangeText={setCif} placeholder={t('auth.cifPlaceholder')} placeholderTextColor={P.fTextMuted} autoCapitalize="characters" onFocus={() => setFocusedField('cif')} onBlur={() => setFocusedField('')} />
+      <Text style={s.label}>{t('auth.cifLabel', { defaultValue: 'NIF / VAT / CIF' })}</Text>
+      <TextInput style={inp('cif')} value={cif} onChangeText={setCif} placeholder={t('auth.cifPlaceholder', { defaultValue: 'Ej: B12345678, FR12345678901…' })} placeholderTextColor={P.fTextMuted} autoCapitalize="characters" onFocus={() => setFocusedField('cif')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.emailLabel')}</Text>
       <TextInput style={inp('email')} value={email} onChangeText={setEmail} placeholder={t('auth.emailPlaceholder')} placeholderTextColor={P.fTextMuted} autoCapitalize="none" keyboardType="email-address" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField('')} />
       <Text style={s.label}>{t('auth.passwordLabel')}</Text>
@@ -1055,8 +999,8 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               <View style={s.logoMarkSlash} />
             </View>
             <Text style={s.logoName}>
-              <Text style={s.logoNamePrint}>Print</Text>
-              <Text style={s.logoNameForge}>Forge</Text>
+              <Text style={s.logoNamePress}>Press</Text>
+              <Text style={s.logoNameMate}>Mate</Text>
               <Text style={s.logoSuffix}> Pro</Text>
             </Text>
           </View>
@@ -1070,19 +1014,22 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           </Text>
           <Text style={s.brandSub}>{t('auth.brandDesc')}</Text>
 
-          {/* Módulos */}
-          <Text style={s.modulesLabel}>{t('auth.modulesLabel')}</Text>
-          <View style={s.modulesGrid}>
-            {MODULES.map((m) => (
-              <View key={m.key} style={s.moduleChip}>
-                <Text style={s.moduleChipText}>{m.key}</Text>
+          {/* Beneficios */}
+          <View style={s.benefitList}>
+            {[
+              { key: 'benefit1', bold: t('auth.benefit1Bold') },
+              { key: 'benefit2', bold: t('auth.benefit2Bold') },
+              { key: 'benefit3', bold: t('auth.benefit3Bold') },
+            ].map(({ key, bold }) => (
+              <View key={key} style={s.benefitItem}>
+                <View style={s.benefitBar} />
+                <Text style={s.benefitText}>
+                  <Text style={s.benefitHighlight}>{bold} </Text>
+                  {t(`auth.${key}Rest`)}
+                </Text>
               </View>
             ))}
           </View>
-          <Text style={s.modulesCaption}>
-            {t('auth.modulesCaption')}{' '}
-            <Text style={s.modulesCaptionAccent}>{t('auth.modulesCaptionAccent')}</Text>
-          </Text>
 
 
         </View>
@@ -1116,7 +1063,17 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             {/* Pie del formulario */}
             <View style={s.legalDivider} />
             <View style={s.legalFooter}>
-              <Text style={s.legalFooterText}>© {new Date().getFullYear()} PrintForgePro</Text>
+              <Text style={s.legalFooterText}>© {new Date().getFullYear()} PressMate Pro</Text>
+              <Text style={s.legalFooterText}>·</Text>
+              <Text
+                style={[s.legalFooterText, { color: P.fAccent, textDecorationLine: 'underline' }]}
+                onPress={() => setLegalModal({ visible: true, tab: 'pp' })}
+              >{t('legal.privacy')}</Text>
+              <Text style={s.legalFooterText}>·</Text>
+              <Text
+                style={[s.legalFooterText, { color: P.fAccent, textDecorationLine: 'underline' }]}
+                onPress={() => setLegalModal({ visible: true, tab: 'tos' })}
+              >{t('legal.terms')}</Text>
             </View>
           </View>
         </ScrollView>

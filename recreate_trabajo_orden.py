@@ -5,7 +5,7 @@ Recrear trabajo_orden basándose en pedidos (para que el código antiguo funcion
 from pymongo import MongoClient
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 
 print("=== RESTAURAR trabajo_orden DESDE pedidos ===\n")
 

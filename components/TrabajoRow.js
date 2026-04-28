@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useSortable } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +39,18 @@ function TrabajoRow({
   const [statusStyle, statusTextStyle] = getStatusColor(trabajo.estado);
   const entregaSemaforo = getEntregaSemaforo(trabajo.fecha_entrega);
   const maquinaFilaId = trabajo._maquina_id ?? maquinas[maquinaActual]?.id;
+
+  const [colorTooltip, setColorTooltip] = useState(false);
+  const colorTimerRef = useRef(null);
+  const colorHoverProps = Platform.OS === 'web' ? {
+    onMouseEnter: () => {
+      colorTimerRef.current = setTimeout(() => {
+        setColorTooltip(true);
+        setTimeout(() => setColorTooltip(false), 1500);
+      }, 600);
+    },
+    onMouseLeave: () => { clearTimeout(colorTimerRef.current); setColorTooltip(false); },
+  } : {};
 
   const rowStyle = [
     styles.tableRow,
@@ -85,7 +97,7 @@ function TrabajoRow({
             );
           case 'nombre':
             return (
-              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
                 <Text style={styles.cellText} numberOfLines={1}>{trabajo.nombre}</Text>
               </View>
             );
@@ -158,43 +170,46 @@ function TrabajoRow({
             return (
               <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
                 {isFinalizado ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
-                    </View>
-                    {onVerCondiciones && (
-                      <TouchableOpacity
-                        onPress={() => onVerCondiciones(trabajo)}
-                        style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
-                      >
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
-                      </TouchableOpacity>
-                    )}
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#ECEFFE', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>{t('screens.trabajos.finalizado')}</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
+                    style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          case 'colorimetria':
+            return (
+              <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex, alignItems: 'center' }]}>
+                {onVerCondiciones ? (
+                  <View style={{ position: 'relative' }}>
                     <TouchableOpacity
-                      onPress={() => onMarcarImpreso && onMarcarImpreso(trabajo)}
-                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#4F46E5', alignItems: 'center' }}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{t('screens.produccion.consumo.btnImpreso')}</Text>
-                    </TouchableOpacity>
-                    {onVerCondiciones && (
-                      <TouchableOpacity
-                        onPress={() => onVerCondiciones(trabajo)}
-                        style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' }}
-                      >
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Colorimetria</Text>
-                      </TouchableOpacity>
+                      onPress={() => onVerCondiciones(trabajo)}
+                      style={[
+                        { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+                        Platform.OS === 'web' && { backgroundImage: 'radial-gradient(circle, #1A1A1A 8%, #F5E000 26%, #EC008C 48%, #00AEEF 72%)' },
+                      ]}
+                      {...colorHoverProps}
+                    />
+                    {colorTooltip && (
+                      <View style={{ position: 'absolute', bottom: 34, right: 0, backgroundColor: '#1E1B4B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 5, zIndex: 9999, pointerEvents: 'none', minWidth: 88 }}>
+                        <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>Colorimetría</Text>
+                      </View>
                     )}
                   </View>
-                )}
+                ) : null}
               </View>
             );
           default:
             return null;
         }
       })}
+      <View style={{ width: 30 }} />
     </View>
   );
 }

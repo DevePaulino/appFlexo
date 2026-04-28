@@ -98,6 +98,21 @@
     "backToLogin": "Back to sign in",
     "errorResetRequest": "Could not send the code. Please try again.",
     "errorResetCode": "Invalid or expired code",
+    "inviteTitle": "Activate your account",
+    "inviteSubtitle": "Choose a password to activate your access.",
+    "inviteSubtitleNamed": "Hi {{nombre}}, choose a password for {{email}}.",
+    "inviteBtn": "Activate account",
+    "inviteBtnLoading": "Activating...",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat your password",
+    "errorPasswordMatch": "Passwords do not match",
+    "modulosRoles": "Roles & permissions",
+    "benefit1Bold": "From quote to delivery,",
+    "benefit1Rest": "full order management without losing track.",
+    "benefit2Bold": "Production, deadlines and resources",
+    "benefit2Rest": "visible in real time from any device.",
+    "benefit3Bold": "Multi-user, multi-company.",
+    "benefit3Rest": "Scale without limits with integrated roles, permissions and billing.",
     "brandEyebrow": "Management for print studios",
     "brandTaglinePre": "Built for those who create.",
     "brandTaglineAccent": "Made to produce.",
@@ -147,6 +162,15 @@
     "troquel": "Die",
     "sinTroquel": "No die",
     "nuevoTroquel": "+ New die",
+    "tipoImpresion": "Print type",
+    "adhesivos": "Adhesives",
+    "bandaAncha": "Wide web",
+    "repetidora": "Repeat unit parameters",
+    "repCalles": "Lanes",
+    "repMotivos": "Motifs across",
+    "repTamano": "Total size",
+    "repSesgado": "Skewed",
+    "repDesp": "Skew offset",
     "material": "Material",
     "acabado": "Finish",
     "tirada": "Total run",
@@ -708,6 +732,12 @@
       "moduloProduccionTrigger": "State that triggers the machine selector:",
       "moduloProduccionTriggerRequired": "Trigger state required",
       "moduloProduccionTriggerRequiredHint": "You must assign a trigger state in Settings › Order configuration before enabling the production module.",
+      "moduloAyudaInteractiva": "Guided tours",
+      "moduloAyudaInteractivaHint": "Enable interactive guided tours in the Help screen.",
+      "moduloAyudaIa": "AI Assistant",
+      "moduloAyudaIaHint": "Enable the AI assistant to answer questions about the application.",
+      "moduloTroqueles": "Dies",
+      "moduloTroquelessHint": "Enables the dies section and its use in jobs and quotes.",
       "triggerHintPre": "The state marked as",
       "triggerHintLabel": "Production",
       "triggerHintPost": "will automatically send the job to production (using the assigned machine) when advanced to that state.",
@@ -1059,6 +1089,11 @@
       "guardado": "Saved"
     }
   },
+  "repetidora": {
+    "modalTitle": "Repeat unit parameters",
+    "yaConfigurado": "Parameters already saved. You can update them.",
+    "guardadoOk": "Parameters saved successfully."
+  },
   "cliches": {
     "modalTitle": "Request plates",
     "maquina": "Machine",
@@ -1096,8 +1131,8 @@
     "terms": "Terms of Use",
     "privacy": "Privacy Policy",
     "legalNotice": "Legal Notice",
-    "gdprNote": "Your data will be processed in accordance with Regulation (EU) 2016/679 (GDPR) for service management. Controller: PrintForgePro.",
-    "dataController": "Data controller: PrintForgePro · GDPR (EU) 2016/679",
+    "gdprNote": "Your data will be processed in accordance with Regulation (EU) 2016/679 (GDPR) for service management. Controller: PressMate Pro.",
+    "dataController": "Data controller: PressMate Pro · GDPR (EU) 2016/679",
     "acceptTermsPre": "I have read and accept the",
     "acceptPrivacyPre": "I have read and accept the",
     "errorConsent": "You must accept the Terms of Use and Privacy Policy to continue.",
@@ -1115,7 +1150,7 @@
       "sections": [
         {
           "title": "1. Data Controller",
-          "body": "PrintForgePro (hereinafter, «the Controller»).\nEmail: [CONTACT_EMAIL]\nAddress: [COMPANY_ADDRESS]\nDPO: [DPO_EMAIL] (if applicable)\n\nThis policy complies with EU GDPR 2016/679. UK users: also applies under the UK GDPR and Data Protection Act 2018."
+          "body": "PressMate Pro (hereinafter, «the Controller»).\nEmail: [CONTACT_EMAIL]\nAddress: [COMPANY_ADDRESS]\nDPO: [DPO_EMAIL] (if applicable)\n\nThis policy complies with EU GDPR 2016/679. UK users: also applies under the UK GDPR and Data Protection Act 2018."
         },
         {
           "title": "2. Data Collected and Purposes",
@@ -1157,7 +1192,7 @@
       "sections": [
         {
           "title": "1. Service Description",
-          "body": "PrintForgePro is a print job management platform for businesses in the graphic arts sector: orders, quotes, production, materials, machinery and team management."
+          "body": "PressMate Pro is a print job management platform for businesses in the graphic arts sector: orders, quotes, production, materials, machinery and team management."
         },
         {
           "title": "2. Access and Registration",
@@ -1173,7 +1208,7 @@
         },
         {
           "title": "5. Intellectual Property",
-          "body": "PrintForgePro, its design, code and brand are the property of the Controller. Data entered by users remains their exclusive property."
+          "body": "PressMate Pro, its design, code and brand are the property of the Controller. Data entered by users remains their exclusive property."
         },
         {
           "title": "6. Limitation of Liability",
@@ -1211,7 +1246,7 @@
         },
         {
           "title": "Purpose",
-          "body": "This legal notice governs access to and use of the PrintForgePro application."
+          "body": "This legal notice governs access to and use of the PressMate Pro application."
         },
         {
           "title": "Intellectual Property",
@@ -1465,6 +1500,18 @@
     "ayuda": "Help",
     "ayudaIntro": "Select a section to start the guided tour. The tour will highlight each key component and explain its functionality.",
     "ayudaSteps": "steps",
-    "ayudaStart": "▶ Tour"
+    "ayudaStart": "▶ Tour",
+    "ayudaDesactivada": "Interactive help is disabled.",
+    "aiTitle": "AI Assistant",
+    "aiIntro": "Ask any question about using PressMate Pro. The assistant will only answer questions about the application.",
+    "aiPlaceholder": "Type your question...",
+    "aiSend": "Send",
+    "aiThinking": "Thinking...",
+    "aiError": "Could not get a response. Please try again.",
+    "aiDesactivado": "Unavailable",
+    "aiNoDisponible": "The AI assistant is temporarily disabled. Contact your administrator for more information.",
+    "aiNoDisponibleShort": "Assistant unavailable",
+    "aiLimitReached": "You have reached the hourly query limit. Please try again later.",
+    "aiLimitReachedShort": "Query limit reached"
   }
 }

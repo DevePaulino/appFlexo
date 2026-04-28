@@ -6,7 +6,7 @@ from pymongo import MongoClient
 def main():
     import argparse
     p = argparse.ArgumentParser(description='Detect duplicated trabajo_id entries in trabajo_orden (global)')
-    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'printforgepro'))
+    p.add_argument('--db', default=os.environ.get('MONGO_DBNAME', 'pressmateapp'))
     p.add_argument('--limit', type=int, default=100, help='Max groups to print')
     args = p.parse_args()
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drop the `printforgepro` database and seed demo data:
+"""Drop the `pressmateapp` database and seed demo data:
 - 5 clientes in `clientes`
 - 10 presupuestos in `presupuestos` referencing clientes
 
@@ -76,7 +76,7 @@ def make_presupuesto(cliente_id, i, empresa_id=1):
 def main():
     uri = get_mongo_uri()
     client = MongoClient(uri)
-    db_name = os.environ.get('MONGO_DBNAME', 'printforgepro')
+    db_name = os.environ.get('MONGO_DBNAME', 'pressmateapp')
 
     print('Conectando a', uri)
     # Drop database to remove all data (DESTRUCTIVE)

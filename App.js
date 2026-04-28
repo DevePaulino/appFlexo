@@ -36,6 +36,7 @@ import ProveedoresScreen from './screens/ProveedoresScreen';
 import SuperAdminScreen from './screens/SuperAdminScreen';
 import ResellerScreen from './screens/ResellerScreen';
 import CookieBanner from './components/CookieBanner';
+import AiHelpFab from './components/AiHelpFab';
 
 // Inject global web CSS: placeholder text italic + muted color
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -802,6 +803,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   const consumoModuloActivo = modulos.consumo_material === true;
   const produccionModuloActivo = modulos.produccion === true;
   const presupuestosModuloActivo = modulos.presupuestos !== false;
+  const troquelModuloActivo = modulos.troqueles !== false;
   const canManageBilling = usePermission('manage_billing');
   const canManageModulos = usePermission('manage_modulos');
   const [submenuPosition, setSubmenuPosition] = React.useState({ top: 44, left: 0 });
@@ -856,6 +858,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
     : openSubmenu === 'Activos'
       ? buildActivosSubmenu(t).filter(item => {
           if (item.key === 'activos-gestion-materiales') return consumoModuloActivo;
+          if (item.key === 'activos-troqueles') return troquelModuloActivo;
           return true;
         })
       : [];
@@ -1893,6 +1896,7 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
       <CookieBanner />
+      {authUser && !['revendedor'].includes(authUser.billing_model) && <AiHelpFab />}
     </PedidosProvider>
     </ClientesProvider>
     </MaquinasProvider>

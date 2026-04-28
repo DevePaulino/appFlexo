@@ -88,7 +88,7 @@ def normalize_pedidos(db, batch=1000):
 def main():
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument('--uri', default='mongodb://localhost:27017/printforgepro')
+    p.add_argument('--uri', default='mongodb://localhost:27017/pressmateapp')
     p.add_argument('--dry', action='store_true', help='Do not write, just report (not implemented)')
     args = p.parse_args()
 
@@ -98,7 +98,7 @@ def main():
     except Exception:
         db = None
     if db is None:
-        db = client['printforgepro']
+        db = client['pressmateapp']
 
     print('Normalizing `trabajo_orden` (trabajo_id, maquina_id, empresa_id)')
     normalize_collection(db, 'trabajo_orden', ['trabajo_id', 'maquina_id', 'empresa_id'])

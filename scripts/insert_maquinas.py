@@ -3,7 +3,7 @@ from pymongo import MongoClient
 from datetime import datetime
 
 c = MongoClient('mongodb://localhost:27017')
-db = c.printforgepro
+db = c.pressmateapp
 col = db.maquinas
 now = datetime.utcnow()
 maquinas = [

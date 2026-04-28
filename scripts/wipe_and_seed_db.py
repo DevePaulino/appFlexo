@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
-DB_NAME = os.environ.get('DB_NAME', 'printforgepro')
+DB_NAME = os.environ.get('DB_NAME', 'pressmateapp')
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), '..', 'backups', 'agent')
 
 os.makedirs(BACKUP_DIR, exist_ok=True)

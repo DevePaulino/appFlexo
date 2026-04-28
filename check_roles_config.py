@@ -37,7 +37,7 @@ print("-" * 70)
 try:
     from pymongo import MongoClient
     client = MongoClient('mongodb://localhost:27017/')
-    db = client['printforgepro']
+    db = client['pressmateapp']
     user = db.usuarios.find_one({'email': 'admin@local.dev'})
     if user:
         print(f"admin@local.dev rol: '{user.get('rol')}'")

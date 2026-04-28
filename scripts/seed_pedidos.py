@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import random
 
 c = MongoClient('mongodb://localhost:27017')
-db = c.printforgepro
+db = c.pressmateapp
 pedidos = db.pedidos
 
 print('Conectando a MongoDB...')

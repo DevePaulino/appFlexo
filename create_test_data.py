@@ -49,7 +49,7 @@ def make_pedido(cliente_id, i, empresa_id=0):
 
 def main():
     client = MongoClient('mongodb://localhost:27017/')
-    db = client.printforgepro
+    db = client.pressmateapp
     clientes_col = db.clientes
     pedidos_col = db.pedidos
 

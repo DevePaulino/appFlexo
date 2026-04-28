@@ -18,8 +18,8 @@ from pymongo import MongoClient
 from bson import ObjectId
 
 # Configuración de MongoDB - usar la misma que app.py
-MONGO_URI = 'mongodb://localhost:27017/printforgepro'
-MONGO_DB = 'printforgepro'
+MONGO_URI = 'mongodb://localhost:27017/pressmateapp'
+MONGO_DB = 'pressmateapp'
 
 def slugify_estado(texto):
     """Normaliza un estado para comparación (Python puro)"""

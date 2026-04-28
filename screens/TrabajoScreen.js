@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   rowAlternate: {},   // eliminated — rows are uniform
   tableCell: { justifyContent: 'center', alignItems: 'center' },
   headerText: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5, textAlign: 'center' },
-  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A', textAlign: 'center' },
+  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A', textAlign: 'center', width: '100%' },
   // Order number pill
   numeroPedidoPill: {
     backgroundColor: '#EEF2FF', borderRadius: 6,
@@ -1155,14 +1155,29 @@ export default function TrabajoScreen({ currentUser }) {
                       );
                     default: {
                       let val;
-                      if (col.fieldKey) {
-                        const raw = trabajo[col.fieldKey];
-                        val = raw !== undefined && raw !== null ? (typeof raw === 'object' ? (raw.nombre || raw.label || JSON.stringify(raw)) : raw) : undefined;
+                      const raw = col.fieldKey
+                        ? (() => {
+                            const top = trabajo[col.fieldKey];
+                            if (top !== undefined && top !== null) return top;
+                            const dp = trabajo.datos_presupuesto || trabajo.datos_json || {};
+                            return dp[col.fieldKey];
+                          })()
+                        : (() => {
+                            const dj = typeof trabajo.datos_json === 'string'
+                              ? (() => { try { return JSON.parse(trabajo.datos_json); } catch { return {}; } })()
+                              : (trabajo.datos_json || {});
+                            return dj[col.key];
+                          })();
+                      if (raw === undefined || raw === null) {
+                        val = undefined;
+                      } else if (Array.isArray(raw)) {
+                        val = raw.map(item => item && typeof item === 'object' ? (item.nombre || item.label || String(item)) : String(item)).join(', ') || undefined;
+                      } else if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                        try { val = new Date(raw).toLocaleDateString(); } catch { val = raw; }
+                      } else if (typeof raw === 'object') {
+                        val = raw.nombre || raw.label || JSON.stringify(raw);
                       } else {
-                        const dj = typeof trabajo.datos_json === 'string'
-                          ? (() => { try { return JSON.parse(trabajo.datos_json); } catch { return {}; } })()
-                          : (trabajo.datos_json || {});
-                        val = dj[col.key];
+                        val = raw;
                       }
                       return (
                         <View key={col.key} style={[styles.tableCell, { flex: col.adjustedFlex }]}>

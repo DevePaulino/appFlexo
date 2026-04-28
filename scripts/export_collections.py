@@ -18,7 +18,7 @@ def export_collection(db, name, out_dir):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--uri", default="mongodb://localhost:27017/printforgepro")
+    p.add_argument("--uri", default="mongodb://localhost:27017/pressmateapp")
     p.add_argument("--collections", default="trabajo_orden,pedidos,trabajos")
     p.add_argument("--out", default="backups/migration_exports")
     args = p.parse_args()
@@ -30,7 +30,7 @@ def main():
     except Exception:
         db = None
     if db is None:
-        db = client['printforgepro']
+        db = client['pressmateapp']
 
     for col in args.collections.split(','):
         export_collection(db, col.strip(), args.out)

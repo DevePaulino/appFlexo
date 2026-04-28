@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from datetime import datetime
 
 MONGO_URI='mongodb://localhost:27017'
-DB_NAME='printforgepro'
+DB_NAME='pressmateapp'
 
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]

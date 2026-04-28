@@ -8,6 +8,7 @@ import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { useTranslation } from 'react-i18next';
 import { useClientes } from '../ClientesContext';
 import { useGridColumns } from '../hooks/useGridColumns';
+import { useCamposFormulario } from '../hooks/useCamposFormulario';
 import ColumnSelector from '../components/ColumnSelector';
 
 const styles = StyleSheet.create({
@@ -152,6 +153,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     textAlign: 'center',
+    width: '100%',
   },
   colNombre: {
     flex: 0.18,
@@ -284,7 +286,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const CLIENTES_COL_DEFS = (t) => [
+const CLIENTES_BASE_COLS = (t) => [
   { key: 'nombre',      label: t('forms.fieldCliente'),             flex: 0.18 },
   { key: 'razonSocial', label: t('forms.razonSocial'),              flex: 0.18 },
   { key: 'cif',         label: t('forms.cif'),                      flex: 0.12 },
@@ -295,8 +297,14 @@ const CLIENTES_COL_DEFS = (t) => [
 
 export default function ClientesScreen({ currentUser }) {
   const { t } = useTranslation();
+  const { colDefs: camposDefs } = useCamposFormulario('cliente', currentUser);
+  const colDefs = useMemo(() => {
+    const base = CLIENTES_BASE_COLS(t);
+    const accionesIdx = base.findIndex(c => c.key === 'acciones');
+    return [...base.slice(0, accionesIdx), ...camposDefs, ...base.slice(accionesIdx)];
+  }, [t, camposDefs]);
   const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
-    useGridColumns('clientes', CLIENTES_COL_DEFS(t), currentUser?.id);
+    useGridColumns('clientes', colDefs, currentUser?.id);
   const ITEMS_PER_PAGE = 100;
   const { clientes: rawClientes, recargarClientes } = useClientes();
   const clientes = useMemo(() => (rawClientes || [])
@@ -582,7 +590,24 @@ export default function ClientesScreen({ currentUser }) {
                       )}
                     </View>
                   );
-                  default: return null;
+                  default: {
+                    const raw = col.fieldKey
+                      ? (cliente[col.fieldKey] ?? (cliente.datos_json || {})[col.fieldKey])
+                      : (cliente.datos_json || {})[col.key];
+                    let val;
+                    if (Array.isArray(raw)) {
+                      val = raw.map(item => item && typeof item === 'object' ? (item.nombre || item.label || String(item)) : String(item)).join(', ') || undefined;
+                    } else if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                      try { val = new Date(raw).toLocaleDateString(); } catch { val = raw; }
+                    } else if (raw !== null && raw !== undefined && typeof raw === 'object') {
+                      val = raw.nombre || raw.label || JSON.stringify(raw);
+                    } else { val = raw; }
+                    return (
+                      <View key={col.key} style={[styles.tableCell, { flex: f }]}>
+                        <Text style={styles.cellText} numberOfLines={1}>{val !== undefined && val !== null && val !== '' ? String(val) : '-'}</Text>
+                      </View>
+                    );
+                  }
                 }
               })}
               {/* spacer para alinear con el botón ⊞ del header */}

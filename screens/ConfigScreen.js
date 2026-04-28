@@ -1640,7 +1640,7 @@ export default function ConfigScreen({ route, currentUser }) {
       if (inviteToken && !usuarioEditandoId) {
         const base = Platform.OS === 'web' && typeof window !== 'undefined'
           ? window.location.origin
-          : 'https://app.printforgepro.com';
+          : 'https://app.pressmateapp.com';
         const inviteUrl = `${base}/?invite=${inviteToken}`;
         setInviteModal({ visible: true, url: inviteUrl, email: data.email || '', nombre: data.nombre || '' });
       }

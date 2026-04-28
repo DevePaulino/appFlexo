@@ -9,7 +9,7 @@ from datetime import datetime
 
 BASE='http://127.0.0.1:8080'
 MONGO_URI='mongodb://localhost:27017'
-DB_NAME='printforgepro'
+DB_NAME='pressmateapp'
 
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]

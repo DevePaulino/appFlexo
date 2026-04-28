@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PrintForge Pro",
-    "slug": "printforge-pro",
+    "name": "PressMate Pro",
+    "slug": "pressmate-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "bundleIdentifier": "com.anonymous.printforge-pro"
+      "bundleIdentifier": "com.anonymous.pressmate-pro"
     },
     "web": {
       "favicon": "./assets/favicon.png"

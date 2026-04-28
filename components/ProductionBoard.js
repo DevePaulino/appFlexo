@@ -22,7 +22,8 @@ const PRODUCCION_COL_DEFS = (t) => [
   { key: 'fechaEntrega', label: t('screens.produccion.colFechaEntrega'),    flex: 0.09 },
   { key: 'dias',         label: t('screens.produccion.colDias'),            flex: 0.06 },
   { key: 'maquina',      label: t('screens.produccion.colMaquina'),         flex: 0.13 },
-  { key: 'impreso',      label: t('screens.produccion.colConsumo'),         flex: 0.15 },
+  { key: 'impreso',      label: '',                                         flex: 0.12 },
+  { key: 'colorimetria', label: '',                                         flex: 0.06 },
 ];
 
 export default function ProductionBoard({ maquinas, trabajosPorMaquina, onRefresh, initialMaquinaId, maquinaActivaIds = [], searchText = '', trabajosTotals = {}, onRequestPage, onOpenDetalle }) {
@@ -813,6 +814,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
@@ -905,6 +907,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     textAlign: 'center',
+    width: '100%',
   },
   numeroPedidoPill: {
     backgroundColor: '#ECEFFE',

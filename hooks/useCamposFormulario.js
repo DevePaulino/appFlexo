@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CAMPOS_BASE_PEDIDO, CAMPOS_BASE_PRESUPUESTO, CAMPOS_BASE_TROQUEL } from '../utils/camposBase';
+import { CAMPOS_BASE_PEDIDO, CAMPOS_BASE_PRESUPUESTO, CAMPOS_BASE_TROQUEL, CAMPOS_BASE_MAQUINA, CAMPOS_BASE_PROVEEDOR } from '../utils/camposBase';
 
 // ── Cache en memoria por empresa+formType ────────────────────────────────────
 const _customCache = {};
@@ -9,6 +9,8 @@ const BASE_COLS_BY_FORM = {
   pedido:      CAMPOS_BASE_PEDIDO.filter(c => !c.excludeInGrid),
   presupuesto: CAMPOS_BASE_PRESUPUESTO.filter(c => !c.excludeInGrid),
   troquel:     CAMPOS_BASE_TROQUEL.filter(c => !c.excludeInGrid),
+  maquina:     CAMPOS_BASE_MAQUINA.filter(c => !c.excludeInGrid),
+  proveedor:   CAMPOS_BASE_PROVEEDOR.filter(c => !c.excludeInGrid),
 };
 
 function buildAuthHeaders() {
@@ -69,10 +71,10 @@ export function useCamposFormulario(formType, currentUser) {
       .finally(() => setLoading(false));
   }, [cacheKey, formType]);
 
-  // Combinar: base primero, luego custom
+  // Combinar: base primero, luego custom — todos ocultos por defecto
   const colDefs = [
-    ...baseCols.map(c => ({ key: c.campo_id, label: c.etiqueta, flex: c.flex, fieldKey: c.fieldKey })),
-    ...customCols,
+    ...baseCols.map(c => ({ key: c.campo_id, label: c.etiqueta, flex: c.flex, fieldKey: c.fieldKey, defaultHidden: true })),
+    ...customCols.map(c => ({ ...c, defaultHidden: true })),
   ];
 
   return { colDefs, loading };

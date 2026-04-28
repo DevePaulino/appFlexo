@@ -98,6 +98,21 @@
     "backToLogin": "Retour à la connexion",
     "errorResetRequest": "Impossible d'envoyer le code. Veuillez réessayer.",
     "errorResetCode": "Code invalide ou expiré",
+    "inviteTitle": "Activez votre compte",
+    "inviteSubtitle": "Choisissez un mot de passe pour activer votre accès.",
+    "inviteSubtitleNamed": "Bonjour {{nombre}}, choisissez un mot de passe pour {{email}}.",
+    "inviteBtn": "Activer le compte",
+    "inviteBtnLoading": "Activation...",
+    "confirmPasswordLabel": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Répétez le mot de passe",
+    "errorPasswordMatch": "Les mots de passe ne correspondent pas",
+    "modulosRoles": "Rôles et permissions",
+    "benefit1Bold": "Du devis à la livraison,",
+    "benefit1Rest": "gestion complète de la commande sans perdre le fil.",
+    "benefit2Bold": "Production, délais et ressources",
+    "benefit2Rest": "visibles en temps réel depuis n'importe quel appareil.",
+    "benefit3Bold": "Multi-utilisateur, multi-entreprise.",
+    "benefit3Rest": "Évoluez sans limites avec rôles, permissions et facturation intégrés.",
     "brandEyebrow": "Gestion pour studios d'impression",
     "brandTaglinePre": "Conçu pour ceux qui créent.",
     "brandTaglineAccent": "Fait pour produire.",
@@ -147,6 +162,15 @@
     "troquel": "Découpe",
     "sinTroquel": "Sans découpe",
     "nuevoTroquel": "+ Nouvelle découpe",
+    "tipoImpresion": "Type d'impression",
+    "adhesivos": "Adhésifs",
+    "bandaAncha": "Bande large",
+    "repetidora": "Paramètres répétitrice",
+    "repCalles": "Voies",
+    "repMotivos": "Motifs en développement",
+    "repTamano": "Taille totale",
+    "repSesgado": "Biseauté",
+    "repDesp": "Décalage biseauté",
     "material": "Matériau",
     "acabado": "Finition",
     "tirada": "Tirage total",
@@ -704,6 +728,12 @@
       "moduloProduccionTrigger": "État qui déclenche le sélecteur de machine :",
       "moduloProduccionTriggerRequired": "État obligatoire",
       "moduloProduccionTriggerRequiredHint": "Vous devez assigner un état déclencheur dans Paramètres › Configuration des commandes avant d'activer le module de production.",
+      "moduloAyudaInteractiva": "Visites guidées",
+      "moduloAyudaInteractivaHint": "Active les visites guidées dans l'écran d'aide.",
+      "moduloAyudaIa": "Assistant IA",
+      "moduloAyudaIaHint": "Active l'assistant IA pour répondre aux questions sur l'application.",
+      "moduloTroqueles": "Découpes",
+      "moduloTroquelessHint": "Active la section découpes et son utilisation dans les commandes.",
       "triggerHintPre": "L'état marqué comme",
       "triggerHintLabel": "Production",
       "triggerHintPost": "enverra automatiquement la commande en production (en utilisant la machine assignée) lors du passage à cet état.",
@@ -1055,6 +1085,11 @@
       "guardado": "Enregistré"
     }
   },
+  "repetidora": {
+    "modalTitle": "Paramètres répétitrice",
+    "yaConfigurado": "Des paramètres sont déjà enregistrés. Vous pouvez les modifier.",
+    "guardadoOk": "Paramètres enregistrés avec succès."
+  },
   "cliches": {
     "modalTitle": "Demander des clichés",
     "maquina": "Machine",
@@ -1092,8 +1127,8 @@
     "terms": "Conditions d'utilisation",
     "privacy": "Politique de confidentialité",
     "legalNotice": "Mentions légales",
-    "gdprNote": "Vos données seront traitées conformément au Règlement (UE) 2016/679 (RGPD) pour la gestion du service. Responsable : PrintForgePro.",
-    "dataController": "Responsable du traitement : PrintForgePro · RGPD (UE) 2016/679",
+    "gdprNote": "Vos données seront traitées conformément au Règlement (UE) 2016/679 (RGPD) pour la gestion du service. Responsable : PressMate Pro.",
+    "dataController": "Responsable du traitement : PressMate Pro · RGPD (UE) 2016/679",
     "acceptTermsPre": "J'ai lu et j'accepte les",
     "acceptPrivacyPre": "J'ai lu et j'accepte la",
     "errorConsent": "Vous devez accepter les Conditions d'utilisation et la Politique de confidentialité pour continuer.",
@@ -1111,7 +1146,7 @@
       "sections": [
         {
           "title": "1. Responsable du traitement",
-          "body": "PrintForgePro (ci-après, «le Responsable»).\nE-mail : [EMAIL_CONTACT]\nAdresse : [ADRESSE_ENTREPRISE]\nDPD : [EMAIL_DPD] (si applicable)\n\nConforme au RGPD (UE) 2016/679 et à la loi Informatique et Libertés n° 78-17 du 6 janvier 1978 modifiée."
+          "body": "PressMate Pro (ci-après, «le Responsable»).\nE-mail : [EMAIL_CONTACT]\nAdresse : [ADRESSE_ENTREPRISE]\nDPD : [EMAIL_DPD] (si applicable)\n\nConforme au RGPD (UE) 2016/679 et à la loi Informatique et Libertés n° 78-17 du 6 janvier 1978 modifiée."
         },
         {
           "title": "2. Données collectées et finalités",
@@ -1153,7 +1188,7 @@
       "sections": [
         {
           "title": "1. Description du service",
-          "body": "PrintForgePro est une plateforme de gestion pour les entreprises du secteur des arts graphiques : commandes, devis, production, matériaux, machines et équipes."
+          "body": "PressMate Pro est une plateforme de gestion pour les entreprises du secteur des arts graphiques : commandes, devis, production, matériaux, machines et équipes."
         },
         {
           "title": "2. Accès et inscription",
@@ -1169,7 +1204,7 @@
         },
         {
           "title": "5. Propriété intellectuelle",
-          "body": "PrintForgePro, sa conception, son code et sa marque sont la propriété du Responsable. Les données saisies par l'utilisateur lui appartiennent exclusivement."
+          "body": "PressMate Pro, sa conception, son code et sa marque sont la propriété du Responsable. Les données saisies par l'utilisateur lui appartiennent exclusivement."
         },
         {
           "title": "6. Limitation de responsabilité",
@@ -1207,7 +1242,7 @@
         },
         {
           "title": "Objet",
-          "body": "Les présentes mentions légales régissent l'accès et l'utilisation de l'application PrintForgePro."
+          "body": "Les présentes mentions légales régissent l'accès et l'utilisation de l'application PressMate Pro."
         },
         {
           "title": "Propriété intellectuelle",
@@ -1461,6 +1496,18 @@
     "ayuda": "Aide",
     "ayudaIntro": "Sélectionnez une section pour démarrer la visite guidée. La visite mettra en évidence chaque composant clé.",
     "ayudaSteps": "étapes",
-    "ayudaStart": "▶ Tour"
+    "ayudaStart": "▶ Tour",
+    "ayudaDesactivada": "L'aide interactive est désactivée.",
+    "aiTitle": "Assistant IA",
+    "aiIntro": "Posez toute question sur l'utilisation de PressMate Pro. L'assistant répondra uniquement aux questions liées à l'application.",
+    "aiPlaceholder": "Écrivez votre question...",
+    "aiSend": "Envoyer",
+    "aiThinking": "Réflexion...",
+    "aiError": "Impossible d'obtenir une réponse. Veuillez réessayer.",
+    "aiDesactivado": "Indisponible",
+    "aiNoDisponible": "L'assistant IA est temporairement désactivé. Contactez votre administrateur pour plus d'informations.",
+    "aiNoDisponibleShort": "Assistant indisponible",
+    "aiLimitReached": "Vous avez atteint la limite de requêtes par heure. Réessayez plus tard.",
+    "aiLimitReachedShort": "Limite de requêtes atteinte"
   }
 }

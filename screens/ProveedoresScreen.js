@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   TextInput, Modal, Alert, Platform, ActivityIndicator,
 } from 'react-native';
 import { useGridColumns } from '../hooks/useGridColumns';
+import { useCamposFormulario } from '../hooks/useCamposFormulario';
 import ColumnSelector from '../components/ColumnSelector';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import EmptyState from '../components/EmptyState';
@@ -61,7 +62,7 @@ const s = StyleSheet.create({
   rowAlt: { backgroundColor: '#FAFBFF' },
   cell: { justifyContent: 'center', alignItems: 'center' },
   headerText: { fontSize: 11, fontWeight: '700', color: '#4F46E5', letterSpacing: 0.5, textAlign: 'center' },
-  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A', textAlign: 'center' },
+  cellText: { fontSize: 13, fontWeight: '500', color: '#0F172A', textAlign: 'center', width: '100%' },
   cellSub: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
   colNombre: { flex: 0.22 },
   colContacto: { flex: 0.18 },
@@ -135,7 +136,7 @@ function getAuthHeaders() {
              : { 'Content-Type': 'application/json' };
 }
 
-const PROVEEDORES_COL_DEFS = (t) => [
+const PROVEEDORES_BASE_COLS = (t) => [
   { key: 'nombre',    label: t('screens.proveedores.colNombre'),    flex: 0.22 },
   { key: 'contacto',  label: t('screens.proveedores.colContacto'),  flex: 0.18 },
   { key: 'email',     label: t('screens.proveedores.colEmail'),     flex: 0.22 },
@@ -146,8 +147,14 @@ const PROVEEDORES_COL_DEFS = (t) => [
 
 export default function ProveedoresScreen() {
   const { t } = useTranslation();
+  const { colDefs: camposDefs } = useCamposFormulario('proveedor', null);
+  const colDefs = useMemo(() => {
+    const base = PROVEEDORES_BASE_COLS(t);
+    const accionesIdx = base.findIndex(c => c.key === 'acciones');
+    return [...base.slice(0, accionesIdx), ...camposDefs, ...base.slice(accionesIdx)];
+  }, [t, camposDefs]);
   const { visibleCols, orderedCols, hiddenKeys, toggleColumn, reorderColumns, resetColumns } =
-    useGridColumns('proveedores', PROVEEDORES_COL_DEFS(t), null);
+    useGridColumns('proveedores', colDefs, null);
   const [tipoActivo, setTipoActivo] = useState(TIPOS[0].key);
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -404,8 +411,24 @@ export default function ProveedoresScreen() {
                             )}
                           </View>
                         );
-                      default:
-                        return null;
+                      default: {
+                        const raw = col.fieldKey
+                          ? (prov[col.fieldKey] ?? (prov.datos_json || {})[col.fieldKey])
+                          : (prov.datos_json || {})[col.key];
+                        let val;
+                        if (Array.isArray(raw)) {
+                          val = raw.map(item => item && typeof item === 'object' ? (item.nombre || item.label || String(item)) : String(item)).join(', ') || undefined;
+                        } else if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                          try { val = new Date(raw).toLocaleDateString(); } catch { val = raw; }
+                        } else if (raw !== null && raw !== undefined && typeof raw === 'object') {
+                          val = raw.nombre || raw.label || JSON.stringify(raw);
+                        } else { val = raw; }
+                        return (
+                          <View key={col.key} style={[s.cell, { flex: col.adjustedFlex }]}>
+                            <Text style={s.cellText} numberOfLines={1}>{val !== undefined && val !== null && val !== '' ? String(val) : '-'}</Text>
+                          </View>
+                        );
+                      }
                     }
                   })}
                   <View style={{ width: 30 }} />

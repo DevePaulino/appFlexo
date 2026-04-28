@@ -3,7 +3,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 
 print('=== MÁQUINAS - campos id y _id ===')
 for m in db['maquinas'].find({}):

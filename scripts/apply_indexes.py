@@ -11,7 +11,7 @@ def get_mongo_uri():
 
 def main():
     uri = get_mongo_uri()
-    db_name = os.environ.get('MONGO_DBNAME', 'printforgepro')
+    db_name = os.environ.get('MONGO_DBNAME', 'pressmateapp')
     client = MongoClient(uri)
     db = client[db_name]
 

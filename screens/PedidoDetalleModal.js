@@ -21,6 +21,7 @@ import NuevoPedidoModal from './NuevoPedidoModal';
 import DeleteConfirmRow from '../components/DeleteConfirmRow';
 import { CanalesGrid, deltaColor } from '../components/CondicionesView';
 import SolicitudClichesModal from './SolicitudClichesModal';
+import SolicitudRepetidoraModal from './SolicitudRepetidoraModal';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -1632,6 +1633,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
   const [approvingArchivoId, setApprovingArchivoId] = useState(null);
   const [confirmingRevocarId, setConfirmingRevocarId] = useState(null);
   const [solicitudClichesVisible, setSolicitudClichesVisible] = useState(false);
+  const [solicitudRepetidoraVisible, setSolicitudRepetidoraVisible] = useState(false);
   const fileInputArtesRef      = useRef(null);
   const fileInputUnitarioRef   = useRef(null);
   const fileInputPdfProduccionRefs      = useRef({ report: null, repetidora: null, trapping: null, troquel: null });
@@ -2884,9 +2886,9 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                         <View key={title} style={styles.pdfProduccionToolCol}>
                           <View style={styles.pdfProduccionCardHeader}>
                             <Text style={styles.pdfProduccionCardLabel}>{title}</Text>
-                            {tipoKey2 === 'repetidora' && (
-                              <TouchableOpacity style={styles.pdfProduccionFileBtnCliches} onPress={() => setSolicitudClichesVisible(true)}>
-                                <Text style={styles.pdfProduccionFileBtnClichesText}>✦ {t('cliches.modalTitle')}</Text>
+                            {tipoKey2 === 'repetidora' && (pedido?.datos_presupuesto?.tipo_impresion || pedido?.tipo_impresion) !== 'adhesivos' && (
+                              <TouchableOpacity style={styles.pdfProduccionFileBtnCliches} onPress={() => setSolicitudRepetidoraVisible(true)}>
+                                <Text style={styles.pdfProduccionFileBtnClichesText}>✦ {t('repetidora.modalTitle')}</Text>
                               </TouchableOpacity>
                             )}
                           </View>
@@ -4107,6 +4109,12 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
       onClose={() => setSolicitudClichesVisible(false)}
       pedido={pedido}
       currentUser={currentUser}
+    />
+    <SolicitudRepetidoraModal
+      visible={solicitudRepetidoraVisible}
+      onClose={() => setSolicitudRepetidoraVisible(false)}
+      pedido={pedido}
+      onSaved={() => setSolicitudRepetidoraVisible(false)}
     />
     </>
   );

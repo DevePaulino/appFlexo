@@ -23,7 +23,7 @@ def capitalize_first(s):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--mongo-uri', default=os.environ.get('MONGO_URI', 'mongodb://localhost:27017'))
-    p.add_argument('--db', default=os.environ.get('MONGO_DB', 'printforgepro'))
+    p.add_argument('--db', default=os.environ.get('MONGO_DB', 'pressmateapp'))
     p.add_argument('--apply', action='store_true')
     p.add_argument('--backup', action='store_true')
     args = p.parse_args()

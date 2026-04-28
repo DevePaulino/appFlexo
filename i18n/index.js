@@ -38,12 +38,16 @@ async function detectLanguage() {
   } catch {}
 
   if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
-    const raw = navigator.language || navigator.userLanguage || '';
-    const code = raw.split('-')[0].toLowerCase();
-    if (SUPPORTED.includes(code)) return code;
+    // navigator.languages es un array ordenado por preferencia (ej: ['fr-CH', 'fr', 'en'])
+    const langs = navigator.languages?.length ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
+    for (const raw of langs) {
+      const code = raw.split('-')[0].toLowerCase();
+      if (SUPPORTED.includes(code)) return code;
+    }
   }
 
-  return 'es';
+  // Fallback: inglés como lengua franca universal
+  return 'en';
 }
 
 /** Initialise i18n — call once at app startup, await before rendering */
@@ -60,7 +64,7 @@ export async function initI18n() {
       it: { translation: it },
     },
     lng,
-    fallbackLng: 'es',
+    fallbackLng: 'en',
     interpolation: { escapeValue: false },
     // avoid warnings for missing keys — fall back to key name
     saveMissing: false,

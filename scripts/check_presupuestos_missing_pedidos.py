@@ -7,7 +7,7 @@ from bson.objectid import ObjectId
 import json
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['printforgepro']
+db = client['pressmateapp']
 pres = db['presupuestos']
 ped = db['pedidos']
 

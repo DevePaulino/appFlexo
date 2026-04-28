@@ -135,6 +135,20 @@ export default function ModulosScreen() {
             />
           </View>
 
+          {/* Módulo Troqueles */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.rowLabel}>{t('screens.config.moduloTroqueles')}</Text>
+              <Text style={styles.rowHint}>{t('screens.config.moduloTroquelessHint')}</Text>
+            </View>
+            <Switch
+              value={modulos.troqueles !== false}
+              onValueChange={(v) => setModulo('troqueles', v)}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
           {/* Módulo Colorimetría */}
           <View style={[styles.row, styles.rowLast]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
