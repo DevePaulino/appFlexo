@@ -2984,7 +2984,7 @@ export default function PedidoDetalleModal({ visible, onClose, pedidoId, onDelet
                     >
                       <Text style={styles.pdfProduccionActionBtnText}>✦ {t('cliches.modalTitle')}</Text>
                     </TouchableOpacity>
-                    {(pedido?.datos_presupuesto?.tipo_impresion || pedido?.tipo_impresion) !== 'adhesivos' && (
+                    {(pedido?.datos_presupuesto?.tipo_impresion || pedido?.tipo_impresion) === 'banda_ancha' && (
                       <TouchableOpacity
                         style={[styles.pdfProduccionActionBtn, styles.pdfProduccionActionBtnOutline]}
                         onPress={() => setSolicitudRepetidoraVisible(true)}
