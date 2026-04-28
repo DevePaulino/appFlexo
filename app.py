@@ -86,7 +86,7 @@ def request_entity_too_large(_):
     return jsonify({'error': 'El archivo supera el límite de tamaño permitido (máx 200 MB)'}), 413
 
 # Configuración MongoDB (puedes cambiar la URI a tu MongoDB Atlas si quieres)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/pressmateapp"
+app.config["MONGO_URI"] = "mongodb://localhost:27017/printforgepro"
 mongo = PyMongo(app)
 
 # ─── File Upload Configuration ────────────────────────────────────────────────
@@ -1321,10 +1321,10 @@ def init_db():
     from os import environ
 
     # Connect directly to MongoDB (bypass PyMongo which may not be ready)
-    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/pressmateapp')
+    mongo_uri = environ.get('MONGODB_URI', 'mongodb://localhost:27017/printforgepro')
     try:
         client = MongoClient(mongo_uri)
-        db = client['pressmateapp']
+        db = client['printforgepro']
         col_opciones = db['config_opciones']
     except Exception as e:
         print(f"Error connecting to MongoDB in init_db(): {e}")
