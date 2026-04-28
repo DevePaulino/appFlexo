@@ -1107,6 +1107,7 @@
     "sinProveedoresSub": "Fügen Sie einen Klischeeanbieter in den Einstellungen hinzu.",
     "sinEmail": "Keine E-Mail konfiguriert",
     "fechaEntregaTitle": "Gewünschtes Lieferdatum",
+    "fechaObligatoria": "Bitte ein Lieferdatum angeben, um die Anfrage zu senden",
     "notasTitle": "Zusätzliche Hinweise",
     "notasPlaceholder": "Besondere Anweisungen, Veredelungen, Dringlichkeit...",
     "enviado": "Anfrage gesendet",

@@ -1107,6 +1107,7 @@
     "sinProveedoresSub": "Ajoutez un fournisseur de clichés dans les paramètres.",
     "sinEmail": "Aucun e-mail configuré",
     "fechaEntregaTitle": "Date de livraison souhaitée",
+    "fechaObligatoria": "Indiquez une date de livraison pour envoyer la demande",
     "notasTitle": "Notes supplémentaires",
     "notasPlaceholder": "Instructions spéciales, finitions, urgence...",
     "enviado": "Demande envoyée",

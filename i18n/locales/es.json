@@ -1107,6 +1107,7 @@
     "sinProveedoresSub": "Añade un proveedor de grabados en Configuración.",
     "sinEmail": "Sin email configurado",
     "fechaEntregaTitle": "Fecha de entrega solicitada",
+    "fechaObligatoria": "Indica una fecha de entrega para poder enviar la solicitud",
     "notasTitle": "Notas adicionales",
     "notasPlaceholder": "Instrucciones especiales, acabados, urgencia...",
     "enviado": "Solicitud enviada",

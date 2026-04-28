@@ -31,6 +31,12 @@ function _isLightColor(hex) {
   } catch { return false; }
 }
 
+function defaultFecha() {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
 // ─── Modal principal ───────────────────────────────────────────────────────────
 export default function SolicitudClichesModal({ visible, onClose, pedido, currentUser }) {
   const { t } = useTranslation();
@@ -41,9 +47,9 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
   const [selected, setSelected]         = useState(new Set());
   const [proveedores, setProveedores]   = useState([]);
   const [proveedorId, setProveedorId]   = useState(null);
-  const [planchaPerSep, setPlanchaPerSep] = useState({}); // { nombre: idx | null }
+  const [planchaPerSep, setPlanchaPerSep] = useState({});
   const [notas, setNotas]               = useState('');
-  const [fechaEntrega, setFechaEntrega] = useState('');
+  const [fechaEntrega, setFechaEntrega] = useState(defaultFecha);
   const [sending, setSending]           = useState(false);
   const [result, setResult]             = useState(null);
   const [previewHtml, setPreviewHtml]   = useState(null);
@@ -58,7 +64,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
     setSelected(new Set());
     setResult(null);
     setNotas('');
-    setFechaEntrega('');
+    setFechaEntrega(defaultFecha());
     setProveedorId(null);
     setPlanchaPerSep({});
     loadData();
@@ -115,7 +121,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
   const planchas = provSeleccionado?.planchas || [];
   const hasPlanchas = !isResellerClient && planchas.length > 0;
   const todasConPlancha = !hasPlanchas || [...selected].every((n) => planchaPerSep[n] != null);
-  const puedeEnviar = selected.size > 0 && (isResellerClient || provSeleccionado?.email) && todasConPlancha;
+  const puedeEnviar = selected.size > 0 && (isResellerClient || provSeleccionado?.email) && todasConPlancha && !!fechaEntrega.trim();
 
   const buildSepsPayload = () =>
     separaciones
@@ -176,7 +182,7 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
           {/* ── Header ── */}
           <View style={s.header}>
             <View style={{ flex: 1 }}>
-              <Text style={s.headerTitle}>🖨️ {t('cliches.modalTitle')}</Text>
+              <Text style={s.headerTitle}>{t('cliches.modalTitle')}</Text>
               <Text style={s.headerSub} numberOfLines={1}>
                 {pedido?.referencia || pedido?.numero_pedido || pedidoId}
               </Text>
@@ -326,16 +332,18 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
                 {/* ── Fecha + Notas ── */}
                 <View style={s.bottomRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.label, { marginBottom: 6 }]}>{t('cliches.fechaEntregaTitle')}</Text>
+                    <Text style={[s.label, { marginBottom: 6 }]}>
+                      {t('cliches.fechaEntregaTitle')} <Text style={{ color: '#EF4444' }}>*</Text>
+                    </Text>
                     {Platform.OS === 'web' ? (
                       <input
                         type="date"
                         value={fechaEntrega}
                         onChange={(e) => setFechaEntrega(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8, border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                        style={{ width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8, border: `1.5px solid ${fechaEntrega ? '#E2E8F0' : '#EF4444'}`, backgroundColor: '#F8FAFC', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
                       />
                     ) : (
-                      <TextInput style={s.input} value={fechaEntrega} onChangeText={setFechaEntrega} placeholder="DD/MM/AAAA" placeholderTextColor="#94A3B8" keyboardType="numbers-and-punctuation" />
+                      <TextInput style={[s.input, !fechaEntrega && { borderColor: '#EF4444' }]} value={fechaEntrega} onChangeText={setFechaEntrega} placeholder="DD/MM/AAAA" placeholderTextColor="#94A3B8" keyboardType="numbers-and-punctuation" />
                     )}
                   </View>
                   <View style={{ flex: 2 }}>
@@ -380,6 +388,9 @@ export default function SolicitudClichesModal({ visible, onClose, pedido, curren
               )}
               {selected.size > 0 && hasPlanchas && !todasConPlancha && (
                 <Text style={s.footerHint}>{t('cliches.seleccionaPlancha')}</Text>
+              )}
+              {!fechaEntrega.trim() && (
+                <Text style={[s.footerHint, { color: '#EF4444' }]}>{t('cliches.fechaObligatoria')}</Text>
               )}
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                 <TouchableOpacity style={s.cancelBtn} onPress={onClose}>

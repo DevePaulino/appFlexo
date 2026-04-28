@@ -1107,6 +1107,7 @@
     "sinProveedoresSub": "Aggiungi un fornitore di cliché nelle impostazioni.",
     "sinEmail": "Nessuna email configurata",
     "fechaEntregaTitle": "Data di consegna richiesta",
+    "fechaObligatoria": "Indica una data di consegna per inviare la richiesta",
     "notasTitle": "Note aggiuntive",
     "notasPlaceholder": "Istruzioni speciali, finiture, urgenza...",
     "enviado": "Richiesta inviata",

@@ -1111,6 +1111,7 @@
     "sinProveedoresSub": "Add a plate supplier in Settings.",
     "sinEmail": "No email configured",
     "fechaEntregaTitle": "Requested delivery date",
+    "fechaObligatoria": "Enter a delivery date to send the request",
     "notasTitle": "Additional notes",
     "notasPlaceholder": "Special instructions, finishes, urgency...",
     "enviado": "Request sent",
