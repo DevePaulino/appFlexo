@@ -1048,7 +1048,6 @@ export default function NuevoPresupuestoModal({
                         // ── Helper: aplica baseLayout y renderiza filas de campos base ──
                         const layoutRows = (defCampos, renderMap) => {
                             const GAP = 12;
-                            const COLS = 12;
                             const withLayout = defCampos.map(c => {
                                 const ov = baseLayoutData[c.campo_id];
                                 return { ...c, col: ov?.col ?? c.col, fila: ov?.fila ?? c.fila, ancho: ov?.ancho ?? c.ancho };
@@ -1061,24 +1060,13 @@ export default function NuevoPresupuestoModal({
                                 .map(([fila, items]) => {
                                     const visibles = items.filter(item => renderMap[item.campo_id] != null);
                                     if (visibles.length === 0) return null;
-                                    const cells = [];
-                                    let cursor = 0;
-                                    visibles.forEach(item => {
-                                        const gap = item.col - cursor;
-                                        if (gap > 0) {
-                                            const spacerPct = `${((gap / COLS) * 100).toFixed(4)}%`;
-                                            cells.push(<View key={`sp_${fila}_${item.col}`} style={{ flexBasis: spacerPct, flexShrink: 0, flexGrow: 0 }} />);
-                                        }
-                                        const pct = `${((item.ancho / COLS) * 100).toFixed(4)}%`;
-                                        cells.push(
-                                            <View key={item.campo_id} style={{ flexBasis: pct, flexShrink: 0, flexGrow: 0, paddingRight: GAP }}>
-                                                {renderMap[item.campo_id]}
-                                            </View>
-                                        );
-                                        cursor = item.col + item.ancho;
-                                    });
+                                    const cells = visibles.map(item => (
+                                        <View key={item.campo_id} style={{ flex: item.ancho }}>
+                                            {renderMap[item.campo_id]}
+                                        </View>
+                                    ));
                                     return (
-                                        <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 8, alignItems: 'flex-start' }}>
+                                        <View key={`fila_${fila}`} style={{ flexDirection: 'row', columnGap: GAP, marginBottom: 8, alignItems: 'flex-start' }}>
                                             {cells}
                                         </View>
                                     );

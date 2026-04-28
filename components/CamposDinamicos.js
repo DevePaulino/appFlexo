@@ -172,22 +172,13 @@ export default function CamposDinamicos({ seccion, contenedorId, showAll = false
       {Object.entries(filaGroups)
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([fila, items]) => {
-          const cells = [];
-          let cursor = 0;
-          items.forEach(campo => {
+          const cells = items.map(campo => {
             const id = campo.campo_id || campo.id;
-            const col = campo.col ?? 0;
             const ancho = Math.min(COLS, campo.ancho || 6);
-            const gap = col - cursor;
-            if (gap > 0) {
-              cells.push(
-                <View key={`sp_${fila}_${col}`} style={{ flexBasis: `${((gap / COLS) * 100).toFixed(4)}%`, flexShrink: 0, flexGrow: 0 }} />
-              );
-            }
             const valor = valores[id] ?? '';
             const invalid = submitted && campo.obligatorio && !valor && valor !== false;
-            cells.push(
-              <View key={id} style={[styles.fieldWrap, { flexBasis: `${((ancho / COLS) * 100).toFixed(4)}%`, flexShrink: 0, flexGrow: 0 }]}>
+            return (
+              <View key={id} style={[styles.fieldWrap, { flex: ancho }]}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>{campo.etiqueta}</Text>
                   {campo.obligatorio && <Text style={styles.required}> *</Text>}
@@ -196,10 +187,9 @@ export default function CamposDinamicos({ seccion, contenedorId, showAll = false
                 {invalid && <Text style={styles.errorText}>{t('formBuilder.requiredField')}</Text>}
               </View>
             );
-            cursor = col + ancho;
           });
           return (
-            <View key={`fila_${fila}`} style={{ flexDirection: 'row', marginRight: -GAP, marginBottom: 4 }}>
+            <View key={`fila_${fila}`} style={{ flexDirection: 'row', columnGap: GAP, marginBottom: 4 }}>
               {cells}
             </View>
           );
@@ -237,7 +227,6 @@ const styles = StyleSheet.create({
   container: { marginTop: 8 },
   fieldWrap: {
     minWidth: 80,
-    paddingRight: 10,
   },
   labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   label: { fontSize: 12, fontWeight: '600', color: '#64748B' },
