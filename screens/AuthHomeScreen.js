@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { R, S } from './theme';
 import LegalModal from '../components/LegalModal';
+import AuroraCanvas from '../components/AuroraCanvas';
 import { isValidEmail } from '../utils/phoneFormat';
 
 const API_BASE = 'http://localhost:8080';
@@ -115,6 +116,8 @@ const s = StyleSheet.create({
     backgroundColor: P.bg,
     justifyContent: 'center',
     padding: 48,
+    position: 'relative',
+    overflow: 'hidden',
     ...(Platform.OS === 'web'
       ? { width: '48%', minHeight: '100vh' }
       : { paddingVertical: 40, paddingHorizontal: 28 }),
@@ -993,6 +996,12 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
         {/* ── Panel de marca ─────────────────────────────────────────────── */}
         <View style={s.brand}>
 
+          {/* Aurora cursor animation (web only) */}
+          <AuroraCanvas />
+
+          {/* Contenido sobre la aurora */}
+          <View style={{ position: 'relative', zIndex: 1 }}>
+
           {/* Logo */}
           <View style={s.logoRow}>
             <View style={s.logoMark}>
@@ -1031,6 +1040,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             ))}
           </View>
 
+          </View>{/* fin contenido sobre aurora */}
 
         </View>
 
