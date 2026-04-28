@@ -24,19 +24,18 @@ function apiFetch(path, opts = {}) {
 export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onSaved }) {
   const { t } = useTranslation();
 
-  const [calles,      setCalles]      = useState('');
-  const [motivos,     setMotivos]     = useState('');
-  const [tamano,      setTamano]      = useState('');
-  const [sesgado,     setSesgado]     = useState(false);
-  const [desp,        setDesp]        = useState('');
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState(null);
-  const [saved,       setSaved]       = useState(false);
+  const [calles,  setCalles]  = useState('');
+  const [motivos, setMotivos] = useState('');
+  const [tamano,  setTamano]  = useState('');
+  const [sesgado, setSesgado] = useState(false);
+  const [desp,    setDesp]    = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState(null);
+  const [saved,   setSaved]   = useState(false);
 
   const pedidoId = pedido?._id || pedido?.pedido_id || pedido?.id;
   const dp = pedido?.datos_presupuesto || pedido?.datos_json || {};
 
-  // Cargar valores existentes al abrir
   useEffect(() => {
     if (!visible) return;
     setCalles(String(dp.rep_calles  || ''));
@@ -79,76 +78,77 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{t('repetidora.modalTitle')}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>✕</Text>
+      <View style={s.overlay}>
+        <View style={s.sheet}>
+
+          {/* ── Header ── */}
+          <View style={s.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.headerTitle}>⟳ {t('repetidora.modalTitle')}</Text>
+              <Text style={s.headerSub} numberOfLines={1}>
+                {pedido?.referencia || pedido?.numero_pedido || pedidoId}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={s.closeBtn}>
+              <Text style={s.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-            {/* Referencia del pedido */}
-            {pedido?.referencia && (
-              <View style={styles.refRow}>
-                <Text style={styles.refLabel}>{t('forms.referencia')}</Text>
-                <Text style={styles.refValue}>{pedido.referencia}</Text>
-              </View>
-            )}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 16 }}>
 
-            {/* Banners */}
+            {/* ── Banners ── */}
             {yaConfigurado && !saved && (
-              <View style={styles.infoBanner}>
-                <Text style={styles.infoBannerText}>{t('repetidora.yaConfigurado')}</Text>
+              <View style={s.alertInfo}>
+                <Text style={s.alertInfoText}>{t('repetidora.yaConfigurado')}</Text>
               </View>
             )}
             {saved && (
-              <View style={styles.successBanner}>
-                <Text style={styles.successBannerText}>{t('repetidora.guardadoOk')}</Text>
+              <View style={s.alertOk}>
+                <Text style={[s.alertText, { color: '#166534', fontWeight: '800', fontSize: 15 }]}>
+                  ✓ {t('repetidora.guardadoOk')}
+                </Text>
               </View>
             )}
 
-            {/* Campos principales */}
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <Text style={styles.label}>{t('forms.repCalles')}</Text>
+            {/* ── Campos principales ── */}
+            <View style={s.row}>
+              <View style={s.col}>
+                <Text style={s.label}>{t('forms.repCalles')}</Text>
                 <TextInput
                   value={calles}
                   onChangeText={setCalles}
                   keyboardType="numeric"
                   placeholder="4"
                   placeholderTextColor="#94A3B8"
-                  style={styles.input}
+                  style={s.input}
                 />
               </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>{t('forms.repMotivos')}</Text>
+              <View style={s.col}>
+                <Text style={s.label}>{t('forms.repMotivos')}</Text>
                 <TextInput
                   value={motivos}
                   onChangeText={setMotivos}
                   keyboardType="numeric"
                   placeholder="2"
                   placeholderTextColor="#94A3B8"
-                  style={styles.input}
+                  style={s.input}
                 />
               </View>
-              <View style={styles.col}>
-                <Text style={styles.label}>{t('forms.repTamano')}</Text>
+              <View style={s.col}>
+                <Text style={s.label}>{t('forms.repTamano')}</Text>
                 <TextInput
                   value={tamano}
                   onChangeText={setTamano}
                   placeholder="500 mm"
                   placeholderTextColor="#94A3B8"
-                  style={styles.input}
+                  style={s.input}
                 />
               </View>
             </View>
 
-            {/* Sesgado — fila completa */}
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>{t('forms.repSesgado')}</Text>
+            {/* ── Sesgado ── */}
+            <View style={s.switchRow}>
+              <Text style={s.switchLabel}>{t('forms.repSesgado')}</Text>
               <Switch
                 value={sesgado}
                 onValueChange={handleSesgadoToggle}
@@ -157,243 +157,92 @@ export default function SolicitudRepetidoraModal({ visible, onClose, pedido, onS
               />
             </View>
 
-            {/* Desplazamiento — fila completa cuando sesgado activo */}
+            {/* ── Desplazamiento ── */}
             {sesgado && (
-              <View style={[styles.row, { marginTop: 12 }]}>
-                <View style={styles.col}>
-                  <Text style={styles.label}>{t('forms.repDesp')}</Text>
+              <View style={s.row}>
+                <View style={s.col}>
+                  <Text style={s.label}>{t('forms.repDesp')}</Text>
                   <TextInput
                     value={desp}
                     onChangeText={setDesp}
                     placeholder="mm"
                     placeholderTextColor="#94A3B8"
-                    style={styles.input}
+                    style={s.input}
                   />
                 </View>
-                {/* Columnas vacías para mantener simetría con la fila superior */}
-                <View style={styles.col} />
-                <View style={styles.col} />
+                <View style={s.col} />
+                <View style={s.col} />
               </View>
             )}
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && (
+              <View style={s.alertErr}>
+                <Text style={s.alertText}>{error}</Text>
+              </View>
+            )}
+
           </ScrollView>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleGuardar}
-              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-              disabled={saving}
-            >
-              {saving
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.saveBtnText}>{t('common.save')}</Text>
-              }
-            </TouchableOpacity>
+          {/* ── Footer ── */}
+          <View style={s.footer}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 0 }}>
+              <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
+                <Text style={s.cancelBtnText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.saveBtn, saving && { opacity: 0.5 }]}
+                onPress={handleGuardar}
+                disabled={saving}
+              >
+                {saving
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={s.saveBtnText}>{t('common.save')}</Text>}
+              </TouchableOpacity>
+            </View>
           </View>
+
         </View>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.55)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    width: '100%',
-    maxWidth: 620,
-    maxHeight: '90%',
-    ...(Platform.OS === 'web' ? { minHeight: 420 } : {}),
-    overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.20,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
-  },
-  header: {
-    backgroundColor: '#1E1B4B',
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: '#C7D2FE',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  body: {
-    paddingHorizontal: 28,
-    paddingTop: 24,
-  },
-  bodyContent: {
-    paddingBottom: 28,
-  },
-  refRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 18,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  refLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  refValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    fontWeight: '700',
-  },
-  infoBanner: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-  },
-  infoBannerText: {
-    fontSize: 13,
-    color: '#3730A3',
-    fontWeight: '600',
-  },
-  successBanner: {
-    backgroundColor: '#DCFCE7',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-  successBannerText: {
-    fontSize: 13,
-    color: '#166534',
-    fontWeight: '700',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 16,
-  },
-  col: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '700',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    fontSize: 15,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    color: '#0F172A',
-  },
+const s = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  sheet:   { backgroundColor: '#FFFFFF', borderRadius: 16, maxHeight: '90%', width: '100%', maxWidth: 620,
+             ...(Platform.OS === 'web' ? { minHeight: 360 } : {}),
+             overflow: 'hidden',
+             shadowColor: '#0F172A', shadowOpacity: 0.18, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+
+  header:      { flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#1E1B4B' },
+  headerSub:   { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  closeBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  closeBtnText:{ fontSize: 14, color: '#64748B', fontWeight: '700' },
+
+  label: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 6 },
+
+  row: { flexDirection: 'row', gap: 12 },
+  col: { flex: 1 },
+
+  input: { backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' },
+
   switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1.5, borderColor: '#E2E8F0',
+    paddingHorizontal: 14, paddingVertical: 12,
   },
-  switchLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-  },
-  cancelBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
-  },
-  cancelBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  saveBtn: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  saveBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  switchLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+
+  alertInfo:     { backgroundColor: '#EEF2FF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#C7D2FE' },
+  alertInfoText: { fontSize: 13, color: '#3730A3', fontWeight: '600' },
+  alertOk:       { backgroundColor: '#F0FDF4', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0' },
+  alertErr:      { backgroundColor: '#FEF2F2', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FECACA' },
+  alertText:     { fontSize: 13, color: '#0F172A' },
+
+  footer:       { padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  cancelBtn:    { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0', alignItems: 'center' },
+  cancelBtnText:{ fontSize: 14, fontWeight: '600', color: '#64748B' },
+  saveBtn:      { flex: 2, backgroundColor: '#4F46E5', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  saveBtnText:  { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
 });
