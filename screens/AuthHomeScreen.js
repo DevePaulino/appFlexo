@@ -133,8 +133,13 @@ const s = StyleSheet.create({
   logoImg: {
     width: 42,
     height: 42,
-    tintColor: '#A5B4FC',
+    tintColor: '#FFFFFF',
     marginRight: 14,
+  },
+  logoTextGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   logoName: {
     fontSize: 22,
@@ -147,12 +152,18 @@ const s = StyleSheet.create({
   logoNameMate: {
     color: '#818CF8',
   },
-  logoSuffix: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: 'rgba(165,180,252,0.65)',
+  proBadge: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignSelf: 'center',
+  },
+  proBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
     letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
 
   // Titular principal
@@ -997,11 +1008,15 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               style={s.logoImg}
               resizeMode="contain"
             />
-            <Text style={s.logoName}>
-              <Text style={s.logoNamePress}>Print</Text>
-              <Text style={s.logoNameMate}>Forge</Text>
-              <Text style={s.logoSuffix}> Pro</Text>
-            </Text>
+            <View style={s.logoTextGroup}>
+              <Text style={s.logoName}>
+                <Text style={s.logoNamePress}>Print</Text>
+                <Text style={s.logoNameMate}>Forge</Text>
+              </Text>
+              <View style={s.proBadge}>
+                <Text style={s.proBadgeText}>PRO</Text>
+              </View>
+            </View>
           </View>
 
           {/* Titular */}
