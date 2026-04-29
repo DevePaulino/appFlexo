@@ -867,7 +867,7 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
     <View>
       <View style={styles.tabsBar}>
         <Image
-          source={require('./resources/logo-printforge.png')}
+          source={require('./assets/logo-printforge.png')}
           style={styles.navLogoMark}
           resizeMode="contain"
         />

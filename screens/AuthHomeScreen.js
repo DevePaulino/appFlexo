@@ -992,7 +992,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
           {/* Logo */}
           <View style={s.logoRow}>
             <Image
-              source={require('../resources/logo-printforge.png')}
+              source={require('../assets/logo-printforge.png')}
               style={s.logoImg}
               resizeMode="contain"
             />
