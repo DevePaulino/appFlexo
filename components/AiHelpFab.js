@@ -216,7 +216,7 @@ const s = StyleSheet.create({
   },
   aiBadge: {
     position: 'absolute',
-    top: -5,
+    bottom: -5,
     right: -5,
     backgroundColor: '#10B981',
     borderRadius: 7,
