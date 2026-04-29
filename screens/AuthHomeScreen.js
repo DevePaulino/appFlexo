@@ -130,25 +130,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 56,
   },
-  logoImgWrap: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-    position: 'relative',
-  },
-  logoImgGlow: {
-    position: 'absolute',
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: 'rgba(99,102,241,0.35)',
-  },
   logoImg: {
     width: 42,
     height: 42,
     tintColor: '#A5B4FC',
+    marginRight: 14,
   },
   logoName: {
     fontSize: 22,
@@ -1006,14 +992,11 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
 
           {/* Logo */}
           <View style={s.logoRow}>
-            <View style={s.logoImgWrap}>
-              <View style={s.logoImgGlow} />
-              <Image
-                source={require('../assets/logo-printforge.png')}
-                style={s.logoImg}
-                resizeMode="contain"
-              />
-            </View>
+            <Image
+              source={require('../assets/logo-printforge.png')}
+              style={s.logoImg}
+              resizeMode="contain"
+            />
             <Text style={s.logoName}>
               <Text style={s.logoNamePress}>Print</Text>
               <Text style={s.logoNameMate}>Forge</Text>
