@@ -151,7 +151,9 @@ const s = StyleSheet.create({
     ...Platform.select({
       web: {
         color: 'transparent',
-        WebkitTextStroke: '0.6px #FFFFFF',
+        WebkitTextStroke: '0.5px #FFFFFF',
+        letterSpacing: 3,
+        paintOrder: 'stroke fill',
       },
       default: {
         color: 'rgba(255,255,255,0.55)',
