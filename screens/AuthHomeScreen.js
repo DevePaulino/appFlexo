@@ -148,17 +148,7 @@ const s = StyleSheet.create({
     color: '#F87171',
   },
   logoNamePro: {
-    ...Platform.select({
-      web: {
-        color: 'transparent',
-        WebkitTextStroke: '0.6px rgba(255,255,255,0.85)',
-        fontFamily: 'Raleway, sans-serif',
-        fontWeight: '800',
-      },
-      default: {
-        color: 'rgba(255,255,255,0.55)',
-      },
-    }),
+    color: 'rgba(255,255,255,0.50)',
   },
 
   // Titular principal
@@ -512,18 +502,6 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
   const [invitePassword2, setInvitePassword2] = useState('');
 
   const inp = (field) => [s.input, focusedField === field && s.inputFocused];
-
-  // Cargar fuente Raleway para el texto outline del logo
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!document.getElementById('pfp-raleway-font')) {
-      const link = document.createElement('link');
-      link.id = 'pfp-raleway-font';
-      link.rel = 'stylesheet';
-      link.href = 'https://fonts.googleapis.com/css2?family=Raleway:wght@800&display=swap';
-      document.head.appendChild(link);
-    }
-  }, []);
 
   // Detect invite token in URL (web)
   useEffect(() => {
