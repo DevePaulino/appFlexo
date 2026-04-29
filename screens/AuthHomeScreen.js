@@ -151,7 +151,7 @@ const s = StyleSheet.create({
     ...Platform.select({
       web: {
         color: 'transparent',
-        WebkitTextStroke: '1.2px #FFFFFF',
+        WebkitTextStroke: '0.6px #FFFFFF',
       },
       default: {
         color: 'rgba(255,255,255,0.55)',
@@ -1001,9 +1001,9 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               style={s.logoImg}
               resizeMode="contain"
             />
-            <Text style={s.logoName}>
-              <Text style={s.logoNamePress}>Print</Text>
-              <Text style={s.logoNameForge}>Forge</Text>
+            <Text style={s.logoName}>{''}
+              <Text style={s.logoNamePress}>Print</Text>{''}
+              <Text style={s.logoNameForge}>Forge</Text>{''}
               <Text style={s.logoNamePro}>Pro</Text>
             </Text>
           </View>
