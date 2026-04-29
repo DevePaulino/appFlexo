@@ -150,10 +150,8 @@ const s = StyleSheet.create({
   logoNamePro: {
     ...Platform.select({
       web: {
-        color: 'transparent',
-        WebkitTextStroke: '0.5px #FFFFFF',
-        letterSpacing: 3,
-        paintOrder: 'stroke fill',
+        color: '#0d0d1f',
+        WebkitTextStroke: '0.6px rgba(255,255,255,0.90)',
       },
       default: {
         color: 'rgba(255,255,255,0.55)',
