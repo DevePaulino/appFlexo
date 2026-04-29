@@ -136,34 +136,27 @@ const s = StyleSheet.create({
     tintColor: '#FFFFFF',
     marginRight: 14,
   },
-  logoTextGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   logoName: {
-    fontSize: 22,
+    fontSize: 34,
     fontWeight: '800',
-    letterSpacing: -0.2,
+    letterSpacing: -0.5,
   },
   logoNamePress: {
     color: '#FFFFFF',
   },
-  logoNameMate: {
-    color: '#818CF8',
+  logoNameForge: {
+    color: '#F87171',
   },
-  proBadge: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    alignSelf: 'center',
-  },
-  proBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 1.4,
+  logoNamePro: {
+    ...Platform.select({
+      web: {
+        color: 'transparent',
+        WebkitTextStroke: '1.2px #FFFFFF',
+      },
+      default: {
+        color: 'rgba(255,255,255,0.55)',
+      },
+    }),
   },
 
   // Titular principal
@@ -1008,15 +1001,11 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               style={s.logoImg}
               resizeMode="contain"
             />
-            <View style={s.logoTextGroup}>
-              <Text style={s.logoName}>
-                <Text style={s.logoNamePress}>Print</Text>
-                <Text style={s.logoNameMate}>Forge</Text>
-              </Text>
-              <View style={s.proBadge}>
-                <Text style={s.proBadgeText}>PRO</Text>
-              </View>
-            </View>
+            <Text style={s.logoName}>
+              <Text style={s.logoNamePress}>Print</Text>
+              <Text style={s.logoNameForge}>Forge</Text>
+              <Text style={s.logoNamePro}>Pro</Text>
+            </Text>
           </View>
 
           {/* Titular */}
