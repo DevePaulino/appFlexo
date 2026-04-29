@@ -156,9 +156,19 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: 'rgba(165,180,252,0.70)',
-    letterSpacing: 2,
     textTransform: 'uppercase',
     marginTop: 5,
+    width: '100%',
+    ...Platform.select({
+      web: {
+        textAlign: 'justify',
+        textAlignLast: 'justify',
+        letterSpacing: 0,
+      },
+      default: {
+        letterSpacing: 2,
+      },
+    }),
   },
   brandTagline: {
     fontSize: Platform.OS === 'web' ? 38 : 26,
