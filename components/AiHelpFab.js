@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
   Platform, ScrollView, TextInput, ActivityIndicator,
-  KeyboardAvoidingView, Pressable,
+  KeyboardAvoidingView, Pressable, Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useModulos } from '../ModulosContext';
@@ -65,7 +65,14 @@ export default function AiHelpFab() {
         onPress={() => setOpen(true)}
         activeOpacity={0.8}
       >
-        <Text style={s.fabIcon}>🤖</Text>
+        <Image
+          source={require('../assets/logo-printforge.png')}
+          style={s.fabLogo}
+          resizeMode="contain"
+        />
+        <View style={s.aiBadge}>
+          <Text style={s.aiBadgeText}>AI</Text>
+        </View>
         {!iaActiva && <View style={s.fabDot} />}
       </TouchableOpacity>
 
@@ -86,7 +93,11 @@ export default function AiHelpFab() {
           <View style={s.panel}>
             {/* Cabecera */}
             <View style={s.panelHeader}>
-              <Text style={s.panelIcon}>🤖</Text>
+              <Image
+                source={require('../assets/logo-printforge.png')}
+                style={s.panelLogo}
+                resizeMode="contain"
+              />
               <View style={{ flex: 1 }}>
                 <Text style={s.panelTitle}>{t('help.aiTitle')}</Text>
                 {!iaActiva && (
@@ -198,7 +209,28 @@ const s = StyleSheet.create({
   fabDisabled: {
     backgroundColor: '#94A3B8',
   },
-  fabIcon: { fontSize: 22 },
+  fabLogo: {
+    width: 28,
+    height: 28,
+    tintColor: '#FFFFFF',
+  },
+  aiBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#10B981',
+    borderRadius: 7,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  aiBadgeText: {
+    fontSize: 7,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.6,
+  },
   fabDot: {
     position: 'absolute',
     top: 6,
@@ -239,7 +271,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  panelIcon: { fontSize: 20 },
+  panelLogo: {
+    width: 24,
+    height: 24,
+    tintColor: '#FFFFFF',
+  },
   panelTitle: {
     fontSize: 14,
     fontWeight: '700',
