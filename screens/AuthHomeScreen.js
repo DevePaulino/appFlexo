@@ -126,32 +126,46 @@ const s = StyleSheet.create({
 
   // Marca superior
   logoRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 48,
+  },
+  logoImgWrap: {
+    width: 90,
+    height: 90,
     alignItems: 'center',
-    marginBottom: 56,
+    justifyContent: 'center',
+    marginBottom: 22,
+    position: 'relative',
+  },
+  logoImgGlow: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(129,140,248,0.20)',
   },
   logoImg: {
-    width: 44,
-    height: 44,
-    marginRight: 12,
+    width: 88,
+    height: 88,
     tintColor: '#FFFFFF',
   },
   logoName: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: -0.8,
   },
   logoNamePress: {
     color: '#FFFFFF',
   },
   logoNameMate: {
-    color: P.accent,   // índigo-400
+    color: P.accent,
   },
   logoSuffix: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '300',
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 0.2,
+    color: 'rgba(255,255,255,0.40)',
+    letterSpacing: -0.3,
   },
 
   // Titular principal
@@ -991,11 +1005,14 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
 
           {/* Logo */}
           <View style={s.logoRow}>
-            <Image
-              source={require('../assets/logo-printforge.png')}
-              style={s.logoImg}
-              resizeMode="contain"
-            />
+            <View style={s.logoImgWrap}>
+              <View style={s.logoImgGlow} />
+              <Image
+                source={require('../assets/logo-printforge.png')}
+                style={s.logoImg}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={s.logoName}>
               <Text style={s.logoNamePress}>Print</Text>
               <Text style={s.logoNameMate}>Forge</Text>
