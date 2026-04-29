@@ -148,7 +148,7 @@ const s = StyleSheet.create({
     color: '#F87171',
   },
   logoNamePro: {
-    color: 'rgba(255,255,255,0.50)',
+    color: 'rgba(255,255,255,0.25)',
   },
 
   // Titular principal
