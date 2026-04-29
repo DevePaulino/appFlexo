@@ -1006,7 +1006,7 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
             <View>
               <Text style={s.logoName}>{''}
                 <Text style={s.logoNamePress}>Print</Text>{''}
-                <Text style={s.logoNameForge}>Forge</Text>{''}
+                <Text style={s.logoNameForge}>Forge</Text>{' '}
                 <Text style={s.logoNamePro}>Pro</Text>
               </Text>
               <Text style={s.brandEyebrow}>{t('auth.brandEyebrow')}</Text>
