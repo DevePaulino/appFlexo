@@ -866,6 +866,11 @@ function TopTabsWithSettingsSubmenu({ state, descriptors, navigation, onTabChang
   return (
     <View>
       <View style={styles.tabsBar}>
+        <Image
+          source={require('./resources/logo-printforge.png')}
+          style={styles.navLogoMark}
+          resizeMode="contain"
+        />
         <EmpresaBranding currentUser={currentUser} />
         <View style={styles.tabsList}>
           {state.routes
@@ -1071,6 +1076,14 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 5,
     overflow: 'visible',
+  },
+  navLogoMark: {
+    width: 28,
+    height: 28,
+    tintColor: '#FFFFFF',
+    marginLeft: 12,
+    marginRight: 4,
+    opacity: 0.9,
   },
   tabsList: {
     flex: 1,

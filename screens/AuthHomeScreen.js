@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -129,25 +130,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 56,
   },
-  logoMark: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: P.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImg: {
+    width: 44,
+    height: 44,
     marginRight: 12,
-    shadowColor: '#818CF8',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  logoMarkSlash: {
-    width: 3,
-    height: 22,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-    transform: [{ rotate: '20deg' }],
+    tintColor: '#FFFFFF',
   },
   logoName: {
     fontSize: 20,
@@ -1004,9 +991,11 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
 
           {/* Logo */}
           <View style={s.logoRow}>
-            <View style={s.logoMark}>
-              <View style={s.logoMarkSlash} />
-            </View>
+            <Image
+              source={require('../resources/logo-printforge.png')}
+              style={s.logoImg}
+              resizeMode="contain"
+            />
             <Text style={s.logoName}>
               <Text style={s.logoNamePress}>Print</Text>
               <Text style={s.logoNameMate}>Forge</Text>
