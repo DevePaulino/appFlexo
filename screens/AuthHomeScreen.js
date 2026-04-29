@@ -154,11 +154,11 @@ const s = StyleSheet.create({
   // Titular principal
   brandEyebrow: {
     fontSize: 11,
-    fontWeight: '700',
-    color: P.accent,   // índigo-400 sobre fondo oscuro
-    letterSpacing: 2.5,
+    fontWeight: '600',
+    color: 'rgba(165,180,252,0.70)',
+    letterSpacing: 2,
     textTransform: 'uppercase',
-    marginBottom: 14,
+    marginTop: 5,
   },
   brandTagline: {
     fontSize: Platform.OS === 'web' ? 38 : 26,
@@ -993,15 +993,17 @@ export default function AuthHomeScreen({ onAuthSuccess }) {
               style={s.logoImg}
               resizeMode="contain"
             />
-            <Text style={s.logoName}>{''}
-              <Text style={s.logoNamePress}>Print</Text>{''}
-              <Text style={s.logoNameForge}>Forge</Text>{''}
-              <Text style={s.logoNamePro}>Pro</Text>
-            </Text>
+            <View>
+              <Text style={s.logoName}>{''}
+                <Text style={s.logoNamePress}>Print</Text>{''}
+                <Text style={s.logoNameForge}>Forge</Text>{''}
+                <Text style={s.logoNamePro}>Pro</Text>
+              </Text>
+              <Text style={s.brandEyebrow}>{t('auth.brandEyebrow')}</Text>
+            </View>
           </View>
 
           {/* Titular */}
-          <Text style={s.brandEyebrow}>{t('auth.brandEyebrow')}</Text>
           <Text style={s.brandTagline}>
             {t('auth.brandTaglinePre')}
             {'\n'}
