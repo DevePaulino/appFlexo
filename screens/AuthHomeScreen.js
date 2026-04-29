@@ -126,46 +126,47 @@ const s = StyleSheet.create({
 
   // Marca superior
   logoRow: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    marginBottom: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 56,
   },
   logoImgWrap: {
-    width: 90,
-    height: 90,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 22,
+    marginRight: 14,
     position: 'relative',
   },
   logoImgGlow: {
     position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: 'rgba(129,140,248,0.20)',
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: 'rgba(99,102,241,0.35)',
   },
   logoImg: {
-    width: 88,
-    height: 88,
-    tintColor: '#FFFFFF',
+    width: 42,
+    height: 42,
+    tintColor: '#A5B4FC',
   },
   logoName: {
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: -0.8,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   logoNamePress: {
     color: '#FFFFFF',
   },
   logoNameMate: {
-    color: P.accent,
+    color: '#818CF8',
   },
   logoSuffix: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: 'rgba(255,255,255,0.40)',
-    letterSpacing: -0.3,
+    fontSize: 15,
+    fontWeight: '500',
+    color: 'rgba(165,180,252,0.65)',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
 
   // Titular principal
